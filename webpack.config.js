@@ -1,6 +1,7 @@
 const path = require("path");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = {
   entry: {
@@ -35,6 +36,18 @@ module.exports = {
   plugins: [
     new MiniCssExtractPlugin({
       filename: "[name].css",
+    }),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: "node_modules/bootstrap/dist/js/bootstrap.min.js",
+          to: "js/bootstrap.min.js",
+        },
+        {
+          from: "node_modules/@popperjs/core/dist/umd/popper.min.js",
+          to: "js/popper.min.js",
+        },
+      ],
     }),
   ],
   optimization: {
