@@ -1,0 +1,246 @@
+// Medical Application Bootstrap Theme
+// Colors designed to convey trust, security, and professionalism
+
+// Medical Color Palette
+$medical-deep-blue: #1e3a8a;
+$medical-blue: #1e40af;
+$medical-teal: #0891b2;
+$medical-dark-teal: #0e7490;
+$medical-green: #059669;
+$medical-dark-green: #047857;
+$medical-light-gray: #f8fafc;
+$medical-gray: #64748b;
+$medical-dark-gray: #334155;
+$medical-warning-orange: #ea580c;
+$medical-danger-red: #dc2626;
+
+// Override Bootstrap's default color variables
+$primary: $medical-deep-blue;
+$secondary: $medical-gray;
+$success: $medical-green;
+$info: $medical-teal;
+$warning: $medical-warning-orange;
+$danger: $medical-danger-red;
+$light: $medical-light-gray;
+$dark: $medical-dark-gray;
+
+// Additional medical theme colors
+$body-bg: #ffffff;
+$body-color: $medical-dark-gray;
+$link-color: $medical-teal;
+$link-hover-color: $medical-dark-teal;
+
+// Button customizations for medical context
+$btn-border-radius: 0.375rem;
+$btn-font-weight: 500;
+
+// Form customizations for better accessibility
+$input-border-color: #d1d5db;
+$input-focus-border-color: $medical-teal;
+$input-focus-box-shadow: 0 0 0 0.2rem rgba(8, 145, 178, 0.25);
+
+// Card and component styling
+$card-border-color: #e5e7eb;
+$card-border-radius: 0.5rem;
+$border-radius: 0.375rem;
+$border-radius-sm: 0.25rem;
+$border-radius-lg: 0.5rem;
+
+// Typography adjustments
+$font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$headings-font-weight: 600;
+$headings-color: $medical-dark-gray;
+
+// Navbar styling for medical applications
+$navbar-light-color: $medical-dark-gray;
+$navbar-light-hover-color: $medical-teal;
+$navbar-light-active-color: $medical-deep-blue;
+
+// Alert customizations
+$alert-border-radius: $border-radius;
+$alert-border-width: 1px;
+
+// Import Bootstrap's SASS source files after variable definitions
+@import "~bootstrap/scss/bootstrap";
+
+// Additional medical-specific utility classes
+.bg-medical-primary {
+  background-color: $medical-deep-blue !important;
+}
+
+.bg-medical-teal {
+  background-color: $medical-teal !important;
+}
+
+.bg-medical-light {
+  background-color: $medical-light-gray !important;
+}
+
+.text-medical-primary {
+  color: $medical-deep-blue !important;
+}
+
+.text-medical-teal {
+  color: $medical-teal !important;
+}
+
+.text-medical-green {
+  color: $medical-green !important;
+}
+
+// Medical-specific button variants
+.btn-medical-primary {
+  @include button-variant($medical-deep-blue, $medical-deep-blue);
+}
+
+.btn-medical-teal {
+  @include button-variant($medical-teal, $medical-teal);
+}
+
+.btn-medical-outline-primary {
+  @include button-outline-variant($medical-deep-blue);
+}
+
+.btn-medical-outline-teal {
+  @include button-outline-variant($medical-teal);
+}
+
+// Medical card styling
+.card-medical {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  
+  .card-header {
+    background-color: $medical-light-gray;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+    color: $medical-dark-gray;
+  }
+}
+
+// Medical form styling
+.form-medical {
+  .form-label {
+    font-weight: 500;
+    color: $medical-dark-gray;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-control {
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    
+    &:focus {
+      border-color: $medical-teal;
+      box-shadow: 0 0 0 0.2rem rgba(8, 145, 178, 0.25);
+    }
+  }
+  
+  .form-select {
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    
+    &:focus {
+      border-color: $medical-teal;
+      box-shadow: 0 0 0 0.2rem rgba(8, 145, 178, 0.25);
+    }
+  }
+}
+
+// Medical navigation styling
+.navbar-medical {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  
+  .navbar-brand {
+    font-weight: 700;
+    color: $medical-deep-blue;
+  }
+  
+  .nav-link {
+    color: $medical-dark-gray;
+    font-weight: 500;
+    
+    &:hover {
+      color: $medical-teal;
+    }
+    
+    &.active {
+      color: $medical-deep-blue;
+    }
+  }
+}
+
+// Medical alert styling
+.alert-medical-info {
+  color: #0c4a6e;
+  background-color: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.alert-medical-success {
+  color: #064e3b;
+  background-color: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.alert-medical-warning {
+  color: #9a3412;
+  background-color: #fed7aa;
+  border-color: #fdba74;
+}
+
+.alert-medical-danger {
+  color: #991b1b;
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+}
+
+// Medical table styling
+.table-medical {
+  .thead-medical {
+    background-color: $medical-light-gray;
+    
+    th {
+      border-bottom: 2px solid #e5e7eb;
+      font-weight: 600;
+      color: $medical-dark-gray;
+      padding: 0.75rem;
+    }
+  }
+  
+  tbody tr {
+    &:hover {
+      background-color: rgba(8, 145, 178, 0.05);
+    }
+  }
+  
+  td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+  }
+}
+
+// Medical badge styling
+.badge-medical-primary {
+  background-color: $medical-deep-blue;
+  color: white;
+}
+
+.badge-medical-teal {
+  background-color: $medical-teal;
+  color: white;
+}
+
+.badge-medical-success {
+  background-color: $medical-green;
+  color: white;
+}
+
+.badge-medical-light {
+  background-color: $medical-light-gray;
+  color: $medical-dark-gray;
+  border: 1px solid #e5e7eb;
+}
