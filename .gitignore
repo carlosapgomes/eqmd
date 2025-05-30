@@ -10,3 +10,6 @@ wheels/
 .venv
 .plandex-v2
 db.sqlite3
+
+# Environment variables
+.env

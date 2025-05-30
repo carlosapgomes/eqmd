@@ -68,7 +68,7 @@ prod = [
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=5.2.1" },
-    { name = "django-allauth", specifier = ">=65.8.1" },
+    { name = "django-allauth", specifier = ">=0.57.0" },
 ]
 
 [package.metadata.requires-dev]
