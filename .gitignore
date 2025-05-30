@@ -9,3 +9,4 @@ wheels/
 # Virtual environments
 .venv
 .plandex-v2
+db.sqlite3
