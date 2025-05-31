@@ -1,0 +1,129 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - EquipeMed{% endblock title %}
+
+{% block header %}
+<nav class="navbar navbar-expand-lg navbar-medical sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'core:landing_page' %}">EquipeMed</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="{% url 'core:landing_page' %}">Início</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#features">Funcionalidades</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#about">Sobre</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link btn btn-medical-teal text-white ms-lg-2 px-3 py-2" href="{% url 'account_login' %}">Login</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+{% endblock header %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="py-5 text-center bg-medical-light">
+    <div class="container">
+        <h1 class="display-4 fw-bold text-medical-primary">EquipeMed</h1>
+        <p class="lead text-medical-dark-gray my-4 col-md-8 mx-auto">
+            O EquipeMed é uma aplicação web projetada para apoiar equipes médicas no acompanhamento de pacientes em múltiplos hospitais, funcionando como um sistema paralelo de prontuário eletrônico.
+        </p>
+        <a href="#features" class="btn btn-medical-primary btn-lg">Conheça as Funcionalidades</a>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5 text-medical-primary fw-bold">Principais Funcionalidades</h2>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-medical h-100">
+                    <div class="card-header">
+                        Anotações Diárias Detalhadas
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Registre e acompanhe as evoluções diárias dos pacientes de forma organizada, segura e acessível para toda a equipe.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-medical h-100">
+                    <div class="card-header">
+                        Gestão de Exames Completa
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Gerencie solicitações e resultados de exames, integrando informações cruciais ao prontuário do paciente em tempo real.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-medical h-100">
+                    <div class="card-header">
+                        Agendamento Cirúrgico Eficaz
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Planeje e organize agendamentos de cirurgias de forma intuitiva, otimizando o fluxo de trabalho da equipe médica.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-medical h-100">
+                    <div class="card-header">
+                        Histórico e Ficha Clínica Unificada
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Mantenha um histórico completo e detalhado da ficha clínica de cada paciente, acessível de qualquer lugar.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-medical h-100">
+                    <div class="card-header">
+                        Central de Relatórios Externos
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Anexe e gerencie relatórios de exames externos e de referência de forma centralizada e segura.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-medical h-100">
+                    <div class="card-header">
+                        Prescrições Ambulatoriais Digitais
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Crie e gerencie prescrições para pacientes ambulatoriais com facilidade, segurança e rastreabilidade.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="py-5 bg-medical-light">
+    <div class="container">
+        <h2 class="text-center mb-4 text-medical-primary fw-bold">Sobre o EquipeMed</h2>
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <p class="text-center text-medical-dark-gray">
+                    O EquipeMed visa simplificar a comunicação e o acesso à informação para equipes médicas, melhorando a coordenação do cuidado ao paciente e a eficiência operacional em ambientes hospitalares complexos. Nossa plataforma é construída com foco na segurança dos dados, usabilidade intuitiva e integração eficiente de informações clínicas, permitindo que os profissionais de saúde dediquem mais tempo ao que realmente importa: o cuidado ao paciente.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% comment %} The footer is inherited from base.html {% endcomment %}
