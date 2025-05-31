@@ -178,3 +178,7 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory")
+
+# Login and Logout Configuration
+LOGIN_REDIRECT_URL = 'core:dashboard'
+# LOGOUT_REDIRECT_URL = 'core:landing_page' # Optional: can be added later

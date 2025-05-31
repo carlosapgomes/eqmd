@@ -258,3 +258,124 @@ $alert-border-width: 1px;
   color: $medical-dark-gray;
   border: 1px solid #e5e7eb;
 }
+
+// Dashboard Layout Styles
+// --------------------------------------------------
+
+// Body padding for fixed navbar
+body.app-layout { // Add a class to body for authenticated layout to avoid affecting landing page
+    padding-top: 56px; // Height of the fixed navbar, ensure this matches $navbar-height if defined
+}
+
+// Sidebar common styles
+.app-sidebar {
+    position: fixed;
+    top: 56px; // Position below the fixed navbar
+    bottom: 0;
+    left: 0;
+    z-index: 100; // Behind the navbar but above content
+    padding: 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    overflow-y: auto; // Enable scrolling for long sidebars
+    background-color: $medical-light-gray; // Match card header for consistency
+    width: 250px; // Default width for desktop sidebar
+
+    .nav-link {
+        font-weight: 500;
+        color: $medical-dark-gray; // Use theme variable
+        padding: 0.75rem 1.5rem; // Consistent padding
+
+        .bi {
+            margin-right: 0.5rem; // Space for icons
+            font-size: 1.1rem;
+            vertical-align: text-bottom;
+        }
+
+        &.active {
+            color: $primary; // Use theme primary color
+            background-color: rgba($primary, 0.1); // Subtle active background
+        }
+
+        &:hover {
+            color: $primary;
+            background-color: rgba($primary, 0.05); // Subtle hover background
+        }
+    }
+
+    .sidebar-heading {
+        font-size: .8rem;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: $medical-gray;
+        padding: 0.75rem 1.5rem;
+        margin-top: 1rem;
+
+        &:first-of-type {
+            margin-top: 0;
+        }
+    }
+
+    // Styling for nested ULs for submenus
+    .nav .nav-link { // More specific selector for submenu items
+        padding-left: 2.5rem; // Indent submenu items
+        font-size: 0.9rem;
+    }
+}
+
+// Main content area adjustments
+.app-main-content {
+    padding-top: 1.5rem; // Initial padding from top
+    
+    @include media-breakpoint-up(lg) { // Apply margin only on large screens (when desktop sidebar is visible)
+        margin-left: 250px; // Same as desktop sidebar width
+    }
+}
+
+// Navbar adjustments for app area
+.navbar-medical {
+    .dropdown-toggle::after {
+        display: none; // Hide default caret for avatar dropdown if using icon
+    }
+    .navbar-toggler {
+        border: none;
+        &:focus {
+            box-shadow: none;
+        }
+    }
+}
+
+// Offcanvas specific styling
+.offcanvas-app-menu {
+    .offcanvas-header {
+        border-bottom: 1px solid $card-border-color;
+    }
+    .nav-link {
+        font-weight: 500;
+        color: $medical-dark-gray;
+        padding: 0.75rem 1rem;
+
+        .bi {
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+            vertical-align: text-bottom;
+        }
+        &.active {
+            color: $primary;
+        }
+        &:hover {
+            color: $primary;
+        }
+    }
+    .sidebar-heading { // Re-use sidebar-heading style for consistency
+        font-size: .8rem;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: $medical-gray;
+        padding: 0.75rem 1rem;
+        margin-top: 1rem;
+    }
+     .nav .nav-link { // Submenu items in offcanvas
+        padding-left: 2rem;
+        font-size: 0.9rem;
+    }
+}
