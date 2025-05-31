@@ -170,6 +170,20 @@ $alert-border-width: 1px;
     &.active {
       color: $medical-deep-blue;
     }
+
+    // Specific styles for .nav-link elements that are also .btn.btn-medical-teal
+    // This targets the login button to ensure visibility.
+    &.btn.btn-medical-teal {
+      background-color: $medical-teal; // Ensure teal background is applied
+      color: #fff; // Ensure text is white, overriding general .nav-link color
+
+      // Hover and active states should be inherited from .btn-medical-teal's definition
+      // or can be explicitly defined here if needed.
+      &:hover {
+        background-color: $medical-dark-teal; // Example: darken teal on hover
+        // color: #fff; // Text color likely remains white
+      }
+    }
   }
 }
 
