@@ -1,32 +1,384 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block page_title %}EquipeMed{% endblock page_title %} - Painel</title>
-    <link rel="stylesheet" href="{% static 'main.css' %}">
-    {% block extra_head %}
-    {% endblock extra_head %}
-</head>
-<body class="app-layout">
+{% extends "core/base.html" %}
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Desktop Sidebar -->
+{% block extra_head %}
+<style>
+  /* Ensure body has proper padding for fixed navbar */
+  body.app-layout {
+    padding-top: 56px;
+  }
+</style>
+{% endblock %}
 
-            <!-- Main Content Area -->
-            <main class="col-lg-10 app-main-content">
-                {% block app_content %}
-                <!-- Specific page content will be injected here -->
-                {% endblock app_content %}
-            </main>
-        </div>
+{% block header %}
+<!-- Top Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-medical fixed-top">
+  <div class="container-fluid">
+    <!-- Mobile Menu Toggle -->
+    <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+      <i class="bi bi-list"></i>
+    </button>
+    
+    <!-- Brand -->
+    <a class="navbar-brand fw-bold ms-2" href="{% url 'dashboard' %}">
+      <i class="bi bi-hospital me-2 text-medical-teal"></i>
+      EquipeMed
+    </a>
+    
+    <!-- Right Side Icons -->
+    <div class="d-flex align-items-center ms-auto">
+      <!-- Notifications -->
+      <div class="dropdown me-3">
+        <button class="btn btn-link text-medical-gray position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-bell fs-5"></i>
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+            3
+          </span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><h6 class="dropdown-header">Notificações</h6></li>
+          <li><a class="dropdown-item" href="#"><i class="bi bi-person-plus me-2"></i>Novo paciente adicionado</a></li>
+          <li><a class="dropdown-item" href="#"><i class="bi bi-clipboard-check me-2"></i>Exame concluído</a></li>
+          <li><a class="dropdown-item" href="#"><i class="bi bi-chat-dots me-2"></i>Nova mensagem da equipe</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item text-center" href="#">Ver todas</a></li>
+        </ul>
+      </div>
+      
+      <!-- User Avatar Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-link text-medical-gray d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="bg-medical-teal rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+            <i class="bi bi-person-fill text-white"></i>
+          </div>
+          <span class="d-none d-md-inline text-medical-dark-gray">Dr. Silva</span>
+          <i class="bi bi-chevron-down ms-1"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><h6 class="dropdown-header">Dr. Silva</h6></li>
+          <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Meu Perfil</a></li>
+          <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configurações</a></li>
+          <li><a class="dropdown-item" href="#"><i class="bi bi-question-circle me-2"></i>Ajuda</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{% url 'account_logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
+        </ul>
+      </div>
     </div>
+  </div>
+</nav>
+{% endblock %}
 
-    <script src="{% static 'js/popper.min.js' %}"></script>
-    <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    {% block extra_scripts %}
-    {% endblock extra_scripts %}
-</body>
-</html>
+{% block content %}
+<div class="container-fluid app-layout">
+  <div class="row">
+    <!-- Desktop Sidebar -->
+    <nav class="col-lg-2 d-none d-lg-block app-sidebar">
+      <div class="position-sticky pt-3">
+        <!-- Main Navigation -->
+        <h6 class="sidebar-heading">Painel Principal</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link active" href="{% url 'dashboard' %}">
+              <i class="bi bi-speedometer2"></i>
+              Dashboard
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Patient Management -->
+        <h6 class="sidebar-heading">Gestão de Pacientes</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-person-lines-fill"></i>
+              Lista de Pacientes
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-person-plus"></i>
+              Novo Paciente
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-search"></i>
+              Buscar Paciente
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Clinical Workflows -->
+        <h6 class="sidebar-heading">Fluxos Clínicos</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-clipboard2-pulse"></i>
+              Eventos Clínicos
+            </a>
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="#">
+                  <i class="bi bi-journal-medical"></i>
+                  Notas Diárias
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#">
+                  <i class="bi bi-clipboard-check"></i>
+                  Exames
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#">
+                  <i class="bi bi-prescription2"></i>
+                  Prescrições
+                </a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-calendar2-event"></i>
+              Agendamentos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-hospital"></i>
+              Transferências
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Reports and Analytics -->
+        <h6 class="sidebar-heading">Relatórios</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-graph-up"></i>
+              Análises
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-file-earmark-text"></i>
+              Relatórios
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-download"></i>
+              Exportar Dados
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Team Collaboration -->
+        <h6 class="sidebar-heading">Colaboração</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-people"></i>
+              Equipe Médica
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-chat-dots"></i>
+              Mensagens
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-share"></i>
+              Compartilhar Casos
+            </a>
+          </li>
+        </ul>
+        
+        <!-- System -->
+        <h6 class="sidebar-heading">Sistema</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-gear"></i>
+              Configurações
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-shield-check"></i>
+              Segurança
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    
+    <!-- Mobile Offcanvas Sidebar -->
+    <div class="offcanvas offcanvas-start offcanvas-app-menu d-lg-none" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title text-medical-primary" id="sidebarOffcanvasLabel">
+          <i class="bi bi-hospital me-2"></i>EquipeMed
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <!-- Main Navigation -->
+        <h6 class="sidebar-heading">Painel Principal</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link active" href="{% url 'dashboard' %}">
+              <i class="bi bi-speedometer2"></i>
+              Dashboard
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Patient Management -->
+        <h6 class="sidebar-heading">Gestão de Pacientes</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-person-lines-fill"></i>
+              Lista de Pacientes
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-person-plus"></i>
+              Novo Paciente
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-search"></i>
+              Buscar Paciente
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Clinical Workflows -->
+        <h6 class="sidebar-heading">Fluxos Clínicos</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-clipboard2-pulse"></i>
+              Eventos Clínicos
+            </a>
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="#">
+                  <i class="bi bi-journal-medical"></i>
+                  Notas Diárias
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#">
+                  <i class="bi bi-clipboard-check"></i>
+                  Exames
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#">
+                  <i class="bi bi-prescription2"></i>
+                  Prescrições
+                </a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-calendar2-event"></i>
+              Agendamentos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-hospital"></i>
+              Transferências
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Reports and Analytics -->
+        <h6 class="sidebar-heading">Relatórios</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-graph-up"></i>
+              Análises
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-file-earmark-text"></i>
+              Relatórios
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-download"></i>
+              Exportar Dados
+            </a>
+          </li>
+        </ul>
+        
+        <!-- Team Collaboration -->
+        <h6 class="sidebar-heading">Colaboração</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-people"></i>
+              Equipe Médica
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-chat-dots"></i>
+              Mensagens
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-share"></i>
+              Compartilhar Casos
+            </a>
+          </li>
+        </ul>
+        
+        <!-- System -->
+        <h6 class="sidebar-heading">Sistema</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-gear"></i>
+              Configurações
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <i class="bi bi-shield-check"></i>
+              Segurança
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <main class="col-lg-10 offset-lg-2 app-main-content">
+      <div class="container-fluid py-4">
+        {% block app_content %}
+        <!-- Specific page content will be injected here -->
+        {% endblock app_content %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// Add app-layout class to body
+document.body.classList.add('app-layout');
+</script>
+{% endblock %}
