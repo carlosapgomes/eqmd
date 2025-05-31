@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EquipeMed{% endblock title %}</title>
     <link rel="stylesheet" href="{% static 'main.css' %}">
-    {% block extra_head %}{% endblock extra_head %}
+    {% block extra_head %}
+    {% endblock extra_head %}
 </head>
 <body>
     <header>
@@ -29,6 +30,7 @@
 
     <script src="{% static 'js/popper.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    {% block extra_scripts %}{% endblock extra_scripts %}
+    {% block extra_scripts %}
+    {% endblock extra_scripts %}
 </body>
 </html>

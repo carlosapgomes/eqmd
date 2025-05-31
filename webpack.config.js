@@ -5,7 +5,7 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = {
   entry: {
-    main: ["./assets/index.js", "./assets/scss/main.scss"]
+    main: ["./assets/index.js", "./assets/scss/main.scss"],
   },
   output: {
     filename: "[name]-bundle.js",
@@ -20,16 +20,16 @@ module.exports = {
           MiniCssExtractPlugin.loader,
           "css-loader",
           "postcss-loader",
-          "sass-loader"
+          "sass-loader",
         ],
       },
       {
+        test: /\.woff2?$/,
+        type: "asset/resource",
+      },
+      {
         test: /\.css$/,
-        use: [
-          MiniCssExtractPlugin.loader,
-          "css-loader",
-          "postcss-loader"
-        ],
+        use: [MiniCssExtractPlugin.loader, "css-loader", "postcss-loader"],
       },
     ],
   },
@@ -51,10 +51,7 @@ module.exports = {
     }),
   ],
   optimization: {
-    minimizer: [
-      `...`,
-      new CssMinimizerPlugin(),
-    ],
+    minimizer: [`...`, new CssMinimizerPlugin()],
   },
   resolve: {
     extensions: [".js", ".scss", ".css"],
