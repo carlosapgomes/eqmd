@@ -24,10 +24,6 @@ module.exports = {
         ],
       },
       {
-        test: /\.woff2?$/,
-        type: "asset/resource",
-      },
-      {
         test: /\.css$/,
         use: [MiniCssExtractPlugin.loader, "css-loader", "postcss-loader"],
       },
@@ -42,6 +38,14 @@ module.exports = {
         {
           from: "node_modules/bootstrap/dist/js/bootstrap.min.js",
           to: "js/bootstrap.min.js",
+        },
+        {
+          from: "node_modules/bootstrap-icons/font/bootstrap-icons.min.css",
+          to: "css/bootstrap-icons.min.css",
+        },
+        {
+          from: "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2",
+          to: "css/fonts/bootstrap-icons.woff2",
         },
         {
           from: "node_modules/@popperjs/core/dist/umd/popper.min.js",
