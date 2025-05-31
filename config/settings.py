@@ -36,6 +36,17 @@ ALLOWED_HOSTS = [
     host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host.strip()
 ]
 
+# CSRF Trusted Origins
+# https://docs.djangoproject.com/en/5.2/ref/settings/#csrf-trusted-origins
+DJANGO_CSRF_TRUSTED_ORIGINS_RAW = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in DJANGO_CSRF_TRUSTED_ORIGINS_RAW.split(",") if origin.strip()
+]
+# If DJANGO_CSRF_TRUSTED_ORIGINS is not set or empty, CSRF_TRUSTED_ORIGINS will be an empty list.
+# For development, if you haven't set it in .env, you might want a default like:
+# if not CSRF_TRUSTED_ORIGINS and DEBUG:
+#     CSRF_TRUSTED_ORIGINS = ['http://localhost:8347', 'http://127.0.0.1:8347']
+
 
 # Application definition
 
