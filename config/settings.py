@@ -59,11 +59,15 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",
     "apps.core",  # New app for core/pages functionality
+    "apps.accounts.apps.AccountsConfig",  # New accounts app
     # django-allauth
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
 ]
+
+# Add custom user model setting
+AUTH_USER_MODEL = 'accounts.EqmdCustomUser'
 
 # Site ID required by django-allauth
 SITE_ID = int(os.getenv("SITE_ID", "1"))

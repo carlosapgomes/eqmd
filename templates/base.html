@@ -9,6 +9,17 @@
     <link rel="stylesheet" href="{% static 'css/bootstrap-icons.min.css' %}">
     {% block extra_head %}
     {% endblock extra_head %}
+    <style>
+        /* Flexbox layout for sticky footer */
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        main[role="main"] {
+            flex: 1;
+        }
+    </style>
 </head>
 <body>
     <header>

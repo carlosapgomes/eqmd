@@ -1,0 +1,46 @@
+{% extends "base_app.html" %}
+
+{% block app_content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      <div class="card">
+        <div class="card-header">
+          <h2>{{ profile.full_name }}</h2>
+          {% if profile.display_name %}
+            <p class="text-muted">{{ profile.display_name }}</p>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-4 fw-bold">Email:</div>
+            <div class="col-md-8">{{ profile.email }}</div>
+          </div>
+          
+          {% if profile.profession %}
+          <div class="row mb-3">
+            <div class="col-md-4 fw-bold">Profession:</div>
+            <div class="col-md-8">{{ profile.profession }}</div>
+          </div>
+          {% endif %}
+          
+          {% if profile.bio %}
+          <div class="row mb-3">
+            <div class="col-md-4 fw-bold">Bio:</div>
+            <div class="col-md-8">{{ profile.bio }}</div>
+          </div>
+          {% endif %}
+          
+          {% if is_owner %}
+          <div class="mt-4">
+            <a href="{% url 'apps.accounts:profile_update' public_id=profile.public_id %}" class="btn btn-primary">
+              Edit Profile
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock app_content %}
