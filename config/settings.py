@@ -40,7 +40,9 @@ ALLOWED_HOSTS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#csrf-trusted-origins
 DJANGO_CSRF_TRUSTED_ORIGINS_RAW = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [
-    origin.strip() for origin in DJANGO_CSRF_TRUSTED_ORIGINS_RAW.split(",") if origin.strip()
+    origin.strip()
+    for origin in DJANGO_CSRF_TRUSTED_ORIGINS_RAW.split(",")
+    if origin.strip()
 ]
 # If DJANGO_CSRF_TRUSTED_ORIGINS is not set or empty, CSRF_TRUSTED_ORIGINS will be an empty list.
 # For development, if you haven't set it in .env, you might want a default like:
@@ -58,6 +60,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "crispy_forms",
+    "crispy_bootstrap5",
     "apps.core",  # New app for core/pages functionality
     "apps.accounts.apps.AccountsConfig",  # New accounts app
     # django-allauth
@@ -67,7 +71,7 @@ INSTALLED_APPS = [
 ]
 
 # Add custom user model setting
-AUTH_USER_MODEL = 'accounts.EqmdCustomUser'
+AUTH_USER_MODEL = "accounts.EqmdCustomUser"
 
 # Site ID required by django-allauth
 SITE_ID = int(os.getenv("SITE_ID", "1"))
@@ -195,5 +199,11 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory")
 
 # Login and Logout Configuration
-LOGIN_REDIRECT_URL = 'core:dashboard'
+LOGIN_REDIRECT_URL = "core:dashboard"
 # LOGOUT_REDIRECT_URL = 'core:landing_page' # Optional: can be added later
+
+# Crispy Forms Configuration
+# https://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
+# https://github.com/django-crispy-forms/crispy-bootstrap5
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
