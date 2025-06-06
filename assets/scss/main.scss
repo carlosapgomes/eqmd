@@ -259,6 +259,43 @@ $alert-border-width: 1px;
   border: 1px solid #e5e7eb;
 }
 
+// Hero Section Styles
+// --------------------------------------------------
+
+.hero-image-container {
+  position: relative;
+
+  .hero-medical-image {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px 0 rgba(0, 0, 0, 0.1), 0 4px 6px 0 rgba(0, 0, 0, 0.05);
+
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px 0 rgba(0, 0, 0, 0.15), 0 8px 12px 0 rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+// Responsive adjustments for hero image
+@media (max-width: 991.98px) {
+  .hero-image-container {
+    margin-top: 2rem;
+
+    .hero-medical-image {
+      max-width: 300px !important;
+    }
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hero-image-container {
+    .hero-medical-image {
+      max-width: 250px !important;
+    }
+  }
+}
+
 // Dashboard Layout Styles
 // --------------------------------------------------
 

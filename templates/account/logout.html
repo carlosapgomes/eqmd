@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Sair - EquipeMed{% endblock title %}
+
+{% block header %}
+<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold text-medical-primary" href="{% url 'core:landing_page' %}">
+      <i class="bi bi-heart-pulse-fill me-2"></i>
+      EquipeMed
+    </a>
+    {% if user.is_authenticated %}
+    <div class="d-flex ms-auto">
+      <a href="{% url 'apps.core:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar ao Dashboard
+      </a>
+    </div>
+    {% else %}
+    <div class="d-flex ms-auto">
+      <a href="{% url 'core:landing_page' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar ao Início
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center bg-medical-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6 col-lg-5 col-xl-4">
+        <div class="card card-medical shadow-lg">
+          <div class="card-body p-4">
+            <!-- Header -->
+            <div class="text-center mb-4">
+              <div class="mb-3">
+                <i class="bi bi-box-arrow-right text-medical-primary" style="font-size: 3rem;"></i>
+              </div>
+              <h1 class="h4 text-medical-primary fw-bold mb-2">Sair da Plataforma</h1>
+              <p class="text-muted small mb-0">Você tem certeza que deseja encerrar sua sessão?</p>
+            </div>
+
+            <!-- Logout Confirmation Message -->
+            <div class="alert alert-medical-info" role="alert">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              <strong>Sessão Segura:</strong> Ao sair, sua sessão será encerrada com segurança e todos os dados temporários serão limpos.
+            </div>
+
+            <!-- Logout Form -->
+            <form method="post" action="{% url 'account_logout' %}" class="form-medical">
+              {% csrf_token %}
+              
+              <!-- Redirect field -->
+              {% if redirect_field_value %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+              {% endif %}
+
+              <!-- Action Buttons -->
+              <div class="row g-2 mb-3">
+                <div class="col-12">
+                  <button type="submit" class="btn btn-medical-primary btn-lg w-100">
+                    <i class="bi bi-box-arrow-right me-2"></i>
+                    Confirmar Saída
+                  </button>
+                </div>
+                <div class="col-12">
+                  {% if user.is_authenticated %}
+                    <a href="{% url 'apps.core:dashboard' %}" class="btn btn-outline-secondary btn-lg w-100">
+                      <i class="bi bi-arrow-left me-2"></i>
+                      Cancelar e Voltar
+                    </a>
+                  {% else %}
+                    <a href="{% url 'core:landing_page' %}" class="btn btn-outline-secondary btn-lg w-100">
+                      <i class="bi bi-arrow-left me-2"></i>
+                      Cancelar e Voltar
+                    </a>
+                  {% endif %}
+                </div>
+              </div>
+            </form>
+
+            <!-- Security Information -->
+            <div class="text-center border-top pt-3">
+              <div class="row g-2">
+                <div class="col-12">
+                  <small class="text-muted">
+                    <i class="bi bi-shield-check text-medical-green me-1"></i>
+                    Sua sessão será encerrada de forma segura
+                  </small>
+                </div>
+                <div class="col-12">
+                  <small class="text-muted">
+                    Precisa acessar novamente? 
+                    <a href="{% url 'account_login' %}" class="text-medical-teal text-decoration-none">
+                      Faça login aqui
+                    </a>
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Notice -->
+        <div class="text-center mt-4">
+          <div class="d-flex align-items-center justify-content-center text-muted">
+            <i class="bi bi-shield-lock text-medical-green me-2"></i>
+            <small>Logout seguro e protegido</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .min-vh-100 {
+    min-height: 100vh !important;
+  }
+  
+  .card-medical:hover {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+    transition: box-shadow 0.15s ease-in-out;
+  }
+  
+  .btn-medical-primary:focus {
+    box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.5);
+  }
+  
+  .btn-outline-secondary:focus {
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+  }
+  
+  .alert-medical-info {
+    background-color: rgba(8, 145, 178, 0.1);
+    border-color: #0891b2;
+    color: #0e7490;
+  }
+  
+  @media (max-width: 768px) {
+    .card-medical {
+      margin: 1rem;
+    }
+  }
+</style>
+{% endblock %}
