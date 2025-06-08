@@ -20,21 +20,21 @@ The application uses a medical-focused color palette designed to convey trust an
 
 ```scss
 // Primary Medical Colors
-$medical-deep-blue: #1e3a8a;     // Primary brand color
-$medical-blue: #1e40af;          // Secondary blue
-$medical-teal: #0891b2;          // Accent/interactive color
-$medical-dark-teal: #0e7490;     // Hover states
-$medical-green: #059669;         // Success states
-$medical-dark-green: #047857;    // Success hover states
+$medical-deep-blue: #1e3a8a; // Primary brand color
+$medical-blue: #1e40af; // Secondary blue
+$medical-teal: #0891b2; // Accent/interactive color
+$medical-dark-teal: #0e7490; // Hover states
+$medical-green: #059669; // Success states
+$medical-dark-green: #047857; // Success hover states
 
 // Neutral Colors
-$medical-light-gray: #f8fafc;    // Light backgrounds
-$medical-gray: #64748b;          // Secondary text
-$medical-dark-gray: #334155;     // Primary text
+$medical-light-gray: #f8fafc; // Light backgrounds
+$medical-gray: #64748b; // Secondary text
+$medical-dark-gray: #334155; // Primary text
 
 // Status Colors
 $medical-warning-orange: #ea580c; // Warning states
-$medical-danger-red: #dc2626;     // Error/danger states
+$medical-danger-red: #dc2626; // Error/danger states
 ```
 
 ### Bootstrap Variable Overrides
@@ -53,16 +53,19 @@ $dark: $medical-dark-gray;
 ## Typography
 
 ### Font Family
+
 - **Primary**: Inter
 - **Fallbacks**: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif
 
 ### Font Weights
+
 - **Headings**: 600 (Semi-bold)
 - **Buttons**: 500 (Medium)
 - **Navigation**: 500 (Medium)
 - **Body**: 400 (Regular)
 
 ### Heading Colors
+
 All headings use `$medical-dark-gray` for consistency and readability.
 
 ## Component Styling
@@ -70,6 +73,7 @@ All headings use `$medical-dark-gray` for consistency and readability.
 ### Buttons
 
 #### Medical Button Variants
+
 ```scss
 .btn-medical-primary      // Deep blue primary button
 .btn-medical-teal         // Teal accent button
@@ -78,24 +82,61 @@ All headings use `$medical-dark-gray` for consistency and readability.
 ```
 
 #### Button Properties
+
 - **Border Radius**: 0.375rem
 - **Font Weight**: 500
 
-### Forms
+## Forms
+
+### Form Libraries
+
+- **Recommended**: Use django-crispy-forms with crispy-bootstrap5 for form rendering
+- **Benefits**: Consistent styling, reduced boilerplate, better maintainability
+- **Implementation**: Configure in settings.py with `CRISPY_TEMPLATE_PACK = "bootstrap5"`
+
+#### Using Crispy Forms
+
+```html
+{% load crispy_forms_tags %}
+
+<form method="post">
+  {% csrf_token %} 
+  {{ form|crispy }}
+  <button type="submit" class="btn btn-medical-primary">Submit</button>
+</form>
+```
+
+#### For Complex Forms
+
+```html
+{% load crispy_forms_tags %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="row">
+    <div class="col-md-6">{{ form.first_name|as_crispy_field }}</div>
+    <div class="col-md-6">{{ form.last_name|as_crispy_field }}</div>
+  </div>
+  {{ form.email|as_crispy_field }}
+  <button type="submit" class="btn btn-medical-primary">Submit</button>
+</form>
+```
 
 #### Medical Form Class
-Use `.form-medical` wrapper for consistent form styling:
+
+Use `.form-medical` wrapper for consistent form styling when not using crispy forms:
 
 ```html
 <form class="form-medical">
   <div class="mb-3">
     <label class="form-label">Label Text</label>
-    <input type="text" class="form-control">
+    <input type="text" class="form-control" />
   </div>
 </form>
 ```
 
 #### Form Properties
+
 - **Border Color**: #d1d5db
 - **Focus Border**: $medical-teal
 - **Focus Shadow**: rgba(8, 145, 178, 0.25)
@@ -104,6 +145,7 @@ Use `.form-medical` wrapper for consistent form styling:
 ### Cards
 
 #### Medical Card Class
+
 Use `.card-medical` for enhanced card styling:
 
 ```html
@@ -114,6 +156,7 @@ Use `.card-medical` for enhanced card styling:
 ```
 
 #### Card Properties
+
 - **Border**: 1px solid #e5e7eb
 - **Border Radius**: 0.5rem
 - **Box Shadow**: Subtle elevation shadow
@@ -122,6 +165,7 @@ Use `.card-medical` for enhanced card styling:
 ### Navigation
 
 #### Medical Navbar
+
 Use `.navbar-medical` class for the main navigation:
 
 ```html
@@ -131,6 +175,7 @@ Use `.navbar-medical` class for the main navigation:
 ```
 
 #### Navbar Properties
+
 - **Background**: White (#ffffff)
 - **Border Bottom**: 1px solid #e5e7eb
 - **Box Shadow**: Subtle shadow for elevation
@@ -140,12 +185,14 @@ Use `.navbar-medical` class for the main navigation:
 ### Sidebar Navigation
 
 #### Desktop Sidebar
+
 - **Class**: `.app-sidebar`
 - **Position**: Fixed, below navbar
 - **Width**: 250px
 - **Background**: $medical-light-gray
 
 #### Mobile Sidebar
+
 - **Class**: `.offcanvas-app-menu`
 - **Type**: Bootstrap offcanvas component
 - **Responsive**: Hidden on large screens
@@ -153,15 +200,20 @@ Use `.navbar-medical` class for the main navigation:
 ### Tables
 
 #### Medical Table Class
+
 Use `.table-medical` with `.thead-medical` for table headers:
 
 ```html
 <table class="table table-medical">
   <thead class="thead-medical">
-    <tr><th>Header</th></tr>
+    <tr>
+      <th>Header</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><td>Data</td></tr>
+    <tr>
+      <td>Data</td>
+    </tr>
   </tbody>
 </table>
 ```
@@ -169,6 +221,7 @@ Use `.table-medical` with `.thead-medical` for table headers:
 ### Alerts
 
 #### Medical Alert Variants
+
 ```scss
 .alert-medical-info       // Blue info alerts
 .alert-medical-success    // Green success alerts
@@ -179,6 +232,7 @@ Use `.table-medical` with `.thead-medical` for table headers:
 ### Badges
 
 #### Medical Badge Variants
+
 ```scss
 .badge-medical-primary    // Deep blue badges
 .badge-medical-teal       // Teal badges
@@ -193,7 +247,7 @@ Use `.table-medical` with `.thead-medical` for table headers:
 ```html
 <body class="app-layout">
   <nav class="navbar navbar-medical fixed-top">...</nav>
-  
+
   <div class="container-fluid">
     <div class="row">
       <nav class="col-lg-2 d-none d-lg-block app-sidebar">...</nav>
@@ -204,6 +258,7 @@ Use `.table-medical` with `.thead-medical` for table headers:
 ```
 
 ### Layout Properties
+
 - **Body Padding Top**: 56px (navbar height)
 - **Sidebar Width**: 250px
 - **Main Content Margin**: 250px left offset on large screens
@@ -212,6 +267,7 @@ Use `.table-medical` with `.thead-medical` for table headers:
 ## Utility Classes
 
 ### Background Colors
+
 ```scss
 .bg-medical-primary       // Deep blue background
 .bg-medical-teal          // Teal background
@@ -219,6 +275,7 @@ Use `.table-medical` with `.thead-medical` for table headers:
 ```
 
 ### Text Colors
+
 ```scss
 .text-medical-primary     // Deep blue text
 .text-medical-teal        // Teal text
@@ -228,7 +285,9 @@ Use `.table-medical` with `.thead-medical` for table headers:
 ## Responsive Design
 
 ### Breakpoints
+
 Following Bootstrap's standard breakpoints:
+
 - **sm**: 576px and up
 - **md**: 768px and up
 - **lg**: 992px and up (sidebar becomes visible)
@@ -236,6 +295,7 @@ Following Bootstrap's standard breakpoints:
 - **xxl**: 1400px and up
 
 ### Mobile Considerations
+
 - Sidebar converts to offcanvas menu
 - Navigation items stack vertically
 - Touch-friendly button sizes maintained
@@ -244,11 +304,13 @@ Following Bootstrap's standard breakpoints:
 ## Accessibility
 
 ### Focus States
+
 - All interactive elements have visible focus indicators
 - Focus colors use sufficient contrast ratios
 - Focus shadows provide clear visual feedback
 
 ### Color Contrast
+
 - All text meets WCAG AA contrast requirements
 - Interactive elements maintain proper contrast
 - Status colors are distinguishable for colorblind users
@@ -268,16 +330,19 @@ static/
 ## Usage Guidelines
 
 ### When to Use Medical Classes
+
 - Use medical-specific classes for core application components
 - Prefer medical variants over standard Bootstrap classes for consistency
 - Use standard Bootstrap classes for generic layout and spacing
 
 ### Class Naming Convention
+
 - Medical classes follow the pattern: `.{component}-medical-{variant}`
 - Utility classes follow: `.{property}-medical-{color}`
 - Layout classes use: `.app-{component}`
 
 ### Best Practices
+
 1. Always use the medical color palette for brand consistency
 2. Maintain proper spacing using Bootstrap's spacing utilities
 3. Use semantic HTML elements with appropriate ARIA labels

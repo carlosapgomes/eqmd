@@ -78,9 +78,20 @@
   </div>
 </div>
 
+<!-- Patient Statistics Row -->
+{% if 'apps.patients' in INSTALLED_APPS %}
+{% include 'patients/widgets/patient_stats.html' %}
+{% endif %}
+
 <!-- Dashboard Widgets -->
 <div class="row g-4">
-  <!-- Recent Patients -->
+  <!-- Recent Patients from Patient App -->
+  {% if 'apps.patients' in INSTALLED_APPS %}
+  <div class="col-lg-6">
+    {% include 'patients/widgets/recent_patients.html' %}
+  </div>
+  {% else %}
+  <!-- Fallback Recent Patients -->
   <div class="col-lg-6">
     <div class="card card-medical h-100">
       <div class="card-header bg-medical-light">
@@ -136,6 +147,7 @@
       </div>
     </div>
   </div>
+  {% endif %}
   
   <!-- Today's Schedule -->
   <div class="col-lg-6">

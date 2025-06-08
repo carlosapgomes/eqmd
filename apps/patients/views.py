@@ -1,0 +1,176 @@
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from django.db.models import Q
+
+from .models import Patient, PatientHospitalRecord, AllowedTag
+from .forms import PatientForm, PatientHospitalRecordForm, AllowedTagForm
+
+
+class PatientListView(LoginRequiredMixin, ListView):
+    model = Patient
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search_query = self.request.GET.get('q')
+
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) |
+                Q(id_number__icontains=search_query) |
+                Q(fiscal_number__icontains=search_query) |
+                Q(healthcard_number__icontains=search_query)
+            )
+
+        return queryset
+
+
+class PatientDetailView(LoginRequiredMixin, DetailView):
+    model = Patient
+
+
+class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = Patient
+    form_class = PatientForm
+    permission_required = 'patients.add_patient'
+
+    def get_success_url(self):
+        return reverse_lazy('patients:patient_detail', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        # Store user for tag creation
+        form.current_user = self.request.user
+        messages.success(self.request, f"Patient {form.instance.name} created successfully.")
+        return super().form_valid(form)
+
+
+class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = Patient
+    form_class = PatientForm
+    permission_required = 'patients.change_patient'
+
+    def get_success_url(self):
+        return reverse_lazy('patients:patient_detail', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        # Store user for tag creation
+        form.current_user = self.request.user
+        messages.success(self.request, f"Patient {form.instance.name} updated successfully.")
+        return super().form_valid(form)
+
+
+class PatientDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = Patient
+    success_url = reverse_lazy('patients:patient_list')
+    permission_required = 'patients.delete_patient'
+
+    def delete(self, request, *args, **kwargs):
+        patient = self.get_object()
+        messages.success(request, f"Patient {patient.name} deleted successfully.")
+        return super().delete(request, *args, **kwargs)
+
+
+class HospitalRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = PatientHospitalRecord
+    form_class = PatientHospitalRecordForm
+    permission_required = 'patients.add_patienthospitalrecord'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        # Check for patient_id in URL kwargs first, then fallback to GET parameter
+        patient_id = self.kwargs.get('patient_id') or self.request.GET.get('patient')
+        if patient_id:
+            initial['patient'] = get_object_or_404(Patient, pk=patient_id)
+        return initial
+
+    def get_success_url(self):
+        # Use patient_id from URL kwargs if available, otherwise use the object's patient
+        patient_id = self.kwargs.get('patient_id') or self.object.patient.pk
+        return reverse_lazy('patients:patient_detail', kwargs={'pk': patient_id})
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        messages.success(self.request, "Hospital record created successfully.")
+        return super().form_valid(form)
+
+
+class HospitalRecordUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = PatientHospitalRecord
+    form_class = PatientHospitalRecordForm
+    permission_required = 'patients.change_patienthospitalrecord'
+
+    def get_success_url(self):
+        return reverse_lazy('patients:patient_detail', kwargs={'pk': self.object.patient.pk})
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        messages.success(self.request, "Hospital record updated successfully.")
+        return super().form_valid(form)
+
+
+class HospitalRecordDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = PatientHospitalRecord
+    permission_required = 'patients.delete_patienthospitalrecord'
+
+    def get_success_url(self):
+        return reverse_lazy('patients:patient_detail', kwargs={'pk': self.object.patient.pk})
+
+    def delete(self, request, *args, **kwargs):
+        record = self.get_object()
+        messages.success(request, f"Hospital record for {record.patient.name} deleted successfully.")
+        return super().delete(request, *args, **kwargs)
+
+
+# AllowedTag views
+class AllowedTagListView(LoginRequiredMixin, ListView):
+    model = AllowedTag
+    template_name = 'patients/tag_list.html'
+    context_object_name = 'tags'
+    paginate_by = 20
+
+
+class AllowedTagCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = AllowedTag
+    form_class = AllowedTagForm
+    template_name = 'patients/tag_form.html'
+    success_url = reverse_lazy('patients:tag_list')
+    permission_required = 'patients.add_allowedtag'
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        messages.success(self.request, 'Tag created successfully.')
+        return super().form_valid(form)
+
+
+class AllowedTagUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = AllowedTag
+    form_class = AllowedTagForm
+    template_name = 'patients/tag_form.html'
+    success_url = reverse_lazy('patients:tag_list')
+    permission_required = 'patients.change_allowedtag'
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        messages.success(self.request, 'Tag updated successfully.')
+        return super().form_valid(form)
+
+
+class AllowedTagDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = AllowedTag
+    template_name = 'patients/tag_confirm_delete.html'
+    success_url = reverse_lazy('patients:tag_list')
+    permission_required = 'patients.delete_allowedtag'
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Tag deleted successfully.')
+        return super().delete(request, *args, **kwargs)
+
+

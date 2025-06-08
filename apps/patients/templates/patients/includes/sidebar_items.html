@@ -1,0 +1,37 @@
+{% if perms.patients.view_patient %}
+<li class="nav-item">
+  <a
+    class="nav-link collapsed"
+    href="#"
+    data-bs-toggle="collapse"
+    data-bs-target="#collapsePatients"
+    aria-expanded="false"
+    aria-controls="collapsePatients"
+  >
+    <i class="bi bi-people"></i>
+    <span>Patients</span>
+  </a>
+  <div
+    id="collapsePatients"
+    class="collapse"
+    aria-labelledby="headingPatients"
+    data-bs-parent="#sidebarAccordion"
+  >
+    <div class="bg-white py-2 collapse-inner rounded">
+      <h6 class="collapse-header">Patient Management:</h6>
+      <a class="collapse-item" href="{% url 'patients:patient_list' %}"
+        >All Patients</a
+      >
+      {% if perms.patients.add_patient %}
+      <a class="collapse-item" href="{% url 'patients:patient_create' %}"
+        >Add Patient</a
+      >
+      {% endif %} {% if perms.patients.view_allowedtag %}
+      <a class="collapse-item" href="{% url 'patients:tag_list' %}"
+        >Manage Tags</a
+      >
+      {% endif %}
+    </div>
+  </div>
+</li>
+{% endif %}

@@ -1,0 +1,25 @@
+{% extends "patients/patient_base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}{% if form.instance.pk %}Edit{% else %}Add{% endif %} Hospital Record{% endblock %}
+{% block patient_content %}
+<div
+  class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+>
+  <h1 class="h2">
+    {% if form.instance.pk %}Edit{% else %}Add{% endif %} Hospital Record
+  </h1>
+</div>
+
+<div class="card">
+  <div class="card-body">{% crispy form %}</div>
+</div>
+
+<div class="mt-3">
+  <a
+    href="{% if form.instance.patient %}{% url 'patients:patient_detail' pk=form.instance.patient.pk %}{% else %}{% url 'patients:patient_list' %}{% endif %}"
+    class="btn btn-outline-secondary"
+  >
+    Cancel
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Ward{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-danger text-white">
+          <h4 class="mb-0">
+            <i class="bi bi-exclamation-triangle"></i> Delete Ward
+          </h4>
+        </div>
+        <div class="card-body">
+          <p>Are you sure you want to delete the ward "<strong>{{ object.name }}</strong>" from <strong>{{ object.hospital.name }}</strong>?</p>
+          
+          <div class="alert alert-warning">
+            <strong>Warning:</strong> This action cannot be undone. All data associated with this ward will be permanently removed.
+          </div>
+
+          <div class="mb-3">
+            <h6>Ward Details:</h6>
+            <ul>
+              <li><strong>Name:</strong> {{ object.name }}</li>
+              <li><strong>Hospital:</strong> {{ object.hospital.name }}</li>
+              <li><strong>Capacity:</strong> {{ object.capacity }} beds</li>
+              <li><strong>Current Occupancy:</strong> {{ object.patient_count }} patients ({{ object.occupancy_rate }}%)</li>
+            </ul>
+          </div>
+
+          <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-end">
+              <a href="{% url 'hospitals:ward_detail' object.pk %}" class="btn btn-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Cancel
+              </a>
+              <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Yes, Delete Ward
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

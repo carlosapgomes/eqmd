@@ -62,8 +62,11 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     "crispy_forms",
     "crispy_bootstrap5",
+    "taggit",
     "apps.core",  # New app for core/pages functionality
     "apps.accounts.apps.AccountsConfig",  # New accounts app
+    "apps.hospitals",  # Hospital management app
+    "apps.patients",  # Patient management app
     # django-allauth
     "allauth",
     "allauth.account",
@@ -107,6 +110,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.patients.context_processors.patient_stats",
+                "apps.patients.context_processors.recent_patients",
             ],
         },
     },

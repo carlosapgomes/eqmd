@@ -1,0 +1,48 @@
+{% extends "patients/patient_base.html" %}
+
+{% block title %}Delete Tag{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                </h4>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Are you sure you want to delete the tag:</p>
+                
+                <div class="alert alert-light border">
+                    <div class="d-flex align-items-center">
+                        <span class="badge me-2" style="background-color: {{ object.color }}; color: white;">
+                            {{ object.name }}
+                        </span>
+                        {% if object.description %}
+                        <span class="text-muted">- {{ object.description }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This action cannot be undone. This will also remove the tag from all patients that currently have it assigned.
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'patients:tag_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-x"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Delete Tag
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

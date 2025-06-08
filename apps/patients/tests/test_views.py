@@ -1,0 +1,123 @@
+from django.test import TestCase
+from django.urls import reverse
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from ..models import Patient, PatientHospitalRecord
+
+User = get_user_model()
+
+
+class PatientViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Create test user
+        cls.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpassword'
+        )
+
+        # Add permissions
+        content_type = ContentType.objects.get_for_model(Patient)
+        permissions = Permission.objects.filter(content_type=content_type)
+        cls.user.user_permissions.add(*permissions)
+
+        # Create test data
+        cls.patient = Patient.objects.create(
+            name='Test Patient',
+            birthday='1980-01-01',
+            status=Patient.Status.OUTPATIENT,
+            created_by=cls.user,
+            updated_by=cls.user
+        )
+
+    def setUp(self):
+        self.client.login(username='testuser', password='testpassword')
+
+    def test_patient_list_view(self):
+        response = self.client.get(reverse('patients:patient_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test Patient')
+        self.assertTemplateUsed(response, 'patients/patient_list.html')
+
+    def test_patient_detail_view(self):
+        response = self.client.get(
+            reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test Patient')
+        self.assertTemplateUsed(response, 'patients/patient_detail.html')
+
+    def test_patient_create_view(self):
+        response = self.client.get(reverse('patients:patient_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'patients/patient_form.html')
+
+        # Test form submission
+        response = self.client.post(reverse('patients:patient_create'), {
+            'name': 'New Patient',
+            'birthday': '1990-01-01',
+            'status': Patient.Status.OUTPATIENT,
+        })
+        self.assertEqual(Patient.objects.filter(name='New Patient').count(), 1)
+
+    def test_patient_update_view(self):
+        response = self.client.get(
+            reverse('patients:patient_update', kwargs={'pk': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'patients/patient_form.html')
+
+        # Test form submission
+        response = self.client.post(
+            reverse('patients:patient_update', kwargs={'pk': self.patient.pk}),
+            {
+                'name': 'Updated Patient',
+                'birthday': '1980-01-01',
+                'status': Patient.Status.OUTPATIENT,
+            }
+        )
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.name, 'Updated Patient')
+
+    def test_patient_delete_view(self):
+        response = self.client.get(
+            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'patients/patient_confirm_delete.html')
+
+        # Test deletion
+        response = self.client.post(
+            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk})
+        )
+        self.assertEqual(Patient.objects.filter(pk=self.patient.pk).count(), 0)
+
+    def test_permission_required(self):
+        # Create a user without permissions
+        user_no_perms = User.objects.create_user(
+            username='noperms',
+            email='noperms@example.com',
+            password='testpassword'
+        )
+
+        # Log in as the user without permissions
+        self.client.logout()
+        self.client.login(username='noperms', password='testpassword')
+
+        # Test create view
+        response = self.client.get(reverse('patients:patient_create'))
+        self.assertEqual(response.status_code, 403)  # Permission denied
+
+        # Test update view
+        response = self.client.get(
+            reverse('patients:patient_update', kwargs={'pk': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 403)  # Permission denied
+
+        # Test delete view
+        response = self.client.get(
+            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 403)  # Permission denied

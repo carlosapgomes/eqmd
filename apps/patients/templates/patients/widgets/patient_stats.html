@@ -1,0 +1,41 @@
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-clipboard2-pulse me-1"></i> Patient Statistics
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-xl-3 col-md-6">
+        <div class="card bg-primary text-white mb-4">
+          <div class="card-body">
+            <h2>{{ total_patients }}</h2>
+            <div>Total Patients</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card bg-success text-white mb-4">
+          <div class="card-body">
+            <h2>{{ inpatient_count }}</h2>
+            <div>Inpatients</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card bg-info text-white mb-4">
+          <div class="card-body">
+            <h2>{{ outpatient_count }}</h2>
+            <div>Outpatients</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card bg-secondary text-white mb-4">
+          <div class="card-body">
+            <h2>{{ hospital_count }}</h2>
+            <div>Hospitals</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

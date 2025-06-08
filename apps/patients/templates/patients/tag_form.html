@@ -1,0 +1,33 @@
+{% extends "patients/patient_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+{% if object %}Edit Tag{% else %}Create Tag{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    {% if object %}
+                        <i class="bi bi-pencil"></i> Edit Tag: {{ object.name }}
+                    {% else %}
+                        <i class="bi bi-plus"></i> Create New Tag
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                {% crispy form %}
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <a href="{% url 'patients:tag_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Tags
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,190 @@
+{% extends "patients/patient_base.html" %}
+{% load static %}
+{% block title %}{{ patient.name }}{% endblock %}
+{% block patient_content %}
+<div
+  class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+>
+  <h1 class="h2">{{ patient.name }}</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a
+      href="{% url 'patients:patient_update' pk=patient.pk %}"
+      class="btn btn-sm btn-outline-primary me-2"
+    >
+      <i class="bi bi-pencil"></i> Edit
+    </a>
+    <a
+      href="{% url 'patients:patient_delete' pk=patient.pk %}"
+      class="btn btn-sm btn-outline-danger"
+    >
+      <i class="bi bi-trash"></i> Delete
+    </a>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <!-- Patient Information -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Patient Information</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row">
+          <dt class="col-sm-4">Birthday:</dt>
+          <dd class="col-sm-8">{{ patient.birthday|date:"d/m/Y" }}</dd>
+
+          <dt class="col-sm-4">Phone:</dt>
+          <dd class="col-sm-8">{{ patient.phone|default:"-" }}</dd>
+
+          <dt class="col-sm-4">ID Number:</dt>
+          <dd class="col-sm-8">{{ patient.id_number|default:"-" }}</dd>
+
+          <dt class="col-sm-4">Fiscal Number:</dt>
+          <dd class="col-sm-8">{{ patient.fiscal_number|default:"-" }}</dd>
+
+          <dt class="col-sm-4">Health Card:</dt>
+          <dd class="col-sm-8">
+            {{ patient.healthcard_number|default:"-" }}
+          </dd>
+
+          <dt class="col-sm-4">Status:</dt>
+          <dd class="col-sm-8">
+            {% if patient.status == 1 %}
+            <span class="badge bg-success">Outpatient</span>
+            {% elif patient.status == 2 %}
+            <span class="badge bg-primary">Inpatient</span>
+            {% elif patient.status == 3 %}
+            <span class="badge bg-danger">Emergency</span>
+            {% elif patient.status == 4 %}
+            <span class="badge bg-secondary">Discharged</span>
+            {% elif patient.status == 5 %}
+            <span class="badge bg-warning">Transferred</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-4">Tags:</dt>
+          <dd class="col-sm-8">
+            {% for tag in patient.tags.all %}
+            <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">
+              {{ tag.name }}
+            </span>
+            {% empty %}
+            <span class="text-muted">No tags assigned</span>
+            {% endfor %}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hospital Information -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Hospital Information</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row">
+          <dt class="col-sm-4">Current Hospital:</dt>
+          <dd class="col-sm-8">
+            {{ patient.current_hospital|default:"-" }}
+          </dd>
+
+          <dt class="col-sm-4">Bed:</dt>
+          <dd class="col-sm-8">{{ patient.bed|default:"-" }}</dd>
+
+          <dt class="col-sm-4">Address:</dt>
+          <dd class="col-sm-8">
+            {% if patient.address %}
+              {{ patient.address }}<br>
+              {{ patient.city }}{% if patient.state %}, {{ patient.state }}{% endif %}
+              {% if patient.zip_code %} {{ patient.zip_code }}{% endif %}
+            {% else %}
+              -
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hospital Records -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0">Hospital Records</h5>
+    <a
+      href="{% url 'patients:hospital_record_create' patient_id=patient.pk %}"
+      class="btn btn-sm btn-outline-primary"
+    >
+      <i class="bi bi-plus"></i> Add Record
+    </a>
+  </div>
+  <div class="card-body">
+    {% if patient.hospital_records.all %}
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Hospital</th>
+            <th>Record Number</th>
+            <th>First Admission</th>
+            <th>Last Admission</th>
+            <th>Last Discharge</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in patient.hospital_records.all %}
+          <tr>
+            <td>{{ record.hospital }}</td>
+            <td>{{ record.record_number }}</td>
+            <td>{{ record.first_admission_date|date:"d/m/Y"|default:"-" }}</td>
+            <td>{{ record.last_admission_date|date:"d/m/Y"|default:"-" }}</td>
+            <td>{{ record.last_discharge_date|date:"d/m/Y"|default:"-" }}</td>
+            <td>
+              <a
+                href="{% url 'patients:hospital_record_update' pk=record.pk %}"
+                class="btn btn-sm btn-outline-primary"
+              >
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a
+                href="{% url 'patients:hospital_record_delete' pk=record.pk %}"
+                class="btn btn-sm btn-outline-danger"
+              >
+                <i class="bi bi-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No hospital records found.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Metadata -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Metadata</h5>
+  </div>
+  <div class="card-body">
+    <dl class="row">
+      <dt class="col-sm-3">Created:</dt>
+      <dd class="col-sm-9">
+        {{ patient.created_at|date:"d/m/Y H:i" }} by {{ patient.created_by }}
+      </dd>
+
+      <dt class="col-sm-3">Last Updated:</dt>
+      <dd class="col-sm-9">
+        {{ patient.updated_at|date:"d/m/Y H:i" }} by {{ patient.updated_by }}
+      </dd>
+    </dl>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,2 @@
+Please read the file @prompts/testing_issues_analysis.md and see the improved Slice 2 of @prompts/hospital_implementation_plan.md as an example.
+After that, rewrite slices 3, 4, 5, 6, 7, 8, and 9 of @prompts/hospital_implementation_plan.md, adding the missing steps to verify the app configuration and basic functionality before writing complex tests. And add any additional recommendation to each slice.

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load hospital_tags %}
+
+{% block title %}Wards{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Wards</h1>
+    {% if perms.hospitals.add_ward %}
+    <a href="{% url 'hospitals:ward_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Add Ward
+    </a>
+    {% endif %}
+  </div>
+
+  {% if wards %}
+  <div class="row">
+    {% for ward in wards %}
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">{{ ward.name }}</h5>
+          <span class="badge {% if ward.is_active %}bg-success{% else %}bg-danger{% endif %}">
+            {% if ward.is_active %}Active{% else %}Inactive{% endif %}
+          </span>
+        </div>
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">
+            {{ ward.hospital.name }}
+          </h6>
+          <p class="card-text">{{ ward.description|truncatewords:20 }}</p>
+          <p>Capacity: {{ ward.capacity }} beds</p>
+          {% capacity_bar ward %}
+        </div>
+        <div class="card-footer">
+          <a href="{% url 'hospitals:ward_detail' ward.pk %}" class="btn btn-sm btn-outline-primary">View Details</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-info">
+    No wards found. {% if perms.hospitals.add_ward %}Click the "Add Ward" button to create one.{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

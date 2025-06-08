@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+  {% if object %}Edit Ward{% else %}Create Ward{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="mb-0">
+            {% if object %}
+              Edit Ward: {{ object.name }}
+            {% else %}
+              Create New Ward
+            {% endif %}
+          </h4>
+        </div>
+        <div class="card-body">
+          {% crispy form %}
+        </div>
+      </div>
+      
+      <div class="mt-3">
+        <a href="{% if object %}{% url 'hospitals:ward_detail' object.pk %}{% else %}{% url 'hospitals:ward_list' %}{% endif %}" 
+           class="btn btn-secondary">
+          <i class="bi bi-arrow-left"></i> 
+          {% if object %}Back to Ward{% else %}Back to Ward List{% endif %}
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

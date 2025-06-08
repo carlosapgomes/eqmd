@@ -1,0 +1,154 @@
+{% extends "base_app.html" %}
+
+{% block app_content %}
+<div class="row">
+  <div class="col-12">
+    <!-- Header with Back Button -->
+    <div class="d-flex align-items-center mb-4">
+      <a href="{{ hospital.get_absolute_url }}" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+      </a>
+      <div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-1">
+            <li class="breadcrumb-item">
+              <a href="{% url 'apps.hospitals:list' %}" class="text-medical-teal text-decoration-none">
+                <i class="bi bi-building me-1"></i>Hospitais
+              </a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{{ hospital.get_absolute_url }}" class="text-medical-teal text-decoration-none">
+                {{ hospital.name }}
+              </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Excluir</li>
+          </ol>
+        </nav>
+        <h1 class="h3 text-medical-dark-gray mb-0">
+          <i class="bi bi-exclamation-triangle me-2 text-danger"></i>
+          Confirmar Exclusão
+        </h1>
+      </div>
+    </div>
+
+    <!-- Confirmation Card -->
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="card border-danger">
+          <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Atenção: Esta ação não pode ser desfeita
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-danger" role="alert">
+              <h6 class="alert-heading">
+                <i class="bi bi-exclamation-circle me-2"></i>
+                Você está prestes a excluir o hospital:
+              </h6>
+              <hr>
+              <h4 class="mb-3">{{ hospital.name }} ({{ hospital.short_name }})</h4>
+              
+              {% if hospital.address or hospital.city or hospital.state %}
+              <p class="mb-2">
+                <strong>Localização:</strong>
+                {% if hospital.address %}{{ hospital.address }}{% endif %}
+                {% if hospital.city %}{{ hospital.city }}{% endif %}{% if hospital.city and hospital.state %}, {% endif %}{% if hospital.state %}{{ hospital.state }}{% endif %}
+              </p>
+              {% endif %}
+              
+              {% if hospital.phone %}
+              <p class="mb-2">
+                <strong>Telefone:</strong> {{ hospital.phone }}
+              </p>
+              {% endif %}
+              
+              <p class="mb-2">
+                <strong>Criado em:</strong> {{ hospital.created_at|date:"d/m/Y à\s H:i" }}
+                {% if hospital.created_by %}por {{ hospital.created_by.profile.display_name|default:hospital.created_by.username }}{% endif %}
+              </p>
+              
+              <hr>
+              <p class="mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Esta ação irá remover permanentemente todos os dados relacionados a este hospital.</strong>
+              </p>
+            </div>
+            
+            <!-- Warning about related data -->
+            <div class="alert alert-warning" role="alert">
+              <h6 class="alert-heading">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Dados relacionados
+              </h6>
+              <p class="mb-0">
+                Caso existam enfermarias, usuários ou outros dados associados a este hospital, 
+                eles também poderão ser afetados pela exclusão. Certifique-se de que não há 
+                informações importantes vinculadas antes de prosseguir.
+              </p>
+            </div>
+
+            <!-- Confirmation Form -->
+            <form method="post" class="mt-4">
+              {% csrf_token %}
+              
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <a href="{{ hospital.get_absolute_url }}" class="btn btn-outline-secondary me-2">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Cancelar
+                  </a>
+                  <a href="{% url 'apps.hospitals:list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-list me-2"></i>
+                    Voltar à Lista
+                  </a>
+                </div>
+                
+                <button type="submit" class="btn btn-danger">
+                  <i class="bi bi-trash me-2"></i>
+                  Sim, Excluir Hospital
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Help Card -->
+      <div class="col-lg-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-question-circle me-2 text-medical-primary"></i>
+              Sobre a Exclusão
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Dados Removidos</h6>
+              <p class="text-medical-gray mb-0">Todas as informações do hospital serão permanentemente removidas do sistema.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Não Reversível</h6>
+              <p class="text-medical-gray mb-0">Esta ação não pode ser desfeita. Os dados não poderão ser recuperados.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Alternativa</h6>
+              <p class="text-medical-gray mb-0">Se você não tem certeza, considere apenas editar as informações em vez de excluir.</p>
+            </div>
+            
+            <div class="mb-0">
+              <h6 class="text-medical-dark-gray">Backup</h6>
+              <p class="text-medical-gray mb-0">Certifique-se de fazer backup de dados importantes antes de excluir.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

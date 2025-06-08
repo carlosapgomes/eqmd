@@ -86,6 +86,35 @@
         </ul>
         
         <!-- Patient Management -->
+        {% if 'apps.patients' in INSTALLED_APPS %}
+        <h6 class="sidebar-heading">Gestão de Pacientes</h6>
+        <ul class="nav flex-column">
+          {% if perms.patients.view_patient %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'patients:patient_list' %}">
+              <i class="bi bi-person-lines-fill"></i>
+              Lista de Pacientes
+            </a>
+          </li>
+          {% endif %}
+          {% if perms.patients.add_patient %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'patients:patient_create' %}">
+              <i class="bi bi-person-plus"></i>
+              Novo Paciente
+            </a>
+          </li>
+          {% endif %}
+          {% if perms.patients.view_allowedtag %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'patients:tag_list' %}">
+              <i class="bi bi-tags"></i>
+              Gerenciar Tags
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+        {% else %}
         <h6 class="sidebar-heading">Gestão de Pacientes</h6>
         <ul class="nav flex-column">
           <li class="nav-item">
@@ -107,6 +136,7 @@
             </a>
           </li>
         </ul>
+        {% endif %}
         
         <!-- Clinical Workflows -->
         <h6 class="sidebar-heading">Fluxos Clínicos</h6>
@@ -237,6 +267,35 @@
         </ul>
         
         <!-- Patient Management -->
+        {% if 'apps.patients' in INSTALLED_APPS %}
+        <h6 class="sidebar-heading">Gestão de Pacientes</h6>
+        <ul class="nav flex-column">
+          {% if perms.patients.view_patient %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'patients:patient_list' %}">
+              <i class="bi bi-person-lines-fill"></i>
+              Lista de Pacientes
+            </a>
+          </li>
+          {% endif %}
+          {% if perms.patients.add_patient %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'patients:patient_create' %}">
+              <i class="bi bi-person-plus"></i>
+              Novo Paciente
+            </a>
+          </li>
+          {% endif %}
+          {% if perms.patients.view_allowedtag %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'patients:tag_list' %}">
+              <i class="bi bi-tags"></i>
+              Gerenciar Tags
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+        {% else %}
         <h6 class="sidebar-heading">Gestão de Pacientes</h6>
         <ul class="nav flex-column">
           <li class="nav-item">
@@ -258,6 +317,7 @@
             </a>
           </li>
         </ul>
+        {% endif %}
         
         <!-- Clinical Workflows -->
         <h6 class="sidebar-heading">Fluxos Clínicos</h6>

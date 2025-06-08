@@ -1,5 +1,17 @@
 # EquipeMed
 
+EquipeMed is a Django 5-based medical team collaboration platform for tracking patients across multiple hospitals.
+
+## Patients App
+
+The Patients app provides comprehensive patient management functionality:
+
+- Patient registration and tracking
+- Hospital record management
+- Patient status tracking (inpatient, outpatient, deceased)
+- Tagging system for patient categorization
+- Dashboard integration with patient statistics
+
 ## UV
 
 ```bash

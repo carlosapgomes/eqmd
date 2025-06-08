@@ -1,0 +1,265 @@
+{% extends "base_app.html" %}
+
+{% block app_content %}
+<div class="row">
+  <div class="col-12">
+    <!-- Header with Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+              <a href="{% url 'apps.hospitals:list' %}" class="text-medical-teal text-decoration-none">
+                <i class="bi bi-building me-1"></i>Hospitais
+              </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ hospital.name }}</li>
+          </ol>
+        </nav>
+        <h1 class="h3 text-medical-dark-gray mb-0">
+          <i class="bi bi-building me-2 text-medical-primary"></i>
+          {{ hospital.name }}
+        </h1>
+      </div>
+      <div class="btn-group" role="group">
+        <a href="{% url 'apps.hospitals:update' hospital.pk %}" class="btn btn-medical-outline-primary">
+          <i class="bi bi-pencil me-2"></i>
+          Editar
+        </a>
+        <a href="{% url 'apps.hospitals:delete' hospital.pk %}" class="btn btn-outline-danger">
+          <i class="bi bi-trash me-2"></i>
+          Excluir
+        </a>
+      </div>
+    </div>
+
+    <!-- Main Hospital Information -->
+    <div class="row">
+      <!-- Basic Information Card -->
+      <div class="col-lg-8 mb-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-info-circle me-2 text-medical-primary"></i>
+              Informações Básicas
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Nome Completo</label>
+                <p class="form-control-plaintext text-medical-dark-gray">{{ hospital.name }}</p>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Nome Curto</label>
+                <p class="form-control-plaintext text-medical-dark-gray">{{ hospital.short_name }}</p>
+              </div>
+            </div>
+            
+            {% if hospital.address or hospital.city or hospital.state or hospital.zip_code %}
+            <div class="row">
+              <div class="col-12 mb-3">
+                <label class="form-label text-medical-gray">Endereço</label>
+                <div class="text-medical-dark-gray">
+                  {% if hospital.address %}
+                    <div>{{ hospital.address }}</div>
+                  {% endif %}
+                  {% if hospital.city or hospital.state or hospital.zip_code %}
+                    <div>
+                      {% if hospital.city %}{{ hospital.city }}{% endif %}{% if hospital.city and hospital.state %}, {% endif %}{% if hospital.state %}{{ hospital.state }}{% endif %}{% if hospital.zip_code %} - {{ hospital.zip_code }}{% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if hospital.phone %}
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Telefone</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <i class="bi bi-telephone me-2"></i>{{ hospital.phone }}
+                </p>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Metadata Card -->
+      <div class="col-lg-4 mb-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-clock-history me-2 text-medical-primary"></i>
+              Informações do Sistema
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Criado em</label>
+              <p class="form-control-plaintext text-medical-dark-gray">
+                <i class="bi bi-calendar3 me-2"></i>
+                {{ hospital.created_at|date:"d/m/Y à\s H:i" }}
+              </p>
+            </div>
+            
+            {% if hospital.created_by %}
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Criado por</label>
+              <p class="form-control-plaintext text-medical-dark-gray">
+                <i class="bi bi-person me-2"></i>
+                {{ hospital.created_by.profile.display_name|default:hospital.created_by.username }}
+              </p>
+            </div>
+            {% endif %}
+            
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Última atualização</label>
+              <p class="form-control-plaintext text-medical-dark-gray">
+                <i class="bi bi-clock me-2"></i>
+                {{ hospital.updated_at|date:"d/m/Y à\s H:i" }}
+              </p>
+            </div>
+            
+            {% if hospital.updated_by %}
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Atualizado por</label>
+              <p class="form-control-plaintext text-medical-dark-gray">
+                <i class="bi bi-person me-2"></i>
+                {{ hospital.updated_by.profile.display_name|default:hospital.updated_by.username }}
+              </p>
+            </div>
+            {% endif %}
+            
+            <div class="mb-0">
+              <label class="form-label text-medical-gray">ID Único</label>
+              <p class="form-control-plaintext text-medical-gray" style="font-family: monospace; font-size: 0.875rem;">
+                {{ hospital.id }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Related Data Sections -->
+    <div class="row">
+      <!-- Related Wards Section -->
+      <div class="col-lg-6 mb-4">
+        <div class="card card-medical">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-diagram-3 me-2 text-medical-primary"></i>
+              Enfermarias
+            </h5>
+            <span class="badge bg-medical-light text-medical-gray">Em breve</span>
+          </div>
+          <div class="card-body">
+            <div class="text-center py-4">
+              <i class="bi bi-diagram-3 display-4 text-muted mb-3"></i>
+              <h6 class="text-medical-dark-gray">Módulo em Desenvolvimento</h6>
+              <p class="text-medical-gray mb-3">
+                As enfermarias associadas a este hospital serão exibidas aqui quando o módulo de enfermarias for implementado.
+              </p>
+              <div class="alert alert-info" role="alert">
+                <small>
+                  <i class="bi bi-info-circle me-2"></i>
+                  Este recurso permitirá visualizar e gerenciar todas as enfermarias deste hospital, incluindo capacidade, ocupação atual e status operacional.
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related Users Section -->
+      <div class="col-lg-6 mb-4">
+        <div class="card card-medical">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-people me-2 text-medical-primary"></i>
+              Equipe Médica
+            </h5>
+            <span class="badge bg-medical-light text-medical-gray">Em breve</span>
+          </div>
+          <div class="card-body">
+            <div class="text-center py-4">
+              <i class="bi bi-people display-4 text-muted mb-3"></i>
+              <h6 class="text-medical-dark-gray">Módulo em Desenvolvimento</h6>
+              <p class="text-medical-gray mb-3">
+                Os profissionais de saúde associados a este hospital serão exibidos aqui quando o módulo de equipe médica for implementado.
+              </p>
+              <div class="alert alert-info" role="alert">
+                <small>
+                  <i class="bi bi-info-circle me-2"></i>
+                  Este recurso permitirá visualizar médicos, enfermeiros, residentes e outros profissionais que trabalham neste hospital.
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics Section (Future Enhancement) -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card card-medical">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-graph-up me-2 text-medical-primary"></i>
+              Estatísticas e Relatórios
+            </h5>
+            <span class="badge bg-medical-light text-medical-gray">Futuro</span>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                  <i class="bi bi-diagram-3 display-6 text-medical-teal mb-2"></i>
+                  <h6 class="text-medical-dark-gray">Enfermarias</h6>
+                  <span class="h4 text-medical-gray">-</span>
+                  <small class="d-block text-medical-gray">Total</small>
+                </div>
+              </div>
+              <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                  <i class="bi bi-people display-6 text-medical-teal mb-2"></i>
+                  <h6 class="text-medical-dark-gray">Profissionais</h6>
+                  <span class="h4 text-medical-gray">-</span>
+                  <small class="d-block text-medical-gray">Ativos</small>
+                </div>
+              </div>
+              <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                  <i class="bi bi-person-lines-fill display-6 text-medical-teal mb-2"></i>
+                  <h6 class="text-medical-dark-gray">Pacientes</h6>
+                  <span class="h4 text-medical-gray">-</span>
+                  <small class="d-block text-medical-gray">Atuais</small>
+                </div>
+              </div>
+              <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                  <i class="bi bi-activity display-6 text-medical-teal mb-2"></i>
+                  <h6 class="text-medical-dark-gray">Ocupação</h6>
+                  <span class="h4 text-medical-gray">-%</span>
+                  <small class="d-block text-medical-gray">Atual</small>
+                </div>
+              </div>
+            </div>
+            <div class="text-center mt-3">
+              <small class="text-medical-gray">
+                <i class="bi bi-info-circle me-2"></i>
+                As estatísticas serão calculadas automaticamente quando os módulos relacionados forem implementados.
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

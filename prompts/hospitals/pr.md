@@ -1,0 +1,1 @@
+read the file @prompts/hospitalsapp.md and make a detailed step-by-step plan to implement its features using a vertical slicing approach. Split the main plan in three markdown files, each one dedicated to one of the class model: Hospital, Ward, HospitalUser and, for each one of them, split the steps using a vertical slicing approach. Think hard to be as detailed as possible.
