@@ -465,9 +465,6 @@ Permission test interface available at:
 - `/test/hospital-context-middleware/` - Hospital context middleware test interface
 - `/test/hospital-context-required/` - Test view that requires hospital context
 - `/test/hospital-context-api/` - API endpoint for hospital context information
-- `/test/role-permissions/` - Role-based permissions test dashboard
-- `/test/role-permissions-api/` - API endpoint for role permission information
-- `/test/template-tags/` - Template tags testing interface
 
 #### Usage Examples
 
@@ -513,87 +510,17 @@ The permission framework follows a vertical slicing approach for systematic impl
    - Integration with existing permission utilities
    - Complete test coverage (16 tests across middleware and views)
 
-3. **Vertical Slice 3: Role-Based Permission Groups** ✅ **COMPLETED**
-   - Management command for setting up profession-based groups
-   - Automatic user-group assignment via signal handlers
-   - Django permission integration with role-based access control
-   - Template tags for permission checking in templates
-   - Comprehensive test coverage (37+ tests across all permission modules)
-
+3. **Role-Based Permission Groups** (Vertical Slice 3) - **PLANNED**
 4. **Object-Level Permissions** (Vertical Slice 4) - **PLANNED**
 5. **UI Integration and Performance Optimization** (Vertical Slice 5) - **PLANNED**
-
-### Role-Based Permission Groups
-
-#### Automatic Group Assignment
-The system automatically assigns users to profession-based groups using Django signals:
-
-- **Medical Doctors**: Full permissions for all models and operations
-- **Residents**: Full access to patients, events, and hospital records in current hospital
-- **Nurses**: Limited patient permissions (no delete), full event access, view-only hospitals
-- **Physiotherapists**: Full access to patients, events, and hospital records in current hospital
-- **Students**: View-only permissions for patients, events, and hospitals
-
-#### Management Commands
-```bash
-# Set up all profession-based groups with appropriate permissions
-python manage.py setup_groups
-
-# Force recreation of groups (removes existing groups first)
-python manage.py setup_groups --force
-```
-
-#### Template Tags for Permission Checking
-The system provides comprehensive template tags for UI permission checks:
-
-```django
-{% load permission_tags %}
-
-<!-- Django permission checks -->
-{% if user|has_permission:"patients.add_patient" %}
-    <a href="{% url 'patients:create' %}">Add Patient</a>
-{% endif %}
-
-<!-- Group membership checks -->
-{% if user|in_group:"Medical Doctors" %}
-    <p>Welcome, Doctor!</p>
-{% endif %}
-
-<!-- Profession type checks -->
-{% if user|is_profession:"medical_doctor" %}
-    <p>Doctor-specific content</p>
-{% endif %}
-
-<!-- Convenience permission filters -->
-{% if user|can_manage_patients %}
-    <p>You can manage patients</p>
-{% endif %}
-
-<!-- Multiple permission checks -->
-{% check_multiple_permissions user "patients.add_patient" "patients.change_patient" as has_all_perms %}
-{% if has_all_perms %}
-    <p>You have all required permissions</p>
-{% endif %}
-
-<!-- Permission debug widget -->
-{% permission_debug user %}
-```
-
-#### Signal-Based Group Assignment
-Users are automatically assigned to appropriate groups when:
-- A new user is created with a profession type
-- An existing user's profession type is changed
-- Groups are created/removed automatically based on profession changes
 
 ### Security Features
 - **Hospital Isolation**: Users can only access patients in their current hospital context
 - **Time-Based Restrictions**: Medical record editing limited to 24-hour windows
-- **Role-Based Access**: Different permissions for each medical profession via Django groups
-- **Automatic Group Management**: Signal-based assignment ensures users always have correct permissions
+- **Role-Based Access**: Different permissions for each medical profession
 - **Audit Trail Support**: Permission checks consider event creators and timestamps
 - **Fail-Safe Defaults**: Permission functions return `False` for unauthorized access
 - **CSRF Protection**: All permission-protected views include CSRF protection
-- **Template-Level Security**: Permission checks available directly in templates
 
 ## Hospitals App Features
 

@@ -2,7 +2,8 @@
 Utility functions for permission checking in EquipeMed.
 
 This module provides the core permission checking logic for various
-operations in the EquipeMed application.
+operations in the EquipeMed application. It integrates with Django's
+permission system and role-based access control.
 """
 
 from django.utils import timezone
@@ -208,15 +209,188 @@ def is_doctor(user: Any) -> bool:
 def has_hospital_context(user: Any) -> bool:
     """
     Check if a user has a valid hospital context.
-    
+
     Args:
         user: The user to check
-        
+
     Returns:
         bool: True if user has hospital context, False otherwise
     """
     if not user.is_authenticated:
         return False
-    
+
     # Updated to use middleware-provided hospital context
     return getattr(user, 'has_hospital_context', False)
+
+
+def has_django_permission(user: Any, permission: str) -> bool:
+    """
+    Check if user has a specific Django permission.
+
+    Args:
+        user: The user to check
+        permission: Permission string (e.g., 'patients.add_patient')
+
+    Returns:
+        bool: True if user has permission, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    return user.has_perm(permission)
+
+
+def is_in_group(user: Any, group_name: str) -> bool:
+    """
+    Check if user is in a specific group.
+
+    Args:
+        user: The user to check
+        group_name: Name of the group
+
+    Returns:
+        bool: True if user is in group, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    return user.groups.filter(name=group_name).exists()
+
+
+def get_user_profession_type(user: Any) -> Optional[str]:
+    """
+    Get user's profession type as a string constant.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        str: Profession type constant or None
+    """
+    if not user.is_authenticated:
+        return None
+
+    profession_type = getattr(user, 'profession_type', None)
+    profession_map = {
+        0: MEDICAL_DOCTOR,
+        1: RESIDENT,
+        2: NURSE,
+        3: PHYSIOTHERAPIST,
+        4: STUDENT,
+    }
+
+    return profession_map.get(profession_type)
+
+
+def can_manage_patients(user: Any) -> bool:
+    """
+    Check if user can manage patients (add, change, delete).
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if user can manage patients, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    required_permissions = [
+        'patients.add_patient',
+        'patients.change_patient',
+        'patients.delete_patient',
+    ]
+
+    return all(user.has_perm(perm) for perm in required_permissions)
+
+
+def can_view_patients(user: Any) -> bool:
+    """
+    Check if user can view patients.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if user can view patients, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    return user.has_perm('patients.view_patient')
+
+
+def can_manage_events(user: Any) -> bool:
+    """
+    Check if user can manage events (add, change, delete).
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if user can manage events, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    required_permissions = [
+        'events.add_event',
+        'events.change_event',
+        'events.delete_event',
+    ]
+
+    return all(user.has_perm(perm) for perm in required_permissions)
+
+
+def can_view_events(user: Any) -> bool:
+    """
+    Check if user can view events.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if user can view events, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    return user.has_perm('events.view_event')
+
+
+def can_manage_hospitals(user: Any) -> bool:
+    """
+    Check if user can manage hospitals (add, change, delete).
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if user can manage hospitals, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    required_permissions = [
+        'hospitals.add_hospital',
+        'hospitals.change_hospital',
+        'hospitals.delete_hospital',
+    ]
+
+    return all(user.has_perm(perm) for perm in required_permissions)
+
+
+def can_view_hospitals(user: Any) -> bool:
+    """
+    Check if user can view hospitals.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if user can view hospitals, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    return user.has_perm('hospitals.view_hospital')

@@ -59,31 +59,43 @@ class PermissionUtilsTestCase(TestCase):
 
     def test_can_access_patient_doctor_same_hospital(self):
         """Doctors can access patients in their current hospital"""
-        self.doctor.current_hospital_id = 1
+        # Set up hospital context using middleware attributes
+        self.doctor.has_hospital_context = True
+        self.doctor.current_hospital = Mock()
+        self.doctor.current_hospital.id = 1
         result = can_access_patient(self.doctor, self.patient)
         self.assertTrue(result)
 
     def test_can_access_patient_doctor_different_hospital(self):
         """Doctors cannot access patients in different hospitals"""
-        self.doctor.current_hospital_id = 2
+        # Set up hospital context using middleware attributes
+        self.doctor.has_hospital_context = True
+        self.doctor.current_hospital = Mock()
+        self.doctor.current_hospital.id = 2
         result = can_access_patient(self.doctor, self.patient)
         self.assertFalse(result)
 
     def test_can_access_patient_nurse_same_hospital(self):
         """Nurses can access patients in their current hospital"""
-        self.nurse.current_hospital_id = 1
+        # Set up hospital context using middleware attributes
+        self.nurse.has_hospital_context = True
+        self.nurse.current_hospital = Mock()
+        self.nurse.current_hospital.id = 1
         result = can_access_patient(self.nurse, self.patient)
         self.assertTrue(result)
 
     def test_can_access_patient_student_limited_access(self):
         """Students have limited access to patients"""
-        self.student.current_hospital_id = 1
-        
+        # Set up hospital context using middleware attributes
+        self.student.has_hospital_context = True
+        self.student.current_hospital = Mock()
+        self.student.current_hospital.id = 1
+
         # Students can access outpatients
         self.patient.status = OUTPATIENT
         result = can_access_patient(self.student, self.patient)
         self.assertTrue(result)
-        
+
         # Students cannot access inpatients
         self.patient.status = INPATIENT
         result = can_access_patient(self.student, self.patient)

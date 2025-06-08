@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import test_views
 from . import test_views_hospital_context
+from . import test_views_role_permissions
 
 app_name = 'core'
 
@@ -20,4 +21,9 @@ urlpatterns = [
     path('test/hospital-context-middleware/', test_views_hospital_context.hospital_context_test_view, name='hospital_context_middleware_test'),
     path('test/hospital-context-required/', test_views_hospital_context.hospital_context_required_view, name='hospital_context_required_test'),
     path('test/hospital-context-api/', test_views_hospital_context.hospital_context_api_view, name='hospital_context_api_test'),
+
+    # Role-based permissions test URLs
+    path('test/role-permissions/', test_views_role_permissions.role_permissions_test_view, name='role_permissions_test'),
+    path('test/role-permissions-api/', test_views_role_permissions.role_permissions_api_view, name='role_permissions_api'),
+    path('test/template-tags/', test_views_role_permissions.test_template_tags_view, name='test_template_tags'),
 ]

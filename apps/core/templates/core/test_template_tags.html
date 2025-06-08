@@ -1,0 +1,279 @@
+{% extends 'base_app.html' %}
+{% load permission_tags %}
+
+{% block title %}Template Tags Test{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-tags me-2"></i>
+                    Template Tags Test
+                </h2>
+                <a href="{% url 'core:role-permissions-test' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Back to Permissions Test
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Permission Filters -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-funnel me-2"></i>
+                        Permission Filters
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Django Permission Checks</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Permission</th>
+                                    <th>Result</th>
+                                    <th>Template Code</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for permission in test_permissions %}
+                                    <tr>
+                                        <td><code>{{ permission }}</code></td>
+                                        <td>
+                                            {% if user|has_permission:permission %}
+                                                <span class="badge bg-success">✓</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">✗</span>
+                                            {% endif %}
+                                        </td>
+                                        <td><small><code>user|has_permission:"{{ permission }}"</code></small></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6 class="mt-4">Convenience Permission Filters</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Filter</th>
+                                    <th>Result</th>
+                                    <th>Template Code</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Can Manage Patients</td>
+                                    <td>
+                                        {% if user|can_manage_patients %}
+                                            <span class="badge bg-success">✓</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">✗</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small><code>user|can_manage_patients</code></small></td>
+                                </tr>
+                                <tr>
+                                    <td>Can View Patients</td>
+                                    <td>
+                                        {% if user|can_view_patients %}
+                                            <span class="badge bg-success">✓</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">✗</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small><code>user|can_view_patients</code></small></td>
+                                </tr>
+                                <tr>
+                                    <td>Can Manage Events</td>
+                                    <td>
+                                        {% if user|can_manage_events %}
+                                            <span class="badge bg-success">✓</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">✗</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small><code>user|can_manage_events</code></small></td>
+                                </tr>
+                                <tr>
+                                    <td>Can View Events</td>
+                                    <td>
+                                        {% if user|can_view_events %}
+                                            <span class="badge bg-success">✓</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">✗</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small><code>user|can_view_events</code></small></td>
+                                </tr>
+                                <tr>
+                                    <td>Is Doctor</td>
+                                    <td>
+                                        {% if user|is_doctor_user %}
+                                            <span class="badge bg-success">✓</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">✗</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small><code>user|is_doctor_user</code></small></td>
+                                </tr>
+                                <tr>
+                                    <td>Has Hospital Context</td>
+                                    <td>
+                                        {% if user|has_hospital_context_user %}
+                                            <span class="badge bg-success">✓</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">✗</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small><code>user|has_hospital_context_user</code></small></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group and Profession Checks -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>
+                        Group and Profession Checks
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Group Membership</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Group</th>
+                                    <th>Member</th>
+                                    <th>Template Code</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for group in test_groups %}
+                                    <tr>
+                                        <td>{{ group }}</td>
+                                        <td>
+                                            {% if user|in_group:group %}
+                                                <span class="badge bg-success">✓</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">✗</span>
+                                            {% endif %}
+                                        </td>
+                                        <td><small><code>user|in_group:"{{ group }}"</code></small></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6 class="mt-4">Profession Type Checks</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Profession</th>
+                                    <th>Match</th>
+                                    <th>Template Code</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for profession in test_professions %}
+                                    <tr>
+                                        <td>{{ profession|title }}</td>
+                                        <td>
+                                            {% if user|is_profession:profession %}
+                                                <span class="badge bg-success">✓</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">✗</span>
+                                            {% endif %}
+                                        </td>
+                                        <td><small><code>user|is_profession:"{{ profession }}"</code></small></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6 class="mt-4">Profession Display</h6>
+                    <p>
+                        <strong>Current Profession:</strong> 
+                        <span class="badge bg-info">{{ user.profession_type|profession_type_display }}</span>
+                    </p>
+                    <p>
+                        <small><code>user.profession_type|profession_type_display</code></small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simple Tags -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-tag me-2"></i>
+                        Simple Tags
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Multiple Permission Checks</h6>
+                            {% check_multiple_permissions user "patients.add_patient" "patients.change_patient" as has_all_patient_perms %}
+                            <p>
+                                <strong>Has all patient permissions (add + change):</strong>
+                                {% if has_all_patient_perms %}
+                                    <span class="badge bg-success">✓</span>
+                                {% else %}
+                                    <span class="badge bg-danger">✗</span>
+                                {% endif %}
+                            </p>
+                            <p><small><code>{% templatetag openblock %} check_multiple_permissions user "patients.add_patient" "patients.change_patient" as has_all_patient_perms {% templatetag closeblock %}</code></small></p>
+
+                            {% check_any_permission user "patients.add_patient" "events.add_event" as has_any_add_perm %}
+                            <p>
+                                <strong>Has any add permission (patients OR events):</strong>
+                                {% if has_any_add_perm %}
+                                    <span class="badge bg-success">✓</span>
+                                {% else %}
+                                    <span class="badge bg-danger">✗</span>
+                                {% endif %}
+                            </p>
+                            <p><small><code>{% templatetag openblock %} check_any_permission user "patients.add_patient" "events.add_event" as has_any_add_perm {% templatetag closeblock %}</code></small></p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6>Profession Groups</h6>
+                            {% get_user_profession_groups as profession_groups %}
+                            <p><strong>Available profession groups:</strong></p>
+                            <ul>
+                                {% for group in profession_groups %}
+                                    <li>{{ group.name }} ({{ group.permissions.count }} permissions)</li>
+                                {% endfor %}
+                            </ul>
+                            <p><small><code>{% templatetag openblock %} get_user_profession_groups as profession_groups {% templatetag closeblock %}</code></small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
