@@ -1,0 +1,72 @@
+{% extends "base_app.html" %}
+
+{% block title %}Permission Demo - Doctor Only{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">
+                <i class="bi bi-shield-check"></i>
+                Doctor-Only Access Demo
+            </h1>
+            
+            <div class="alert alert-success" role="alert">
+                <i class="bi bi-check-circle"></i>
+                <strong>Access Granted!</strong> {{ message }}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-badge"></i>
+                        Your Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tr>
+                            <td><strong>Profession:</strong></td>
+                            <td>
+                                <span class="badge bg-success">{{ user_profession }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Access Level:</strong></td>
+                            <td>Doctor-Only</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        About This Demo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>This view demonstrates the <code>@doctor_required</code> decorator.</p>
+                    <p>Only users with the Medical Doctor profession can access this page.</p>
+                    <p>Other users (nurses, students, etc.) will receive a 403 Forbidden error.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{% url 'core:permission_demo_dashboard' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -23,8 +23,10 @@ from .constants import (
     TRANSFERRED,
     EVENT_EDIT_TIME_LIMIT,
 )
+from .cache import cache_permission_result
 
 
+@cache_permission_result('access_patient', use_object_id=True)
 def can_access_patient(user: Any, patient: Any) -> bool:
     """
     Check if a user can access a specific patient.
@@ -88,6 +90,7 @@ def can_access_patient(user: Any, patient: Any) -> bool:
     return False
 
 
+@cache_permission_result('edit_event', use_object_id=True)
 def can_edit_event(user: Any, event: Any) -> bool:
     """
     Check if a user can edit a specific event.
@@ -123,6 +126,7 @@ def can_edit_event(user: Any, event: Any) -> bool:
     return True
 
 
+@cache_permission_result('change_patient_status', use_object_id=True)
 def can_change_patient_status(user: Any, patient: Any, new_status: str) -> bool:
     """
     Check if a user can change a patient's status.
@@ -240,6 +244,7 @@ def has_django_permission(user: Any, permission: str) -> bool:
     return user.has_perm(permission)
 
 
+@cache_permission_result('in_group')
 def is_in_group(user: Any, group_name: str) -> bool:
     """
     Check if user is in a specific group.
@@ -282,6 +287,7 @@ def get_user_profession_type(user: Any) -> Optional[str]:
     return profession_map.get(profession_type)
 
 
+@cache_permission_result('manage_patients')
 def can_manage_patients(user: Any) -> bool:
     """
     Check if user can manage patients (add, change, delete).
@@ -396,6 +402,7 @@ def can_view_hospitals(user: Any) -> bool:
     return user.has_perm('hospitals.view_hospital')
 
 
+@cache_permission_result('change_patient_personal_data', use_object_id=True)
 def can_change_patient_personal_data(user: Any, patient: Any) -> bool:
     """
     Check if a user can change a patient's personal data.
@@ -468,6 +475,7 @@ def can_change_patient_personal_data(user: Any, patient: Any) -> bool:
     return False
 
 
+@cache_permission_result('delete_event', use_object_id=True)
 def can_delete_event(user: Any, event: Any) -> bool:
     """
     Check if a user can delete a specific event.
@@ -503,6 +511,7 @@ def can_delete_event(user: Any, event: Any) -> bool:
     return True
 
 
+@cache_permission_result('see_patient_in_search', use_object_id=True)
 def can_see_patient_in_search(user: Any, patient: Any) -> bool:
     """
     Check if a user can see a patient in search results.

@@ -329,3 +329,105 @@ def can_change_patient_data(user):
     Usage: {% if user|can_change_patient_data %}
     """
     return is_doctor(user)
+
+
+@register.simple_tag
+def permission_cache_stats():
+    """
+    Get permission cache statistics for debugging.
+
+    Usage: {% permission_cache_stats as cache_stats %}
+    """
+    try:
+        from apps.core.permissions.cache import get_cache_stats, is_caching_enabled
+        if is_caching_enabled():
+            return get_cache_stats()
+        else:
+            return {'caching_enabled': False}
+    except ImportError:
+        return {'error': 'Cache module not available'}
+
+
+@register.inclusion_tag('core/tags/permission_performance.html')
+def permission_performance_widget(user):
+    """
+    Display permission performance information.
+
+    Usage: {% permission_performance_widget user %}
+    """
+    if not user.is_authenticated:
+        return {'user': None}
+
+    try:
+        from apps.core.permissions.queries import get_permission_summary_optimized
+        from apps.core.permissions.cache import get_cache_stats, is_caching_enabled
+
+        summary = get_permission_summary_optimized(user)
+        cache_stats = get_cache_stats() if is_caching_enabled() else None
+
+        return {
+            'user': user,
+            'summary': summary,
+            'cache_stats': cache_stats,
+            'caching_enabled': is_caching_enabled()
+        }
+    except ImportError:
+        return {'user': user, 'error': 'Performance modules not available'}
+
+
+@register.simple_tag
+def check_bulk_permissions(user, *permissions):
+    """
+    Check multiple permissions efficiently and return detailed results.
+
+    Usage: {% check_bulk_permissions user "patients.add_patient" "events.add_event" as perm_results %}
+    """
+    if not user.is_authenticated:
+        return {perm: False for perm in permissions}
+
+    # Use bulk permission checking for better performance
+    results = {}
+    for perm in permissions:
+        results[perm] = user.has_perm(perm)
+
+    return results
+
+
+@register.filter
+def has_any_model_permission(user, app_label):
+    """
+    Check if user has any permission for a specific app/model.
+
+    Usage: {% if user|has_any_model_permission:"patients" %}
+    """
+    if not user.is_authenticated:
+        return False
+
+    # Get all permissions for the user
+    all_perms = user.get_all_permissions()
+
+    # Check if any permission starts with the app label
+    return any(perm.startswith(f"{app_label}.") for perm in all_perms)
+
+
+@register.simple_tag
+def get_user_accessible_models(user):
+    """
+    Get list of models/apps the user can access.
+
+    Usage: {% get_user_accessible_models user as accessible_models %}
+    """
+    if not user.is_authenticated:
+        return []
+
+    accessible = []
+
+    # Check main app permissions
+    if user.has_perm('patients.view_patient'):
+        accessible.append('patients')
+    if user.has_perm('events.view_event'):
+        accessible.append('events')
+    if user.has_perm('hospitals.view_hospital'):
+        accessible.append('hospitals')
+
+    return accessible

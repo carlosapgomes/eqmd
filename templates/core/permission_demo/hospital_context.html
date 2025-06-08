@@ -1,0 +1,87 @@
+{% extends "base_app.html" %}
+
+{% block title %}Permission Demo - Hospital Context{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">
+                <i class="bi bi-building"></i>
+                Hospital Context Demo
+            </h1>
+            
+            <div class="alert alert-success" role="alert">
+                <i class="bi bi-check-circle"></i>
+                <strong>Access Granted!</strong> {{ message }}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-building"></i>
+                        Current Hospital Context
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if current_hospital %}
+                    <table class="table">
+                        <tr>
+                            <td><strong>Hospital ID:</strong></td>
+                            <td>{{ current_hospital.id }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hospital Name:</strong></td>
+                            <td>{{ current_hospital.name }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Context Status:</strong></td>
+                            <td>
+                                <span class="badge bg-success">Active</span>
+                            </td>
+                        </tr>
+                    </table>
+                    {% else %}
+                    <p class="text-muted">No hospital context available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        About This Demo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>This view demonstrates the <code>@hospital_context_required</code> decorator.</p>
+                    <p>Only users who have selected a current hospital can access this page.</p>
+                    <p>Users without hospital context will be redirected to the hospital selection page.</p>
+                    
+                    <h6 class="mt-3">Hospital Context Benefits:</h6>
+                    <ul>
+                        <li>Ensures data privacy and security</li>
+                        <li>Prevents cross-hospital data access</li>
+                        <li>Supports multi-hospital workflows</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{% url 'core:permission_demo_dashboard' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

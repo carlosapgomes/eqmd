@@ -45,3 +45,7 @@ PERM_DISCHARGE_PATIENT = 'discharge_patient'
 
 # Time-based permission settings (in hours)
 EVENT_EDIT_TIME_LIMIT = 24  # Events can be edited for 24 hours after creation
+
+# Cache settings for permission system
+PERMISSION_CACHE_TIMEOUT = 300  # 5 minutes cache timeout for permission checks
+PERMISSION_CACHE_PREFIX = 'eqmd_perm'  # Cache key prefix for permissions

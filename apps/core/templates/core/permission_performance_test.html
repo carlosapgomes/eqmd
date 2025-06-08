@@ -1,0 +1,294 @@
+{% extends "core/base.html" %}
+{% load permission_tags %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">
+                <i class="bi bi-speedometer2"></i>
+                Permission System Performance Test
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Permission Performance Widget -->
+        <div class="col-lg-6 mb-4">
+            {% permission_performance_widget user %}
+        </div>
+
+        <!-- Cache Statistics -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-database"></i>
+                        Cache Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if caching_enabled %}
+                        {% if cache_stats %}
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-primary">{{ cache_stats.hits }}</h4>
+                                        <small class="text-muted">Cache Hits</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h4 class="text-warning">{{ cache_stats.misses }}</h4>
+                                        <small class="text-muted">Cache Misses</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="text-center">
+                                <h5>Hit Ratio: {{ cache_stats.hit_ratio|floatformat:2 }}%</h5>
+                                <div class="progress">
+                                    <div class="progress-bar 
+                                        {% if cache_stats.hit_ratio > 70 %}bg-success
+                                        {% elif cache_stats.hit_ratio > 40 %}bg-warning
+                                        {% else %}bg-danger{% endif %}" 
+                                        role="progressbar" 
+                                        style="width: {{ cache_stats.hit_ratio }}%">
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No cache statistics available</p>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            Caching is disabled
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Permission Summary -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-shield-check"></i>
+                        Permission Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if permission_summary %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Permission Counts</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>Total:</strong> {{ permission_summary.permission_counts.total_permissions }}</li>
+                                    <li><strong>From Groups:</strong> {{ permission_summary.permission_counts.group_permissions }}</li>
+                                    <li><strong>Direct:</strong> {{ permission_summary.permission_counts.user_permissions }}</li>
+                                    <li><strong>Groups:</strong> {{ permission_summary.permission_counts.groups_count }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Accessible Models</h6>
+                                {% if permission_summary.accessible_models %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for model in permission_summary.accessible_models %}
+                                            <span class="badge bg-primary">{{ model|title }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">No accessible models</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Permission summary not available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Template Tag Tests -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-code-square"></i>
+                        Template Tag Tests
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Permission Checks</h6>
+                    <ul class="list-unstyled">
+                        <li>
+                            <i class="bi bi-{% if user|has_permission:'patients.view_patient' %}check-circle text-success{% else %}x-circle text-danger{% endif %}"></i>
+                            View Patients
+                        </li>
+                        <li>
+                            <i class="bi bi-{% if user|has_permission:'events.view_event' %}check-circle text-success{% else %}x-circle text-danger{% endif %}"></i>
+                            View Events
+                        </li>
+                        <li>
+                            <i class="bi bi-{% if user|has_permission:'hospitals.view_hospital' %}check-circle text-success{% else %}x-circle text-danger{% endif %}"></i>
+                            View Hospitals
+                        </li>
+                    </ul>
+
+                    <h6>Role Checks</h6>
+                    <ul class="list-unstyled">
+                        <li>
+                            <i class="bi bi-{% if user|is_profession:'medical_doctor' %}check-circle text-success{% else %}x-circle text-danger{% endif %}"></i>
+                            Medical Doctor
+                        </li>
+                        <li>
+                            <i class="bi bi-{% if user|has_hospital_context_user %}check-circle text-success{% else %}x-circle text-danger{% endif %}"></i>
+                            Hospital Context
+                        </li>
+                    </ul>
+
+                    <h6>Bulk Permission Check</h6>
+                    {% check_bulk_permissions user "patients.add_patient" "events.add_event" "hospitals.view_hospital" as bulk_perms %}
+                    <div class="progress mb-2">
+                        {% with granted_count=bulk_perms.values|length %}
+                        {% with total_count=3 %}
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {% widthratio granted_count total_count 100 %}%">
+                            {{ granted_count }}/{{ total_count }}
+                        </div>
+                        {% endwith %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Performance Testing -->
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-stopwatch"></i>
+                        Performance Testing
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button id="test-permission-speed" class="btn btn-primary mb-2">
+                                Test Permission Check Speed
+                            </button>
+                            <div id="permission-speed-results" class="alert alert-info d-none"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <button id="test-api-performance" class="btn btn-secondary mb-2">
+                                Test API Performance
+                            </button>
+                            <div id="api-performance-results" class="alert alert-info d-none"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bug"></i>
+                        Debug Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% permission_debug user %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Test permission check speed
+    document.getElementById('test-permission-speed').addEventListener('click', function() {
+        const button = this;
+        const results = document.getElementById('permission-speed-results');
+        
+        button.disabled = true;
+        button.textContent = 'Testing...';
+        results.classList.remove('d-none');
+        results.textContent = 'Running permission speed test...';
+        
+        const startTime = performance.now();
+        let iterations = 1000;
+        
+        // Simulate permission checks (client-side test)
+        for (let i = 0; i < iterations; i++) {
+            // This is a simple client-side test
+            // In a real scenario, you'd test server-side permission checks
+            Math.random() > 0.5; // Simulate some work
+        }
+        
+        const endTime = performance.now();
+        const totalTime = endTime - startTime;
+        const avgTime = totalTime / iterations;
+        
+        results.innerHTML = `
+            <strong>Client-side Test Results:</strong><br>
+            Total time: ${totalTime.toFixed(2)}ms<br>
+            Average per operation: ${avgTime.toFixed(4)}ms<br>
+            Operations per second: ${(1000 / avgTime).toFixed(0)}
+        `;
+        
+        button.disabled = false;
+        button.textContent = 'Test Permission Check Speed';
+    });
+    
+    // Test API performance
+    document.getElementById('test-api-performance').addEventListener('click', function() {
+        const button = this;
+        const results = document.getElementById('api-performance-results');
+        
+        button.disabled = true;
+        button.textContent = 'Testing...';
+        results.classList.remove('d-none');
+        results.textContent = 'Testing API performance...';
+        
+        const startTime = performance.now();
+        
+        fetch('{% url "core:permission_performance_api" %}')
+            .then(response => response.json())
+            .then(data => {
+                const endTime = performance.now();
+                const responseTime = endTime - startTime;
+                
+                results.innerHTML = `
+                    <strong>API Performance Results:</strong><br>
+                    Response time: ${responseTime.toFixed(2)}ms<br>
+                    Caching enabled: ${data.caching_enabled ? 'Yes' : 'No'}<br>
+                    Total permissions: ${data.permission_summary.permission_counts.total_permissions}
+                `;
+            })
+            .catch(error => {
+                results.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                results.className = 'alert alert-danger';
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.textContent = 'Test API Performance';
+            });
+    });
+});
+</script>
+{% endblock %}

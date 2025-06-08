@@ -1,0 +1,411 @@
+{% extends "base_app.html" %}
+{% load permission_tags %}
+
+{% block title %}Permission System Demo - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">
+                <i class="bi bi-shield-check"></i>
+                Permission System Demo Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <!-- User Information Card -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-circle"></i>
+                        Current User Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Email:</strong></td>
+                            <td>{{ user_info.email }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Profession:</strong></td>
+                            <td>
+                                <span class="badge bg-primary">
+                                    {{ user_info.profession|default:"Not Set" }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Is Doctor:</strong></td>
+                            <td>
+                                {% if user_info.is_doctor %}
+                                    <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hospital Context:</strong></td>
+                            <td>
+                                {% if user_info.has_hospital_context %}
+                                    <span class="badge bg-success">
+                                        {{ user_info.current_hospital.name|default:"Set" }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">Not Set</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Groups:</strong></td>
+                            <td>
+                                {% for group in user_info.groups %}
+                                    <span class="badge bg-info me-1">{{ group }}</span>
+                                {% empty %}
+                                    <span class="text-muted">No groups</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-speedometer2"></i>
+                        Permission Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Total Permissions:</strong></td>
+                            <td>{{ permission_summary.permission_counts.total_permissions }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Group Permissions:</strong></td>
+                            <td>{{ permission_summary.permission_counts.group_permissions }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Direct Permissions:</strong></td>
+                            <td>{{ permission_summary.permission_counts.user_permissions }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Accessible Models:</strong></td>
+                            <td>
+                                {% for model in permission_summary.accessible_models %}
+                                    <span class="badge bg-success me-1">{{ model }}</span>
+                                {% empty %}
+                                    <span class="text-muted">None</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Permissions Testing -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people"></i>
+                        Patient Access Permissions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Status</th>
+                                    <th>Hospital</th>
+                                    <th>Can Access</th>
+                                    <th>Can Change Personal Data</th>
+                                    <th>Can See in Search</th>
+                                    <th>Can Discharge</th>
+                                    <th>Can Admit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for perm in patient_permissions %}
+                                <tr>
+                                    <td>{{ perm.patient.name }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ perm.patient.status }}</span>
+                                    </td>
+                                    <td>{{ perm.patient.hospital_name }}</td>
+                                    <td>
+                                        {% if perm.can_access %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% else %}
+                                            <i class="bi bi-x-circle text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if perm.can_change_personal_data %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% else %}
+                                            <i class="bi bi-x-circle text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if perm.can_see_in_search %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% else %}
+                                            <i class="bi bi-x-circle text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if perm.can_change_to_discharged %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% else %}
+                                            <i class="bi bi-x-circle text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if perm.can_change_to_inpatient %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% else %}
+                                            <i class="bi bi-x-circle text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Permissions Testing -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calendar-event"></i>
+                        Event Management Permissions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Created By</th>
+                                    <th>Created At</th>
+                                    <th>Can Edit</th>
+                                    <th>Can Delete</th>
+                                    <th>Time Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for perm in event_permissions %}
+                                <tr>
+                                    <td>{{ perm.event.description }}</td>
+                                    <td>{{ perm.event.created_by.email }}</td>
+                                    <td>{{ perm.event.created_at|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        {% if perm.can_edit %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% else %}
+                                            <i class="bi bi-x-circle text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if perm.can_delete %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% else %}
+                                            <i class="bi bi-x-circle text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% now "U" as current_timestamp %}
+                                        {% if perm.event.created_at|date:"U"|add:"86400" > current_timestamp %}
+                                            <span class="badge bg-success">Within 24h</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Beyond 24h</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cache Statistics -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning"></i>
+                        Cache Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Cache Hits:</strong></td>
+                            <td>{{ cache_stats.hits }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cache Misses:</strong></td>
+                            <td>{{ cache_stats.misses }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Requests:</strong></td>
+                            <td>{{ cache_stats.total_requests }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hit Ratio:</strong></td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {{ cache_stats.hit_ratio|floatformat:0 }}%">
+                                        {{ cache_stats.hit_ratio|floatformat:1 }}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="mt-3">
+                        <a href="{% url 'core:permission_demo_cache' %}?action=clear" 
+                           class="btn btn-warning btn-sm">
+                            <i class="bi bi-trash"></i> Clear Cache
+                        </a>
+                        <a href="{% url 'core:permission_demo_cache' %}?action=stats" 
+                           class="btn btn-info btn-sm">
+                            <i class="bi bi-graph-up"></i> Refresh Stats
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-tools"></i>
+                        Demo Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'core:permission_demo_patient' patient_id='demo-patient-1' %}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-person"></i> Test Patient Access
+                        </a>
+                        <a href="{% url 'core:permission_demo_doctor' %}" 
+                           class="btn btn-success">
+                            <i class="bi bi-shield-check"></i> Test Doctor-Only View
+                        </a>
+                        <a href="{% url 'core:permission_demo_hospital' %}" 
+                           class="btn btn-info">
+                            <i class="bi bi-building"></i> Test Hospital Context
+                        </a>
+                        <a href="{% url 'core:permission_demo_test' %}" 
+                           class="btn btn-warning">
+                            <i class="bi bi-gear"></i> Interactive Permission Test
+                        </a>
+                        <a href="{% url 'core:permission_demo_comparison' %}" 
+                           class="btn btn-secondary">
+                            <i class="bi bi-people"></i> Role Comparison
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Tags Demo -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-code-square"></i>
+                        Template Tags Demo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Permission Checks:</h6>
+                            <ul class="list-unstyled">
+                                <li>
+                                    {% if user|has_permission:"patients.add_patient" %}
+                                        <i class="bi bi-check-circle text-success"></i> Can add patients
+                                    {% else %}
+                                        <i class="bi bi-x-circle text-danger"></i> Cannot add patients
+                                    {% endif %}
+                                </li>
+                                <li>
+                                    {% if user|can_manage_patients %}
+                                        <i class="bi bi-check-circle text-success"></i> Can manage patients
+                                    {% else %}
+                                        <i class="bi bi-x-circle text-danger"></i> Cannot manage patients
+                                    {% endif %}
+                                </li>
+                                <li>
+                                    {% if user|can_view_events %}
+                                        <i class="bi bi-check-circle text-success"></i> Can view events
+                                    {% else %}
+                                        <i class="bi bi-x-circle text-danger"></i> Cannot view events
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Role Checks:</h6>
+                            <ul class="list-unstyled">
+                                <li>
+                                    {% if user|is_profession:"medical_doctor" %}
+                                        <i class="bi bi-check-circle text-success"></i> Is Medical Doctor
+                                    {% else %}
+                                        <i class="bi bi-x-circle text-secondary"></i> Not Medical Doctor
+                                    {% endif %}
+                                </li>
+                                <li>
+                                    {% if user|in_group:"Nurses" %}
+                                        <i class="bi bi-check-circle text-success"></i> In Nurses group
+                                    {% else %}
+                                        <i class="bi bi-x-circle text-secondary"></i> Not in Nurses group
+                                    {% endif %}
+                                </li>
+                                <li>
+                                    {% if user|in_group:"Students" %}
+                                        <i class="bi bi-check-circle text-success"></i> In Students group
+                                    {% else %}
+                                        <i class="bi bi-x-circle text-secondary"></i> Not in Students group
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

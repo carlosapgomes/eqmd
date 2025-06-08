@@ -3,6 +3,7 @@ from . import views
 from . import test_views
 from . import test_views_hospital_context
 from . import test_views_role_permissions
+from .views import permission_demo
 
 app_name = 'core'
 
@@ -29,4 +30,18 @@ urlpatterns = [
     path('test/role-permissions/', test_views_role_permissions.role_permissions_test_view, name='role_permissions_test'),
     path('test/role-permissions-api/', test_views_role_permissions.role_permissions_api_view, name='role_permissions_api'),
     path('test/template-tags/', test_views_role_permissions.test_template_tags_view, name='test_template_tags'),
+
+    # Performance and UI integration test URLs
+    path('test/permission-performance/', views.permission_performance_test, name='permission_performance_test'),
+    path('test/permission-performance-api/', views.permission_performance_api, name='permission_performance_api'),
+
+    # Permission System Demo URLs
+    path('demo/permissions/', permission_demo.permission_demo_dashboard, name='permission_demo_dashboard'),
+    path('demo/permissions/api/', permission_demo.permission_demo_api, name='permission_demo_api'),
+    path('demo/permissions/patient/<str:patient_id>/', permission_demo.demo_patient_detail, name='permission_demo_patient'),
+    path('demo/permissions/doctor-only/', permission_demo.demo_doctor_only, name='permission_demo_doctor'),
+    path('demo/permissions/hospital-context/', permission_demo.demo_hospital_context, name='permission_demo_hospital'),
+    path('demo/permissions/cache/', permission_demo.demo_cache_management, name='permission_demo_cache'),
+    path('demo/permissions/test/', permission_demo.demo_permission_test, name='permission_demo_test'),
+    path('demo/permissions/comparison/', permission_demo.demo_role_comparison, name='permission_demo_comparison'),
 ]

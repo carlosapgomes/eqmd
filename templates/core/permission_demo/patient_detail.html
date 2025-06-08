@@ -1,0 +1,96 @@
+{% extends "base_app.html" %}
+{% load permission_tags %}
+
+{% block title %}Permission Demo - Patient Detail{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">
+                <i class="bi bi-person"></i>
+                Patient Access Demo
+            </h1>
+            
+            <div class="alert alert-success" role="alert">
+                <i class="bi bi-check-circle"></i>
+                <strong>Access Granted!</strong> You have permission to access this patient.
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-badge"></i>
+                        Patient Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tr>
+                            <td><strong>Patient ID:</strong></td>
+                            <td>{{ patient.id }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Name:</strong></td>
+                            <td>{{ patient.name }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td>
+                                <span class="badge bg-info">{{ patient.status }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hospital:</strong></td>
+                            <td>{{ patient.hospital }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-shield-check"></i>
+                        Your Permissions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            {% if permissions.can_change_personal_data %}
+                                <i class="bi bi-check-circle text-success"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i>
+                            {% endif %}
+                            Change Personal Data
+                        </li>
+                        <li class="mb-2">
+                            {% if permissions.can_change_status %}
+                                <i class="bi bi-check-circle text-success"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i>
+                            {% endif %}
+                            Discharge Patient
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{% url 'core:permission_demo_dashboard' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
