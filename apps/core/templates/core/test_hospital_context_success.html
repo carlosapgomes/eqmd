@@ -1,0 +1,67 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Hospital Context Required - Success{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Hospital Context Required View - Success!
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        {{ message }}
+                    </div>
+
+                    <h5>Current Hospital Context</h5>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ hospital_name }}</h6>
+                            <p class="card-text">
+                                <strong>Hospital ID:</strong> <code>{{ current_hospital.pk }}</code>
+                            </p>
+                            {% if current_hospital.short_name %}
+                                <p class="card-text">
+                                    <strong>Short Name:</strong> {{ current_hospital.short_name }}
+                                </p>
+                            {% endif %}
+                            {% if current_hospital.city %}
+                                <p class="card-text">
+                                    <strong>Location:</strong> 
+                                    <i class="bi bi-geo-alt me-1"></i>
+                                    {{ current_hospital.city }}{% if current_hospital.state %}, {{ current_hospital.state }}{% endif %}
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <p class="text-muted">
+                            This view is protected by the <code>@hospital_context_required</code> decorator.
+                            You can only access this page if you have selected a hospital context.
+                        </p>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-block">
+                        <a href="{% url 'core:hospital_context_test' %}" class="btn btn-primary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Back to Hospital Context Test
+                        </a>
+                        
+                        <a href="{% url 'hospitals:select_hospital' %}?next={{ request.path }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-hospital me-1"></i>
+                            Change Hospital
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

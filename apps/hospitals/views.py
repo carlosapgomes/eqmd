@@ -1,11 +1,13 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
 from .models import Hospital, Ward
 from .forms import HospitalForm, WardForm
+from .middleware import HospitalContextMiddleware
 
 
 class HospitalListView(ListView):
@@ -188,6 +190,40 @@ class WardDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     template_name = 'hospitals/ward_confirm_delete.html'
     permission_required = 'hospitals.delete_ward'
     success_url = reverse_lazy('hospitals:ward_list')
+
+
+@login_required
+def hospital_selection_view(request):
+    """View for selecting current hospital context."""
+    if request.method == 'POST':
+        hospital_id = request.POST.get('hospital_id')
+        if hospital_id:
+            hospital = HospitalContextMiddleware.set_hospital_context(request, hospital_id)
+            if hospital:
+                messages.success(request, f'Hospital "{hospital.name}" selecionado como contexto atual.')
+                # Redirect to next page or dashboard
+                next_url = request.GET.get('next', '/dashboard/')
+                return redirect(next_url)
+            else:
+                messages.error(request, 'Hospital não encontrado.')
+        else:
+            # Clear hospital context
+            HospitalContextMiddleware.clear_hospital_context(request)
+            messages.info(request, 'Contexto de hospital removido.')
+            next_url = request.GET.get('next', '/dashboard/')
+            return redirect(next_url)
+    
+    # Get available hospitals for the user
+    hospitals = HospitalContextMiddleware.get_available_hospitals(request.user)
+    current_hospital = getattr(request.user, 'current_hospital', None)
+    
+    context = {
+        'hospitals': hospitals,
+        'current_hospital': current_hospital,
+        'next_url': request.GET.get('next', '/dashboard/'),
+    }
+    
+    return render(request, 'hospitals/hospital_selection.html', context)
 
 
 def test_ward_tags(request):

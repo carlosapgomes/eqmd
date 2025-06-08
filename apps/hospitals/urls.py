@@ -17,6 +17,9 @@ urlpatterns = [
     path('wards/<int:pk>/update/', views.WardUpdateView.as_view(), name='ward_update'),
     path('wards/<int:pk>/delete/', views.WardDeleteView.as_view(), name='ward_delete'),
     
+    # Hospital context selection
+    path('select/', views.hospital_selection_view, name='select_hospital'),
+    
     # Test URL
     path('test/ward-tags/', views.test_ward_tags, name='test_ward_tags'),
 ]

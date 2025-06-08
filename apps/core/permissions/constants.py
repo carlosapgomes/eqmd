@@ -1,0 +1,47 @@
+"""
+Constants for the EquipeMed permission system.
+
+This module defines all constants used for profession types, patient statuses,
+and permission codes throughout the application.
+"""
+
+# Profession types from accounts.EqmdCustomUser
+MEDICAL_DOCTOR = 'medical_doctor'
+NURSE = 'nurse'
+PHYSIOTHERAPIST = 'physiotherapist'
+RESIDENT = 'resident'
+STUDENT = 'student'
+
+PROFESSION_TYPES = [
+    MEDICAL_DOCTOR,
+    NURSE,
+    PHYSIOTHERAPIST,
+    RESIDENT,
+    STUDENT,
+]
+
+# Patient status types from patients.Patient
+INPATIENT = 'inpatient'
+OUTPATIENT = 'outpatient'
+EMERGENCY = 'emergency'
+DISCHARGED = 'discharged'
+TRANSFERRED = 'transferred'
+
+PATIENT_STATUS_TYPES = [
+    INPATIENT,
+    OUTPATIENT,
+    EMERGENCY,
+    DISCHARGED,
+    TRANSFERRED,
+]
+
+# Permission codes for different rules
+PERM_ACCESS_PATIENT = 'access_patient'
+PERM_EDIT_EVENT = 'edit_event'
+PERM_DELETE_EVENT = 'delete_event'
+PERM_CHANGE_PATIENT_STATUS = 'change_patient_status'
+PERM_CHANGE_PATIENT_DATA = 'change_patient_data'
+PERM_DISCHARGE_PATIENT = 'discharge_patient'
+
+# Time-based permission settings (in hours)
+EVENT_EDIT_TIME_LIMIT = 24  # Events can be edited for 24 hours after creation

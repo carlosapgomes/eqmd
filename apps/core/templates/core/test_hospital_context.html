@@ -1,0 +1,131 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Hospital Context Test{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-hospital me-2"></i>
+                        Hospital Context Test
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <h5>User Information</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>Email:</strong> {{ user.email }}</li>
+                        <li><strong>Profession:</strong> {{ user.get_profession_type_display }}</li>
+                        <li><strong>Is Authenticated:</strong> 
+                            {% if user.is_authenticated %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-danger">No</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+
+                    <h5 class="mt-4">Hospital Context Status</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>Has Hospital Context:</strong> 
+                            {% if has_hospital_context %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-warning">No</span>
+                            {% endif %}
+                        </li>
+                        <li><strong>Current Hospital:</strong> 
+                            {% if current_hospital %}
+                                <span class="badge bg-info">{{ current_hospital.name }}</span>
+                                {% if current_hospital.city %}
+                                    <small class="text-muted">({{ current_hospital.city }})</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">None</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+
+                    {% if not has_hospital_context %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            You don't have a hospital context set. 
+                            <a href="{% url 'hospitals:select_hospital' %}?next={{ request.path }}" class="alert-link">
+                                Select a hospital to continue.
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <h5 class="mt-4">Available Hospitals</h5>
+                    {% if available_hospitals %}
+                        <div class="row">
+                            {% for hospital in available_hospitals %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card {% if current_hospital and hospital.pk == current_hospital.pk %}border-primary{% endif %}">
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ hospital.name }}</h6>
+                                            {% if hospital.short_name %}
+                                                <p class="card-text text-muted">{{ hospital.short_name }}</p>
+                                            {% endif %}
+                                            {% if hospital.city %}
+                                                <p class="card-text">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-geo-alt me-1"></i>
+                                                        {{ hospital.city }}{% if hospital.state %}, {{ hospital.state }}{% endif %}
+                                                    </small>
+                                                </p>
+                                            {% endif %}
+                                            {% if current_hospital and hospital.pk == current_hospital.pk %}
+                                                <span class="badge bg-primary">Current</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No hospitals available.
+                        </div>
+                    {% endif %}
+
+                    <h5 class="mt-4">Test Actions</h5>
+                    <div class="d-grid gap-2 d-md-block">
+                        <a href="{% url 'hospitals:select_hospital' %}?next={{ request.path }}" class="btn btn-primary">
+                            <i class="bi bi-hospital me-1"></i>
+                            Select Hospital
+                        </a>
+                        
+                        {% if has_hospital_context %}
+                            <a href="{% url 'core:hospital_context_required_test' %}" class="btn btn-success">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Test Hospital Context Required View
+                            </a>
+                        {% else %}
+                            <button class="btn btn-success" disabled>
+                                <i class="bi bi-x-circle me-1"></i>
+                                Test Hospital Context Required View (Disabled)
+                            </button>
+                        {% endif %}
+                        
+                        <a href="{% url 'core:hospital_context_api_test' %}" class="btn btn-info" target="_blank">
+                            <i class="bi bi-code-slash me-1"></i>
+                            Test API View
+                        </a>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'core:permission_test' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Back to Permission Tests
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -27,6 +27,7 @@ urlpatterns = [
     path("profiles/", include("apps.accounts.urls", namespace="apps.accounts")),
     path("hospitals/", include("apps.hospitals.urls", namespace="apps.hospitals")),
     path("patients/", include("apps.patients.urls", namespace="patients")),
+    path("events/", include("apps.events.urls", namespace="events")),
 ]
 
 # Serve media files during development

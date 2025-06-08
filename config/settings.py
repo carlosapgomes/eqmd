@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "apps.accounts.apps.AccountsConfig",  # New accounts app
     "apps.hospitals",  # Hospital management app
     "apps.patients",  # Patient management app
+    "apps.events",  # Events management app
     # django-allauth
     "allauth",
     "allauth.account",
@@ -92,6 +93,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "apps.hospitals.middleware.HospitalContextMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

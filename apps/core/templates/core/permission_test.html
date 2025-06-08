@@ -1,0 +1,171 @@
+{% extends 'base_app.html' %}
+{% load bootstrap_icons %}
+
+{% block title %}Permission Test{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Permission System Test</h1>
+            </div>
+
+            <!-- User Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">{% icon 'person-circle' %} User Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Email:</strong> {{ user.email }}</p>
+                            <p><strong>Profession:</strong> {{ user.profession|default:"Not set" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Is Doctor:</strong> 
+                                {% if is_doctor %}
+                                    <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Hospital Context:</strong> 
+                                {% if has_hospital_context %}
+                                    <span class="badge bg-success">Set</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Not Set</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Access Test -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">{% icon 'people' %} Patient Access Test</h5>
+                </div>
+                <div class="card-body">
+                    {% if patients %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Status</th>
+                                        <th>Hospital</th>
+                                        <th>Can Access</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in patients %}
+                                    <tr>
+                                        <td>{{ item.patient.full_name|default:"Unknown" }}</td>
+                                        <td>{{ item.patient.status|default:"Unknown" }}</td>
+                                        <td>{{ item.patient.current_hospital|default:"None" }}</td>
+                                        <td>
+                                            {% if item.can_access %}
+                                                <span class="badge bg-success">Yes</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">No</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No patients available for testing or patients app not installed.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Event Access Test -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">{% icon 'calendar-event' %} Event Edit Test</h5>
+                </div>
+                <div class="card-body">
+                    {% if events %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Event</th>
+                                        <th>Type</th>
+                                        <th>Created By</th>
+                                        <th>Created At</th>
+                                        <th>Can Edit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in events %}
+                                    <tr>
+                                        <td>{{ item.event.description|default:"Unknown" }}</td>
+                                        <td>{{ item.event.get_event_type_display|default:"Unknown" }}</td>
+                                        <td>{{ item.event.created_by|default:"Unknown" }}</td>
+                                        <td>{{ item.event.created_at|default:"Unknown" }}</td>
+                                        <td>
+                                            {% if item.can_edit %}
+                                                <span class="badge bg-success">Yes</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">No</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No events available for testing or events app not installed.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Decorator Test Links -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{% icon 'shield-check' %} Decorator Tests</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Permission Tests</h6>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'core:doctor_only_test' %}" class="btn btn-outline-primary btn-sm">
+                                    Test Doctor Required
+                                </a>
+                                <a href="{% url 'core:hospital_context_test' %}" class="btn btn-outline-info btn-sm">
+                                    Test Hospital Context Required
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Object-based Tests</h6>
+                            <div class="d-grid gap-2">
+                                {% if patients %}
+                                    <a href="{% url 'core:patient_access_test' patient_id=patients.0.patient.pk %}" class="btn btn-outline-success btn-sm">
+                                        Test Patient Access ({{ patients.0.patient.pk }})
+                                    </a>
+                                {% endif %}
+                                {% if events %}
+                                    <a href="{% url 'core:event_edit_test' event_id=events.0.event.pk %}" class="btn btn-outline-warning btn-sm">
+                                        Test Event Edit ({{ events.0.event.pk }})
+                                    </a>
+                                {% endif %}
+                                {% if not patients and not events %}
+                                    <p class="text-muted small">No objects available for testing</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
