@@ -9,6 +9,9 @@ from .utils import (
     can_access_patient,
     can_edit_event,
     can_change_patient_status,
+    can_change_patient_personal_data,
+    can_delete_event,
+    can_see_patient_in_search,
     is_doctor,
     has_hospital_context,
     has_django_permission,
@@ -27,6 +30,8 @@ from .decorators import (
     doctor_required,
     can_edit_event_required,
     hospital_context_required,
+    patient_data_change_required,
+    can_delete_event_required,
 )
 
 from .constants import (
@@ -46,6 +51,9 @@ __all__ = [
     'can_access_patient',
     'can_edit_event',
     'can_change_patient_status',
+    'can_change_patient_personal_data',
+    'can_delete_event',
+    'can_see_patient_in_search',
     'is_doctor',
     'has_hospital_context',
     'has_django_permission',
@@ -61,6 +69,8 @@ __all__ = [
     'doctor_required',
     'can_edit_event_required',
     'hospital_context_required',
+    'patient_data_change_required',
+    'can_delete_event_required',
     'MEDICAL_DOCTOR',
     'NURSE',
     'PHYSIOTHERAPIST',

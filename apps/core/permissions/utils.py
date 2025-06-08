@@ -394,3 +394,133 @@ def can_view_hospitals(user: Any) -> bool:
         return False
 
     return user.has_perm('hospitals.view_hospital')
+
+
+def can_change_patient_personal_data(user: Any, patient: Any) -> bool:
+    """
+    Check if a user can change a patient's personal data.
+
+    Rules:
+    - For inpatients: Only medical doctors can change personal data
+    - The doctor must be a member of the patient's hospital
+    - The doctor must be logged into the patient's hospital
+    - For outpatients: Any doctor can change personal data
+
+    Args:
+        user: The user requesting the change
+        patient: The patient object
+
+    Returns:
+        bool: True if personal data change is allowed, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    # Only doctors can change patient personal data
+    if not is_doctor(user):
+        return False
+
+    # Get patient status
+    patient_status = getattr(patient, 'status', None)
+
+    # For outpatients, any doctor can change personal data
+    if patient_status == OUTPATIENT:
+        return True
+
+    # For inpatients, doctor must be in the same hospital
+    if patient_status == INPATIENT:
+        # Check if user has hospital context
+        if not has_hospital_context(user):
+            return False
+
+        current_hospital = getattr(user, 'current_hospital', None)
+        if not current_hospital:
+            return False
+
+        # Check if patient is in the same hospital
+        patient_hospital_id = None
+        if hasattr(patient, 'current_hospital') and patient.current_hospital:
+            patient_hospital_id = patient.current_hospital.id
+        elif hasattr(patient, 'current_hospital_id'):
+            patient_hospital_id = patient.current_hospital_id
+
+        return current_hospital.id == patient_hospital_id
+
+    # For other statuses (emergency, discharged, transferred), apply same rules as inpatients
+    if patient_status in [EMERGENCY, DISCHARGED, TRANSFERRED]:
+        # Check if user has hospital context
+        if not has_hospital_context(user):
+            return False
+
+        current_hospital = getattr(user, 'current_hospital', None)
+        if not current_hospital:
+            return False
+
+        # Check if patient is in the same hospital
+        patient_hospital_id = None
+        if hasattr(patient, 'current_hospital') and patient.current_hospital:
+            patient_hospital_id = patient.current_hospital.id
+        elif hasattr(patient, 'current_hospital_id'):
+            patient_hospital_id = patient.current_hospital_id
+
+        return current_hospital.id == patient_hospital_id
+
+    return False
+
+
+def can_delete_event(user: Any, event: Any) -> bool:
+    """
+    Check if a user can delete a specific event.
+
+    Rules:
+    - Only the event creator can delete events
+    - Events can only be deleted within 24 hours of creation
+
+    Args:
+        user: The user requesting to delete
+        event: The event object
+
+    Returns:
+        bool: True if deletion is allowed, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    # Check if user is the creator
+    event_creator = getattr(event, 'created_by', None)
+    if event_creator != user:
+        return False
+
+    # Check time limit
+    created_at = getattr(event, 'created_at', None)
+    if not created_at:
+        return False
+
+    time_limit = timedelta(hours=EVENT_EDIT_TIME_LIMIT)
+    if timezone.now() - created_at > time_limit:
+        return False
+
+    return True
+
+
+def can_see_patient_in_search(user: Any, patient: Any) -> bool:
+    """
+    Check if a user can see a patient in search results.
+
+    Rules:
+    - Same as can_access_patient but may have additional filtering logic
+    - Users can only see patients they have access to
+
+    Args:
+        user: The user performing the search
+        patient: The patient object
+
+    Returns:
+        bool: True if patient should be visible in search, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+
+    # For now, use the same logic as can_access_patient
+    # This can be extended in the future for more specific search filtering
+    return can_access_patient(user, patient)

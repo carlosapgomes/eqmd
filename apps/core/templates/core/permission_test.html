@@ -9,6 +9,16 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1>Permission System Test</h1>
+                <div>
+                    <a href="{% url 'core:object_level_permissions_test' %}" class="btn btn-primary">
+                        <i class="bi bi-shield-lock me-1"></i>
+                        Object-Level Permissions Test
+                    </a>
+                    <a href="{% url 'core:role_permissions_test' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-people me-1"></i>
+                        Role-Based Permissions
+                    </a>
+                </div>
             </div>
 
             <!-- User Information -->

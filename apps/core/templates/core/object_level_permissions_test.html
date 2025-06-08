@@ -1,0 +1,295 @@
+{% extends 'base_app.html' %}
+{% load permission_tags %}
+
+{% block title %}Object-Level Permissions Test{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-shield-lock me-2"></i>
+                    Object-Level Permissions Test
+                </h2>
+                <a href="{% url 'core:permission_test' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Back to Permission Test
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person me-2"></i>
+                        Current User Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Username:</strong> {{ user.username }}</p>
+                            <p><strong>Email:</strong> {{ user.email }}</p>
+                            <p><strong>Profession:</strong> {{ user.profession_type|profession_type_display }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Is Doctor:</strong> 
+                                {% if is_doctor %}
+                                    <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Hospital Context:</strong> 
+                                {% if user|has_hospital_context_user %}
+                                    <span class="badge bg-success">{{ user.current_hospital.name }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning">No hospital selected</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Permissions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>
+                        Patient Object-Level Permissions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if patients %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Status</th>
+                                        <th>Hospital</th>
+                                        <th>Can Access</th>
+                                        <th>Can Change Personal Data</th>
+                                        <th>Can See in Search</th>
+                                        <th>Template Tag Tests</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for patient_data in patients %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ patient_data.patient.name }}</strong><br>
+                                                <small class="text-muted">{{ patient_data.patient.pk }}</small>
+                                            </td>
+                                            <td>
+                                                {{ patient_data.patient.status|patient_status_badge }}
+                                            </td>
+                                            <td>
+                                                {% if patient_data.patient.current_hospital %}
+                                                    {{ patient_data.patient.current_hospital.name }}
+                                                {% else %}
+                                                    <span class="text-muted">No hospital</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if patient_data.can_access %}
+                                                    <span class="badge bg-success">✓</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">✗</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if patient_data.can_change_personal_data %}
+                                                    <span class="badge bg-success">✓</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">✗</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if patient_data.can_see_in_search %}
+                                                    <span class="badge bg-success">✓</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">✗</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% can_user_change_patient_personal_data user patient_data.patient as can_change_data %}
+                                                {% can_user_see_patient_in_search user patient_data.patient as can_see %}
+                                                <small>
+                                                    Change Data: 
+                                                    {% if can_change_data %}
+                                                        <span class="badge bg-success">✓</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">✗</span>
+                                                    {% endif %}
+                                                    <br>
+                                                    See Search: 
+                                                    {% if can_see %}
+                                                        <span class="badge bg-success">✓</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">✗</span>
+                                                    {% endif %}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No patients available for testing. Create some patients first.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Permissions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calendar-event me-2"></i>
+                        Event Object-Level Permissions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if events %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Event</th>
+                                        <th>Type</th>
+                                        <th>Created By</th>
+                                        <th>Created At</th>
+                                        <th>Can Edit</th>
+                                        <th>Can Delete</th>
+                                        <th>Template Tag Tests</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for event_data in events %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ event_data.event.description|truncatechars:30 }}</strong><br>
+                                                <small class="text-muted">{{ event_data.event.pk }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ event_data.event.get_event_type_display }}</span>
+                                            </td>
+                                            <td>
+                                                {% if event_data.event.created_by %}
+                                                    {{ event_data.event.created_by.username }}
+                                                    {% if event_data.event.created_by == user %}
+                                                        <span class="badge bg-primary">You</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">Unknown</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small>{{ event_data.event.created_at|date:"M d, Y H:i" }}</small>
+                                            </td>
+                                            <td>
+                                                {% if event_data.can_edit %}
+                                                    <span class="badge bg-success">✓</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">✗</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if event_data.can_delete %}
+                                                    <span class="badge bg-success">✓</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">✗</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% can_user_delete_event user event_data.event as can_delete %}
+                                                <small>
+                                                    Delete: 
+                                                    {% if can_delete %}
+                                                        <span class="badge bg-success">✓</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">✗</span>
+                                                    {% endif %}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No events available for testing. Create some events first.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permission Filter Tests -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-funnel me-2"></i>
+                        Permission Filter Tests
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>General Permission Filters</h6>
+                            <ul class="list-unstyled">
+                                <li>
+                                    <code>user|can_change_patient_data</code>: 
+                                    {% if user|can_change_patient_data %}
+                                        <span class="badge bg-success">True</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">False</span>
+                                    {% endif %}
+                                </li>
+                                <li>
+                                    <code>user|is_doctor_user</code>: 
+                                    {% if user|is_doctor_user %}
+                                        <span class="badge bg-success">True</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">False</span>
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Custom Permission Backend</h6>
+                            <p><small class="text-muted">
+                                The custom permission backend is now active and handles object-level permissions
+                                through Django's <code>user.has_perm()</code> method with objects.
+                            </small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

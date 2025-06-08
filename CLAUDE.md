@@ -462,6 +462,9 @@ Permission test interface available at:
 - `/test/hospital-context/` - Hospital context requirement test
 - `/test/patient-access/<uuid:patient_id>/` - Patient access test
 - `/test/event-edit/<uuid:event_id>/` - Event editing test
+- `/test/patient-data-change/<uuid:patient_id>/` - Patient personal data change test
+- `/test/event-delete/<uuid:event_id>/` - Event deletion test
+- `/test/object-level-permissions/` - Object-level permissions comprehensive test dashboard
 - `/test/hospital-context-middleware/` - Hospital context middleware test interface
 - `/test/hospital-context-required/` - Test view that requires hospital context
 - `/test/hospital-context-api/` - API endpoint for hospital context information
@@ -473,13 +476,32 @@ Permission test interface available at:
 
 ##### View Protection
 ```python
-from apps.core.permissions import patient_access_required, doctor_required
+from apps.core.permissions import (
+    patient_access_required,
+    doctor_required,
+    patient_data_change_required,
+    can_delete_event_required
+)
 
 @patient_access_required
 def patient_detail_view(request, patient_id):
     # User access to patient already validated
     patient = get_object_or_404(Patient, pk=patient_id)
     return render(request, 'patient_detail.html', {'patient': patient})
+
+@patient_data_change_required
+def patient_edit_personal_data_view(request, patient_id):
+    # User permission to change patient personal data already validated
+    patient = get_object_or_404(Patient, pk=patient_id)
+    # Handle personal data editing logic
+    pass
+
+@can_delete_event_required
+def event_delete_view(request, event_id):
+    # User permission to delete event already validated
+    event = get_object_or_404(Event, pk=event_id)
+    # Handle event deletion logic
+    pass
 
 @doctor_required
 def discharge_patient_view(request, patient_id):
@@ -489,7 +511,13 @@ def discharge_patient_view(request, patient_id):
 
 ##### Manual Permission Checks
 ```python
-from apps.core.permissions import can_access_patient, can_edit_event
+from apps.core.permissions import (
+    can_access_patient,
+    can_edit_event,
+    can_change_patient_personal_data,
+    can_delete_event,
+    can_see_patient_in_search
+)
 
 def some_business_logic(user, patient, event):
     if can_access_patient(user, patient):
@@ -497,6 +525,30 @@ def some_business_logic(user, patient, event):
         if can_edit_event(user, event):
             # User can edit event
             pass
+
+        if can_change_patient_personal_data(user, patient):
+            # User can change patient personal data
+            pass
+
+    if can_delete_event(user, event):
+        # User can delete event
+        pass
+
+    if can_see_patient_in_search(user, patient):
+        # Patient should be visible in search results
+        pass
+```
+
+##### Custom Permission Backend Usage
+```python
+# Using Django's permission system with objects
+if user.has_perm('patients.change_patient_personal_data', patient):
+    # User can change this specific patient's personal data
+    pass
+
+if user.has_perm('events.delete_event', event):
+    # User can delete this specific event
+    pass
 ```
 
 ### Implementation Status
@@ -520,7 +572,13 @@ The permission framework follows a vertical slicing approach for systematic impl
    - Template tags for permission checking in templates
    - Comprehensive test coverage (37+ tests across all permission modules)
 
-4. **Object-Level Permissions** (Vertical Slice 4) - **PLANNED**
+4. **Object-Level Permissions** (Vertical Slice 4) ✅ **COMPLETED**
+   - Object-level permission utility functions for fine-grained access control
+   - Custom permission backend integration with Django's permission system
+   - Additional permission decorators for patient data and event deletion
+   - Template tags for object-level permission checking in UI
+   - Comprehensive test coverage (45+ tests for object-level permissions)
+
 5. **UI Integration and Performance Optimization** (Vertical Slice 5) - **PLANNED**
 
 ### Role-Based Permission Groups
@@ -585,15 +643,95 @@ Users are automatically assigned to appropriate groups when:
 - An existing user's profession type is changed
 - Groups are created/removed automatically based on profession changes
 
+### Object-Level Permissions
+
+#### Overview
+The system implements fine-grained object-level permissions that control access to specific patients and events based on user roles, hospital context, and time-based restrictions.
+
+#### Object-Level Permission Functions
+
+##### Patient-Related Permissions
+- **`can_change_patient_personal_data(user, patient)`**: Controls who can modify patient personal information
+  - Only doctors can change patient personal data
+  - For outpatients: Any doctor can change data
+  - For inpatients/emergency/discharged/transferred: Doctor must be in same hospital with hospital context
+
+- **`can_see_patient_in_search(user, patient)`**: Controls patient visibility in search results
+  - Uses same logic as `can_access_patient` for consistent access control
+  - Extensible for future search-specific filtering requirements
+
+##### Event-Related Permissions
+- **`can_delete_event(user, event)`**: Controls event deletion permissions
+  - Only event creators can delete their events
+  - Events can only be deleted within 24 hours of creation
+  - Same time-based restrictions as editing for audit trail integrity
+
+#### Object-Level Permission Decorators
+
+- **`@patient_data_change_required`**: View decorator for patient personal data modification
+  - Validates user can change patient personal data
+  - Extracts patient_id from URL parameters
+  - Returns 403 Forbidden for unauthorized access
+
+- **`@can_delete_event_required`**: View decorator for event deletion
+  - Validates user can delete specific events
+  - Extracts event_id from URL parameters
+  - Enforces creator and time-based restrictions
+
+#### Custom Permission Backend
+
+**`EquipeMedPermissionBackend`** integrates object-level permissions with Django's permission system:
+
+- **Integration**: Added to `AUTHENTICATION_BACKENDS` in settings
+- **Object-Level Support**: Handles `user.has_perm(permission, obj)` calls
+- **Supported Permissions**:
+  - `patients.access_patient`
+  - `patients.change_patient_personal_data`
+  - `patients.see_patient_in_search`
+  - `events.edit_event`
+  - `events.delete_event`
+
+#### Object-Level Template Tags
+
+```django
+{% load permission_tags %}
+
+<!-- Patient personal data change permission -->
+{% can_user_change_patient_personal_data user patient as can_change_data %}
+{% if can_change_data %}
+    <a href="{% url 'patients:edit_personal_data' patient.pk %}">Edit Personal Data</a>
+{% endif %}
+
+<!-- Event deletion permission -->
+{% can_user_delete_event user event as can_delete %}
+{% if can_delete %}
+    <button class="btn btn-danger" onclick="deleteEvent('{{ event.pk }}')">Delete Event</button>
+{% endif %}
+
+<!-- Patient search visibility -->
+{% can_user_see_patient_in_search user patient as can_see %}
+{% if can_see %}
+    <!-- Display patient in search results -->
+{% endif %}
+
+<!-- General permission filters -->
+{% if user|can_change_patient_data %}
+    <p>You have permission to change patient data</p>
+{% endif %}
+```
+
 ### Security Features
 - **Hospital Isolation**: Users can only access patients in their current hospital context
-- **Time-Based Restrictions**: Medical record editing limited to 24-hour windows
+- **Time-Based Restrictions**: Medical record editing and deletion limited to 24-hour windows
 - **Role-Based Access**: Different permissions for each medical profession via Django groups
+- **Object-Level Permissions**: Fine-grained control over individual patient and event access
+- **Custom Permission Backend**: Seamless integration with Django's permission system for object-level checks
 - **Automatic Group Management**: Signal-based assignment ensures users always have correct permissions
 - **Audit Trail Support**: Permission checks consider event creators and timestamps
 - **Fail-Safe Defaults**: Permission functions return `False` for unauthorized access
 - **CSRF Protection**: All permission-protected views include CSRF protection
 - **Template-Level Security**: Permission checks available directly in templates
+- **Personal Data Protection**: Strict controls on who can modify patient personal information
 
 ## Hospitals App Features
 

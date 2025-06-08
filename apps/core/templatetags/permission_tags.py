@@ -12,6 +12,9 @@ from apps.core.permissions import (
     can_access_patient,
     can_edit_event,
     can_change_patient_status,
+    can_change_patient_personal_data,
+    can_delete_event,
+    can_see_patient_in_search,
     is_doctor,
     has_hospital_context,
 )
@@ -279,10 +282,50 @@ def can_manage_events(user):
 def can_view_events(user):
     """
     Check if user can view events.
-    
+
     Usage: {% if user|can_view_events %}
     """
     if not user.is_authenticated:
         return False
-    
+
     return user.has_perm('events.view_event')
+
+
+@register.simple_tag
+def can_user_change_patient_personal_data(user, patient):
+    """
+    Check if user can change patient personal data.
+
+    Usage: {% can_user_change_patient_personal_data user patient as can_change_data %}
+    """
+    return can_change_patient_personal_data(user, patient)
+
+
+@register.simple_tag
+def can_user_delete_event(user, event):
+    """
+    Check if user can delete a specific event.
+
+    Usage: {% can_user_delete_event user event as can_delete %}
+    """
+    return can_delete_event(user, event)
+
+
+@register.simple_tag
+def can_user_see_patient_in_search(user, patient):
+    """
+    Check if user can see patient in search results.
+
+    Usage: {% can_user_see_patient_in_search user patient as can_see %}
+    """
+    return can_see_patient_in_search(user, patient)
+
+
+@register.filter
+def can_change_patient_data(user):
+    """
+    Check if user can generally change patient personal data (based on role).
+
+    Usage: {% if user|can_change_patient_data %}
+    """
+    return is_doctor(user)
