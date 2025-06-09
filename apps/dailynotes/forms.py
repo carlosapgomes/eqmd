@@ -6,6 +6,7 @@ from crispy_forms.bootstrap import FormActions
 
 from .models import DailyNote
 from apps.patients.models import Patient
+from apps.core.permissions import can_access_patient
 
 
 class DailyNoteForm(forms.ModelForm):
@@ -44,7 +45,29 @@ class DailyNoteForm(forms.ModelForm):
             self.fields['event_datetime'].initial = timezone.now()
             
         # Configure field properties
-        self.fields['patient'].queryset = Patient.objects.all()
+        # Filter patients based on user permissions and hospital context
+        if self.user:
+            from apps.core.permissions.utils import has_hospital_context
+            
+            # Check if user has hospital context
+            if has_hospital_context(self.user):
+                current_hospital = getattr(self.user, 'current_hospital', None)
+                if current_hospital:
+                    # Start with patients in the user's current hospital
+                    patient_queryset = Patient.objects.filter(current_hospital=current_hospital)
+                    
+                    # For efficiency, we'll let the permission checking happen in clean_patient()
+                    # rather than checking every patient here in __init__
+                    self.fields['patient'].queryset = patient_queryset
+                else:
+                    self.fields['patient'].queryset = Patient.objects.none()
+            else:
+                # If no hospital context, show no patients
+                self.fields['patient'].queryset = Patient.objects.none()
+        else:
+            # If no user, show no patients
+            self.fields['patient'].queryset = Patient.objects.none()
+
         self.fields['patient'].empty_label = "Selecione um paciente"
         self.fields['description'].help_text = "Breve descrição da evolução"
         self.fields['content'].help_text = "Conteúdo detalhado da evolução (suporte a Markdown)"
@@ -88,6 +111,16 @@ class DailyNoteForm(forms.ModelForm):
             )
         return event_datetime
         
+    def clean_patient(self):
+        """Validate that user can access the selected patient."""
+        patient = self.cleaned_data.get('patient')
+        if patient and self.user:
+            if not can_access_patient(self.user, patient):
+                raise forms.ValidationError(
+                    "Você não tem permissão para criar evoluções para este paciente."
+                )
+        return patient
+
     def clean_content(self):
         """Validate content field."""
         content = self.cleaned_data.get('content')

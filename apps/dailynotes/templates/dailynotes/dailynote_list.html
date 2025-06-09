@@ -142,25 +142,25 @@
             </td>
             <td class="text-center">
               <div class="btn-group btn-group-sm" role="group">
-                <a 
-                  href="{% url 'dailynotes:dailynote_detail' pk=dailynote.pk %}" 
+                <a
+                  href="{% url 'dailynotes:dailynote_detail' pk=dailynote.pk %}"
                   class="btn btn-outline-primary"
                   title="Ver detalhes"
                 >
                   <i class="bi bi-eye"></i>
                 </a>
-                {% if perms.events.change_event %}
-                <a 
-                  href="{% url 'dailynotes:dailynote_update' pk=dailynote.pk %}" 
+                {% if perms.events.change_event and dailynote.can_edit %}
+                <a
+                  href="{% url 'dailynotes:dailynote_update' pk=dailynote.pk %}"
                   class="btn btn-outline-secondary"
                   title="Editar"
                 >
                   <i class="bi bi-pencil"></i>
                 </a>
                 {% endif %}
-                {% if perms.events.delete_event %}
-                <a 
-                  href="{% url 'dailynotes:dailynote_delete' pk=dailynote.pk %}" 
+                {% if perms.events.delete_event and dailynote.can_delete %}
+                <a
+                  href="{% url 'dailynotes:dailynote_delete' pk=dailynote.pk %}"
                   class="btn btn-outline-danger"
                   title="Excluir"
                 >
