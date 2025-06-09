@@ -36,6 +36,10 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         {
+          from: "node_modules/easymde/dist/easymde.min.js",
+          to: "js/easymde.min.js",
+        },
+        {
           from: "node_modules/bootstrap/dist/js/bootstrap.min.js",
           to: "js/bootstrap.min.js",
         },

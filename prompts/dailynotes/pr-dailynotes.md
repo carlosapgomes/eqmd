@@ -9,7 +9,7 @@ Save this plan in the file @prompts/dailynotes/dailynotes_implementation_plan.md
 
 ### App Structure and Testing
 
-Read the file @prompts/CLAUDE.md to learn about this project and apss, and follow its recommendations for any testing related task.
+Read the file @CLAUDE.md to learn about this project and apps, and follow its recommendations for any testing related task.
 
 ### App Permissions
 

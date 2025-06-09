@@ -48,6 +48,9 @@ python manage.py test apps.patients.tests.test_views
 # Run events app tests (recommended due to django-model-utils dependency)
 python manage.py test apps.events.tests
 
+# Run dailynotes app tests (recommended due to Event model inheritance)
+python manage.py test apps.dailynotes.tests
+
 # Run comprehensive patients app test suite
 python manage.py test apps.patients.tests.test_integration apps.patients.tests.test_models apps.patients.tests.test_views apps.patients.tests.test_tags
 
@@ -104,6 +107,7 @@ python manage.py create_sample_tags
 - **apps/hospitals**: Hospital and ward management with CRUD operations
 - **apps/patients**: Patient management with tagging system and hospital records
 - **apps/events**: Base event system for medical records and activities
+- **apps/dailynotes**: Daily evolution notes extending the base Event model
 - **config/**: Django project configuration directory
 - **assets/**: Webpack-managed frontend assets (SCSS, JS)
 - **static/**: Compiled static files
@@ -132,6 +136,15 @@ python manage.py create_sample_tags
   - Custom permissions for 24-hour edit/delete windows
   - django-model-utils InheritanceManager for extensibility
 
+#### Daily Notes App
+- **DailyNote**: Medical daily evolution notes model extending Event
+  - Inherits all Event functionality (UUID primary keys, audit fields, permissions)
+  - Content field for detailed evolution notes
+  - Automatic event_type assignment to DAILY_NOTE_EVENT
+  - Portuguese verbose names ("Evolução" / "Evoluções")
+  - Comprehensive admin interface with fieldsets and optimized queries
+  - Full test coverage with model inheritance validation
+
 ### Authentication
 - Uses django-allauth for email-based authentication
 - Custom user model at `accounts.EqmdCustomUser`
@@ -153,6 +166,7 @@ python manage.py create_sample_tags
 - Complete patient workflow testing including hospital transfers and discharge
 - Permission-based testing for different user roles
 - Events app: Full test coverage for models, admin, forms, views, and templates
+- Daily Notes app: Complete model test coverage including inheritance validation and event type auto-assignment
 
 ### Security Notes
 - Environment variables for sensitive configuration
@@ -330,6 +344,186 @@ Optimized for production use:
 - **Caching Ready**: Structure supports Redis/Memcached integration
 - **Lazy Loading**: Widgets can be enhanced with AJAX for dynamic updates
 - **Mobile Optimized**: Responsive design with proper touch interactions
+
+## Daily Notes App Features
+
+### Overview
+The Daily Notes app (`apps.dailynotes`) provides medical daily evolution notes functionality, extending the base Event model to create specialized medical records for patient progress tracking.
+
+### Core Model Architecture
+
+#### DailyNote Model
+The `DailyNote` model inherits from the base `Event` model, providing:
+
+- **Model Inheritance**: Extends `apps.events.models.Event` using Django model inheritance
+- **Content Field**: `TextField` for detailed evolution notes with Portuguese verbose name "Conteúdo"
+- **Automatic Event Type**: Automatically sets `event_type = Event.DAILY_NOTE_EVENT` on save
+- **Portuguese Localization**: Verbose names "Evolução" (singular) and "Evoluções" (plural)
+- **Audit Trail**: Inherits created/updated by tracking from Event model
+- **UUID Primary Keys**: Inherits UUID-based primary keys for security
+- **Permissions**: Inherits 24-hour edit/delete window restrictions from Event model
+
+#### Model Features
+```python
+class DailyNote(Event):
+    content = models.TextField(verbose_name="Conteúdo")
+
+    def save(self, *args, **kwargs):
+        self.event_type = Event.DAILY_NOTE_EVENT
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Evolução - {self.patient.name} - {self.event_datetime.strftime('%d/%m/%Y %H:%M')}"
+
+    class Meta:
+        verbose_name = "Evolução"
+        verbose_name_plural = "Evoluções"
+        ordering = ["-event_datetime"]
+```
+
+### Admin Interface
+
+#### Comprehensive Admin Configuration
+The Daily Notes admin interface provides:
+
+- **List Display**: Patient, event datetime, created by, timestamps
+- **Filtering**: Event datetime, creation/update timestamps, creator
+- **Search**: Patient name, content, description
+- **Fieldsets**: Organized sections for event info, content, audit trail, and system fields
+- **Read-only Fields**: ID, event type, timestamps for data integrity
+- **Query Optimization**: `select_related` for efficient database queries
+
+#### Admin Features
+- **Permission Integration**: Respects Django admin permissions
+- **Audit Trail Display**: Shows creation and modification history
+- **User-friendly Interface**: Portuguese labels and organized fieldsets
+- **Data Integrity**: Read-only system fields prevent accidental modification
+
+### Database Integration
+
+#### Migration Management
+- **Initial Migration**: `apps/dailynotes/migrations/0001_initial.py`
+- **Model Inheritance**: Proper OneToOneField relationship with Event model
+- **Database Schema**: Efficient table structure with inheritance support
+
+#### Installation Steps
+1. **App Registration**: Added to `INSTALLED_APPS` as `apps.dailynotes`
+2. **Migration Creation**: `python manage.py makemigrations dailynotes`
+3. **Migration Application**: `python manage.py migrate dailynotes`
+
+### Testing Framework
+
+#### Comprehensive Test Coverage
+The Daily Notes app includes complete test coverage in `apps/dailynotes/tests.py`:
+
+#### Test Categories
+- **Model Creation Tests**: Verify DailyNote creation with all required fields
+- **Event Type Auto-Assignment**: Validate automatic setting of `DAILY_NOTE_EVENT`
+- **String Representation**: Test `__str__` method formatting
+- **Model Inheritance**: Verify proper inheritance from Event model
+- **Meta Configuration**: Test verbose names and ordering settings
+
+#### Test Implementation
+```python
+class DailyNoteModelTest(TestCase):
+    def test_daily_note_creation(self):
+        # Test basic model creation
+
+    def test_daily_note_event_type_auto_set(self):
+        # Test automatic event_type assignment
+
+    def test_daily_note_str_representation(self):
+        # Test string representation formatting
+
+    def test_daily_note_inheritance_from_event(self):
+        # Test Event model inheritance
+
+    def test_daily_note_meta_configuration(self):
+        # Test Meta class settings
+```
+
+#### Test Execution
+```bash
+# Run Daily Notes tests
+python manage.py test apps.dailynotes.tests
+
+# Run with verbose output
+python manage.py test apps.dailynotes.tests -v 2
+```
+
+### Integration with Event System
+
+#### Event Type Integration
+- **Event Constant**: Uses `Event.DAILY_NOTE_EVENT` from base Event model
+- **Inheritance Manager**: Compatible with django-model-utils InheritanceManager
+- **Polymorphic Queries**: Can be queried through Event model with proper type filtering
+
+#### Permission Integration
+- **Inherited Permissions**: Automatically inherits Event model permissions
+- **Time-based Restrictions**: 24-hour edit/delete window from Event model
+- **Hospital Context**: Respects hospital-based access control
+- **Role-based Access**: Integrates with profession-based permission system
+
+### Development Guidelines
+
+#### Code Organization
+```
+apps/dailynotes/
+├── __init__.py
+├── admin.py              # Admin interface configuration
+├── apps.py              # App configuration
+├── migrations/          # Database migrations
+│   └── 0001_initial.py  # Initial model creation
+├── models.py            # DailyNote model definition
+├── tests.py             # Comprehensive test suite
+└── views.py             # Future view implementations
+```
+
+#### Best Practices
+- **Model Inheritance**: Properly extends Event model without breaking inheritance chain
+- **Portuguese Localization**: All user-facing text in Portuguese
+- **Test Coverage**: Complete test coverage for all model functionality
+- **Admin Integration**: Comprehensive admin interface with proper permissions
+- **Database Efficiency**: Optimized queries and proper indexing through inheritance
+
+### Future Development
+
+#### Planned Features (Not Yet Implemented)
+- **Web Interface**: CRUD views for daily note management
+- **Template System**: Bootstrap 5 styled templates
+- **Form Integration**: Crispy Forms for note creation/editing
+- **Dashboard Widgets**: Recent daily notes and statistics
+- **API Endpoints**: REST API for mobile/external access
+- **Search Integration**: Full-text search across note content
+- **Export Features**: PDF/Excel export for medical records
+
+#### Implementation Status
+- ✅ **Slice 1: Core Model and Basic Infrastructure** - COMPLETED
+  - DailyNote model with Event inheritance
+  - Admin interface configuration
+  - Database migrations
+  - Comprehensive test suite
+  - App configuration and installation
+
+### Technical Specifications
+
+#### Dependencies
+- **Django**: Core framework functionality
+- **apps.events**: Base Event model inheritance
+- **apps.patients**: Patient model relationship (inherited)
+- **apps.accounts**: User model for audit trail (inherited)
+
+#### Database Schema
+- **Table**: `dailynotes_dailynote` (Django naming convention)
+- **Primary Key**: UUID inherited from Event model
+- **Foreign Keys**: Patient, created_by, updated_by (inherited)
+- **Indexes**: Event datetime ordering, patient relationships
+
+#### Performance Considerations
+- **Query Optimization**: Admin interface uses `select_related`
+- **Inheritance Efficiency**: Minimal overhead from Event model inheritance
+- **Index Usage**: Proper indexing on datetime and patient fields
+- **Memory Usage**: Efficient model design with minimal additional fields
 
 ## Permission System
 
