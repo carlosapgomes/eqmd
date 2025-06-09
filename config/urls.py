@@ -28,6 +28,7 @@ urlpatterns = [
     path("hospitals/", include("apps.hospitals.urls", namespace="apps.hospitals")),
     path("patients/", include("apps.patients.urls", namespace="patients")),
     path("events/", include("apps.events.urls", namespace="events")),
+    path("dailynotes/", include("apps.dailynotes.urls", namespace="dailynotes")),
 ]
 
 # Serve media files during development

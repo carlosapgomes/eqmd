@@ -1,0 +1,1 @@
+Please, read the file @prompts/dailynotes/dailynotes_implementation_plan.md and implement only the "Slice 3: Templates and UI Integration", because the first two slices have already been implemented. After that just stop.
