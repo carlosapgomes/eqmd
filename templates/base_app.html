@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block extra_head %}
 <style>
   /* Ensure body has proper padding for fixed navbar */
@@ -18,8 +19,8 @@
     </button>
     
     <!-- Brand -->
-    <a class="navbar-brand fw-bold ms-2" href="{% url 'apps.core:dashboard' %}">
-      <i class="bi bi-hospital me-2 text-medical-primary"></i>
+    <a class="navbar-brand fw-bold ms-2 d-flex align-items-center" href="{% url 'apps.core:dashboard' %}">
+      <img src="{% static 'images/logo.png' %}" alt="EquipeMed Logo" height="28" class="me-2" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1))">
       EquipeMed
     </a>
     
@@ -249,8 +250,9 @@
     <!-- Mobile Offcanvas Sidebar -->
     <div class="offcanvas offcanvas-start offcanvas-app-menu d-lg-none" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
       <div class="offcanvas-header">
-        <h5 class="offcanvas-title text-medical-primary" id="sidebarOffcanvasLabel">
-          <i class="bi bi-hospital me-2"></i>EquipeMed
+        <h5 class="offcanvas-title text-medical-primary d-flex align-items-center" id="sidebarOffcanvasLabel">
+          <img src="{% static 'images/logo.png' %}" alt="EquipeMed Logo" height="24" class="me-2" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1))">
+          EquipeMed
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>

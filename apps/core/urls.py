@@ -5,7 +5,7 @@ from . import test_views_hospital_context
 from . import test_views_role_permissions
 from . import permission_demo
 
-app_name = "core"
+app_name = "apps.core"
 
 urlpatterns = [
     path("", views.landing_page, name="landing_page"),
