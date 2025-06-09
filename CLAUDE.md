@@ -75,6 +75,14 @@ python manage.py create_sample_tags
 - Automatic event_type assignment
 - Admin interface with fieldsets and optimizations
 
+#### Advanced Features (Slice 5)
+- **Patient Integration**: Patient-specific daily note views with date filtering
+- **Search & Filtering**: Advanced search by content, patient, creator, and date ranges
+- **Dashboard Integration**: Recent daily notes widget and statistics counters
+- **Export/Print**: Print-friendly individual notes and patient evolution reports
+- **URLs**: `/dailynotes/`, `/dailynotes/patient/<uuid>/`, `/dailynotes/<uuid>/print/`
+- **Template Tags**: `recent_dailynotes_widget`, `dailynotes_count_today`, `dailynotes_count_week`
+
 ### Hospitals App
 **Hospital and ward management with context middleware**
 - Hospital/Ward models with capacity tracking

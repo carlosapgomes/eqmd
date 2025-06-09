@@ -301,6 +301,159 @@ Following Bootstrap's standard breakpoints:
 - Touch-friendly button sizes maintained
 - Proper spacing for mobile interactions
 
+## Printing Strategy
+
+### HTML + Browser Print Approach
+
+EquipeMed uses an **HTML + browser print** strategy for all document printing needs instead of server-side PDF generation. This approach provides several advantages:
+
+#### Benefits
+
+1. **No additional dependencies** - No PDF libraries or external services required
+2. **User control** - Users can choose print settings, paper size, and save as PDF
+3. **Responsive design** - Works across all browsers and devices
+4. **Fast rendering** - No server-side processing delays
+5. **Professional output** - Medical-grade document formatting
+6. **Cost effective** - Leverages built-in browser capabilities
+
+#### Implementation Pattern
+
+##### 1. Print View Class
+```python
+class DocumentPrintView(LoginRequiredMixin, DetailView):
+    model = YourModel
+    template_name = 'app/document_print.html'
+    
+    def get_object(self, queryset=None):
+        """Add permission checks here"""
+        obj = super().get_object(queryset)
+        # Add your permission logic
+        return obj
+```
+
+##### 2. Print Template Structure
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Document Title</title>
+    <style>
+        @media print {
+            @page {
+                margin: 1cm;
+                size: A4;
+            }
+            .no-print { display: none !important; }
+        }
+        
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+        }
+        
+        /* Add more medical document styling */
+    </style>
+</head>
+<body>
+    <button class="no-print" onclick="window.print()">
+        🖨️ Imprimir
+    </button>
+    
+    <!-- Document content here -->
+</body>
+</html>
+```
+
+##### 3. Print Button Implementation
+```html
+<a href="{% url 'app:document_print' pk=object.pk %}" 
+   class="btn btn-outline-primary" 
+   target="_blank" 
+   title="Imprimir documento">
+    <i class="bi bi-printer"></i> Imprimir
+</a>
+```
+
+#### Medical Document Standards
+
+##### Document Structure
+- **Header**: Hospital name and document title
+- **Patient Section**: Demographics table with key information
+- **Content Area**: Main document content with proper spacing
+- **Signature Section**: Professional signature areas
+- **Footer**: Generation timestamp and metadata
+
+##### Typography for Print
+- **Font**: Times New Roman (professional medical standard)
+- **Size**: 11-12px for body text
+- **Line Height**: 1.3-1.4 for readability
+- **Headers**: Bold, appropriate hierarchy
+
+##### Print-Specific CSS
+```css
+@media print {
+    @page {
+        margin: 1cm;
+        size: A4;
+    }
+    
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        font-family: 'Times New Roman', serif;
+        color: #000;
+    }
+    
+    .page-break {
+        page-break-before: always;
+    }
+    
+    .avoid-break {
+        page-break-inside: avoid;
+    }
+}
+```
+
+#### URL Patterns
+```python
+# In app/urls.py
+path('<uuid:pk>/print/', views.DocumentPrintView.as_view(), name='document_print'),
+path('patient/<uuid:patient_pk>/export/', views.PatientReportExportView.as_view(), name='patient_export'),
+```
+
+#### Best Practices
+
+1. **Always open in new tab** (`target="_blank"`) to preserve user's current context
+2. **Use semantic HTML** for proper document structure
+3. **Include print button** with `.no-print` class for easy access
+4. **Professional medical styling** with Times New Roman font
+5. **Proper page breaks** for multi-page documents
+6. **Hospital branding** in document headers
+7. **Security**: Always validate permissions before showing print view
+
+#### Testing Checklist
+
+- [ ] Document prints correctly in Chrome, Firefox, Safari
+- [ ] Page breaks work properly for long content
+- [ ] Print button is hidden when printing
+- [ ] Professional appearance matches medical standards
+- [ ] Permissions are properly enforced
+- [ ] Hospital information displays correctly
+
+#### Example Implementation
+
+See `apps/dailynotes/views.py` (DailyNotePrintView) and `apps/dailynotes/templates/dailynotes/dailynote_print.html` for a complete reference implementation.
+
 ## Accessibility
 
 ### Focus States

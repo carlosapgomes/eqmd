@@ -82,6 +82,16 @@
     Evolução Diária
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group me-2">
+      <a href="{% url 'dailynotes:dailynote_print' pk=dailynote.pk %}" 
+         class="btn btn-outline-primary" 
+         target="_blank" 
+         title="Imprimir evolução">
+        <i class="bi bi-printer me-1"></i>
+        Imprimir
+      </a>
+    </div>
+    
     {% if perms.events.change_event and can_edit_dailynote %}
     <a href="{% url 'dailynotes:dailynote_update' pk=dailynote.pk %}" class="btn btn-medical-primary me-2">
       <i class="bi bi-pencil me-1"></i>

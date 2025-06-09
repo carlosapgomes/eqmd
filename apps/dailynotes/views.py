@@ -6,6 +6,8 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import datetime, timedelta
 
 from .models import DailyNote
 from .forms import DailyNoteForm
@@ -18,6 +20,7 @@ from apps.core.permissions import (
     can_edit_event,
     can_delete_event
 )
+from apps.patients.models import Patient
 
 
 @method_decorator(hospital_context_required, name='dispatch')
@@ -64,6 +67,29 @@ class DailyNoteListView(LoginRequiredMixin, ListView):
         if patient_id:
             queryset = queryset.filter(patient__id=patient_id)
 
+        # Date range filtering
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        
+        if date_from:
+            try:
+                date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+                queryset = queryset.filter(event_datetime__date__gte=date_from)
+            except ValueError:
+                pass
+                
+        if date_to:
+            try:
+                date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(event_datetime__date__lte=date_to)
+            except ValueError:
+                pass
+
+        # Filter by creator
+        creator_id = self.request.GET.get('creator')
+        if creator_id:
+            queryset = queryset.filter(created_by__id=creator_id)
+
         return queryset.order_by('-event_datetime')
 
     def get_context_data(self, **kwargs):
@@ -71,6 +97,26 @@ class DailyNoteListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('search', '')
         context['selected_patient'] = self.request.GET.get('patient', '')
+        context['date_from'] = self.request.GET.get('date_from', '')
+        context['date_to'] = self.request.GET.get('date_to', '')
+        context['selected_creator'] = self.request.GET.get('creator', '')
+
+        # Get available patients for filter dropdown (only accessible ones)
+        accessible_patients = []
+        if hasattr(self.request.user, 'current_hospital') and self.request.user.current_hospital:
+            all_patients = Patient.objects.filter(current_hospital=self.request.user.current_hospital)
+            for patient in all_patients:
+                if can_access_patient(self.request.user, patient):
+                    accessible_patients.append(patient)
+        context['available_patients'] = accessible_patients
+
+        # Get available creators (users who have created daily notes in this hospital)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        available_creators = User.objects.filter(
+            dailynote_created__patient__current_hospital=self.request.user.current_hospital
+        ).distinct() if hasattr(self.request.user, 'current_hospital') and self.request.user.current_hospital else User.objects.none()
+        context['available_creators'] = available_creators
 
         # Add permission information for each daily note
         if 'dailynote_list' in context:
@@ -241,3 +287,180 @@ class DailyNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
             f"Evolução para {patient_name} excluída com sucesso."
         )
         return super().delete(request, *args, **kwargs)
+
+
+@method_decorator(hospital_context_required, name='dispatch')
+class PatientDailyNoteListView(LoginRequiredMixin, ListView):
+    """
+    List view for DailyNote instances for a specific patient with date filtering.
+    """
+    model = DailyNote
+    template_name = 'dailynotes/patient_dailynote_list.html'
+    context_object_name = 'dailynotes'
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        """Get patient and check permissions before processing request."""
+        self.patient = get_object_or_404(Patient, pk=kwargs['patient_pk'])
+        
+        # Check if user can access this patient
+        if not can_access_patient(request.user, self.patient):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("You don't have permission to access this patient's daily notes")
+            
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        """Filter queryset for specific patient with date range filtering."""
+        queryset = DailyNote.objects.filter(patient=self.patient).select_related('created_by', 'updated_by')
+
+        # Date range filtering
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        
+        if date_from:
+            try:
+                date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+                queryset = queryset.filter(event_datetime__date__gte=date_from)
+            except ValueError:
+                pass
+                
+        if date_to:
+            try:
+                date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(event_datetime__date__lte=date_to)
+            except ValueError:
+                pass
+
+        # Search in content
+        search_query = self.request.GET.get('search', '')
+        if search_query:
+            queryset = queryset.filter(
+                Q(description__icontains=search_query) |
+                Q(content__icontains=search_query)
+            )
+
+        return queryset.order_by('-event_datetime')
+
+    def get_context_data(self, **kwargs):
+        """Add patient and filter context."""
+        context = super().get_context_data(**kwargs)
+        context['patient'] = self.patient
+        context['search_query'] = self.request.GET.get('search', '')
+        context['date_from'] = self.request.GET.get('date_from', '')
+        context['date_to'] = self.request.GET.get('date_to', '')
+        
+        # Add permission information for each daily note
+        if 'dailynote_list' in context:
+            for dailynote in context['dailynote_list']:
+                dailynote.can_edit = can_edit_event(self.request.user, dailynote)
+                dailynote.can_delete = can_delete_event(self.request.user, dailynote)
+
+        return context
+
+
+@method_decorator(hospital_context_required, name='dispatch')
+class PatientDailyNoteCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """
+    Create view for DailyNote instances for a specific patient.
+    """
+    model = DailyNote
+    form_class = DailyNoteForm
+    template_name = 'dailynotes/patient_dailynote_form.html'
+    permission_required = 'events.add_event'
+
+    def dispatch(self, request, *args, **kwargs):
+        """Get patient and check permissions before processing request."""
+        self.patient = get_object_or_404(Patient, pk=kwargs['patient_pk'])
+        
+        # Check if user can access this patient
+        if not can_access_patient(request.user, self.patient):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("You don't have permission to create daily notes for this patient")
+            
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        """Pass current user and initial patient to form."""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        kwargs['initial'] = {'patient': self.patient}
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        """Add patient context."""
+        context = super().get_context_data(**kwargs)
+        context['patient'] = self.patient
+        return context
+
+    def get_success_url(self):
+        """Redirect to patient daily notes list after successful creation."""
+        return reverse_lazy('dailynotes:patient_dailynote_list', kwargs={'patient_pk': self.patient.pk})
+
+    def form_valid(self, form):
+        """Handle successful form submission."""
+        form.instance.patient = self.patient
+        messages.success(
+            self.request,
+            f"Evolução para {self.patient.name} criada com sucesso."
+        )
+        return super().form_valid(form)
+
+
+@method_decorator(hospital_context_required, name='dispatch')
+class DailyNotePrintView(LoginRequiredMixin, DetailView):
+    """
+    Print view for DailyNote instances - clean print layout.
+    """
+    model = DailyNote
+    template_name = 'dailynotes/dailynote_print.html'
+    context_object_name = 'dailynote'
+
+    def get_object(self, queryset=None):
+        """Get object and check patient access permissions."""
+        obj = super().get_object(queryset)
+
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("You don't have permission to access this patient's daily notes")
+
+        return obj
+
+    def get_queryset(self):
+        """Optimize queryset with related objects."""
+        return DailyNote.objects.select_related('patient', 'created_by', 'updated_by')
+
+
+@method_decorator(hospital_context_required, name='dispatch')
+class PatientDailyNoteExportView(LoginRequiredMixin, ListView):
+    """
+    Export view for all daily notes of a specific patient - print-friendly format.
+    """
+    model = DailyNote
+    template_name = 'dailynotes/patient_dailynote_export.html'
+    context_object_name = 'dailynotes'
+
+    def dispatch(self, request, *args, **kwargs):
+        """Get patient and check permissions before processing request."""
+        self.patient = get_object_or_404(Patient, pk=kwargs['patient_pk'])
+        
+        # Check if user can access this patient
+        if not can_access_patient(request.user, self.patient):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("You don't have permission to access this patient's daily notes")
+            
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        """Get all daily notes for the patient, ordered by date."""
+        return DailyNote.objects.filter(
+            patient=self.patient
+        ).select_related('created_by', 'updated_by').order_by('event_datetime')
+
+    def get_context_data(self, **kwargs):
+        """Add patient context."""
+        context = super().get_context_data(**kwargs)
+        context['patient'] = self.patient
+        context['export_date'] = timezone.now()
+        return context

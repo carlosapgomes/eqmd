@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolução - {{ dailynote.patient.name }} - {{ dailynote.event_datetime|date:"d/m/Y" }}</title>
+    <style>
+        @media print {
+            @page {
+                margin: 1cm;
+                size: A4;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
+            color: #000;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+        }
+        
+        .hospital-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .document-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .patient-info {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+            border: 1px solid #000;
+        }
+        
+        .patient-info-row {
+            display: table-row;
+        }
+        
+        .patient-info-cell {
+            display: table-cell;
+            padding: 8px;
+            border-right: 1px solid #000;
+            vertical-align: top;
+        }
+        
+        .patient-info-cell:last-child {
+            border-right: none;
+        }
+        
+        .patient-info-label {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .evolution-content {
+            margin-bottom: 30px;
+        }
+        
+        .evolution-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .evolution-text {
+            text-align: justify;
+            min-height: 200px;
+            border: 1px solid #000;
+            padding: 10px;
+            white-space: pre-wrap;
+        }
+        
+        .signature-section {
+            margin-top: 50px;
+            display: table;
+            width: 100%;
+        }
+        
+        .signature-cell {
+            display: table-cell;
+            width: 50%;
+            text-align: center;
+            vertical-align: bottom;
+            padding: 0 20px;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-bottom: 5px;
+            height: 50px;
+        }
+        
+        .signature-info {
+            font-size: 10px;
+        }
+        
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .print-button:hover {
+            background: #0056b3;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">
+        🖨️ Imprimir
+    </button>
+    
+    <div class="header">
+        <div class="hospital-name">
+            {% if dailynote.patient.current_hospital %}
+                {{ dailynote.patient.current_hospital.name }}
+            {% else %}
+                EquipeMed - Sistema de Gestão Hospitalar
+            {% endif %}
+        </div>
+        <div class="document-title">EVOLUÇÃO MÉDICA</div>
+    </div>
+    
+    <div class="patient-info">
+        <div class="patient-info-row">
+            <div class="patient-info-cell" style="width: 40%;">
+                <div class="patient-info-label">Nome do Paciente:</div>
+                <div>{{ dailynote.patient.name }}</div>
+            </div>
+            <div class="patient-info-cell" style="width: 30%;">
+                <div class="patient-info-label">CPF:</div>
+                <div>{{ dailynote.patient.fiscal_number|default:"—" }}</div>
+            </div>
+            <div class="patient-info-cell" style="width: 30%;">
+                <div class="patient-info-label">Cartão SUS:</div>
+                <div>{{ dailynote.patient.health_card_number|default:"—" }}</div>
+            </div>
+        </div>
+        <div class="patient-info-row">
+            <div class="patient-info-cell">
+                <div class="patient-info-label">Data de Nascimento:</div>
+                <div>{{ dailynote.patient.birth_date|date:"d/m/Y"|default:"—" }}</div>
+            </div>
+            <div class="patient-info-cell">
+                <div class="patient-info-label">Status:</div>
+                <div>{{ dailynote.patient.get_status_display|default:"—" }}</div>
+            </div>
+            <div class="patient-info-cell">
+                <div class="patient-info-label">Leito/Enfermaria:</div>
+                <div>{{ dailynote.patient.current_ward.name|default:"—" }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="evolution-content">
+        <div class="evolution-header">
+            Data/Hora: {{ dailynote.event_datetime|date:"d/m/Y à\s H:i" }}
+        </div>
+        <div class="evolution-header">
+            Descrição: {{ dailynote.description }}
+        </div>
+        <div class="evolution-header">EVOLUÇÃO:</div>
+        <div class="evolution-text">{{ dailynote.content|default:"[Conteúdo não informado]" }}</div>
+    </div>
+    
+    <div class="signature-section">
+        <div class="signature-cell">
+            <div class="signature-line"></div>
+            <div class="signature-info">
+                <strong>{{ dailynote.created_by.get_full_name|default:dailynote.created_by.username }}</strong><br>
+                {{ dailynote.created_by.profession|default:"Profissional de Saúde" }}<br>
+                CRM: _______________
+            </div>
+        </div>
+        <div class="signature-cell">
+            <div class="signature-line"></div>
+            <div class="signature-info">
+                Supervisor/Responsável<br>
+                Nome: _______________<br>
+                CRM: _______________
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div>Documento gerado em {{ dailynote.created_at|date:"d/m/Y à\s H:i" }}</div>
+        {% if dailynote.updated_at != dailynote.created_at %}
+        <div>Última atualização: {{ dailynote.updated_at|date:"d/m/Y à\s H:i" }} por {{ dailynote.updated_by.get_full_name|default:dailynote.updated_by.username }}</div>
+        {% endif %}
+    </div>
+    
+    <script>
+        // Auto-focus print button for keyboard navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-print when accessed with print parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('print') === 'true') {
+                window.print();
+            }
+        });
+    </script>
+</body>
+</html>

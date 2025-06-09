@@ -29,34 +29,79 @@
   </div>
   <div class="card-body">
     <form method="get" class="row g-3">
-      <div class="col-md-6">
+      <div class="col-md-4">
         <label for="search" class="form-label">Buscar</label>
         <input 
           type="text" 
           class="form-control" 
           id="search" 
           name="search" 
-          value="{{ request.GET.search }}"
+          value="{{ search_query }}"
           placeholder="Buscar por descrição, conteúdo ou paciente..."
         >
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label for="patient" class="form-label">Paciente</label>
         <select class="form-select" id="patient" name="patient">
           <option value="">Todos os pacientes</option>
-          <!-- Patient options would be populated by the view -->
+          {% for patient in available_patients %}
+          <option value="{{ patient.pk }}" {% if selected_patient == patient.pk|stringformat:"s" %}selected{% endif %}>
+            {{ patient.name }}
+          </option>
+          {% endfor %}
         </select>
       </div>
-      <div class="col-md-2 d-flex align-items-end">
-        <button type="submit" class="btn btn-medical-teal me-2">
+      <div class="col-md-2">
+        <label for="date_from" class="form-label">Data inicial</label>
+        <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+      </div>
+      <div class="col-md-2">
+        <label for="date_to" class="form-label">Data final</label>
+        <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+      </div>
+      <div class="col-md-1 d-flex align-items-end">
+        <button type="submit" class="btn btn-medical-teal me-1">
           <i class="bi bi-search"></i>
-          Buscar
         </button>
         <a href="{% url 'dailynotes:dailynote_list' %}" class="btn btn-outline-secondary">
           <i class="bi bi-x-circle"></i>
         </a>
       </div>
     </form>
+    
+    <!-- Advanced Filters Toggle -->
+    <div class="mt-3">
+      <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+        <i class="bi bi-funnel"></i> Filtros Avançados
+      </button>
+    </div>
+    
+    <!-- Advanced Filters Collapse -->
+    <div class="collapse mt-3" id="advancedFilters">
+      <form method="get" class="row g-3 border-top pt-3">
+        <input type="hidden" name="search" value="{{ search_query }}">
+        <input type="hidden" name="patient" value="{{ selected_patient }}">
+        <input type="hidden" name="date_from" value="{{ date_from }}">
+        <input type="hidden" name="date_to" value="{{ date_to }}">
+        
+        <div class="col-md-4">
+          <label for="creator" class="form-label">Criado por</label>
+          <select class="form-select" id="creator" name="creator">
+            <option value="">Todos os profissionais</option>
+            {% for creator in available_creators %}
+            <option value="{{ creator.pk }}" {% if selected_creator == creator.pk|stringformat:"s" %}selected{% endif %}>
+              {{ creator.get_full_name|default:creator.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-medical-teal">
+            <i class="bi bi-funnel"></i> Aplicar
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
