@@ -9,7 +9,7 @@
     aria-controls="collapsePatients"
   >
     <i class="bi bi-people"></i>
-    <span>Patients</span>
+    <span>Pacientes</span>
   </a>
   <div
     id="collapsePatients"
@@ -18,17 +18,17 @@
     data-bs-parent="#sidebarAccordion"
   >
     <div class="bg-white py-2 collapse-inner rounded">
-      <h6 class="collapse-header">Patient Management:</h6>
-      <a class="collapse-item" href="{% url 'patients:patient_list' %}"
-        >All Patients</a
+      <h6 class="collapse-header">Gerenciamento de Pacientes:</h6>
+      <a class="collapse-item" href="{% url 'apps.patients:patient_list' %}"
+        >Todos os Pacientes</a
       >
       {% if perms.patients.add_patient %}
-      <a class="collapse-item" href="{% url 'patients:patient_create' %}"
-        >Add Patient</a
+      <a class="collapse-item" href="{% url 'apps.patients:patient_create' %}"
+        >Adicionar Paciente</a
       >
       {% endif %} {% if perms.patients.view_allowedtag %}
-      <a class="collapse-item" href="{% url 'patients:tag_list' %}"
-        >Manage Tags</a
+      <a class="collapse-item" href="{% url 'apps.patients:tag_list' %}"
+        >Gerenciar Tags</a
       >
       {% endif %}
     </div>

@@ -1,7 +1,7 @@
 {% load patient_tags %}
 <div class="card mb-4">
   <div class="card-header">
-    <i class="bi bi-people me-1"></i> Recent Patients
+    <i class="bi bi-people me-1"></i> Pacientes Recentes
   </div>
   <div class="card-body">
     {% if recent_patients %}
@@ -9,10 +9,10 @@
       <table class="table table-bordered table-hover">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Nome</th>
             <th>Status</th>
             <th>Hospital</th>
-            <th>Actions</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -23,13 +23,13 @@
             <td>{{ patient.current_hospital.name|default:"-" }}</td>
             <td>
               <a
-                href="{% url 'patients:patient_detail' patient.id %}"
+                href="{% url 'apps.patients:patient_detail' patient.id %}"
                 class="btn btn-sm btn-primary"
               >
                 <i class="bi bi-eye"></i>
               </a>
               <a
-                href="{% url 'patients:patient_update' patient.id %}"
+                href="{% url 'apps.patients:patient_update' patient.id %}"
                 class="btn btn-sm btn-warning"
               >
                 <i class="bi bi-pencil"></i>
@@ -41,14 +41,14 @@
       </table>
     </div>
     <div class="text-end">
-      <a href="{% url 'patients:patient_list' %}" class="btn btn-primary"
-        >View All Patients</a
+      <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-primary"
+        >Ver Todos os Pacientes</a
       >
     </div>
     {% else %}
-    <p class="text-muted">No patients have been added yet.</p>
-    <a href="{% url 'patients:patient_create' %}" class="btn btn-primary"
-      >Add Patient</a
+    <p class="text-muted">Nenhum paciente foi adicionado ainda.</p>
+    <a href="{% url 'apps.patients:patient_create' %}" class="btn btn-primary"
+      >Adicionar Paciente</a
     >
     {% endif %}
   </div>

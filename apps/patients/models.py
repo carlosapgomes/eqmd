@@ -1,28 +1,34 @@
 import uuid
 from django.db import models
 from django.conf import settings
+from django.urls import reverse
 
 
 class AllowedTag(models.Model):
     """Model representing allowed tags that can be assigned to patients"""
+
     name = models.CharField(max_length=100, unique=True, verbose_name="Nome")
     description = models.TextField(blank=True, verbose_name="Descrição")
     color = models.CharField(
-        max_length=7, 
-        default="#007bff", 
-        help_text="Color in hex format (e.g., #007bff)",
-        verbose_name="Cor"
+        max_length=7,
+        default="#007bff",
+        help_text="Cor em formato hexadecimal (ex: #007bff)",
+        verbose_name="Cor",
     )
     is_active = models.BooleanField(default=True, verbose_name="Ativo")
-    
+
     # Tracking fields
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
     )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
     )
 
     class Meta:
@@ -36,23 +42,28 @@ class AllowedTag(models.Model):
 
 class Tag(models.Model):
     """Model representing a tag instance assigned to a patient"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     allowed_tag = models.ForeignKey(
         AllowedTag,
         on_delete=models.CASCADE,
         related_name="tag_instances",
-        verbose_name="Tag Permitida"
+        verbose_name="Tag Permitida",
     )
     notes = models.TextField(blank=True, verbose_name="Notas")
-    
+
     # Tracking fields
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
     )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
     )
 
     class Meta:
@@ -70,31 +81,43 @@ class Tag(models.Model):
     def color(self):
         return self.allowed_tag.color
 
+
 class Patient(models.Model):
     """Model representing a patient in the system"""
+
     class Status(models.IntegerChoices):
-        OUTPATIENT = 1, "Outpatient"
-        INPATIENT = 2, "Inpatient"
-        EMERGENCY = 3, "Emergency"
-        DISCHARGED = 4, "Discharged"
-        TRANSFERRED = 5, "Transferred"
+        OUTPATIENT = 1, "Ambulatorial"
+        INPATIENT = 2, "Internado"
+        EMERGENCY = 3, "Emergência"
+        DISCHARGED = 4, "Alta"
+        TRANSFERRED = 5, "Transferido"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, verbose_name="Nome Completo")
     birthday = models.DateField(verbose_name="Data de Nascimento")
-    healthcard_number = models.CharField(max_length=30, blank=True, verbose_name="Número do Cartão de Saúde")
-    id_number = models.CharField(max_length=30, blank=True, verbose_name="Número de Identidade")
-    fiscal_number = models.CharField(max_length=30, blank=True, verbose_name="Número Fiscal")
+    healthcard_number = models.CharField(
+        max_length=30, blank=True, verbose_name="Número do Cartão de Saúde"
+    )
+    id_number = models.CharField(
+        max_length=30, blank=True, verbose_name="Número de Identidade"
+    )
+    fiscal_number = models.CharField(
+        max_length=30, blank=True, verbose_name="Número Fiscal"
+    )
     phone = models.CharField(max_length=30, blank=True, verbose_name="Telefone")
 
     # Address fields
     address = models.CharField(max_length=255, blank=True, verbose_name="Endereço")
     city = models.CharField(max_length=100, blank=True, verbose_name="Cidade")
-    state = models.CharField(max_length=100, blank=True, verbose_name="Estado/Província")
+    state = models.CharField(
+        max_length=100, blank=True, verbose_name="Estado/Província"
+    )
     zip_code = models.CharField(max_length=20, blank=True, verbose_name="Código Postal")
 
     # Hospital status
-    status = models.IntegerField(choices=Status.choices, default=Status.OUTPATIENT, verbose_name="Status")
+    status = models.IntegerField(
+        choices=Status.choices, default=Status.OUTPATIENT, verbose_name="Status"
+    )
     current_hospital = models.ForeignKey(
         "hospitals.Hospital",
         on_delete=models.SET_NULL,
@@ -104,26 +127,30 @@ class Patient(models.Model):
         verbose_name="Hospital Atual",
     )
     bed = models.CharField(max_length=20, blank=True, verbose_name="Leito/Cama")
-    last_admission_date = models.DateField(null=True, blank=True, verbose_name="Data da Última Admissão")
-    last_discharge_date = models.DateField(null=True, blank=True, verbose_name="Data da Última Alta")
-    
-    # Tags relationship
-    tags = models.ManyToManyField(
-        Tag,
-        blank=True,
-        related_name="patients",
-        verbose_name="Tags"
+    last_admission_date = models.DateField(
+        null=True, blank=True, verbose_name="Data da Última Admissão"
+    )
+    last_discharge_date = models.DateField(
+        null=True, blank=True, verbose_name="Data da Última Alta"
     )
 
+    # Tags relationship
+    tags = models.ManyToManyField(
+        Tag, blank=True, related_name="patients", verbose_name="Tags"
+    )
 
     # Tracking fields
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
     )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
     )
 
     class Meta:
@@ -134,8 +161,13 @@ class Patient(models.Model):
     def __str__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return reverse("patients:patient_detail", kwargs={"pk": self.pk})
+
+
 class PatientHospitalRecord(models.Model):
     """Model representing a patient's record at a specific hospital"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     patient = models.ForeignKey(
         Patient,
@@ -170,8 +202,8 @@ class PatientHospitalRecord(models.Model):
 
     class Meta:
         unique_together = ["patient", "hospital"]
-        verbose_name = "Hospital Record"
-        verbose_name_plural = "Hospital Records"
+        verbose_name = "Registro Hospitalar"
+        verbose_name_plural = "Registros Hospitalares"
         indexes = [
             models.Index(fields=["patient", "hospital"]),
             models.Index(fields=["hospital", "record_number"]),
@@ -179,3 +211,4 @@ class PatientHospitalRecord(models.Model):
 
     def __str__(self):
         return f"{self.patient.name} - {self.hospital.name} ({self.record_number})"
+

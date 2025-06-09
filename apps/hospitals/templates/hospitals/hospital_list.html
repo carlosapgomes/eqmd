@@ -138,7 +138,7 @@
                   <td>{{ hospital.phone|default:"-" }}</td>
                   <td>
                     <div class="btn-group btn-group-sm" role="group">
-                      <a href="{{ hospital.get_absolute_url }}" class="btn btn-outline-medical-primary" title="Ver detalhes">
+                      <a href="{{ hospital.get_absolute_url }}" class="btn btn-medical-outline-primary" title="Ver detalhes">
                         <i class="bi bi-eye"></i>
                       </a>
                       <a href="{% url 'apps.hospitals:update' hospital.pk %}" class="btn btn-outline-secondary" title="Editar">

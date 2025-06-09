@@ -27,7 +27,7 @@ class PatientForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
         required=False,
         label="Tags",
-        help_text="Select applicable tags for this patient"
+        help_text="Selecione as tags aplicáveis para este paciente"
     )
     class Meta:
         model = Patient
@@ -51,7 +51,7 @@ class PatientForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
             Fieldset(
-                'Patient Information',
+                'Informações do Paciente',
                 Row(
                     Column('name', css_class='col-md-6'),
                     Column('birthday', css_class='col-md-6'),
@@ -66,7 +66,7 @@ class PatientForm(forms.ModelForm):
                 ),
             ),
             Fieldset(
-                'Address Information',
+                'Informações de Endereço',
                 Row(
                     Column('address', css_class='col-md-8'),
                     Column('zip_code', css_class='col-md-4'),
@@ -77,7 +77,7 @@ class PatientForm(forms.ModelForm):
                 ),
             ),
             Fieldset(
-                'Hospital Information',
+                'Informações Hospitalares',
                 Row(
                     Column('status', css_class='col-md-4'),
                     Column('current_hospital', css_class='col-md-4'),
@@ -88,7 +88,7 @@ class PatientForm(forms.ModelForm):
                 'Tags',
                 'tag_selection',
             ),
-            Submit('submit', 'Save', css_class='btn btn-primary mt-3')
+            Submit('submit', 'Salvar', css_class='btn btn-primary mt-3')
         )
 
     def save(self, commit=True):
@@ -133,7 +133,7 @@ class PatientHospitalRecordForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
             Fieldset(
-                'Hospital Record',
+                'Registro Hospitalar',
                 Row(
                     Column('patient', css_class='col-md-6'),
                     Column('hospital', css_class='col-md-6'),
@@ -145,7 +145,7 @@ class PatientHospitalRecordForm(forms.ModelForm):
                     Column('last_discharge_date', css_class='col-md-4'),
                 ),
             ),
-            Submit('submit', 'Save', css_class='btn btn-primary mt-3')
+            Submit('submit', 'Salvar', css_class='btn btn-primary mt-3')
         )
 
 
@@ -164,7 +164,7 @@ class AllowedTagForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
             Fieldset(
-                'Tag Information',
+                'Informações da Tag',
                 'name',
                 'description',
                 Row(
@@ -172,7 +172,7 @@ class AllowedTagForm(forms.ModelForm):
                     Column('is_active', css_class='col-md-6'),
                 ),
             ),
-            Submit('submit', 'Save', css_class='btn btn-primary mt-3')
+            Submit('submit', 'Salvar', css_class='btn btn-primary mt-3')
         )
 
     def save(self, commit=True):

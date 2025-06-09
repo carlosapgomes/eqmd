@@ -1,25 +1,333 @@
 {% extends "patients/patient_base.html" %}
-{% load crispy_forms_tags %}
-{% block title %}{% if form.instance.pk %}Edit{% else %}Add{% endif %} Patient{% endblock %}
+{% block title %}{% if form.instance.pk %}Editar{% else %}Adicionar{% endif %} Paciente{% endblock %}
 {% block patient_content %}
-<div
-  class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
->
-  <h1 class="h2">
-    {% if form.instance.pk %}Edit{% else %}Add{% endif %} Patient
-  </h1>
-</div>
+<div class="row">
+  <div class="col-12">
+    <!-- Header with Back Button -->
+    <div class="d-flex align-items-center mb-4">
+      <a href="{% if form.instance.pk %}{% url 'apps.patients:patient_detail' pk=form.instance.pk %}{% else %}{% url 'apps.patients:patient_list' %}{% endif %}" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+      </a>
+      <div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-1">
+            <li class="breadcrumb-item">
+              <a href="{% url 'apps.patients:patient_list' %}" class="text-medical-teal text-decoration-none">
+                <i class="bi bi-person-lines-fill me-1"></i>Pacientes
+              </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+              {% if form.instance.pk %}Editar {{ form.instance.name }}{% else %}Novo Paciente{% endif %}
+            </li>
+          </ol>
+        </nav>
+        <h1 class="h3 text-medical-dark-gray mb-0">
+          <i class="bi bi-person me-2 text-medical-primary"></i>
+          {% if form.instance.pk %}Editar Paciente{% else %}Novo Paciente{% endif %}
+        </h1>
+      </div>
+    </div>
 
-<div class="card">
-  <div class="card-body">{% crispy form %}</div>
-</div>
+    <!-- Form Card -->
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-info-circle me-2 text-medical-primary"></i>
+              Informações do Paciente
+            </h5>
+          </div>
+          <div class="card-body">
+            <form method="post" class="form-medical">
+              {% csrf_token %}
+              
+              <!-- Basic Information -->
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.name.id_for_label }}" class="form-label">
+                    {{ form.name.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.name }}
+                  {% if form.name.help_text %}
+                    <div class="form-text">{{ form.name.help_text }}</div>
+                  {% endif %}
+                  {% if form.name.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.name.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.birthday.id_for_label }}" class="form-label">
+                    {{ form.birthday.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.birthday }}
+                  {% if form.birthday.help_text %}
+                    <div class="form-text">{{ form.birthday.help_text }}</div>
+                  {% endif %}
+                  {% if form.birthday.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.birthday.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
 
-<div class="mt-3">
-  <a
-    href="{% if form.instance.pk %}{% url 'patients:patient_detail' pk=form.instance.pk %}{% else %}{% url 'patients:patient_list' %}{% endif %}"
-    class="btn btn-outline-secondary"
-  >
-    Cancel
-  </a>
+              <!-- Document Information -->
+              <hr class="my-4">
+              <h6 class="text-medical-dark-gray mb-3">
+                <i class="bi bi-card-text me-2"></i>
+                Documentos
+              </h6>
+              
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label for="{{ form.id_number.id_for_label }}" class="form-label">{{ form.id_number.label }}</label>
+                  {{ form.id_number }}
+                  {% if form.id_number.help_text %}
+                    <div class="form-text">{{ form.id_number.help_text }}</div>
+                  {% endif %}
+                  {% if form.id_number.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.id_number.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="{{ form.fiscal_number.id_for_label }}" class="form-label">{{ form.fiscal_number.label }}</label>
+                  {{ form.fiscal_number }}
+                  {% if form.fiscal_number.help_text %}
+                    <div class="form-text">{{ form.fiscal_number.help_text }}</div>
+                  {% endif %}
+                  {% if form.fiscal_number.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.fiscal_number.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="{{ form.healthcard_number.id_for_label }}" class="form-label">{{ form.healthcard_number.label }}</label>
+                  {{ form.healthcard_number }}
+                  {% if form.healthcard_number.help_text %}
+                    <div class="form-text">{{ form.healthcard_number.help_text }}</div>
+                  {% endif %}
+                  {% if form.healthcard_number.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.healthcard_number.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Contact Information -->
+              <div class="row">
+                <div class="col-12 mb-3">
+                  <label for="{{ form.phone.id_for_label }}" class="form-label">{{ form.phone.label }}</label>
+                  {{ form.phone }}
+                  {% if form.phone.help_text %}
+                    <div class="form-text">{{ form.phone.help_text }}</div>
+                  {% endif %}
+                  {% if form.phone.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.phone.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Address Information -->
+              <hr class="my-4">
+              <h6 class="text-medical-dark-gray mb-3">
+                <i class="bi bi-geo-alt me-2"></i>
+                Endereço
+              </h6>
+              
+              <div class="row">
+                <div class="col-md-8 mb-3">
+                  <label for="{{ form.address.id_for_label }}" class="form-label">{{ form.address.label }}</label>
+                  {{ form.address }}
+                  {% if form.address.help_text %}
+                    <div class="form-text">{{ form.address.help_text }}</div>
+                  {% endif %}
+                  {% if form.address.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.address.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="{{ form.zip_code.id_for_label }}" class="form-label">{{ form.zip_code.label }}</label>
+                  {{ form.zip_code }}
+                  {% if form.zip_code.help_text %}
+                    <div class="form-text">{{ form.zip_code.help_text }}</div>
+                  {% endif %}
+                  {% if form.zip_code.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.zip_code.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.city.id_for_label }}" class="form-label">{{ form.city.label }}</label>
+                  {{ form.city }}
+                  {% if form.city.help_text %}
+                    <div class="form-text">{{ form.city.help_text }}</div>
+                  {% endif %}
+                  {% if form.city.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.city.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.state.id_for_label }}" class="form-label">{{ form.state.label }}</label>
+                  {{ form.state }}
+                  {% if form.state.help_text %}
+                    <div class="form-text">{{ form.state.help_text }}</div>
+                  {% endif %}
+                  {% if form.state.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.state.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Hospital Information -->
+              <hr class="my-4">
+              <h6 class="text-medical-dark-gray mb-3">
+                <i class="bi bi-building me-2"></i>
+                Informações Hospitalares
+              </h6>
+              
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                  {{ form.status }}
+                  {% if form.status.help_text %}
+                    <div class="form-text">{{ form.status.help_text }}</div>
+                  {% endif %}
+                  {% if form.status.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.status.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="{{ form.current_hospital.id_for_label }}" class="form-label">{{ form.current_hospital.label }}</label>
+                  {{ form.current_hospital }}
+                  {% if form.current_hospital.help_text %}
+                    <div class="form-text">{{ form.current_hospital.help_text }}</div>
+                  {% endif %}
+                  {% if form.current_hospital.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.current_hospital.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="{{ form.bed.id_for_label }}" class="form-label">{{ form.bed.label }}</label>
+                  {{ form.bed }}
+                  {% if form.bed.help_text %}
+                    <div class="form-text">{{ form.bed.help_text }}</div>
+                  {% endif %}
+                  {% if form.bed.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.bed.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Tags -->
+              <hr class="my-4">
+              <h6 class="text-medical-dark-gray mb-3">
+                <i class="bi bi-tags me-2"></i>
+                Tags
+              </h6>
+              
+              <div class="row">
+                <div class="col-12 mb-3">
+                  <label for="{{ form.tag_selection.id_for_label }}" class="form-label">{{ form.tag_selection.label }}</label>
+                  {{ form.tag_selection }}
+                  {% if form.tag_selection.help_text %}
+                    <div class="form-text">{{ form.tag_selection.help_text }}</div>
+                  {% endif %}
+                  {% if form.tag_selection.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.tag_selection.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <hr class="my-4">
+              <div class="d-flex justify-content-between">
+                <a href="{% if form.instance.pk %}{% url 'apps.patients:patient_detail' pk=form.instance.pk %}{% else %}{% url 'apps.patients:patient_list' %}{% endif %}" class="btn btn-outline-secondary">
+                  <i class="bi bi-x-circle me-2"></i>
+                  Cancelar
+                </a>
+                <button type="submit" class="btn btn-medical-primary">
+                  <i class="bi bi-check-circle me-2"></i>
+                  {% if form.instance.pk %}Salvar Alterações{% else %}Criar Paciente{% endif %}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Help Card -->
+      <div class="col-lg-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-question-circle me-2 text-medical-primary"></i>
+              Ajuda
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Campos Obrigatórios</h6>
+              <p class="text-medical-gray mb-0">Os campos marcados com <span class="text-danger">*</span> são obrigatórios.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Nome do Paciente</h6>
+              <p class="text-medical-gray mb-0">Digite o nome completo do paciente.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Data de Nascimento</h6>
+              <p class="text-medical-gray mb-0">Use o formato DD/MM/AAAA ou o seletor de data.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Documentos</h6>
+              <p class="text-medical-gray mb-0">RG, CPF e Cartão SUS são opcionais mas ajudam na identificação.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Status do Paciente</h6>
+              <p class="text-medical-gray mb-0">Defina se é ambulatorial, internado, emergência, alta ou transferido.</p>
+            </div>
+            
+            <div class="mb-0">
+              <h6 class="text-medical-dark-gray">Tags</h6>
+              <p class="text-medical-gray mb-0">Selecione tags para categorizar o paciente (opcional).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

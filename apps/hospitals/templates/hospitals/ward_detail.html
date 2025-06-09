@@ -1,82 +1,274 @@
-{% extends "base.html" %}
+{% extends "base_app.html" %}
 {% load hospital_tags %}
 
-{% block title %}{{ ward.name }} - Ward Details{% endblock %}
+{% block title %}{{ ward.name }} - Detalhes da Enfermaria{% endblock %}
 
-{% block content %}
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>{{ ward.name }}</h1>
-    <div>
-      {% if perms.hospitals.change_ward %}
-      <a href="{% url 'hospitals:ward_update' ward.pk %}" class="btn btn-outline-primary">
-        <i class="bi bi-pencil"></i> Edit
-      </a>
-      {% endif %}
-      {% if perms.hospitals.delete_ward %}
-      <a href="{% url 'hospitals:ward_delete' ward.pk %}" class="btn btn-outline-danger ms-2">
-        <i class="bi bi-trash"></i> Delete
-      </a>
-      {% endif %}
+{% block app_content %}
+<div class="row">
+  <div class="col-12">
+    <!-- Header with Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+              <a href="{% url 'hospitals:ward_list' %}" class="text-medical-teal text-decoration-none">
+                <i class="bi bi-diagram-3 me-1"></i>Enfermarias
+              </a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'hospitals:detail' ward.hospital.pk %}" class="text-medical-teal text-decoration-none">
+                {{ ward.hospital.short_name }}
+              </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ ward.name }}</li>
+          </ol>
+        </nav>
+        <h1 class="h3 text-medical-dark-gray mb-0">
+          <i class="bi bi-diagram-3 me-2 text-medical-primary"></i>
+          {{ ward.name }}
+          <span class="badge {% if ward.is_active %}bg-success{% else %}bg-secondary{% endif %} ms-2">
+            {% if ward.is_active %}Ativa{% else %}Inativa{% endif %}
+          </span>
+        </h1>
+      </div>
+      <div class="btn-group" role="group">
+        {% if perms.hospitals.change_ward %}
+        <a href="{% url 'hospitals:ward_update' ward.pk %}" class="btn btn-medical-outline-primary">
+          <i class="bi bi-pencil me-2"></i>
+          Editar
+        </a>
+        {% endif %}
+        {% if perms.hospitals.delete_ward %}
+        <a href="{% url 'hospitals:ward_delete' ward.pk %}" class="btn btn-outline-danger">
+          <i class="bi bi-trash me-2"></i>
+          Excluir
+        </a>
+        {% endif %}
+      </div>
     </div>
-  </div>
 
-  <div class="row">
-    <div class="col-md-8">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Ward Information</h5>
+    <!-- Main Ward Information -->
+    <div class="row">
+      <!-- Basic Information Card -->
+      <div class="col-lg-8 mb-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-info-circle me-2 text-medical-primary"></i>
+              Informações Básicas
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Nome da Enfermaria</label>
+                <p class="form-control-plaintext text-medical-dark-gray">{{ ward.name }}</p>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Hospital</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <i class="bi bi-building me-2"></i>
+                  <a href="{% url 'hospitals:detail' ward.hospital.pk %}" class="text-medical-teal text-decoration-none">
+                    {{ ward.hospital.name }}
+                  </a>
+                </p>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Capacidade</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <i class="bi bi-grid-3x3 me-2"></i>
+                  {{ ward.capacity }} leitos
+                </p>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Status Operacional</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <span class="badge {% if ward.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                    {% if ward.is_active %}
+                      <i class="bi bi-check-circle me-1"></i>Ativa
+                    {% else %}
+                      <i class="bi bi-x-circle me-1"></i>Inativa
+                    {% endif %}
+                  </span>
+                </p>
+              </div>
+            </div>
+            
+            {% if ward.description %}
+            <div class="row">
+              <div class="col-12 mb-3">
+                <label class="form-label text-medical-gray">Descrição</label>
+                <p class="form-control-plaintext text-medical-dark-gray">{{ ward.description }}</p>
+              </div>
+            </div>
+            {% endif %}
+          </div>
         </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <p><strong>Name:</strong> {{ ward.name }}</p>
-              <p><strong>Hospital:</strong> <a href="{% url 'hospitals:detail' ward.hospital.pk %}">{{ ward.hospital.name }}</a></p>
-              <p><strong>Capacity:</strong> {{ ward.capacity }} beds</p>
-              <p><strong>Status:</strong> 
-                <span class="badge {% if ward.is_active %}bg-success{% else %}bg-danger{% endif %}">
-                  {% if ward.is_active %}Active{% else %}Inactive{% endif %}
-                </span>
+      </div>
+
+      <!-- Metadata Card -->
+      <div class="col-lg-4 mb-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-clock-history me-2 text-medical-primary"></i>
+              Informações do Sistema
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Criado em</label>
+              <p class="form-control-plaintext text-medical-dark-gray">
+                <i class="bi bi-calendar3 me-2"></i>
+                {{ ward.created_at|date:"d/m/Y à\s H:i" }}
               </p>
             </div>
-            <div class="col-md-6">
-              <p><strong>Patient Count:</strong> {{ ward.patient_count }}</p>
-              <p><strong>Occupancy Rate:</strong> {{ ward.occupancy_rate }}%</p>
-              <p><strong>Created:</strong> {{ ward.created_at|date:"d/m/Y H:i" }}</p>
-              <p><strong>Updated:</strong> {{ ward.updated_at|date:"d/m/Y H:i" }}</p>
+            
+            {% if ward.created_by %}
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Criado por</label>
+              <p class="form-control-plaintext text-medical-dark-gray">
+                <i class="bi bi-person me-2"></i>
+                {{ ward.created_by.profile.display_name|default:ward.created_by.username }}
+              </p>
+            </div>
+            {% endif %}
+            
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Última atualização</label>
+              <p class="form-control-plaintext text-medical-dark-gray">
+                <i class="bi bi-clock me-2"></i>
+                {{ ward.updated_at|date:"d/m/Y à\s H:i" }}
+              </p>
+            </div>
+            
+            {% if ward.updated_by %}
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Atualizado por</label>
+              <p class="form-control-plaintext text-medical-dark-gray">
+                <i class="bi bi-person me-2"></i>
+                {{ ward.updated_by.profile.display_name|default:ward.updated_by.username }}
+              </p>
+            </div>
+            {% endif %}
+            
+            <div class="mb-0">
+              <label class="form-label text-medical-gray">ID Único</label>
+              <p class="form-control-plaintext text-medical-gray" style="font-family: monospace; font-size: 0.875rem;">
+                {{ ward.id }}
+              </p>
             </div>
           </div>
-          {% if ward.description %}
-          <div class="mt-3">
-            <strong>Description:</strong>
-            <p class="mt-2">{{ ward.description }}</p>
-          </div>
-          {% endif %}
         </div>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="mb-0">Capacity Overview</h6>
+    <!-- Occupancy and Statistics -->
+    <div class="row">
+      <!-- Occupancy Card -->
+      <div class="col-lg-6 mb-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-activity me-2 text-medical-primary"></i>
+              Ocupação Atual
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row mb-3">
+              <div class="col-6">
+                <div class="text-center p-3 border rounded">
+                  <i class="bi bi-person-fill display-6 text-medical-teal mb-2"></i>
+                  <h4 class="text-medical-dark-gray">{{ ward.patient_count }}</h4>
+                  <small class="text-medical-gray">Pacientes Atuais</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="text-center p-3 border rounded">
+                  <i class="bi bi-percent display-6 text-medical-teal mb-2"></i>
+                  <h4 class="text-medical-dark-gray">{{ ward.occupancy_rate }}%</h4>
+                  <small class="text-medical-gray">Taxa de Ocupação</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label text-medical-gray">Capacidade Total</label>
+              {% capacity_bar ward %}
+            </div>
+            
+            <div class="text-center">
+              <small class="text-medical-gray">
+                <i class="bi bi-info-circle me-2"></i>
+                {{ ward.patient_count }} de {{ ward.capacity }} leitos ocupados
+              </small>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          {% capacity_bar ward %}
-          <div class="mt-3">
-            <small class="text-muted">
-              Occupancy: {{ ward.patient_count }}/{{ ward.capacity }} beds ({{ ward.occupancy_rate }}%)
-            </small>
+      </div>
+
+      <!-- Statistics Card -->
+      <div class="col-lg-6 mb-4">
+        <div class="card card-medical">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-graph-up me-2 text-medical-primary"></i>
+              Estatísticas
+            </h5>
+            <span class="badge bg-medical-light text-medical-gray">Em breve</span>
+          </div>
+          <div class="card-body">
+            <div class="text-center py-4">
+              <i class="bi bi-graph-up display-4 text-muted mb-3"></i>
+              <h6 class="text-medical-dark-gray">Estatísticas Detalhadas</h6>
+              <p class="text-medical-gray mb-3">
+                Métricas avançadas de ocupação, rotatividade e desempenho serão exibidas aqui quando implementadas.
+              </p>
+              <div class="alert alert-info" role="alert">
+                <small>
+                  <i class="bi bi-info-circle me-2"></i>
+                  Este recurso incluirá histórico de ocupação, tempo médio de internação e outras métricas importantes.
+                </small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="mt-3">
-    <a href="{% url 'hospitals:ward_list' %}" class="btn btn-secondary">
-      <i class="bi bi-arrow-left"></i> Back to Ward List
-    </a>
+    <!-- Patients Section -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card card-medical">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-people me-2 text-medical-primary"></i>
+              Pacientes Internados
+            </h5>
+            <span class="badge bg-medical-light text-medical-gray">Futuro</span>
+          </div>
+          <div class="card-body">
+            <div class="text-center py-4">
+              <i class="bi bi-people display-4 text-muted mb-3"></i>
+              <h6 class="text-medical-dark-gray">Lista de Pacientes</h6>
+              <p class="text-medical-gray mb-3">
+                A lista de pacientes internados nesta enfermaria será exibida aqui quando o módulo de internações for implementado.
+              </p>
+              <div class="alert alert-info" role="alert">
+                <small>
+                  <i class="bi bi-info-circle me-2"></i>
+                  Este recurso permitirá visualizar todos os pacientes atualmente internados, com informações sobre data de admissão, leito ocupado e status médico.
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

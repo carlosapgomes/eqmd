@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from .models import Patient, PatientHospitalRecord, AllowedTag
 from .forms import PatientForm, PatientHospitalRecordForm, AllowedTagForm
+from apps.hospitals.models import Hospital
 
 
 class PatientListView(LoginRequiredMixin, ListView):
@@ -14,9 +15,10 @@ class PatientListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('current_hospital').prefetch_related('tags__allowed_tag')
+        
+        # Search functionality
         search_query = self.request.GET.get('q')
-
         if search_query:
             queryset = queryset.filter(
                 Q(name__icontains=search_query) |
@@ -25,7 +27,30 @@ class PatientListView(LoginRequiredMixin, ListView):
                 Q(healthcard_number__icontains=search_query)
             )
 
+        # Status filter
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            try:
+                status_value = int(status_filter)
+                queryset = queryset.filter(status=status_value)
+            except (ValueError, TypeError):
+                pass
+
+        # Hospital filter
+        hospital_filter = self.request.GET.get('hospital')
+        if hospital_filter:
+            try:
+                hospital_id = int(hospital_filter)
+                queryset = queryset.filter(current_hospital_id=hospital_id)
+            except (ValueError, TypeError):
+                pass
+
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['available_hospitals'] = Hospital.objects.all().order_by('name')
+        return context
 
 
 class PatientDetailView(LoginRequiredMixin, DetailView):

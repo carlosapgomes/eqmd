@@ -1,148 +1,217 @@
 {% extends "patients/patient_base.html" %}
 {% load static %}
-{% block title %}Patients{% endblock %}
+{% load patient_tags %}
+{% block title %}Pacientes{% endblock %}
 {% block patient_content %}
-<div
-  class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
->
-  <h1 class="h2">Patients</h1>
-  <div class="btn-toolbar mb-2 mb-md-0">
-    <a
-      href="{% url 'patients:patient_create' %}"
-      class="btn btn-sm btn-outline-primary"
-    >
-      <i class="bi bi-person-plus"></i> Add Patient
-    </a>
-  </div>
-</div>
-
-<!-- Search form -->
-<form method="get" class="mb-4">
-  <div class="input-group">
-    <input
-      type="text"
-      name="q"
-      class="form-control"
-      placeholder="Search patients..."
-      value="{{ request.GET.q|default:'' }}"
-    />
-    <button class="btn btn-outline-secondary" type="submit">
-      <i class="bi bi-search"></i> Search
-    </button>
-  </div>
-</form>
-
-<!-- Patient list -->
-{% if patient_list %}
-<div class="table-responsive">
-  <table class="table table-striped table-hover">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Birthday</th>
-        <th>Status</th>
-        <th>Hospital</th>
-        <th>Tags</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for patient in patient_list %}
-      <tr>
-        <td>{{ patient.name }}</td>
-        <td>{{ patient.birthday|date:"d/m/Y" }}</td>
-        <td>
-          {% if patient.status == 1 %}
-          <span class="badge bg-success">Outpatient</span>
-          {% elif patient.status == 2 %}
-          <span class="badge bg-primary">Inpatient</span>
-          {% elif patient.status == 3 %}
-          <span class="badge bg-danger">Emergency</span>
-          {% elif patient.status == 4 %}
-          <span class="badge bg-secondary">Discharged</span>
-          {% elif patient.status == 5 %}
-          <span class="badge bg-warning">Transferred</span>
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 text-medical-dark-gray">
+        <i class="bi bi-person-lines-fill me-2 text-medical-primary"></i>
+        Pacientes
+        {% if patient_list %}
+          <span class="badge bg-medical-teal ms-2">{{ patient_list|length }}</span>
+        {% endif %}
+      </h1>
+      <a href="{% url 'apps.patients:patient_create' %}" class="btn btn-medical-primary">
+        <i class="bi bi-person-plus me-2"></i>
+        Novo Paciente
+      </a>
+    </div>
+    
+    <!-- Search and Filter Section -->
+    <div class="card card-medical mb-4">
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <!-- Search -->
+          <div class="col-md-4">
+            <label for="search" class="form-label">
+              <i class="bi bi-search me-2"></i>Buscar
+            </label>
+            <input type="text" 
+                   class="form-control" 
+                   id="search" 
+                   name="q" 
+                   value="{{ request.GET.q|default:'' }}"
+                   placeholder="Nome, CPF, cartão SUS...">
+          </div>
+          
+          <!-- Status Filter -->
+          <div class="col-md-3">
+            <label for="status" class="form-label">
+              <i class="bi bi-activity me-2"></i>Status
+            </label>
+            <select class="form-select" id="status" name="status">
+              <option value="">Todos os status</option>
+              <option value="1" {% if request.GET.status == "1" %}selected{% endif %}>Ambulatorial</option>
+              <option value="2" {% if request.GET.status == "2" %}selected{% endif %}>Internado</option>
+              <option value="3" {% if request.GET.status == "3" %}selected{% endif %}>Emergência</option>
+              <option value="4" {% if request.GET.status == "4" %}selected{% endif %}>Alta</option>
+              <option value="5" {% if request.GET.status == "5" %}selected{% endif %}>Transferido</option>
+            </select>
+          </div>
+          
+          <!-- Hospital Filter -->
+          <div class="col-md-3">
+            <label for="hospital" class="form-label">
+              <i class="bi bi-building me-2"></i>Hospital
+            </label>
+            <select class="form-select" id="hospital" name="hospital">
+              <option value="">Todos os hospitais</option>
+              {% for hospital in available_hospitals %}
+                <option value="{{ hospital.id }}" {% if hospital.id|stringformat:"s" == request.GET.hospital %}selected{% endif %}>
+                  {{ hospital.short_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <!-- Actions -->
+          <div class="col-md-2 d-flex align-items-end">
+            <div class="btn-group w-100" role="group">
+              <button type="submit" class="btn btn-medical-outline-primary">
+                <i class="bi bi-search"></i>
+              </button>
+              <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-outline-secondary" title="Limpar filtros">
+                <i class="bi bi-x-circle"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+        
+        <!-- Active Filters Display -->
+        {% if request.GET.q or request.GET.status or request.GET.hospital %}
+        <div class="mt-3">
+          <small class="text-medical-gray">Filtros ativos:</small>
+          <div class="d-flex flex-wrap gap-2 mt-1">
+            {% if request.GET.q %}
+              <span class="badge bg-medical-teal">
+                Busca: "{{ request.GET.q }}"
+                <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.hospital %}hospital={{ request.GET.hospital }}{% endif %}" 
+                   class="text-white text-decoration-none ms-1">×</a>
+              </span>
+            {% endif %}
+            {% if request.GET.status %}
+              <span class="badge bg-medical-teal">
+                Status: {% if request.GET.status == "1" %}Ambulatorial{% elif request.GET.status == "2" %}Internado{% elif request.GET.status == "3" %}Emergência{% elif request.GET.status == "4" %}Alta{% elif request.GET.status == "5" %}Transferido{% endif %}
+                <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.hospital %}hospital={{ request.GET.hospital }}{% endif %}" 
+                   class="text-white text-decoration-none ms-1">×</a>
+              </span>
+            {% endif %}
+            {% if request.GET.hospital %}
+              <span class="badge bg-medical-teal">
+                Hospital: {{ request.GET.hospital }}
+                <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}{% endif %}" 
+                   class="text-white text-decoration-none ms-1">×</a>
+              </span>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    {% if patient_list %}
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Nome</th>
+                  <th>Data de Nascimento</th>
+                  <th>Status</th>
+                  <th>Hospital</th>
+                  <th>Tags</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for patient in patient_list %}
+                <tr>
+                  <td>
+                    <a href="{{ patient.get_absolute_url }}" class="text-decoration-none">
+                      <strong>{{ patient.name }}</strong>
+                    </a>
+                  </td>
+                  <td>{{ patient.birthday|date:"d/m/Y" }}</td>
+                  <td>
+                    {{ patient.status|patient_status_badge }}
+                  </td>
+                  <td>{{ patient.current_hospital.short_name|default:"-" }}</td>
+                  <td>
+                    {% for tag in patient.tags.all %}
+                    <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">
+                      {{ tag.name }}
+                    </span>
+                    {% empty %}
+                    <span class="text-muted">-</span>
+                    {% endfor %}
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                      <a href="{{ patient.get_absolute_url }}" class="btn btn-medical-outline-primary" title="Ver detalhes">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                      <a href="{% url 'apps.patients:patient_update' patient.pk %}" class="btn btn-outline-secondary" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                      </a>
+                      <a href="{% url 'apps.patients:patient_delete' patient.pk %}" class="btn btn-outline-danger" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination -->
+          {% if is_paginated %}
+          <div class="d-flex justify-content-center mt-4">
+            <nav aria-label="Navegação de páginas">
+              <ul class="pagination">
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.hospital %}hospital={{ request.GET.hospital }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                      <i class="bi bi-chevron-left"></i> Anterior
+                    </a>
+                  </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                  <span class="page-link">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                  </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.hospital %}hospital={{ request.GET.hospital }}&{% endif %}page={{ page_obj.next_page_number }}">
+                      Próxima <i class="bi bi-chevron-right"></i>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
           {% endif %}
-        </td>
-        <td>{{ patient.current_hospital|default:"-" }}</td>
-        <td>
-          {% for tag in patient.tags.all %}
-          <span class="badge" style="background-color: {{ tag.color }}; color: white;">
-            {{ tag.name }}
-          </span>
-          {% empty %}
-          <span class="text-muted">-</span>
-          {% endfor %}
-        </td>
-        <td>
-          <a
-            href="{% url 'patients:patient_detail' pk=patient.pk %}"
-            class="btn btn-sm btn-outline-info"
-          >
-            <i class="bi bi-eye"></i>
+        </div>
+      </div>
+    {% else %}
+      <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+          <i class="bi bi-person-lines-fill display-1 text-muted mb-3"></i>
+          <h4 class="text-muted mb-3">Nenhum paciente encontrado</h4>
+          <p class="text-muted mb-4">Comece adicionando o primeiro paciente ao sistema.</p>
+          <a href="{% url 'apps.patients:patient_create' %}" class="btn btn-medical-primary">
+            <i class="bi bi-person-plus me-2"></i>
+            Adicionar Paciente
           </a>
-          <a
-            href="{% url 'patients:patient_update' pk=patient.pk %}"
-            class="btn btn-sm btn-outline-primary"
-          >
-            <i class="bi bi-pencil"></i>
-          </a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<!-- Pagination -->
-{% if is_paginated %}
-<nav aria-label="Page navigation">
-  <ul class="pagination justify-content-center">
-    {% if page_obj.has_previous %}
-    <li class="page-item">
-      <a
-        class="page-link"
-        href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-        >First</a
-      >
-    </li>
-    <li class="page-item">
-      <a
-        class="page-link"
-        href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-        >Previous</a
-      >
-    </li>
+        </div>
+      </div>
     {% endif %}
-
-    <li class="page-item active">
-      <span class="page-link"
-        >Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages
-        }}</span
-      >
-    </li>
-
-    {% if page_obj.has_next %}
-    <li class="page-item">
-      <a
-        class="page-link"
-        href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-        >Next</a
-      >
-    </li>
-    <li class="page-item">
-      <a
-        class="page-link"
-        href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-        >Last</a
-      >
-    </li>
-    {% endif %}
-  </ul>
-</nav>
-{% endif %} {% else %}
-<div class="alert alert-info">
-  No patients found.
-  <a href="{% url 'patients:patient_create' %}">Add a new patient</a>.
+  </div>
 </div>
-{% endif %} {% endblock %}
+{% endblock %}

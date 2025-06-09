@@ -1,48 +1,203 @@
 {% extends "patients/patient_base.html" %}
-
-{% block title %}Delete Tag{% endblock %}
-
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-danger text-white">
-                <h4 class="mb-0">
-                    <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
-                </h4>
-            </div>
-            <div class="card-body">
-                <p class="mb-3">Are you sure you want to delete the tag:</p>
-                
-                <div class="alert alert-light border">
-                    <div class="d-flex align-items-center">
-                        <span class="badge me-2" style="background-color: {{ object.color }}; color: white;">
-                            {{ object.name }}
-                        </span>
-                        {% if object.description %}
-                        <span class="text-muted">- {{ object.description }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    <strong>Warning:</strong> This action cannot be undone. This will also remove the tag from all patients that currently have it assigned.
-                </div>
-                
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="{% url 'patients:tag_list' %}" class="btn btn-secondary">
-                            <i class="bi bi-x"></i> Cancel
-                        </a>
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-trash"></i> Delete Tag
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+{% block title %}Excluir Tag{% endblock %}
+{% block patient_content %}
+<div class="row">
+  <div class="col-12">
+    <!-- Header with Back Button -->
+    <div class="d-flex align-items-center mb-4">
+      <a href="{% url 'apps.patients:tag_list' %}" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+      </a>
+      <div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-1">
+            <li class="breadcrumb-item">
+              <a href="{% url 'apps.patients:tag_list' %}" class="text-medical-teal text-decoration-none">
+                <i class="bi bi-tags me-1"></i>Tags
+              </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Excluir {{ object.name }}</li>
+          </ol>
+        </nav>
+        <h1 class="h3 text-medical-dark-gray mb-0">
+          <i class="bi bi-exclamation-triangle me-2 text-danger"></i>
+          Confirmar Exclusão
+        </h1>
+      </div>
     </div>
+
+    <!-- Confirmation Card -->
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="card border-danger">
+          <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Atenção: Esta ação não pode ser desfeita
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-danger" role="alert">
+              <h6 class="alert-heading">
+                <i class="bi bi-exclamation-circle me-2"></i>
+                Você está prestes a excluir a tag:
+              </h6>
+              <hr>
+              <div class="d-flex align-items-center mb-3">
+                <span class="badge me-3" style="background-color: {{ object.color }}; color: white; font-size: 1.1em;">
+                  {{ object.name }}
+                </span>
+                <div class="color-preview me-2" style="width: 25px; height: 25px; background-color: {{ object.color }}; border-radius: 3px; border: 1px solid rgba(255,255,255,0.3);"></div>
+                <code class="text-white bg-transparent">{{ object.color }}</code>
+              </div>
+              
+              {% if object.description %}
+              <p class="mb-2">
+                <strong>Descrição:</strong> {{ object.description }}
+              </p>
+              {% endif %}
+              
+              <p class="mb-2">
+                <strong>Status:</strong> 
+                {% if object.is_active %}
+                  <span class="text-white">Ativo</span>
+                {% else %}
+                  <span class="text-white">Inativo</span>
+                {% endif %}
+              </p>
+              
+              <p class="mb-2">
+                <strong>Criada em:</strong> {{ object.created_at|date:"d/m/Y à\s H:i" }}
+                {% if object.created_by %}por {{ object.created_by.profile.display_name|default:object.created_by.username }}{% endif %}
+              </p>
+              
+              <hr>
+              <p class="mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Esta ação irá remover permanentemente a tag de todos os pacientes que a possuem.</strong>
+              </p>
+            </div>
+            
+            <!-- Warning about related data -->
+            <div class="alert alert-warning" role="alert">
+              <h6 class="alert-heading">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Impacto da Exclusão
+              </h6>
+              <ul class="mb-0">
+                <li>A tag será removida de <strong>todos os pacientes</strong> que a possuem atribuída</li>
+                <li>Não será mais possível filtrar por esta tag nos relatórios</li>
+                <li>O histórico de uso da tag será perdido permanentemente</li>
+                <li>Esta ação <strong>não pode ser desfeita</strong></li>
+              </ul>
+            </div>
+
+            <!-- Usage Statistics -->
+            <div class="alert alert-info" role="alert">
+              <h6 class="alert-heading">
+                <i class="bi bi-graph-up me-2"></i>
+                Estatísticas de Uso
+              </h6>
+              <p class="mb-0">
+                {% if object.tag_instances.count > 0 %}
+                  Esta tag está atualmente atribuída a <strong>{{ object.tag_instances.count }} paciente{{ object.tag_instances.count|pluralize }}</strong>.
+                {% else %}
+                  Esta tag não está atribuída a nenhum paciente no momento.
+                {% endif %}
+              </p>
+            </div>
+
+            <!-- Confirmation Form -->
+            <form method="post" class="mt-4">
+              {% csrf_token %}
+              
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <a href="{% url 'apps.patients:tag_list' %}" class="btn btn-outline-secondary me-2">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Cancelar
+                  </a>
+                  {% if object.tag_instances.count > 0 %}
+                  <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Considere desativar em vez de excluir
+                  </small>
+                  {% endif %}
+                </div>
+                
+                <button type="submit" class="btn btn-danger">
+                  <i class="bi bi-trash me-2"></i>
+                  Sim, Excluir Tag
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Help Card -->
+      <div class="col-lg-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-question-circle me-2 text-medical-primary"></i>
+              Sobre a Exclusão
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Dados Removidos</h6>
+              <p class="text-medical-gray mb-0">A tag será removida de todos os pacientes e não poderá ser recuperada.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Não Reversível</h6>
+              <p class="text-medical-gray mb-0">Esta ação é permanente. Os dados não poderão ser restaurados.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Alternativa Recomendada</h6>
+              <p class="text-medical-gray mb-0">
+                Se você não tem certeza, considere apenas 
+                <a href="{% url 'apps.patients:tag_update' object.pk %}" class="text-decoration-none">desativar a tag</a> 
+                em vez de excluí-la.
+              </p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Tags Inativas</h6>
+              <p class="text-medical-gray mb-0">Tags inativas não aparecem para seleção, mas mantêm o histórico nos pacientes existentes.</p>
+            </div>
+            
+            <div class="mb-0">
+              <h6 class="text-medical-dark-gray">Backup</h6>
+              <p class="text-medical-gray mb-0">Certifique-se de fazer backup dos dados importantes antes de excluir.</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Quick Action Card -->
+        {% if object.is_active %}
+        <div class="card card-medical mt-3">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-toggle-off me-2 text-medical-primary"></i>
+              Ação Alternativa
+            </h5>
+          </div>
+          <div class="card-body text-center">
+            <p class="text-medical-gray mb-3">Em vez de excluir, você pode desativar esta tag:</p>
+            <a href="{% url 'apps.patients:tag_update' object.pk %}" class="btn btn-medical-outline-primary">
+              <i class="bi bi-pencil me-2"></i>
+              Editar Tag
+            </a>
+            <div class="form-text mt-2">Desativar preserva o histórico</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

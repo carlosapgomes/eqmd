@@ -1,112 +1,224 @@
 {% extends "patients/patient_base.html" %}
-{% load crispy_forms_tags %}
-
 {% block title %}Tags{% endblock %}
-
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Tags</h2>
-    {% if perms.patients.add_allowedtag %}
-    <a href="{% url 'patients:tag_create' %}" class="btn btn-primary">
-        <i class="bi bi-plus"></i> Add Tag
-    </a>
-    {% endif %}
-</div>
-
-{% if tags %}
+{% block patient_content %}
 <div class="row">
-    {% for tag in tags %}
-    <div class="col-md-6 col-lg-4 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h5 class="card-title">
-                            <span class="badge" style="background-color: {{ tag.color }}; color: white;">
-                                {{ tag.name }}
-                            </span>
-                        </h5>
-                        {% if tag.description %}
-                        <p class="card-text text-muted">{{ tag.description }}</p>
-                        {% endif %}
-                        <small class="text-muted">
-                            Status: 
-                            {% if tag.is_active %}
-                                <span class="text-success">Active</span>
-                            {% else %}
-                                <span class="text-danger">Inactive</span>
-                            {% endif %}
-                        </small>
-                    </div>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                            {% if perms.patients.change_allowedtag %}
-                            <li>
-                                <a class="dropdown-item" href="{% url 'patients:tag_update' tag.pk %}">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if perms.patients.delete_allowedtag %}
-                            <li>
-                                <a class="dropdown-item text-danger" href="{% url 'patients:tag_delete' tag.pk %}">
-                                    <i class="bi bi-trash"></i> Delete
-                                </a>
-                            </li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 text-medical-dark-gray">
+        <i class="bi bi-tags me-2 text-medical-primary"></i>
+        Tags
+        {% if tags %}
+          <span class="badge bg-medical-teal ms-2">{{ tags|length }}</span>
+        {% endif %}
+      </h1>
+      {% if perms.patients.add_allowedtag %}
+      <a href="{% url 'apps.patients:tag_create' %}" class="btn btn-medical-primary">
+        <i class="bi bi-plus-circle me-2"></i>
+        Nova Tag
+      </a>
+      {% endif %}
     </div>
-    {% endfor %}
-</div>
-
-{% if is_paginated %}
-<nav aria-label="Tags pagination">
-    <ul class="pagination justify-content-center">
-        {% if page_obj.has_previous %}
-        <li class="page-item">
-            <a class="page-link" href="?page=1">First</a>
-        </li>
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-        </li>
+    
+    <!-- Search and Filter Section -->
+    <div class="card card-medical mb-4">
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <!-- Search -->
+          <div class="col-md-4">
+            <label for="search" class="form-label">
+              <i class="bi bi-search me-2"></i>Buscar
+            </label>
+            <input type="text" 
+                   class="form-control" 
+                   id="search" 
+                   name="q" 
+                   value="{{ request.GET.q|default:'' }}"
+                   placeholder="Nome ou descrição...">
+          </div>
+          
+          <!-- Status Filter -->
+          <div class="col-md-3">
+            <label for="status" class="form-label">
+              <i class="bi bi-activity me-2"></i>Status
+            </label>
+            <select class="form-select" id="status" name="status">
+              <option value="">Todos os status</option>
+              <option value="active" {% if request.GET.status == "active" %}selected{% endif %}>Ativo</option>
+              <option value="inactive" {% if request.GET.status == "inactive" %}selected{% endif %}>Inativo</option>
+            </select>
+          </div>
+          
+          <!-- Color Filter -->
+          <div class="col-md-3">
+            <label for="color" class="form-label">
+              <i class="bi bi-palette me-2"></i>Cor
+            </label>
+            <select class="form-select" id="color" name="color">
+              <option value="">Todas as cores</option>
+              {% for color in available_colors %}
+                <option value="{{ color }}" {% if color == request.GET.color %}selected{% endif %}>
+                  {{ color }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <!-- Actions -->
+          <div class="col-md-2 d-flex align-items-end">
+            <div class="btn-group w-100" role="group">
+              <button type="submit" class="btn btn-medical-outline-primary">
+                <i class="bi bi-search"></i>
+              </button>
+              <a href="{% url 'apps.patients:tag_list' %}" class="btn btn-outline-secondary" title="Limpar filtros">
+                <i class="bi bi-x-circle"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+        
+        <!-- Active Filters Display -->
+        {% if request.GET.q or request.GET.status or request.GET.color %}
+        <div class="mt-3">
+          <small class="text-medical-gray">Filtros ativos:</small>
+          <div class="d-flex flex-wrap gap-2 mt-1">
+            {% if request.GET.q %}
+              <span class="badge bg-medical-teal">
+                Busca: "{{ request.GET.q }}"
+                <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.color %}color={{ request.GET.color }}{% endif %}" 
+                   class="text-white text-decoration-none ms-1">×</a>
+              </span>
+            {% endif %}
+            {% if request.GET.status %}
+              <span class="badge bg-medical-teal">
+                Status: {% if request.GET.status == "active" %}Ativo{% else %}Inativo{% endif %}
+                <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.color %}color={{ request.GET.color }}{% endif %}" 
+                   class="text-white text-decoration-none ms-1">×</a>
+              </span>
+            {% endif %}
+            {% if request.GET.color %}
+              <span class="badge bg-medical-teal">
+                Cor: {{ request.GET.color }}
+                <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}{% endif %}" 
+                   class="text-white text-decoration-none ms-1">×</a>
+              </span>
+            {% endif %}
+          </div>
+        </div>
         {% endif %}
-
-        <li class="page-item active">
-            <span class="page-link">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-            </span>
-        </li>
-
-        {% if page_obj.has_next %}
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-        </li>
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
-
-{% else %}
-<div class="text-center py-5">
-    <i class="bi bi-tags display-1 text-muted"></i>
-    <h4 class="mt-3">No tags found</h4>
-    <p class="text-muted">Get started by creating your first tag.</p>
-    {% if perms.patients.add_allowedtag %}
-    <a href="{% url 'patients:tag_create' %}" class="btn btn-primary">
-        <i class="bi bi-plus"></i> Create Tag
-    </a>
+      </div>
+    </div>
+    
+    {% if tags %}
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Tag</th>
+                  <th>Descrição</th>
+                  <th>Cor</th>
+                  <th>Status</th>
+                  <th>Criado em</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for tag in tags %}
+                <tr>
+                  <td>
+                    <span class="badge" style="background-color: {{ tag.color }}; color: white;">
+                      {{ tag.name }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if tag.description %}
+                      {{ tag.description|truncatechars:50 }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="color-preview me-2" style="width: 20px; height: 20px; background-color: {{ tag.color }}; border-radius: 3px; border: 1px solid #dee2e6;"></div>
+                      <code class="text-muted">{{ tag.color }}</code>
+                    </div>
+                  </td>
+                  <td>
+                    {% if tag.is_active %}
+                      <span class="badge bg-success">Ativo</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Inativo</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ tag.created_at|date:"d/m/Y" }}</td>
+                  <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                      {% if perms.patients.change_allowedtag %}
+                      <a href="{% url 'apps.patients:tag_update' tag.pk %}" class="btn btn-outline-secondary" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                      </a>
+                      {% endif %}
+                      {% if perms.patients.delete_allowedtag %}
+                      <a href="{% url 'apps.patients:tag_delete' tag.pk %}" class="btn btn-outline-danger" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                      </a>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination -->
+          {% if is_paginated %}
+          <div class="d-flex justify-content-center mt-4">
+            <nav aria-label="Navegação de páginas">
+              <ul class="pagination">
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.color %}color={{ request.GET.color }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                      <i class="bi bi-chevron-left"></i> Anterior
+                    </a>
+                  </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                  <span class="page-link">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                  </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.color %}color={{ request.GET.color }}&{% endif %}page={{ page_obj.next_page_number }}">
+                      Próxima <i class="bi bi-chevron-right"></i>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+          <i class="bi bi-tags display-1 text-muted mb-3"></i>
+          <h4 class="text-muted mb-3">Nenhuma tag encontrada</h4>
+          <p class="text-muted mb-4">Comece criando sua primeira tag para organizar os pacientes.</p>
+          {% if perms.patients.add_allowedtag %}
+          <a href="{% url 'apps.patients:tag_create' %}" class="btn btn-medical-primary">
+            <i class="bi bi-plus-circle me-2"></i>
+            Criar Primeira Tag
+          </a>
+          {% endif %}
+        </div>
+      </div>
     {% endif %}
+  </div>
 </div>
-{% endif %}
 {% endblock %}
