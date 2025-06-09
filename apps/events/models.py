@@ -65,3 +65,10 @@ class Event(models.Model):
             ("edit_own_event_24h", "Can edit own events within 24 hours"),
             ("delete_own_event_24h", "Can delete own events within 24 hours"),
         ]
+        indexes = [
+            models.Index(fields=['patient', '-event_datetime'], name='event_patient_dt_idx'),
+            models.Index(fields=['created_by', '-event_datetime'], name='event_creator_dt_idx'),
+            models.Index(fields=['event_datetime'], name='event_datetime_idx'),
+            models.Index(fields=['event_type', '-event_datetime'], name='event_type_dt_idx'),
+            models.Index(fields=['patient', 'event_type', '-event_datetime'], name='event_pt_type_dt_idx'),
+        ]

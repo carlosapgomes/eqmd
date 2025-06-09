@@ -83,6 +83,14 @@ python manage.py create_sample_tags
 - **URLs**: `/dailynotes/`, `/dailynotes/patient/<uuid>/`, `/dailynotes/<uuid>/print/`
 - **Template Tags**: `recent_dailynotes_widget`, `dailynotes_count_today`, `dailynotes_count_week`
 
+#### Performance Optimizations (Slice 6)
+- **Database Optimization**: Added indexes for common query patterns on Event model
+- **Query Optimization**: Enhanced views with `select_related()` and `prefetch_related()`
+- **Pagination**: Improved pagination with `paginate_orphans` for better UX
+- **Permission Caching**: Bulk patient access checks with `get_user_accessible_patients()`
+- **Filter Caching**: Cached filter dropdown options for list views (5-minute cache)
+- **Query Patterns**: Optimized patient/creator lookups with `only()` clauses
+
 ### Hospitals App
 **Hospital and ward management with context middleware**
 - Hospital/Ward models with capacity tracking

@@ -7,6 +7,8 @@ from django.db.models import Q
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 from datetime import datetime, timedelta
 
 from .models import DailyNote
@@ -32,24 +34,27 @@ class DailyNoteListView(LoginRequiredMixin, ListView):
     template_name = 'dailynotes/dailynote_list.html'
     context_object_name = 'dailynotes'
     paginate_by = 20
+    paginate_orphans = 5
 
     def get_queryset(self):
         """Filter queryset based on search parameters and user permissions."""
-        queryset = DailyNote.objects.select_related('patient', 'created_by').all()
+        queryset = DailyNote.objects.select_related(
+            'patient', 'created_by', 'updated_by'
+        ).prefetch_related(
+            'patient__current_hospital',
+            'patient__hospitalrecord_set'
+        ).all()
 
         # Filter by user's hospital context and patient access permissions
         if hasattr(self.request.user, 'current_hospital') and self.request.user.current_hospital:
             # Only show daily notes for patients in the user's current hospital
             queryset = queryset.filter(patient__current_hospital=self.request.user.current_hospital)
 
-        # Further filter based on patient access permissions
-        accessible_patients = []
-        for dailynote in queryset:
-            if can_access_patient(self.request.user, dailynote.patient):
-                accessible_patients.append(dailynote.patient.id)
-
-        if accessible_patients:
-            queryset = queryset.filter(patient__id__in=accessible_patients)
+        # Optimize patient access check with bulk operations
+        from apps.core.permissions.cache import get_user_accessible_patients
+        accessible_patient_ids = get_user_accessible_patients(self.request.user)
+        if accessible_patient_ids:
+            queryset = queryset.filter(patient__id__in=accessible_patient_ids)
         else:
             queryset = queryset.none()
 
@@ -100,23 +105,43 @@ class DailyNoteListView(LoginRequiredMixin, ListView):
         context['date_from'] = self.request.GET.get('date_from', '')
         context['date_to'] = self.request.GET.get('date_to', '')
         context['selected_creator'] = self.request.GET.get('creator', '')
+        
+        # Cache key for filter options
+        cache_key = f"dailynotes_filters_{self.request.user.id}_{getattr(self.request.user, 'current_hospital_id', 'none')}"
 
-        # Get available patients for filter dropdown (only accessible ones)
-        accessible_patients = []
-        if hasattr(self.request.user, 'current_hospital') and self.request.user.current_hospital:
-            all_patients = Patient.objects.filter(current_hospital=self.request.user.current_hospital)
-            for patient in all_patients:
-                if can_access_patient(self.request.user, patient):
-                    accessible_patients.append(patient)
-        context['available_patients'] = accessible_patients
-
-        # Get available creators (users who have created daily notes in this hospital)
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        available_creators = User.objects.filter(
-            dailynote_created__patient__current_hospital=self.request.user.current_hospital
-        ).distinct() if hasattr(self.request.user, 'current_hospital') and self.request.user.current_hospital else User.objects.none()
-        context['available_creators'] = available_creators
+        # Try to get filter options from cache
+        filter_options = cache.get(cache_key)
+        if filter_options is None:
+            # Get available patients for filter dropdown (only accessible ones)
+            from apps.core.permissions.cache import get_user_accessible_patients
+            if hasattr(self.request.user, 'current_hospital') and self.request.user.current_hospital:
+                accessible_patient_ids = get_user_accessible_patients(self.request.user)
+                accessible_patients = Patient.objects.filter(
+                    id__in=accessible_patient_ids,
+                    current_hospital=self.request.user.current_hospital
+                ).only('id', 'name', 'fiscal_number')
+            else:
+                accessible_patients = Patient.objects.none()
+            
+            # Get available creators (users who have created daily notes in this hospital)
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            if hasattr(self.request.user, 'current_hospital') and self.request.user.current_hospital:
+                available_creators = User.objects.filter(
+                    dailynote_created__patient__current_hospital=self.request.user.current_hospital
+                ).distinct().only('id', 'first_name', 'last_name', 'email')
+            else:
+                available_creators = User.objects.none()
+            
+            filter_options = {
+                'available_patients': accessible_patients,
+                'available_creators': available_creators
+            }
+            # Cache for 5 minutes
+            cache.set(cache_key, filter_options, 300)
+        
+        context['available_patients'] = filter_options['available_patients']
+        context['available_creators'] = filter_options['available_creators']
 
         # Add permission information for each daily note
         if 'dailynote_list' in context:
@@ -298,6 +323,7 @@ class PatientDailyNoteListView(LoginRequiredMixin, ListView):
     template_name = 'dailynotes/patient_dailynote_list.html'
     context_object_name = 'dailynotes'
     paginate_by = 20
+    paginate_orphans = 5
 
     def dispatch(self, request, *args, **kwargs):
         """Get patient and check permissions before processing request."""

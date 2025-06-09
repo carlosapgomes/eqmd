@@ -148,6 +148,53 @@ def clear_permission_cache() -> None:
     cache.set(global_version_key, current_version + 1, None)
 
 
+def get_user_accessible_patients(user):
+    """
+    Get list of patient IDs that a user can access.
+    
+    This function provides a cached, optimized way to get all patient IDs
+    that a user has permission to access, reducing the need for individual
+    permission checks in bulk operations.
+    
+    Args:
+        user: The user object
+        
+    Returns:
+        list: List of patient IDs the user can access
+    """
+    if not getattr(user, 'is_authenticated', False):
+        return []
+    
+    # Generate cache key for user's accessible patients
+    cache_key = generate_cache_key(user.id, 'accessible_patients')
+    
+    # Try to get from cache
+    cached_result = cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
+    
+    # Calculate accessible patients
+    from apps.patients.models import Patient
+    from .utils import can_access_patient
+    
+    accessible_patient_ids = []
+    
+    # Get patients from user's current hospital
+    if hasattr(user, 'current_hospital') and user.current_hospital:
+        patients = Patient.objects.filter(
+            current_hospital=user.current_hospital
+        ).only('id')
+        
+        for patient in patients:
+            if can_access_patient(user, patient):
+                accessible_patient_ids.append(patient.id)
+    
+    # Cache the result
+    cache.set(cache_key, accessible_patient_ids, PERMISSION_CACHE_TIMEOUT)
+    
+    return accessible_patient_ids
+
+
 def is_caching_enabled() -> bool:
     """
     Check if permission caching is enabled.
