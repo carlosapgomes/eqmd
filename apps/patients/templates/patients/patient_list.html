@@ -59,7 +59,9 @@
             <select class="form-select" id="hospital" name="hospital">
               <option value="">Todos os hospitais</option>
               {% for hospital in available_hospitals %}
-                <option value="{{ hospital.id }}" {% if hospital.id|stringformat:"s" == request.GET.hospital %}selected{% endif %}>
+                <option value="{{ hospital.id }}" 
+                        {% if hospital.id|stringformat:"s" == request.GET.hospital %}selected
+                        {% elif using_default_hospital_filter and hospital.id == current_hospital.id %}selected{% endif %}>
                   {{ hospital.short_name }}
                 </option>
               {% endfor %}
@@ -80,7 +82,7 @@
         </form>
         
         <!-- Active Filters Display -->
-        {% if request.GET.q or request.GET.status or request.GET.hospital %}
+        {% if request.GET.q or request.GET.status or request.GET.hospital or using_default_hospital_filter %}
         <div class="mt-3">
           <small class="text-medical-gray">Filtros ativos:</small>
           <div class="d-flex flex-wrap gap-2 mt-1">
@@ -103,6 +105,12 @@
                 Hospital: {% for hospital in available_hospitals %}{% if hospital.id|stringformat:"s" == request.GET.hospital %}{{ hospital.short_name }}{% endif %}{% endfor %}
                 <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}{% endif %}" 
                    class="text-white text-decoration-none ms-1">×</a>
+              </span>
+            {% elif using_default_hospital_filter %}
+              <span class="badge bg-medical-primary">
+                Hospital: {{ current_hospital.short_name }} (padrão)
+                <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}hospital=" 
+                   class="text-white text-decoration-none ms-1" title="Ver todos os hospitais">×</a>
               </span>
             {% endif %}
           </div>

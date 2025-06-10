@@ -38,16 +38,33 @@ class PatientListView(LoginRequiredMixin, ListView):
             except (ValueError, TypeError):
                 pass
 
-        # Hospital filter
+        # Hospital filter - explicit parameter overrides default context
         hospital_filter = self.request.GET.get('hospital')
         if hospital_filter:
             queryset = queryset.filter(current_hospital_id=hospital_filter)
+        else:
+            # Default to current hospital context if user has one and no explicit filter
+            if (hasattr(self.request.user, 'has_hospital_context') and 
+                self.request.user.has_hospital_context and 
+                hasattr(self.request.user, 'current_hospital') and 
+                self.request.user.current_hospital):
+                queryset = queryset.filter(current_hospital=self.request.user.current_hospital)
 
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['available_hospitals'] = Hospital.objects.all().order_by('name')
+        # Use available hospitals from context processor (which respects user permissions)
+        from apps.hospitals.middleware import HospitalContextMiddleware
+        context['available_hospitals'] = HospitalContextMiddleware.get_available_hospitals(self.request.user)
+        
+        # Add current hospital and default filter information for template logic
+        context['current_hospital'] = getattr(self.request.user, 'current_hospital', None)
+        context['using_default_hospital_filter'] = (
+            not self.request.GET.get('hospital') and 
+            getattr(self.request.user, 'has_hospital_context', False) and
+            getattr(self.request.user, 'current_hospital', None)
+        )
         return context
 
 
