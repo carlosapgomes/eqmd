@@ -20,16 +20,16 @@ PROFESSION_TYPES = [
     STUDENT,
 ]
 
-# Patient status types from patients.Patient
-INPATIENT = 'inpatient'
-OUTPATIENT = 'outpatient'
-EMERGENCY = 'emergency'
-DISCHARGED = 'discharged'
-TRANSFERRED = 'transferred'
+# Patient status types from patients.Patient (using integer values to match model)
+OUTPATIENT = 1
+INPATIENT = 2
+EMERGENCY = 3
+DISCHARGED = 4
+TRANSFERRED = 5
 
 PATIENT_STATUS_TYPES = [
-    INPATIENT,
     OUTPATIENT,
+    INPATIENT,
     EMERGENCY,
     DISCHARGED,
     TRANSFERRED,

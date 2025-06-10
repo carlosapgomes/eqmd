@@ -15,7 +15,7 @@ from django.conf import settings
 from .constants import PERMISSION_CACHE_TIMEOUT, PERMISSION_CACHE_PREFIX
 
 
-def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[str] = None) -> str:
+def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[str] = None, hospital_context_id: Optional[str] = None) -> str:
     """
     Generate a cache key for permission checks.
     
@@ -23,6 +23,7 @@ def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[s
         user_id: The user's ID
         permission_type: Type of permission being checked
         object_id: Optional object ID for object-level permissions
+        hospital_context_id: Optional hospital context ID for hospital-sensitive permissions
         
     Returns:
         str: Cache key for the permission check
@@ -30,6 +31,8 @@ def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[s
     key_parts = [PERMISSION_CACHE_PREFIX, str(user_id), permission_type]
     if object_id:
         key_parts.append(str(object_id))
+    if hospital_context_id:
+        key_parts.append(f"hospital:{hospital_context_id}")
     
     # Create a hash to ensure key length limits
     key_string = ':'.join(key_parts)
@@ -68,7 +71,14 @@ def cache_permission_result(
             if use_object_id and obj:
                 object_id = getattr(obj, 'pk', None) or getattr(obj, 'id', None)
             
-            cache_key = generate_cache_key(user.id, permission_type, object_id)
+            # Include hospital context for hospital-sensitive permissions
+            hospital_context_id = None
+            if permission_type in ['access_patient', 'change_patient_status', 'change_patient_personal_data', 'can_create_event_type']:
+                current_hospital = getattr(user, 'current_hospital', None)
+                if current_hospital:
+                    hospital_context_id = str(current_hospital.id)
+            
+            cache_key = generate_cache_key(user.id, permission_type, object_id, hospital_context_id)
             
             # Try to get from cache
             cached_result = cache.get(cache_key)

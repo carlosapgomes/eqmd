@@ -1,0 +1,80 @@
+{% load permission_tags %}
+
+<div class="recent-events-list">
+    {% if recent_events %}
+        {% for event in recent_events %}
+            <div class="recent-event-item d-flex align-items-center py-2 {% if not forloop.last %}border-bottom{% endif %}">
+                <div class="flex-shrink-0 me-2">
+                    <span class="badge {{ event.get_event_type_badge_class }} badge-sm">
+                        <i class="{{ event.get_event_type_icon }}"></i>
+                    </span>
+                </div>
+                <div class="flex-grow-1 min-width-0">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1 min-width-0">
+                            <h6 class="mb-0 text-truncate">
+                                {{ event.get_event_type_display }}
+                            </h6>
+                            <small class="text-muted">
+                                {{ event.created_by.get_full_name }} • 
+                                {{ event.created_at|timesince }} atrás
+                            </small>
+                        </div>
+                        <div class="flex-shrink-0 ms-2">
+                            <a href="{{ event.get_absolute_url }}" 
+                               class="btn btn-outline-primary btn-xs"
+                               title="Visualizar evento">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% if event.get_excerpt %}
+                        <p class="mb-0 mt-1 text-muted small text-truncate">
+                            {{ event.get_excerpt|truncatechars:50 }}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+        
+        <!-- View All Link -->
+        <div class="text-center mt-2">
+            <a href="{% url 'patients:patient_events_timeline' patient.pk %}" 
+               class="btn btn-outline-medical-primary btn-sm">
+                <i class="bi bi-clock-history me-1"></i>
+                Ver Timeline Completa
+            </a>
+        </div>
+    {% else %}
+        <div class="text-center py-3">
+            <div class="text-muted mb-2">
+                <i class="bi bi-clock-history" style="font-size: 2rem; opacity: 0.3;"></i>
+            </div>
+            <p class="text-muted small mb-2">Nenhum evento registrado</p>
+            <a href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}" 
+               class="btn btn-medical-success btn-sm">
+                <i class="bi bi-plus-circle me-1"></i>
+                Criar Primeiro Evento
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.badge-sm {
+    font-size: 0.65rem;
+    padding: 0.25em 0.4em;
+}
+.btn-xs {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+.recent-event-item:hover {
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 4px;
+}
+.min-width-0 {
+    min-width: 0;
+}
+</style>

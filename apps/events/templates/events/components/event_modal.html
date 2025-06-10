@@ -1,0 +1,59 @@
+<!-- Event Detail Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalLabel">
+                    <span id="modal-event-type"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Loading state -->
+                <div id="modal-loading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+                
+                <!-- Event content -->
+                <div id="modal-content" style="display: none;">
+                    <!-- Event metadata -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Data/Hora:</strong>
+                            <span id="modal-datetime"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Profissional:</strong>
+                            <span id="modal-creator"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Event content -->
+                    <div class="mb-3">
+                        <strong>Conteúdo:</strong>
+                        <div id="modal-event-content" class="mt-2 p-3 bg-light rounded"></div>
+                    </div>
+                    
+                    <!-- Last updated -->
+                    <div class="text-muted small" id="modal-updated" style="display: none;">
+                        <i class="bi bi-pencil-square me-1"></i>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <a href="#" id="modal-view-full" class="btn btn-primary" style="display: none;">
+                    <i class="bi bi-eye me-1"></i>
+                    Visualizar Completo
+                </a>
+                <a href="#" id="modal-edit" class="btn btn-warning" style="display: none;">
+                    <i class="bi bi-pencil me-1"></i>
+                    Editar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

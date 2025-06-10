@@ -4,10 +4,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Q
+from django.core.exceptions import PermissionDenied
 
 from .models import Patient, PatientHospitalRecord, AllowedTag
 from .forms import PatientForm, PatientHospitalRecordForm, AllowedTagForm
 from apps.hospitals.models import Hospital
+from apps.core.permissions.utils import can_access_patient, can_change_patient_personal_data
 
 
 class PatientListView(LoginRequiredMixin, ListView):
@@ -55,6 +57,30 @@ class PatientListView(LoginRequiredMixin, ListView):
 
 class PatientDetailView(LoginRequiredMixin, DetailView):
     model = Patient
+    template_name = 'patients/patient_detail.html'
+    context_object_name = 'patient'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        patient = self.get_object()
+        
+        # Check permission
+        if not can_access_patient(self.request.user, patient):
+            raise PermissionDenied("You don't have permission to view this patient.")
+        
+        # Add recent events (last 3)
+        from apps.events.models import Event
+        context['recent_events'] = Event.objects.filter(
+            patient=patient
+        ).select_subclasses().select_related('created_by').order_by('-created_at')[:3]
+        
+        # Add events count
+        context['total_events_count'] = Event.objects.filter(patient=patient).count()
+        
+        # Add permission context
+        context['can_edit_patient'] = can_change_patient_personal_data(self.request.user, patient)
+        
+        return context
 
 
 class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):

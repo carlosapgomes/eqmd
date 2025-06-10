@@ -132,6 +132,7 @@ def can_change_patient_status(user: Any, patient: Any, new_status: str) -> bool:
     Check if a user can change a patient's status.
     
     Rules:
+    - User must be able to access the patient (includes hospital membership)
     - Doctors can change any patient status
     - Nurses can change from emergency to inpatient, but cannot discharge
     - Students cannot change patient status
@@ -145,6 +146,10 @@ def can_change_patient_status(user: Any, patient: Any, new_status: str) -> bool:
         bool: True if status change is allowed, False otherwise
     """
     if not user.is_authenticated:
+        return False
+    
+    # First check if user can access the patient (includes hospital membership)
+    if not can_access_patient(user, patient):
         return False
     
     # Get user profession type and map to constants
@@ -533,3 +538,166 @@ def can_see_patient_in_search(user: Any, patient: Any) -> bool:
     # For now, use the same logic as can_access_patient
     # This can be extended in the future for more specific search filtering
     return can_access_patient(user, patient)
+
+
+@cache_permission_result('is_hospital_member', use_object_id=True)
+def is_hospital_member(user: Any, hospital: Any) -> bool:
+    """
+    Check if user is a member of the given hospital.
+    
+    Args:
+        user: The user to check
+        hospital: The hospital object
+        
+    Returns:
+        bool: True if user is a member, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+    
+    if not hospital:
+        return False
+    
+    # Superusers have access to all hospitals
+    if user.is_superuser:
+        return True
+        
+    # Check if user has hospital membership method
+    if hasattr(user, 'is_hospital_member'):
+        return user.is_hospital_member(hospital)
+    
+    # Fallback: check if user has hospitals relationship
+    if hasattr(user, 'hospitals'):
+        return user.hospitals.filter(id=hospital.id).exists()
+    
+    return False
+
+
+def has_any_hospital_membership(user: Any) -> bool:
+    """
+    Check if user is a member of at least one hospital.
+    
+    Args:
+        user: The user to check
+        
+    Returns:
+        bool: True if user is a member of at least one hospital, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+    
+    # Superusers have access to all hospitals
+    if user.is_superuser:
+        return True
+        
+    # Check if user has hospitals relationship
+    if hasattr(user, 'hospitals'):
+        return user.hospitals.exists()
+    
+    return False
+
+
+def get_user_accessible_patients(user: Any):
+    """
+    Get patients accessible to user based on hospital membership and role.
+    
+    Args:
+        user: The user requesting access
+        
+    Returns:
+        QuerySet: Patients the user can access
+    """
+    if not user.is_authenticated:
+        from apps.patients.models import Patient
+        return Patient.objects.none()
+    
+    # Get user's hospitals
+    user_hospitals = []
+    if hasattr(user, 'hospitals'):
+        user_hospitals = list(user.hospitals.values_list('id', flat=True))
+    elif user.is_superuser:
+        from apps.hospitals.models import Hospital
+        user_hospitals = list(Hospital.objects.values_list('id', flat=True))
+    
+    if not user_hospitals:
+        from apps.patients.models import Patient
+        return Patient.objects.none()
+    
+    # Get user profession type
+    profession_type = getattr(user, 'profession_type', None)
+    profession_map = {
+        0: MEDICAL_DOCTOR,  # User.MEDICAL_DOCTOR
+        1: RESIDENT,        # User.RESIDENT 
+        2: NURSE,           # User.NURSE
+        3: PHYSIOTHERAPIST, # User.PHYSIOTERAPIST
+        4: STUDENT,         # User.STUDENT
+    }
+    profession = profession_map.get(profession_type)
+    
+    # Import Patient model
+    from apps.patients.models import Patient
+    
+    # Base query: patients in user's hospitals
+    base_query = Patient.objects.filter(current_hospital_id__in=user_hospitals)
+    
+    # Students can only see outpatients
+    if profession == STUDENT:
+        return base_query.filter(status=OUTPATIENT)
+    
+    # All other professions can see all patients in their hospitals
+    return base_query
+
+
+@cache_permission_result('can_create_event_type', use_object_id=True)
+def can_create_event_type(user: Any, patient: Any, event_type: str) -> bool:
+    """
+    Check if user can create specific event type for patient.
+    
+    Args:
+        user: The user requesting to create the event
+        patient: The patient object
+        event_type: The type of event to create
+        
+    Returns:
+        bool: True if user can create this event type, False otherwise
+    """
+    if not user.is_authenticated:
+        return False
+    
+    # First check if user can access the patient at all
+    if not can_access_patient(user, patient):
+        return False
+    
+    # Get user profession type
+    profession_type = getattr(user, 'profession_type', None)
+    profession_map = {
+        0: MEDICAL_DOCTOR,  # User.MEDICAL_DOCTOR
+        1: RESIDENT,        # User.RESIDENT 
+        2: NURSE,           # User.NURSE
+        3: PHYSIOTHERAPIST, # User.PHYSIOTERAPIST
+        4: STUDENT,         # User.STUDENT
+    }
+    profession = profession_map.get(profession_type)
+    
+    # Event type restrictions based on profession
+    if profession == STUDENT:
+        # Students can only create basic notes, not medical records
+        allowed_event_types = ['Daily Notes', 'Notes']
+        return event_type in allowed_event_types
+    
+    if profession == NURSE:
+        # Nurses can create most events except diagnosis/prescriptions
+        restricted_event_types = ['History and Physical', 'Diagnosis', 'Prescription']
+        return event_type not in restricted_event_types
+    
+    if profession in [PHYSIOTHERAPIST, RESIDENT]:
+        # Physiotherapists and residents can create most events
+        restricted_event_types = ['Discharge Summary']
+        return event_type not in restricted_event_types
+    
+    if profession == MEDICAL_DOCTOR:
+        # Doctors can create all event types
+        return True
+    
+    # Default: no access
+    return False

@@ -28,11 +28,36 @@ class HospitalContextMiddleware:
         # Get current hospital ID from session
         hospital_id = request.session.get('current_hospital_id')
         
+        # If no session context, try to auto-select user's default hospital
+        if not hospital_id and hasattr(request.user, 'get_default_hospital'):
+            default_hospital = request.user.get_default_hospital()
+            if default_hospital:
+                hospital_id = str(default_hospital.id)
+                request.session['current_hospital_id'] = hospital_id
+                # Update last_hospital for future sessions
+                if request.user.last_hospital != default_hospital:
+                    request.user.last_hospital = default_hospital
+                    request.user.save(update_fields=['last_hospital'])
+        
         # Add hospital context attributes to user
         if hospital_id:
             try:
-                request.user.current_hospital = Hospital.objects.get(pk=hospital_id)
-                request.user.has_hospital_context = True
+                hospital = Hospital.objects.get(pk=hospital_id)
+                # Validate user is a member of this hospital
+                if hasattr(request.user, 'is_hospital_member') and not request.user.is_hospital_member(hospital):
+                    # User is not a member, clear session and try default
+                    request.session.pop('current_hospital_id', None)
+                    default_hospital = request.user.get_default_hospital() if hasattr(request.user, 'get_default_hospital') else None
+                    if default_hospital:
+                        request.user.current_hospital = default_hospital
+                        request.user.has_hospital_context = True
+                        request.session['current_hospital_id'] = str(default_hospital.id)
+                    else:
+                        request.user.current_hospital = None
+                        request.user.has_hospital_context = False
+                else:
+                    request.user.current_hospital = hospital
+                    request.user.has_hospital_context = True
             except Hospital.DoesNotExist:
                 # Remove invalid hospital ID from session
                 request.session.pop('current_hospital_id', None)
@@ -52,13 +77,24 @@ class HospitalContextMiddleware:
             hospital_id: UUID of the hospital to set as current
             
         Returns:
-            Hospital object if successful, None if not found
+            Hospital object if successful, None if not found or not authorized
         """
         try:
             hospital = Hospital.objects.get(pk=hospital_id)
+            
+            # Validate user is a member of this hospital
+            if hasattr(request.user, 'is_hospital_member') and not request.user.is_hospital_member(hospital):
+                return None
+            
             request.session['current_hospital_id'] = str(hospital_id)
             request.user.current_hospital = hospital
             request.user.has_hospital_context = True
+            
+            # Update user's last_hospital for future sessions
+            if hasattr(request.user, 'last_hospital') and request.user.last_hospital != hospital:
+                request.user.last_hospital = hospital
+                request.user.save(update_fields=['last_hospital'])
+            
             return hospital
         except Hospital.DoesNotExist:
             return None
@@ -76,8 +112,7 @@ class HospitalContextMiddleware:
         """
         Get available hospitals for the user.
         
-        For now, returns all hospitals. This can be extended later
-        to implement user-specific hospital restrictions.
+        Returns only hospitals the user is a member of.
         
         Args:
             user: User object
@@ -85,4 +120,14 @@ class HospitalContextMiddleware:
         Returns:
             QuerySet of available hospitals
         """
-        return Hospital.objects.all()
+        if not user.is_authenticated:
+            return Hospital.objects.none()
+        
+        if hasattr(user, 'hospitals'):
+            return user.hospitals.all()
+        
+        # Fallback for users without hospital relationships (e.g., superusers)
+        if getattr(user, 'is_superuser', False):
+            return Hospital.objects.all()
+        
+        return Hospital.objects.none()

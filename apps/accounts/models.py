@@ -25,6 +25,34 @@ class EqmdCustomUser(AbstractUser):
     country_id_number = models.CharField(max_length=20, blank=True)
     fiscal_number = models.CharField(max_length=20, blank=True)
     phone = models.CharField(max_length=20, blank=True)
+    
+    # Hospital relationships
+    hospitals = models.ManyToManyField(
+        'hospitals.Hospital', 
+        related_name='members', 
+        blank=True,
+        help_text="Hospitals this user is a member of"
+    )
+    last_hospital = models.ForeignKey(
+        'hospitals.Hospital', 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        related_name='last_logged_users',
+        help_text="Last hospital context this user was in"
+    )
+    
+    def get_default_hospital(self):
+        """Get user's default hospital context"""
+        if self.last_hospital and self.hospitals.filter(id=self.last_hospital.id).exists():
+            return self.last_hospital
+        return self.hospitals.first()
+    
+    def is_hospital_member(self, hospital):
+        """Check if user is a member of the given hospital"""
+        if not hospital:
+            return False
+        return self.hospitals.filter(id=hospital.id).exists()
 
 class UserProfile(models.Model):
     user = models.OneToOneField(EqmdCustomUser, on_delete=models.CASCADE, related_name='profile')

@@ -56,6 +56,68 @@ class Event(models.Model):
 
     def __str__(self):
         return str(self.description)
+    
+    def get_excerpt(self, max_length=150):
+        """Generate a short excerpt from event content."""
+        content = getattr(self, 'content', None) or getattr(self, 'description', '')
+        if content:
+            # Remove HTML tags
+            import re
+            clean_content = re.sub('<[^<]+?>', '', str(content))
+            return clean_content[:max_length] + '...' if len(clean_content) > max_length else clean_content
+        return "No content available"
+
+    def get_event_type_badge_class(self):
+        """Return CSS class for event type badge."""
+        badge_classes = {
+            0: 'bg-medical-primary',     # History & Physical
+            1: 'bg-medical-success',     # Daily Notes
+            2: 'bg-medical-info',        # Simple Note
+            3: 'bg-medical-warning',     # Photos
+            4: 'bg-medical-danger',      # Exam Results
+            5: 'bg-medical-secondary',   # Exam Request
+            6: 'bg-medical-dark',        # Discharge Report
+            7: 'bg-medical-light',       # Prescription
+            8: 'bg-medical-teal',        # Report
+            9: 'bg-info'                 # Photo Series
+        }
+        return badge_classes.get(self.event_type, 'bg-secondary')
+
+    def get_event_type_icon(self):
+        """Return Bootstrap icon class for event type."""
+        icon_classes = {
+            0: 'bi-clipboard2-heart',    # History & Physical
+            1: 'bi-journal-text',        # Daily Notes
+            2: 'bi-sticky',              # Simple Note
+            3: 'bi-camera',              # Photos
+            4: 'bi-clipboard2-data',     # Exam Results
+            5: 'bi-clipboard2-check',    # Exam Request
+            6: 'bi-door-open',           # Discharge Report
+            7: 'bi-prescription2',       # Prescription
+            8: 'bi-file-text',           # Report
+            9: 'bi-images'               # Photo Series
+        }
+        return icon_classes.get(self.event_type, 'bi-file-text')
+
+    def get_absolute_url(self):
+        """Return the absolute URL for this event.
+        Should be overridden by derived classes.
+        """
+        from django.urls import reverse
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured(
+            f"The {self.__class__.__name__} model must define a get_absolute_url() method."
+        )
+
+    @property
+    def can_be_edited(self):
+        """Check if event is within edit window (24 hours)."""
+        if not self.created_at:
+            return False
+        from datetime import timedelta
+        from django.utils import timezone
+        edit_deadline = self.created_at + timedelta(hours=24)
+        return timezone.now() <= edit_deadline
 
     class Meta:
         ordering = ["-created_at"]

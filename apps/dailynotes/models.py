@@ -14,6 +14,11 @@ class DailyNote(Event):
         self.event_type = Event.DAILY_NOTE_EVENT
         super().save(*args, **kwargs)
 
+    def get_absolute_url(self):
+        """Return the absolute URL for this daily note."""
+        from django.urls import reverse
+        return reverse('apps.dailynotes:dailynote_detail', kwargs={'pk': self.pk})
+
     def __str__(self):
         """String representation of the daily note."""
         return f"Evolução - {self.patient.name} - {self.event_datetime.strftime('%d/%m/%Y %H:%M')}"

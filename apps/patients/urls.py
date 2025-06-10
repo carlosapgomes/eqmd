@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from apps.events.views import PatientEventsTimelineView
 
 app_name = "apps.patients"
 
@@ -7,6 +8,7 @@ urlpatterns = [
     # Patient URLs
     path("", views.PatientListView.as_view(), name="patient_list"),
     path("<uuid:pk>/", views.PatientDetailView.as_view(), name="patient_detail"),
+    path("<uuid:patient_id>/timeline/", PatientEventsTimelineView.as_view(), name="patient_events_timeline"),
     path("create/", views.PatientCreateView.as_view(), name="patient_create"),
     path("<uuid:pk>/update/", views.PatientUpdateView.as_view(), name="patient_update"),
     path("<uuid:pk>/delete/", views.PatientDeleteView.as_view(), name="patient_delete"),

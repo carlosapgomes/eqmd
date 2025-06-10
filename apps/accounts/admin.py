@@ -8,7 +8,7 @@ class EqmdCustomUserAdmin(UserAdmin):
     form = EqmdCustomUserChangeForm
     model = EqmdCustomUser
     list_display = ['username', 'email', 'first_name', 'last_name',
-                    'is_active', 'profession_type', 'is_staff']
+                    'is_active', 'profession_type', 'is_staff', 'last_hospital']
 
     # Custom fieldsets for editing existing users
     fieldsets = (
@@ -21,6 +21,9 @@ class EqmdCustomUserAdmin(UserAdmin):
         ('Professional Information', {
             'fields': ('profession_type', 'professional_registration_number',
                       'country_id_number', 'fiscal_number', 'phone')
+        }),
+        ('Hospital Information', {
+            'fields': ('hospitals', 'last_hospital')
         }),
     )
 
@@ -36,6 +39,9 @@ class EqmdCustomUserAdmin(UserAdmin):
         ('Professional Information', {
             'fields': ('profession_type', 'professional_registration_number',
                       'country_id_number', 'fiscal_number', 'phone')
+        }),
+        ('Hospital Information', {
+            'fields': ('hospitals',)
         }),
     )
 
