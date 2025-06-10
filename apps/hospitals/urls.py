@@ -19,6 +19,7 @@ urlpatterns = [
     
     # Hospital context selection
     path('select/', views.hospital_selection_view, name='select_hospital'),
+    path('context/switch/', views.hospital_context_switch_ajax, name='context_switch'),
     
     # Test URL
     path('test/ward-tags/', views.test_ward_tags, name='test_ward_tags'),

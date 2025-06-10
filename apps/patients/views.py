@@ -41,11 +41,7 @@ class PatientListView(LoginRequiredMixin, ListView):
         # Hospital filter
         hospital_filter = self.request.GET.get('hospital')
         if hospital_filter:
-            try:
-                hospital_id = int(hospital_filter)
-                queryset = queryset.filter(current_hospital_id=hospital_id)
-            except (ValueError, TypeError):
-                pass
+            queryset = queryset.filter(current_hospital_id=hospital_filter)
 
         return queryset
 

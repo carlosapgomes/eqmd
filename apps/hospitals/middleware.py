@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.core.exceptions import ValidationError
 from apps.hospitals.models import Hospital
 
 
@@ -58,7 +59,7 @@ class HospitalContextMiddleware:
                 else:
                     request.user.current_hospital = hospital
                     request.user.has_hospital_context = True
-            except Hospital.DoesNotExist:
+            except (Hospital.DoesNotExist, ValueError, ValidationError):
                 # Remove invalid hospital ID from session
                 request.session.pop('current_hospital_id', None)
                 request.user.current_hospital = None
@@ -96,7 +97,7 @@ class HospitalContextMiddleware:
                 request.user.save(update_fields=['last_hospital'])
             
             return hospital
-        except Hospital.DoesNotExist:
+        except (Hospital.DoesNotExist, ValueError, ValidationError):
             return None
 
     @staticmethod

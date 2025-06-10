@@ -19,6 +19,11 @@ class DailyNote(Event):
         from django.urls import reverse
         return reverse('apps.dailynotes:dailynote_detail', kwargs={'pk': self.pk})
 
+    def get_edit_url(self):
+        """Return the edit URL for this daily note."""
+        from django.urls import reverse
+        return reverse('apps.dailynotes:dailynote_update', kwargs={'pk': self.pk})
+
     def __str__(self):
         """String representation of the daily note."""
         return f"Evolução - {self.patient.name} - {self.event_datetime.strftime('%d/%m/%Y %H:%M')}"

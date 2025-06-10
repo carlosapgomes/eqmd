@@ -77,15 +77,12 @@ class PatientEventsTimelineView(ListView):
         # Optimized base queryset
         queryset = Event.objects.filter(
             patient=self.patient
-        ).select_related(
+        ).select_subclasses().select_related(
             'created_by',
             'updated_by',
             'patient'
         ).prefetch_related(
-            Prefetch(
-                'created_by',
-                queryset=User.objects.select_related('groups')
-            )
+            'created_by__groups'
         ).order_by('-created_at')
         
         # Apply filters with indexing considerations
@@ -215,9 +212,9 @@ class PatientEventsTimelineView(ListView):
         if creators is None:
             creators = list(
                 User.objects.filter(
-                    created_events__patient=self.patient
+                    event_set__patient=self.patient
                 ).distinct().values(
-                    'id', 'first_name', 'last_name', 'profession'
+                    'id', 'first_name', 'last_name', 'profession_type'
                 ).order_by('first_name', 'last_name')
             )
             # Add full name

@@ -109,6 +109,16 @@ class Event(models.Model):
             f"The {self.__class__.__name__} model must define a get_absolute_url() method."
         )
 
+    def get_edit_url(self):
+        """Return the edit URL for this event.
+        Should be overridden by derived classes.
+        """
+        from django.urls import reverse
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured(
+            f"The {self.__class__.__name__} model must define a get_edit_url() method."
+        )
+
     @property
     def can_be_edited(self):
         """Check if event is within edit window (24 hours)."""

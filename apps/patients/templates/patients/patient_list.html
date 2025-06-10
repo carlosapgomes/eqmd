@@ -100,7 +100,7 @@
             {% endif %}
             {% if request.GET.hospital %}
               <span class="badge bg-medical-teal">
-                Hospital: {{ request.GET.hospital }}
+                Hospital: {% for hospital in available_hospitals %}{% if hospital.id|stringformat:"s" == request.GET.hospital %}{{ hospital.short_name }}{% endif %}{% endfor %}
                 <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}{% endif %}" 
                    class="text-white text-decoration-none ms-1">×</a>
               </span>
@@ -130,7 +130,7 @@
                 {% for patient in patient_list %}
                 <tr>
                   <td>
-                    <a href="{{ patient.get_absolute_url }}" class="text-decoration-none">
+                    <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}" class="text-decoration-none">
                       <strong>{{ patient.name }}</strong>
                     </a>
                   </td>

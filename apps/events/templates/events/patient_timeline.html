@@ -1,5 +1,6 @@
 {% extends "base_app.html" %}
 {% load permission_tags %}
+{% load event_tags %}
 {% load static %}
 
 {% block title %}Timeline - {{ patient.name }}{% endblock %}
@@ -47,7 +48,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block app_content %}
 <div class="timeline-container" role="main" aria-label="Timeline de eventos do paciente">
     
     <!-- Add skip navigation -->
@@ -241,14 +242,14 @@
                                         <div class="event-actions" role="group" 
                                              aria-label="Ações para {{ event.get_event_type_display }}">
                                             <div class="btn-group btn-group-sm">
-                                                <a href="{% url 'events:patient_events_list' event.patient.pk %}" 
+                                                <a href="{{ event.get_absolute_url }}" 
                                                    class="btn btn-outline-primary btn-sm"
                                                    aria-label="Visualizar {{ event.get_event_type_display }} completo">
                                                     <i class="bi bi-eye" aria-hidden="true"></i>
                                                     <span class="visually-hidden">Visualizar</span>
                                                 </a>
                                                 {% if event_data.can_edit %}
-                                                    <a href="#" 
+                                                    <a href="{{ event.get_edit_url }}" 
                                                        class="btn btn-outline-warning btn-sm"
                                                        aria-label="Editar {{ event.get_event_type_display }}">
                                                         <i class="bi bi-pencil" aria-hidden="true"></i>

@@ -65,9 +65,9 @@
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb">
     <li class="breadcrumb-item">
-      <a href="{% url 'dailynotes:dailynote_list' %}">
-        <i class="bi bi-journal-medical me-1"></i>
-        Evoluções
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=dailynote.patient.id %}">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline do Paciente
       </a>
     </li>
     <li class="breadcrumb-item active" aria-current="page">
@@ -104,7 +104,7 @@
       Excluir
     </a>
     {% endif %}
-    <a href="{% url 'dailynotes:dailynote_list' %}" class="btn btn-outline-secondary">
+    <a href="{% url 'apps.patients:patient_events_timeline' patient_id=dailynote.patient.id %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>
       Voltar
     </a>
@@ -249,9 +249,9 @@
       Excluir Evolução
     </a>
     {% endif %}
-    <a href="{% url 'dailynotes:dailynote_list' %}" class="btn btn-outline-secondary">
+    <a href="{% url 'apps.patients:patient_events_timeline' patient_id=dailynote.patient.id %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>
-      Voltar à Lista
+      Voltar ao Timeline
     </a>
   </div>
 </div>

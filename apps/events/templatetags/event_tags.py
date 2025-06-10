@@ -39,3 +39,10 @@ def events_count_by_type(patient):
     return Event.objects.filter(patient=patient).values('event_type').annotate(
         count=Count('id')
     ).order_by('event_type')
+
+@register.filter
+def get_item(dictionary, key):
+    """Get an item from a dictionary by key."""
+    if hasattr(dictionary, 'get'):
+        return dictionary.get(key)
+    return None

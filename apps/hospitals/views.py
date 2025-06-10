@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 from .models import Hospital, Ward
 from .forms import HospitalForm, WardForm
 from .middleware import HospitalContextMiddleware
@@ -224,6 +226,45 @@ def hospital_selection_view(request):
     }
     
     return render(request, 'hospitals/hospital_selection.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def hospital_context_switch_ajax(request):
+    """AJAX endpoint for switching hospital context."""
+    hospital_id = request.POST.get('hospital_id')
+    
+    if hospital_id:
+        try:
+            hospital = HospitalContextMiddleware.set_hospital_context(request, hospital_id)
+            if hospital:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Hospital "{hospital.name}" selecionado.',
+                    'hospital': {
+                        'id': str(hospital.id),
+                        'name': hospital.name,
+                        'short_name': hospital.short_name or '',
+                    }
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Hospital não encontrado ou você não tem acesso.'
+                })
+        except (ValueError, Hospital.DoesNotExist):
+            return JsonResponse({
+                'success': False,
+                'message': 'Hospital não encontrado ou você não tem acesso.'
+            })
+    else:
+        # Clear hospital context
+        HospitalContextMiddleware.clear_hospital_context(request)
+        return JsonResponse({
+            'success': True,
+            'message': 'Contexto de hospital removido.',
+            'hospital': None
+        })
 
 
 def test_ward_tags(request):
