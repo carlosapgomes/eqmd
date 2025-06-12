@@ -81,7 +81,7 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 **View-Only Access** - Limited to outpatients for learning
 
 **Permissions:**
-- ✅ View outpatients only in current hospital
+- ✅ View outpatients across all their hospitals (not limited to current hospital context)
 - ❌ Cannot view inpatients, emergency, or discharged patients
 - ❌ Cannot create, edit, or delete patients
 - ❌ Cannot change patient status
@@ -92,8 +92,8 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 
 **Restrictions:**
 - Limited to outpatients only
-- Must have hospital context selected
 - Read-only access to most features
+- Can access outpatients from any hospital they belong to
 
 ## Hospital Context Management
 
@@ -113,37 +113,51 @@ Hospital context determines which hospital you are currently working in. This is
 
 ### Hospital Context Rules
 
-- **Required for Most Operations**: You must have a hospital context to access patients
-- **Hospital Isolation**: You can only access patients in your selected hospital
+- **Required for Admitted Patients**: Hospital context required to access inpatients/emergency/transferred patients
+- **Flexible for Outpatients**: Outpatients accessible across user's hospitals regardless of current context
 - **Easy Switching**: You can change hospitals at any time through the interface
-- **Security**: Prevents accidental access to patients in other hospitals
+- **Status-Dependent Security**: Prevents unauthorized access based on patient admission status
 
 ## Patient Access Rules
 
 ### General Access Rules
 
-1. **Hospital Context Required**: You must have selected a current hospital
+1. **Status-Dependent Access**: Patient access rules vary by patient status (admitted vs outpatient)
 2. **Role-Based Access**: Your profession determines what you can do
-3. **Patient Status Matters**: Some roles have restrictions based on patient status
+3. **Hospital Context**: Required for admitted patients, broader for outpatients
 4. **Time-Based Restrictions**: Medical records can only be edited for 24 hours
 
-### Patient Status Types
+### Patient Status Types and Hospital Assignment
 
-- **Outpatient**: Patients receiving care but not admitted
-- **Inpatient**: Patients admitted to the hospital
-- **Emergency**: Patients in emergency care
-- **Discharged**: Patients who have been discharged
-- **Transferred**: Patients transferred to another facility
+- **Outpatient (Ambulatorial)**: Patients receiving care without admission - **No fixed hospital assignment**
+- **Inpatient (Internado)**: Patients admitted to hospital - **Requires current hospital assignment**
+- **Emergency (Emergência)**: Patients in emergency care - **Requires current hospital assignment**
+- **Discharged (Alta)**: Recently discharged patients - **No current hospital assignment**
+- **Transferred (Transferido)**: Patients transferred between facilities - **Requires current hospital assignment**
 
-### Who Can Access Which Patients?
+### Updated Access Rules by Patient Status
 
-| Role | Outpatients | Inpatients | Emergency | Discharged | Transferred |
-|------|-------------|------------|-----------|------------|-------------|
-| **Medical Doctors** | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All |
-| **Residents** | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital |
-| **Nurses** | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital |
-| **Physiotherapists** | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital | ✅ Current Hospital |
-| **Students** | ✅ Current Hospital Only | ❌ No Access | ❌ No Access | ❌ No Access | ❌ No Access |
+#### Admitted Patients (Inpatient, Emergency, Transferred)
+**Strict Hospital Access** - Users must be in the same hospital as the patient
+
+| Role | Access Rule |
+|------|-------------|
+| **Medical Doctors** | ✅ Full access if in same hospital |
+| **Residents** | ✅ Full access if in same hospital |
+| **Nurses** | ✅ Full access if in same hospital |
+| **Physiotherapists** | ✅ Full access if in same hospital |
+| **Students** | ❌ No access to admitted patients |
+
+#### Outpatients & Discharged Patients
+**Broader Hospital Access** - Users can access patients from multiple hospitals
+
+| Role | Access Rule |
+|------|-------------|
+| **Medical Doctors** | ✅ Access if patient has records at user's hospitals |
+| **Residents** | ✅ Access if patient has records at user's hospitals |
+| **Nurses** | ✅ Access if patient has records at user's hospitals |
+| **Physiotherapists** | ✅ Access if patient has records at user's hospitals |
+| **Students** | ✅ Outpatients only, across all user hospitals |
 
 ## Medical Record Rules
 

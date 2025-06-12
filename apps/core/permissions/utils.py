@@ -32,9 +32,10 @@ def can_access_patient(user: Any, patient: Any) -> bool:
     Check if a user can access a specific patient.
     
     Rules:
-    - Doctors and nurses can access patients in their current hospital
-    - Students can only access outpatients in their current hospital
-    - No access if user is not in the same hospital as patient
+    - For INPATIENTS/EMERGENCY/TRANSFERRED: User must be in the same hospital as patient
+    - For OUTPATIENTS/DISCHARGED: User can access if they belong to any hospital where 
+      patient has a record OR if user is in any hospital the patient has been treated at
+    - Students can only access outpatients
     
     Args:
         user: The user requesting access
@@ -46,28 +47,8 @@ def can_access_patient(user: Any, patient: Any) -> bool:
     if not user.is_authenticated:
         return False
     
-    # Check if user has a current hospital context (updated to use middleware)
-    if not has_hospital_context(user):
-        return False
-    
-    current_hospital = getattr(user, 'current_hospital', None)
-    if not current_hospital:
-        return False
-    
-    # Check if patient is in the same hospital
-    patient_hospital_id = None
-    if hasattr(patient, 'current_hospital') and patient.current_hospital:
-        patient_hospital_id = patient.current_hospital.id
-    elif hasattr(patient, 'current_hospital_id'):
-        patient_hospital_id = patient.current_hospital_id
-    
-    if current_hospital.id != patient_hospital_id:
-        return False
-    
     # Get user profession type
     profession_type = getattr(user, 'profession_type', None)
-    
-    # Map integer values to constants for comparison
     profession_map = {
         0: MEDICAL_DOCTOR,  # User.MEDICAL_DOCTOR
         1: RESIDENT,        # User.RESIDENT 
@@ -75,17 +56,65 @@ def can_access_patient(user: Any, patient: Any) -> bool:
         3: PHYSIOTHERAPIST, # User.PHYSIOTERAPIST
         4: STUDENT,         # User.STUDENT
     }
-    
     profession = profession_map.get(profession_type)
     
-    # Doctors, nurses, physiotherapists, and residents have full access
-    if profession in [MEDICAL_DOCTOR, NURSE, PHYSIOTHERAPIST, RESIDENT]:
-        return True
+    # Get patient status
+    patient_status = getattr(patient, 'status', None)
     
-    # Students have limited access - only outpatients
+    # Students can only access outpatients
     if profession == STUDENT:
-        patient_status = getattr(patient, 'status', None)
-        return patient_status == OUTPATIENT
+        if patient_status != OUTPATIENT:
+            return False
+    
+    # For admitted patients (inpatient, emergency, transferred), strict hospital matching
+    if patient_status in [INPATIENT, EMERGENCY, TRANSFERRED]:
+        # User must have hospital context
+        if not has_hospital_context(user):
+            return False
+        
+        current_hospital = getattr(user, 'current_hospital', None)
+        if not current_hospital:
+            return False
+        
+        # Patient must have current hospital assignment
+        patient_hospital_id = None
+        if hasattr(patient, 'current_hospital') and patient.current_hospital:
+            patient_hospital_id = patient.current_hospital.id
+        elif hasattr(patient, 'current_hospital_id'):
+            patient_hospital_id = patient.current_hospital_id
+        
+        if not patient_hospital_id:
+            return False
+            
+        return current_hospital.id == patient_hospital_id
+    
+    # For outpatients and discharged patients, broader access rules
+    if patient_status in [OUTPATIENT, DISCHARGED]:
+        # Get user's accessible hospitals
+        user_hospitals = []
+        if hasattr(user, 'hospitals'):
+            user_hospitals = list(user.hospitals.values_list('id', flat=True))
+        elif user.is_superuser:
+            from apps.hospitals.models import Hospital
+            user_hospitals = list(Hospital.objects.values_list('id', flat=True))
+        
+        if not user_hospitals:
+            return False
+        
+        # Check if patient has any hospital records at user's hospitals
+        if hasattr(patient, 'hospital_records'):
+            patient_hospital_records = patient.hospital_records.values_list('hospital_id', flat=True)
+            # User can access if they belong to any hospital where patient has records
+            if any(hospital_id in user_hospitals for hospital_id in patient_hospital_records):
+                return True
+        
+        # Fallback: if patient has current hospital and user belongs to it
+        if hasattr(patient, 'current_hospital') and patient.current_hospital:
+            return patient.current_hospital.id in user_hospitals
+        
+        # If patient has no hospital records, allow access from any user hospital
+        # (for new outpatients or edge cases)
+        return len(user_hospitals) > 0
     
     return False
 
@@ -634,18 +663,42 @@ def get_user_accessible_patients(user: Any):
     }
     profession = profession_map.get(profession_type)
     
-    # Import Patient model
+    # Import Patient and related models
     from apps.patients.models import Patient
+    from django.db.models import Q
     
-    # Base query: patients in user's hospitals
-    base_query = Patient.objects.filter(current_hospital_id__in=user_hospitals)
+    # Build query based on new access rules
+    query = Q()
+    
+    # For admitted patients (inpatient, emergency, transferred): strict hospital matching
+    admitted_statuses = [INPATIENT, EMERGENCY, TRANSFERRED]
+    admitted_query = Q(
+        status__in=admitted_statuses,
+        current_hospital_id__in=user_hospitals
+    )
+    
+    # For outpatients and discharged: broader access through hospital records
+    outpatient_statuses = [OUTPATIENT, DISCHARGED]
+    outpatient_query = Q(
+        status__in=outpatient_statuses,
+        hospital_records__hospital_id__in=user_hospitals
+    ) | Q(
+        status__in=outpatient_statuses,
+        current_hospital_id__in=user_hospitals
+    ) | Q(
+        status__in=outpatient_statuses,
+        current_hospital__isnull=True,
+        hospital_records__hospital_id__in=user_hospitals
+    )
+    
+    # Combine queries
+    query = admitted_query | outpatient_query
     
     # Students can only see outpatients
     if profession == STUDENT:
-        return base_query.filter(status=OUTPATIENT)
+        query = Q(status=OUTPATIENT) & (outpatient_query)
     
-    # All other professions can see all patients in their hospitals
-    return base_query
+    return Patient.objects.filter(query).distinct()
 
 
 @cache_permission_result('can_create_event_type', use_object_id=True)

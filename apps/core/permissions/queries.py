@@ -65,7 +65,7 @@ def get_optimized_patient_queryset():
         ).prefetch_related(
             'tags',
             'tags__allowed_tag',
-            'patienthospitalrecord_set__hospital'
+            'hospital_records__hospital'
         )
     except ImportError:
         # Return empty queryset if patients app is not available

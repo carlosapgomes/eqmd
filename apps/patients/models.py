@@ -2,6 +2,8 @@ import uuid
 from django.db import models
 from django.conf import settings
 from django.urls import reverse
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 class AllowedTag(models.Model):
@@ -163,6 +165,98 @@ class Patient(models.Model):
 
     def get_absolute_url(self):
         return reverse("patients:patient_detail", kwargs={"pk": self.pk})
+
+    @property
+    def requires_hospital_assignment(self):
+        """Check if patient status requires hospital assignment"""
+        return self.status in [self.Status.INPATIENT, self.Status.EMERGENCY, self.Status.TRANSFERRED]
+
+    @property
+    def should_clear_hospital_assignment(self):
+        """Check if patient status should clear hospital assignment"""
+        return self.status in [self.Status.OUTPATIENT, self.Status.DISCHARGED]
+
+    def clean(self):
+        """Validate patient data including hospital assignment rules"""
+        super().clean()
+        
+        # Validate hospital assignment based on status
+        if self.requires_hospital_assignment and not self.current_hospital:
+            raise ValidationError({
+                'current_hospital': f'Hospital é obrigatório para pacientes com status "{self.get_status_display()}"'
+            })
+        
+        # Clear bed assignment if no hospital
+        if not self.current_hospital:
+            self.bed = ""
+
+    def save(self, *args, **kwargs):
+        """Override save to handle hospital assignment logic"""
+        # Store previous status to detect changes
+        previous_status = None
+        if self.pk:
+            try:
+                previous_instance = Patient.objects.get(pk=self.pk)
+                previous_status = previous_instance.status
+            except Patient.DoesNotExist:
+                pass
+
+        # Handle status change logic
+        if previous_status is not None and previous_status != self.status:
+            self._handle_status_change(previous_status)
+
+        # Auto-clear hospital assignment for outpatients/discharged
+        if self.should_clear_hospital_assignment:
+            self.current_hospital = None
+            self.bed = ""
+
+        # Update admission/discharge dates
+        if previous_status is not None and previous_status != self.status:
+            self._update_admission_discharge_dates(previous_status)
+
+        # Run validation
+        self.full_clean()
+        
+        super().save(*args, **kwargs)
+
+    def _handle_status_change(self, previous_status):
+        """Handle business logic when patient status changes"""
+        current_date = timezone.now().date()
+        
+        # Handle admission (to inpatient/emergency)
+        if (previous_status in [self.Status.OUTPATIENT, self.Status.DISCHARGED] and 
+            self.status in [self.Status.INPATIENT, self.Status.EMERGENCY]):
+            self.last_admission_date = current_date
+            
+        # Handle discharge
+        elif (previous_status in [self.Status.INPATIENT, self.Status.EMERGENCY, self.Status.TRANSFERRED] and 
+              self.status == self.Status.DISCHARGED):
+            self.last_discharge_date = current_date
+
+    def _update_admission_discharge_dates(self, previous_status):
+        """Update admission and discharge dates based on status changes"""
+        current_date = timezone.now().date()
+        
+        # Set admission date when moving to inpatient/emergency
+        if (self.status in [self.Status.INPATIENT, self.Status.EMERGENCY] and 
+            previous_status not in [self.Status.INPATIENT, self.Status.EMERGENCY, self.Status.TRANSFERRED]):
+            self.last_admission_date = current_date
+            
+        # Set discharge date when moving to discharged
+        if self.status == self.Status.DISCHARGED and previous_status != self.Status.DISCHARGED:
+            self.last_discharge_date = current_date
+
+    def get_hospital_records(self):
+        """Get all hospital records for this patient"""
+        return self.hospital_records.select_related('hospital').order_by('-last_admission_date')
+
+    def has_hospital_record_at(self, hospital):
+        """Check if patient has a record at the given hospital"""
+        return self.hospital_records.filter(hospital=hospital).exists()
+
+    def is_currently_admitted(self):
+        """Check if patient is currently admitted (has active hospital assignment)"""
+        return self.current_hospital is not None and self.requires_hospital_assignment
 
 
 class PatientHospitalRecord(models.Model):

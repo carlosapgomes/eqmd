@@ -1,6 +1,6 @@
 from django import forms
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Row, Column, Submit, HTML
+from crispy_forms.layout import Layout, Fieldset, Row, Column, Submit, HTML, Div
 from .models import Patient, PatientHospitalRecord, AllowedTag, Tag
 
 
@@ -47,6 +47,20 @@ class PatientForm(forms.ModelForm):
                 tag.allowed_tag for tag in self.instance.tags.all()
             ]
         
+        # Add help text for hospital field
+        self.fields['current_hospital'].help_text = (
+            'Obrigatório apenas para pacientes internados, em emergência ou transferidos. '
+            'Pacientes ambulatoriais não precisam de hospital atual.'
+        )
+        
+        # Add CSS classes for conditional display
+        self.fields['current_hospital'].widget.attrs.update({
+            'class': 'form-control hospital-field'
+        })
+        self.fields['bed'].widget.attrs.update({
+            'class': 'form-control bed-field'
+        })
+        
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
@@ -79,10 +93,47 @@ class PatientForm(forms.ModelForm):
             Fieldset(
                 'Informações Hospitalares',
                 Row(
-                    Column('status', css_class='col-md-4'),
-                    Column('current_hospital', css_class='col-md-4'),
-                    Column('bed', css_class='col-md-4'),
+                    Column('status', css_class='col-md-12'),
                 ),
+                Div(
+                    Row(
+                        Column('current_hospital', css_class='col-md-8'),
+                        Column('bed', css_class='col-md-4'),
+                    ),
+                    css_class='hospital-fields-container',
+                    css_id='hospital-fields'
+                ),
+                HTML("""
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const statusField = document.querySelector('#id_status');
+                        const hospitalFieldsContainer = document.querySelector('#hospital-fields');
+                        const hospitalField = document.querySelector('#id_current_hospital');
+                        const bedField = document.querySelector('#id_bed');
+                        
+                        function toggleHospitalFields() {
+                            const status = statusField.value;
+                            const requiresHospital = ['2', '3', '5']; // INPATIENT, EMERGENCY, TRANSFERRED
+                            
+                            if (requiresHospital.includes(status)) {
+                                hospitalFieldsContainer.style.display = 'block';
+                                hospitalField.required = true;
+                            } else {
+                                hospitalFieldsContainer.style.display = 'none';
+                                hospitalField.required = false;
+                                hospitalField.value = '';
+                                bedField.value = '';
+                            }
+                        }
+                        
+                        // Initial toggle
+                        toggleHospitalFields();
+                        
+                        // Toggle on status change
+                        statusField.addEventListener('change', toggleHospitalFields);
+                    });
+                    </script>
+                """)
             ),
             Fieldset(
                 'Tags',
@@ -90,6 +141,26 @@ class PatientForm(forms.ModelForm):
             ),
             Submit('submit', 'Salvar', css_class='btn btn-primary mt-3')
         )
+
+    def clean(self):
+        """Custom validation to ensure hospital is provided when required"""
+        cleaned_data = super().clean()
+        status = cleaned_data.get('status')
+        current_hospital = cleaned_data.get('current_hospital')
+        
+        # Check if hospital is required for this status
+        if status in [Patient.Status.INPATIENT, Patient.Status.EMERGENCY, Patient.Status.TRANSFERRED]:
+            if not current_hospital:
+                raise forms.ValidationError({
+                    'current_hospital': f'Hospital é obrigatório para pacientes com status "{Patient.Status(status).label}"'
+                })
+        
+        # Clear hospital-related fields for outpatients and discharged
+        if status in [Patient.Status.OUTPATIENT, Patient.Status.DISCHARGED]:
+            cleaned_data['current_hospital'] = None
+            cleaned_data['bed'] = ''
+        
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)

@@ -17,7 +17,16 @@ class PatientListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('current_hospital').prefetch_related('tags__allowed_tag')
+        # Use permission-based filtering instead of manual hospital filtering
+        from apps.core.permissions.utils import get_user_accessible_patients
+        
+        # Get base queryset with accessible patients
+        queryset = get_user_accessible_patients(self.request.user)
+        if queryset is None:
+            queryset = super().get_queryset().none()
+        
+        # Add optimized select_related and prefetch_related
+        queryset = queryset.select_related('current_hospital').prefetch_related('tags__allowed_tag', 'hospital_records__hospital')
         
         # Search functionality
         search_query = self.request.GET.get('q')
@@ -38,17 +47,34 @@ class PatientListView(LoginRequiredMixin, ListView):
             except (ValueError, TypeError):
                 pass
 
-        # Hospital filter - explicit parameter overrides default context
+        # Hospital filter - updated to handle new logic
         hospital_filter = self.request.GET.get('hospital')
         if hospital_filter:
-            queryset = queryset.filter(current_hospital_id=hospital_filter)
+            try:
+                hospital_id = int(hospital_filter)
+                # Filter by current hospital OR by hospital records
+                queryset = queryset.filter(
+                    Q(current_hospital_id=hospital_id) |
+                    Q(hospital_records__hospital_id=hospital_id)
+                ).distinct()
+            except (ValueError, TypeError):
+                pass
         else:
-            # Default to current hospital context if user has one and no explicit filter
+            # Apply default hospital context filtering only for admitted patients
             if (hasattr(self.request.user, 'has_hospital_context') and 
                 self.request.user.has_hospital_context and 
                 hasattr(self.request.user, 'current_hospital') and 
                 self.request.user.current_hospital):
-                queryset = queryset.filter(current_hospital=self.request.user.current_hospital)
+                
+                # Only filter admitted patients by current hospital context
+                # Outpatients remain visible regardless of hospital context
+                user_hospital = self.request.user.current_hospital
+                admitted_statuses = [Patient.Status.INPATIENT, Patient.Status.EMERGENCY, Patient.Status.TRANSFERRED]
+                
+                queryset = queryset.filter(
+                    Q(status__in=admitted_statuses, current_hospital=user_hospital) |
+                    Q(status__in=[Patient.Status.OUTPATIENT, Patient.Status.DISCHARGED])
+                )
 
         return queryset
 

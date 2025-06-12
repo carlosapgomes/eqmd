@@ -52,7 +52,7 @@ python manage.py create_sample_tags
 ## App Details
 
 ### Patients App
-**Full CRUD patient management with tagging system**
+**Full CRUD patient management with tagging system and intelligent hospital relationships**
 - Patient models: Patient, PatientHospitalRecord, AllowedTag, Tag
 - Search by name, ID, fiscal/health card numbers
 - Status tracking: inpatient, outpatient, emergency, discharged, transferred
@@ -60,6 +60,13 @@ python manage.py create_sample_tags
 - Dashboard widgets: patient stats, recent patients
 - Template tags: `patient_status_badge`, `patient_tags`
 - URL structure: `/patients/`, `/patients/<uuid>/`, `/patients/tags/`
+
+#### Hospital Assignment Logic
+- **Admitted Patients** (inpatient, emergency, transferred): Require `current_hospital` assignment
+- **Outpatients/Discharged**: No `current_hospital` assignment (hospital-independent)
+- **Automatic Management**: Hospital assignments auto-cleared/set on status changes
+- **Historical Tracking**: PatientHospitalRecord maintains treatment history across facilities
+- **Form Validation**: Dynamic hospital field visibility based on patient status
 
 ### Events App
 **Base event system for medical records**
@@ -113,16 +120,33 @@ Located in `apps/core/permissions/`:
 - **Doctors**: Full permissions, can discharge patients
 - **Residents/Physiotherapists**: Full access to current hospital patients
 - **Nurses**: Limited status changes, cannot discharge
-- **Students**: View-only outpatients in current hospital
+- **Students**: View-only outpatients (accessible across all user hospitals)
 - **Time limits**: 24-hour edit/delete window for events
-- **Hospital context**: Required for patient access
+- **Hospital context**: Status-dependent access control
+
+#### Patient Access Rules (Updated)
+- **Admitted Patients** (inpatient, emergency, transferred): Strict hospital matching required
+- **Outpatients/Discharged**: Broader access - users can access patients from any hospital where:
+  - Patient has historical records (PatientHospitalRecord) at user's hospitals, OR
+  - Patient has current hospital assignment at user's hospitals, OR
+  - User belongs to hospitals where patient was previously treated
+- **Students**: Limited to outpatients only, but accessible across all user hospitals
 
 ### Key Functions
 ```python
-can_access_patient(user, patient)           # Hospital-based access
+can_access_patient(user, patient)           # Status-dependent hospital access
 can_edit_event(user, event)                 # Time-limited editing
 can_change_patient_status(user, patient, status)  # Role-based status changes
 can_change_patient_personal_data(user, patient)   # Doctor-only data changes
+get_user_accessible_patients(user)          # Optimized patient queryset filtering
+```
+
+### Patient Model Methods
+```python
+patient.requires_hospital_assignment        # Check if status requires hospital
+patient.should_clear_hospital_assignment    # Check if status should clear hospital
+patient.is_currently_admitted()             # Check if patient is actively admitted
+patient.has_hospital_record_at(hospital)    # Check treatment history at hospital
 ```
 
 ### Management Commands
