@@ -60,8 +60,7 @@
               <option value="">Todos os hospitais</option>
               {% for hospital in available_hospitals %}
                 <option value="{{ hospital.id }}" 
-                        {% if hospital.id|stringformat:"s" == request.GET.hospital %}selected
-                        {% elif using_default_hospital_filter and hospital.id == current_hospital.id %}selected{% endif %}>
+                        {% if hospital.id|stringformat:"s" == request.GET.hospital %}selected{% endif %}>
                   {{ hospital.short_name }}
                 </option>
               {% endfor %}
@@ -182,7 +181,7 @@
               <ul class="pagination">
                 {% if page_obj.has_previous %}
                   <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.hospital %}hospital={{ request.GET.hospital }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if 'hospital' in request.GET %}hospital={{ request.GET.hospital }}&{% endif %}page={{ page_obj.previous_page_number }}">
                       <i class="bi bi-chevron-left"></i> Anterior
                     </a>
                   </li>
@@ -196,7 +195,7 @@
                 
                 {% if page_obj.has_next %}
                   <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.hospital %}hospital={{ request.GET.hospital }}&{% endif %}page={{ page_obj.next_page_number }}">
+                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if 'hospital' in request.GET %}hospital={{ request.GET.hospital }}&{% endif %}page={{ page_obj.next_page_number }}">
                       Próxima <i class="bi bi-chevron-right"></i>
                     </a>
                   </li>

@@ -3,7 +3,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
-from django.db.models import Q
+from django.db.models import Q, Case, When, IntegerField
 from django.core.exceptions import PermissionDenied
 
 from .models import Patient, PatientHospitalRecord, AllowedTag
@@ -17,13 +17,80 @@ class PatientListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        # Use permission-based filtering instead of manual hospital filtering
         from apps.core.permissions.utils import get_user_accessible_patients
+        from apps.core.permissions.constants import INPATIENT, EMERGENCY, TRANSFERRED, OUTPATIENT, DISCHARGED
         
-        # Get base queryset with accessible patients
-        queryset = get_user_accessible_patients(self.request.user)
-        if queryset is None:
-            queryset = super().get_queryset().none()
+        # Check hospital filter parameters first to determine filtering strategy
+        hospital_filter = self.request.GET.get('hospital')
+        has_hospital_param = 'hospital' in self.request.GET
+        
+        if hospital_filter or has_hospital_param:
+            # User has explicitly selected a hospital filter - use simple permission checking
+            if not self.request.user.is_authenticated:
+                return super().get_queryset().none()
+            
+            # Get user's accessible hospitals
+            user_hospitals = []
+            if hasattr(self.request.user, 'hospitals'):
+                user_hospitals = list(self.request.user.hospitals.values_list('id', flat=True))
+            elif self.request.user.is_superuser:
+                from apps.hospitals.models import Hospital
+                user_hospitals = list(Hospital.objects.values_list('id', flat=True))
+            
+            if not user_hospitals:
+                return super().get_queryset().none()
+            
+            # Start with base queryset that respects user's hospital access
+            from apps.patients.models import Patient
+            queryset = Patient.objects.filter(
+                Q(current_hospital_id__in=user_hospitals) |
+                Q(hospital_records__hospital_id__in=user_hospitals)
+            ).distinct()
+            
+            # Apply specific hospital filter if provided
+            if hospital_filter:
+                try:
+                    # Handle both UUID strings and integer IDs
+                    from uuid import UUID
+                    if len(hospital_filter) > 10:  # Likely a UUID string
+                        hospital_id = UUID(hospital_filter)
+                    else:
+                        hospital_id = int(hospital_filter)
+                    
+                    if hospital_id in user_hospitals:  # Security check
+                        # Different filtering logic for inpatients vs outpatients
+                        from apps.core.permissions.constants import INPATIENT, EMERGENCY, TRANSFERRED, OUTPATIENT, DISCHARGED
+                        inpatient_statuses = [INPATIENT, EMERGENCY, TRANSFERRED]
+                        outpatient_statuses = [OUTPATIENT, DISCHARGED]
+                        
+                        queryset = queryset.filter(
+                            Q(status__in=inpatient_statuses, current_hospital_id=hospital_id) |
+                            Q(status__in=outpatient_statuses)  # All outpatients, no hospital restriction
+                        ).distinct()
+                    else:
+                        return super().get_queryset().none()
+                except (ValueError, TypeError):
+                    pass
+        else:
+            # No explicit hospital filter - use default permission-based filtering
+            queryset = get_user_accessible_patients(self.request.user)
+            if queryset is None:
+                queryset = super().get_queryset().none()
+            
+            # Apply default context filtering for current hospital
+            if (hasattr(self.request.user, 'has_hospital_context') and 
+                self.request.user.has_hospital_context and 
+                hasattr(self.request.user, 'current_hospital') and 
+                self.request.user.current_hospital):
+                
+                user_hospital = self.request.user.current_hospital
+                admitted_statuses = [INPATIENT, EMERGENCY, TRANSFERRED]
+                
+                # Only filter admitted patients to current hospital
+                queryset = queryset.filter(
+                    Q(status__in=admitted_statuses, current_hospital=user_hospital) |
+                    Q(status__in=[OUTPATIENT, DISCHARGED])
+                )
         
         # Add optimized select_related and prefetch_related
         queryset = queryset.select_related('current_hospital').prefetch_related('tags__allowed_tag', 'hospital_records__hospital')
@@ -47,34 +114,16 @@ class PatientListView(LoginRequiredMixin, ListView):
             except (ValueError, TypeError):
                 pass
 
-        # Hospital filter - updated to handle new logic
-        hospital_filter = self.request.GET.get('hospital')
-        if hospital_filter:
-            try:
-                hospital_id = int(hospital_filter)
-                # Filter by current hospital OR by hospital records
-                queryset = queryset.filter(
-                    Q(current_hospital_id=hospital_id) |
-                    Q(hospital_records__hospital_id=hospital_id)
-                ).distinct()
-            except (ValueError, TypeError):
-                pass
-        else:
-            # Apply default hospital context filtering only for admitted patients
-            if (hasattr(self.request.user, 'has_hospital_context') and 
-                self.request.user.has_hospital_context and 
-                hasattr(self.request.user, 'current_hospital') and 
-                self.request.user.current_hospital):
-                
-                # Only filter admitted patients by current hospital context
-                # Outpatients remain visible regardless of hospital context
-                user_hospital = self.request.user.current_hospital
-                admitted_statuses = [Patient.Status.INPATIENT, Patient.Status.EMERGENCY, Patient.Status.TRANSFERRED]
-                
-                queryset = queryset.filter(
-                    Q(status__in=admitted_statuses, current_hospital=user_hospital) |
-                    Q(status__in=[Patient.Status.OUTPATIENT, Patient.Status.DISCHARGED])
-                )
+        # Apply priority ordering: inpatients first, then outpatients, both alphabetically
+        from apps.core.permissions.constants import INPATIENT, EMERGENCY, TRANSFERRED, OUTPATIENT, DISCHARGED
+        queryset = queryset.annotate(
+            priority=Case(
+                When(status__in=[INPATIENT, EMERGENCY, TRANSFERRED], then=1),  # Inpatients first
+                When(status__in=[OUTPATIENT, DISCHARGED], then=2),            # Outpatients second
+                default=3,
+                output_field=IntegerField()
+            )
+        ).order_by('priority', 'name')
 
         return queryset
 
@@ -87,7 +136,7 @@ class PatientListView(LoginRequiredMixin, ListView):
         # Add current hospital and default filter information for template logic
         context['current_hospital'] = getattr(self.request.user, 'current_hospital', None)
         context['using_default_hospital_filter'] = (
-            not self.request.GET.get('hospital') and 
+            'hospital' not in self.request.GET and 
             getattr(self.request.user, 'has_hospital_context', False) and
             getattr(self.request.user, 'current_hospital', None)
         )
