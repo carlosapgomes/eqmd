@@ -44,6 +44,113 @@
     .event-actions {
         opacity: 1; /* Always show on mobile */
     }
+    .d-flex.gap-2 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+}
+.dropdown-item.disabled {
+    color: #6c757d !important;
+    pointer-events: none;
+    background-color: transparent;
+}
+.dropdown-item.disabled:hover {
+    background-color: transparent;
+}
+.dropdown-item .text-muted.ms-auto {
+    font-size: 0.75rem;
+    font-style: italic;
+}
+.dropdown-menu {
+    min-width: 280px;
+}
+.dropdown-header {
+    font-weight: 600;
+    color: var(--bs-primary);
+    font-size: 0.875rem;
+}
+.dropdown-item {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+}
+.dropdown-item i {
+    width: 1.25rem;
+    text-align: center;
+}
+
+/* Mobile filter enhancements */
+@media (max-width: 991.98px) {
+    .filter-panel {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background-color: #ffffff;
+    }
+    
+    #mobile-filters .filter-panel {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .collapse.show {
+        animation: slideDown 0.3s ease-out;
+    }
+    
+    .collapse:not(.show) {
+        animation: slideUp 0.3s ease-out;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Improved mobile filter toggle button */
+#mobile-filter-toggle {
+    border: 1px solid var(--bs-primary);
+    transition: all 0.2s ease;
+}
+
+#mobile-filter-toggle:hover {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+#mobile-filter-toggle i {
+    transition: transform 0.2s ease;
+}
+
+/* Better spacing for mobile form elements */
+@media (max-width: 575.98px) {
+    .filter-panel .form-check {
+        margin-bottom: 0.75rem;
+    }
+    
+    .filter-panel .btn-group-vertical .btn {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .d-flex.gap-2 {
+        gap: 0.75rem !important;
+    }
 }
 </style>
 {% endblock %}
@@ -76,7 +183,127 @@
                         {% endif %}
                     </p>
                 </div>
-                <div>
+                <div class="d-flex gap-2">
+                    <!-- Create Event Dropdown -->
+                    {% if user.is_authenticated %}
+                    <div class="dropdown">
+                        <button class="btn btn-medical-primary dropdown-toggle" type="button" 
+                                id="createEventDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                                aria-label="Criar novo evento para {{ patient.name }}">
+                            <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>
+                            Criar Evento
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="createEventDropdown">
+                            <!-- Clinical Notes Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-journal-medical me-1" aria-hidden="true"></i>
+                                Notas Clínicas
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}">
+                                        <i class="bi bi-journal-text me-2 text-medical-success" aria-hidden="true"></i>
+                                        Evolução
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-clipboard2-heart me-2 text-muted" aria-hidden="true"></i>
+                                        Anamnese e Exame Físico
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-sticky me-2 text-muted" aria-hidden="true"></i>
+                                        Nota/Observação
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Exams Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-clipboard2-data me-1" aria-hidden="true"></i>
+                                Exames
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-clipboard2-data me-2 text-muted" aria-hidden="true"></i>
+                                        Resultado de Exame
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-clipboard2-check me-2 text-muted" aria-hidden="true"></i>
+                                        Requisição de Exame
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Media Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-camera me-1" aria-hidden="true"></i>
+                                Mídia
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-camera me-2 text-muted" aria-hidden="true"></i>
+                                        Imagem
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-images me-2 text-muted" aria-hidden="true"></i>
+                                        Série de Fotos
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Reports Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-file-text me-1" aria-hidden="true"></i>
+                                Relatórios
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-door-open me-2 text-muted" aria-hidden="true"></i>
+                                        Relatório de Alta
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-prescription2 me-2 text-muted" aria-hidden="true"></i>
+                                        Receita
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-file-text me-2 text-muted" aria-hidden="true"></i>
+                                        Relatório
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
                     <a href="{% url 'apps.patients:patient_detail' patient.pk %}" 
                        class="btn btn-outline-medical-primary"
                        aria-label="Voltar à página do paciente {{ patient.name }}">
@@ -89,8 +316,145 @@
     </div>
 
     <div class="row">
-        <!-- Filters Panel -->
-        <div class="col-lg-3 mb-4">
+        <!-- Mobile Filter Toggle (shown only on mobile) -->
+        <div class="col-12 d-lg-none mb-3">
+            <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded border">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-funnel me-2 text-medical-primary" aria-hidden="true"></i>
+                    <span class="fw-semibold text-medical-primary">Filtros</span>
+                    <!-- Filter count badges -->
+                    <div class="ms-2" id="filter-badges">
+                        {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator %}
+                            <span class="badge bg-medical-primary rounded-pill" id="filter-count">
+                                Ativos
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <button class="btn btn-outline-medical-primary btn-sm" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#mobile-filters" 
+                        aria-expanded="false" aria-controls="mobile-filters"
+                        id="mobile-filter-toggle">
+                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                    <span class="visually-hidden">Expandir filtros</span>
+                </button>
+            </div>
+            
+            <!-- Collapsible Mobile Filters -->
+            <div class="collapse mt-2" id="mobile-filters">
+                <div class="filter-panel p-3">
+                    <form method="get" id="mobile-timeline-filters" role="search" aria-label="Filtros da timeline">
+                        <fieldset>
+                            <legend class="visually-hidden">Filtros de eventos</legend>
+                            
+                            <!-- Event Type Filter -->
+                            <div class="mb-3" role="group" aria-labelledby="mobile-event-types-label">
+                                <label id="mobile-event-types-label" class="form-label fw-semibold">Tipos de Evento</label>
+                                {% for value, label in event_type_choices %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="types" value="{{ value }}" id="mobile_type_{{ value }}"
+                                               {% if value|stringformat:"s" in current_filters.types %}checked{% endif %}
+                                               aria-describedby="mobile-type-{{ value }}-desc">
+                                        <label class="form-check-label" for="mobile_type_{{ value }}">
+                                            {{ label }}
+                                        </label>
+                                        <span id="mobile-type-{{ value }}-desc" class="visually-hidden">
+                                            {% with count=event_counts_by_type|get_item:value %}
+                                                {{ count|default:0 }} evento{{ count|pluralize }}
+                                            {% endwith %}
+                                        </span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Quick Date Filters -->
+                            <div class="mb-3">
+                                <fieldset>
+                                    <legend class="form-label fw-semibold">Período</legend>
+                                    <div class="btn-group-vertical d-grid gap-1" role="radiogroup" aria-label="Selecionar período">
+                                        <input type="radio" class="btn-check" name="quick_date" value="" id="mobile_all_time"
+                                               {% if not current_filters.quick_date %}checked{% endif %}>
+                                        <label class="btn btn-outline-secondary btn-sm" for="mobile_all_time">Todos</label>
+                                        
+                                        <input type="radio" class="btn-check" name="quick_date" value="24h" id="mobile_last_24h"
+                                               {% if current_filters.quick_date == '24h' %}checked{% endif %}>
+                                        <label class="btn btn-outline-secondary btn-sm" for="mobile_last_24h">Últimas 24h</label>
+                                        
+                                        <input type="radio" class="btn-check" name="quick_date" value="7d" id="mobile_last_7d"
+                                               {% if current_filters.quick_date == '7d' %}checked{% endif %}>
+                                        <label class="btn btn-outline-secondary btn-sm" for="mobile_last_7d">Últimos 7 dias</label>
+                                        
+                                        <input type="radio" class="btn-check" name="quick_date" value="30d" id="mobile_last_30d"
+                                               {% if current_filters.quick_date == '30d' %}checked{% endif %}>
+                                        <label class="btn btn-outline-secondary btn-sm" for="mobile_last_30d">Últimos 30 dias</label>
+                                    </div>
+                                </fieldset>
+                            </div>
+
+                            <!-- Custom Date Range -->
+                            <div class="mb-3">
+                                <fieldset>
+                                    <legend class="form-label fw-semibold">Período Personalizado</legend>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label for="mobile_date_from" class="visually-hidden">Data inicial</label>
+                                            <input type="date" class="form-control form-control-sm" 
+                                                   id="mobile_date_from" name="date_from" 
+                                                   value="{{ current_filters.date_from }}"
+                                                   aria-label="Data inicial do período">
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="mobile_date_to" class="visually-hidden">Data final</label>
+                                            <input type="date" class="form-control form-control-sm" 
+                                                   id="mobile_date_to" name="date_to" 
+                                                   value="{{ current_filters.date_to }}"
+                                                   aria-label="Data final do período">
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+
+                            <!-- Creator Filter -->
+                            {% if available_creators %}
+                            <div class="mb-3">
+                                <label for="mobile_creator" class="form-label fw-semibold">Criado por</label>
+                                <select name="creator" id="mobile_creator" class="form-select form-select-sm" 
+                                        aria-label="Filtrar eventos por profissional">
+                                    <option value="">Todos os profissionais</option>
+                                    {% for creator in available_creators %}
+                                        <option value="{{ creator.id }}" 
+                                                {% if creator.id|stringformat:"s" == current_filters.creator %}selected{% endif %}>
+                                            {{ creator.first_name }} {{ creator.last_name }}
+                                            {% if creator.profession %} ({{ creator.profession }}){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+
+                            <!-- Filter Actions -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-medical-primary btn-sm"
+                                        aria-label="Aplicar filtros selecionados">
+                                    <i class="bi bi-search me-1" aria-hidden="true"></i>
+                                    Aplicar Filtros
+                                </button>
+                                <a href="{% url 'apps.patients:patient_events_timeline' patient.pk %}" 
+                                   class="btn btn-outline-secondary btn-sm"
+                                   aria-label="Remover todos os filtros">
+                                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
+                                    Limpar Filtros
+                                </a>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desktop Filters Panel (hidden on mobile) -->
+        <div class="col-lg-3 mb-4 d-none d-lg-block">
             <div class="filter-panel p-3">
                 <h2 class="text-medical-primary mb-3 h5">
                     <i class="bi bi-funnel me-2" aria-hidden="true"></i>
@@ -207,7 +571,7 @@
         </div>
 
         <!-- Timeline Content -->
-        <div class="col-lg-9">
+        <div class="col-12 col-lg-9">
             <div class="timeline-container">
                 {% if events_with_permissions %}
                     <!-- Events Timeline -->
@@ -389,45 +753,90 @@
 <script src="{% static 'events/js/accessibility.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-submit filters on change
-    const filterForm = document.getElementById('timeline-filters');
-    const filterInputs = filterForm.querySelectorAll('input[type="checkbox"], input[type="radio"], select');
+    // Initialize both desktop and mobile filter forms
+    const desktopFilterForm = document.getElementById('timeline-filters');
+    const mobileFilterForm = document.getElementById('mobile-timeline-filters');
+    const mobileFilterToggle = document.getElementById('mobile-filter-toggle');
+    const mobileFiltersCollapse = document.getElementById('mobile-filters');
     
-    filterInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            // Debounce for better UX
-            setTimeout(() => {
-                filterForm.submit();
-            }, 100);
+    // Function to setup form interactions
+    function setupFormInteractions(form) {
+        if (!form) return;
+        
+        const filterInputs = form.querySelectorAll('input[type="checkbox"], input[type="radio"], select');
+        
+        filterInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                // Debounce for better UX
+                setTimeout(() => {
+                    form.submit();
+                }, 100);
+            });
         });
-    });
-    
-    // Date inputs submit on change (not immediate for better UX)
-    const dateInputs = filterForm.querySelectorAll('input[type="date"]');
-    dateInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            // Clear quick date selection when custom dates are used
-            const quickDateInputs = filterForm.querySelectorAll('input[name="quick_date"]');
-            quickDateInputs.forEach(radio => {
-                if (radio.value !== '') {
-                    radio.checked = false;
+        
+        // Date inputs submit on change (not immediate for better UX)
+        const dateInputs = form.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                // Clear quick date selection when custom dates are used
+                const quickDateInputs = form.querySelectorAll('input[name="quick_date"]');
+                quickDateInputs.forEach(radio => {
+                    if (radio.value !== '') {
+                        radio.checked = false;
+                    }
+                });
+            });
+        });
+        
+        // Clear custom dates when quick date is selected
+        const quickDateInputs = form.querySelectorAll('input[name="quick_date"]');
+        quickDateInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                if (this.value !== '') {
+                    const dateInputs = form.querySelectorAll('input[type="date"]');
+                    dateInputs.forEach(dateInput => {
+                        dateInput.value = '';
+                    });
                 }
             });
         });
-    });
+    }
     
-    // Clear custom dates when quick date is selected
-    const quickDateInputs = filterForm.querySelectorAll('input[name="quick_date"]');
-    quickDateInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            if (this.value !== '') {
-                const dateInputs = filterForm.querySelectorAll('input[type="date"]');
-                dateInputs.forEach(dateInput => {
-                    dateInput.value = '';
-                });
+    // Setup both forms
+    setupFormInteractions(desktopFilterForm);
+    setupFormInteractions(mobileFilterForm);
+    
+    // Mobile-specific enhancements
+    if (mobileFilterToggle && mobileFiltersCollapse) {
+        // Update toggle button icon and text based on collapse state
+        mobileFiltersCollapse.addEventListener('show.bs.collapse', function() {
+            const icon = mobileFilterToggle.querySelector('i');
+            if (icon) {
+                icon.className = 'bi bi-chevron-up';
             }
+            mobileFilterToggle.setAttribute('aria-expanded', 'true');
         });
-    });
+        
+        mobileFiltersCollapse.addEventListener('hide.bs.collapse', function() {
+            const icon = mobileFilterToggle.querySelector('i');
+            if (icon) {
+                icon.className = 'bi bi-chevron-down';
+            }
+            mobileFilterToggle.setAttribute('aria-expanded', 'false');
+        });
+        
+        // Auto-collapse mobile filters after form submission
+        if (mobileFilterForm) {
+            mobileFilterForm.addEventListener('submit', function() {
+                // Small delay to allow form submission, then collapse
+                setTimeout(() => {
+                    const collapse = new bootstrap.Collapse(mobileFiltersCollapse, {
+                        hide: true
+                    });
+                }, 150);
+            });
+        }
+    }
 });
 </script>
 {% endblock %}
