@@ -10,7 +10,7 @@
   {% endif %}
 {% endblock %}
 
-{% block extra_head %}
+{% block extra_css %}
 <!-- EasyMDE CSS -->
 <link rel="stylesheet" href="{% static 'css/easymde.min.css' %}" />
 <style>
@@ -53,7 +53,7 @@
     color: #dc3545;
   }
 </style>
-{% endblock %}
+{% endblock extra_css %}
 
 {% block app_content %}
 <!-- Header with breadcrumb -->
@@ -139,25 +139,6 @@
         <div class="row">
           <div class="col-md-6">
             <div class="mb-3">
-              <label for="{{ form.patient.id_for_label }}" class="form-label required-field">
-                <i class="bi bi-person me-1"></i>
-                {{ form.patient.label }}
-              </label>
-              {{ form.patient }}
-              {% if form.patient.errors %}
-                <div class="invalid-feedback d-block">
-                  {% for error in form.patient.errors %}
-                    {{ error }}
-                  {% endfor %}
-                </div>
-              {% endif %}
-              {% if form.patient.help_text %}
-                <div class="form-text">{{ form.patient.help_text }}</div>
-              {% endif %}
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="mb-3">
               <label for="{{ form.event_datetime.id_for_label }}" class="form-label required-field">
                 <i class="bi bi-calendar-event me-1"></i>
                 {{ form.event_datetime.label }}
@@ -175,24 +156,6 @@
               {% endif %}
             </div>
           </div>
-        </div>
-        
-        <div class="mb-3">
-          <label for="{{ form.description.id_for_label }}" class="form-label required-field">
-            <i class="bi bi-file-text me-1"></i>
-            {{ form.description.label }}
-          </label>
-          {{ form.description }}
-          {% if form.description.errors %}
-            <div class="invalid-feedback d-block">
-              {% for error in form.description.errors %}
-                {{ error }}
-              {% endfor %}
-            </div>
-          {% endif %}
-          {% if form.description.help_text %}
-            <div class="form-text">{{ form.description.help_text }}</div>
-          {% endif %}
         </div>
       </div>
 
