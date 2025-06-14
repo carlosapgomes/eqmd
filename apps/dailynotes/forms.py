@@ -1,3 +1,4 @@
+import pytz
 from django import forms
 from django.utils import timezone
 from crispy_forms.helper import FormHelper
@@ -7,6 +8,7 @@ from crispy_forms.bootstrap import FormActions
 from .models import DailyNote
 from apps.patients.models import Patient
 from apps.core.permissions import can_access_patient
+from apps.events.models import Event
 
 
 class DailyNoteForm(forms.ModelForm):
@@ -14,82 +16,57 @@ class DailyNoteForm(forms.ModelForm):
     Form for creating and updating DailyNote instances.
     Uses crispy forms for responsive design and EasyMDE editor for content.
     """
-    
+
     class Meta:
         model = DailyNote
-        fields = ['patient', 'event_datetime', 'description', 'content']
+        fields = ["event_datetime", "content"]
         widgets = {
-            'event_datetime': forms.DateTimeInput(
-                attrs={
-                    'type': 'datetime-local',
-                    'class': 'form-control'
-                }
+            "event_datetime": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "class": "form-control"}
             ),
-            'content': forms.Textarea(
+            "content": forms.Textarea(
                 attrs={
-                    'id': 'id_content',
-                    'class': 'form-control',
-                    'rows': 10,
-                    'placeholder': 'Conteúdo da evolução...'
+                    "id": "id_content",
+                    "name": "content",
+                    "class": "form-control",
+                    "rows": 10,
+                    "placeholder": "Conteúdo da evolução...",
                 }
             ),
         }
-        
+
     def __init__(self, *args, **kwargs):
         # Extract user from kwargs if provided
-        self.user = kwargs.pop('user', None)
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
-        
+
         # Set default datetime to now if creating new instance
         if not self.instance.pk:
-            self.fields['event_datetime'].initial = timezone.now()
-            
-        # Configure field properties
-        # Filter patients based on user permissions and hospital context
-        if self.user:
-            from apps.core.permissions.utils import has_hospital_context
-            
-            # Check if user has hospital context
-            if has_hospital_context(self.user):
-                current_hospital = getattr(self.user, 'current_hospital', None)
-                if current_hospital:
-                    # Start with patients in the user's current hospital
-                    patient_queryset = Patient.objects.filter(current_hospital=current_hospital)
-                    
-                    # For efficiency, we'll let the permission checking happen in clean_patient()
-                    # rather than checking every patient here in __init__
-                    self.fields['patient'].queryset = patient_queryset
-                else:
-                    self.fields['patient'].queryset = Patient.objects.none()
-            else:
-                # If no hospital context, show no patients
-                self.fields['patient'].queryset = Patient.objects.none()
-        else:
-            # If no user, show no patients
-            self.fields['patient'].queryset = Patient.objects.none()
+            utc_now = timezone.now().astimezone(timezone.get_default_timezone())
+            self.fields["event_datetime"].initial = utc_now.strftime("%Y-%m-%dT%H:%M")
 
-        self.fields['patient'].empty_label = "Selecione um paciente"
-        self.fields['description'].help_text = "Breve descrição da evolução"
-        self.fields['content'].help_text = "Conteúdo detalhado da evolução (suporte a Markdown)"
-        
+        # Configure field properties
+        self.fields[
+            "content"
+        ].help_text = "Conteúdo detalhado da evolução (suporte a Markdown)"
+        self.fields["content"].required = False
+
         # Configure crispy forms
         self.helper = FormHelper()
-        self.helper.form_method = 'post'
-        self.helper.form_class = 'needs-validation'
-        self.helper.attrs = {'novalidate': ''}
-        
+        self.helper.form_method = "post"
+        self.helper.form_class = "needs-validation"
+        self.helper.attrs = {"novalidate": ""}
+
         self.helper.layout = Layout(
             Fieldset(
-                'Informações da Evolução',
+                "Informações da Evolução",
                 Row(
-                    Column('patient', css_class='col-md-6'),
-                    Column('event_datetime', css_class='col-md-6'),
+                    Column("event_datetime", css_class="col-md-6"),
                 ),
-                Field('description', css_class='form-control'),
             ),
             Fieldset(
-                'Conteúdo',
-                Field('content', css_class='form-control'),
+                "Conteúdo",
+                Field("content", css_class="form-control"),
                 HTML("""
                     <small class="form-text text-muted">
                         Use Markdown para formatação. O editor oferece uma prévia em tempo real.
@@ -97,23 +74,25 @@ class DailyNoteForm(forms.ModelForm):
                 """),
             ),
             FormActions(
-                Submit('submit', 'Salvar Evolução', css_class='btn btn-primary'),
-                HTML('<a href="{% url "dailynotes:dailynote_list" %}" class="btn btn-secondary ms-2">Cancelar</a>'),
+                Submit("submit", "Salvar Evolução", css_class="btn btn-primary"),
+                HTML(
+                    '<a href="{% url "dailynotes:dailynote_list" %}" class="btn btn-secondary ms-2">Cancelar</a>'
+                ),
             ),
         )
-        
+
     def clean_event_datetime(self):
         """Validate that event_datetime is not in the future."""
-        event_datetime = self.cleaned_data.get('event_datetime')
+        event_datetime = self.cleaned_data.get("event_datetime")
         if event_datetime and event_datetime > timezone.now():
             raise forms.ValidationError(
                 "A data e hora do evento não pode ser no futuro."
             )
         return event_datetime
-        
+
     def clean_patient(self):
         """Validate that user can access the selected patient."""
-        patient = self.cleaned_data.get('patient')
+        patient = self.cleaned_data.get("patient")
         if patient and self.user:
             if not can_access_patient(self.user, patient):
                 raise forms.ValidationError(
@@ -123,22 +102,21 @@ class DailyNoteForm(forms.ModelForm):
 
     def clean_content(self):
         """Validate content field."""
-        content = self.cleaned_data.get('content')
+        content = self.cleaned_data.get("content")
         if content and len(content.strip()) < 10:
-            raise forms.ValidationError(
-                "O conteúdo deve ter pelo menos 10 caracteres."
-            )
+            raise forms.ValidationError("O conteúdo deve ter pelo menos 10 caracteres.")
         return content
-        
+
     def save(self, commit=True):
         """Override save to set created_by and updated_by fields."""
         instance = super().save(commit=False)
-        
+
+        self.description = Event.EVENT_TYPE_CHOICES[Event.DAILY_NOTE_EVENT][1]
         if self.user:
             if not instance.pk:  # New instance
                 instance.created_by = self.user
             instance.updated_by = self.user
-            
+
         if commit:
             instance.save()
         return instance

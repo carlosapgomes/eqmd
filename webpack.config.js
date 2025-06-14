@@ -40,6 +40,10 @@ module.exports = {
           to: "js/easymde.min.js",
         },
         {
+          from: "node_modules/easymde/dist/easymde.min.css",
+          to: "css/easymde.min.css",
+        },
+        {
           from: "node_modules/bootstrap/dist/js/bootstrap.min.js",
           to: "js/bootstrap.min.js",
         },

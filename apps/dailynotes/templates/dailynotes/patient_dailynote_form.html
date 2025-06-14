@@ -6,9 +6,9 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/easymde.min.css' %}">
-{% endblock %}
+{% endblock extra_css %}
 
-{% block content %}
+{% block app_content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -44,15 +44,6 @@
                                 
                                 {% crispy form %}
                                 
-                                <div class="d-flex justify-content-between mt-4">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
-                                        <i class="bi bi-x-circle"></i> Cancelar
-                                    </button>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-check-circle"></i>
-                                        {% if form.instance.pk %}Atualizar{% else %}Criar{% endif %} Evolução
-                                    </button>
-                                </div>
                             </form>
                         </div>
                     </div>
@@ -109,10 +100,6 @@
                                 </li>
                                 <li class="mb-2">
                                     <i class="bi bi-check-circle text-success"></i>
-                                    A descrição é um resumo breve da evolução
-                                </li>
-                                <li class="mb-2">
-                                    <i class="bi bi-check-circle text-success"></i>
                                     Evoluções podem ser editadas por 24 horas
                                 </li>
                             </ul>
@@ -125,27 +112,21 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
 <script src="{% static 'js/easymde.min.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const contentField = document.getElementById('id_content');
     if (contentField) {
+      console.log('Initializing EasyMDE editor');
         const easyMDE = new EasyMDE({
             element: contentField,
             placeholder: 'Digite o conteúdo da evolução...',
             spellChecker: false,
-            toolbar: [
-                'bold', 'italic', 'strikethrough', '|',
-                'heading-1', 'heading-2', 'heading-3', '|',
-                'unordered-list', 'ordered-list', '|',
-                'link', 'quote', 'code', '|',
-                'preview', 'side-by-side', 'fullscreen', '|',
-                'guide'
-            ],
-            status: ['lines', 'words', 'cursor']
+            hideIcons: ["link", "image", "side-by-side", "fullscreen"],
+            status: false,
         });
     }
 });
 </script>
-{% endblock %}
+{% endblock extra_scripts %}
