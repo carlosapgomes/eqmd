@@ -152,6 +152,100 @@
         gap: 0.75rem !important;
     }
 }
+
+/* Mobile header improvements */
+@media (max-width: 767.98px) {
+    /* Improve title hierarchy and spacing on mobile */
+    .d-block.d-md-none h1.h4 {
+        font-size: 1.25rem;
+        line-height: 1.3;
+        margin-bottom: 0.75rem;
+    }
+    
+    .d-block.d-md-none h1.h4 i {
+        font-size: 1.1rem;
+    }
+    
+    /* Better patient info styling */
+    .d-block.d-md-none p.small {
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+    
+    /* Optimize button spacing and sizing */
+    .d-flex.flex-column.gap-2 {
+        gap: 0.75rem !important;
+    }
+    
+    .d-flex.flex-column.gap-2 .btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+        border-radius: 6px;
+    }
+    
+    /* Ensure proper touch targets */
+    .d-flex.flex-column.gap-2 .btn {
+        min-height: 44px; /* Recommended minimum touch target size */
+    }
+    
+    /* Better visual hierarchy with improved spacing */
+    .d-block.d-md-none .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+}
+
+/* Enhanced button styling for mobile */
+@media (max-width: 575.98px) {
+    .d-flex.flex-column.gap-2 .btn {
+        font-size: 0.875rem;
+        padding: 0.65rem 1rem;
+    }
+    
+    /* Better spacing between title and patient info */
+    .d-block.d-md-none h1.h4 {
+        margin-bottom: 0.5rem;
+    }
+    
+    .d-block.d-md-none p.small {
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* Mobile filters optimization */
+@media (max-width: 991.98px) {
+    /* Compact mobile filter toggle */
+    .d-lg-none .d-flex.align-items-center.justify-content-between {
+        background-color: rgba(var(--bs-light-rgb), 0.3);
+        transition: all 0.2s ease;
+    }
+    
+    .d-lg-none .d-flex.align-items-center.justify-content-between:hover {
+        background-color: rgba(var(--bs-light-rgb), 0.5);
+    }
+    
+    /* Optimize filter icon and text spacing */
+    .d-lg-none .bi-funnel {
+        font-size: 0.875rem;
+    }
+    
+    .d-lg-none .text-medical-primary {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    /* Better badge styling */
+    .d-lg-none .badge {
+        font-size: 0.65rem;
+        padding: 0.25em 0.5em;
+    }
+    
+    /* Smooth chevron rotation */
+    #mobile-filter-toggle i.bi-chevron-down,
+    #mobile-filter-toggle i.bi-chevron-up {
+        transition: transform 0.2s ease;
+        font-size: 0.75rem;
+    }
+}
 </style>
 {% endblock %}
 
@@ -165,7 +259,160 @@
     <!-- Header -->
     <div class="row mb-4">
         <div class="col">
-            <div class="d-flex align-items-center justify-content-between">
+            <!-- Mobile Header Layout -->
+            <div class="d-block d-md-none">
+                <!-- Title Section -->
+                <div class="mb-3">
+                    <h1 class="text-medical-primary mb-2 h4">
+                        <i class="bi bi-clock-history me-2" aria-hidden="true"></i>
+                        Timeline de Eventos
+                    </h1>
+                    <p class="text-muted mb-0 small">
+                        <a href="{% url 'apps.patients:patient_detail' patient.pk %}" class="text-decoration-none">
+                            {{ patient.name }}
+                        </a>
+                        <span class="mx-1" aria-hidden="true">•</span>
+                        {% if filtered_count != total_events %}
+                            {{ filtered_count }} de {{ total_events }} eventos
+                        {% else %}
+                            {{ total_events }} evento{{ total_events|pluralize }}
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <!-- Action Buttons Section -->
+                <div class="d-flex flex-column gap-2">
+                    <!-- Create Event Dropdown - Mobile -->
+                    {% if user.is_authenticated %}
+                    <div class="dropdown">
+                        <button class="btn btn-medical-primary dropdown-toggle btn-sm w-100" type="button" 
+                                id="createEventDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false"
+                                aria-label="Criar novo evento para {{ patient.name }}">
+                            <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>
+                            Criar Evento
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="createEventDropdownMobile">
+                            <!-- Clinical Notes Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-journal-medical me-1" aria-hidden="true"></i>
+                                Notas Clínicas
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}">
+                                        <i class="bi bi-journal-text me-2 text-medical-success" aria-hidden="true"></i>
+                                        Evolução
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-clipboard2-heart me-2 text-muted" aria-hidden="true"></i>
+                                        Anamnese e Exame Físico
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-sticky me-2 text-muted" aria-hidden="true"></i>
+                                        Nota/Observação
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Exams Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-clipboard2-data me-1" aria-hidden="true"></i>
+                                Exames
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-clipboard2-data me-2 text-muted" aria-hidden="true"></i>
+                                        Resultado de Exame
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-clipboard2-check me-2 text-muted" aria-hidden="true"></i>
+                                        Requisição de Exame
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Media Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-camera me-1" aria-hidden="true"></i>
+                                Mídia
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-camera me-2 text-muted" aria-hidden="true"></i>
+                                        Imagem
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-images me-2 text-muted" aria-hidden="true"></i>
+                                        Série de Fotos
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Reports Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-file-text me-1" aria-hidden="true"></i>
+                                Relatórios
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-door-open me-2 text-muted" aria-hidden="true"></i>
+                                        Relatório de Alta
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-prescription2 me-2 text-muted" aria-hidden="true"></i>
+                                        Receita
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
+                                        <i class="bi bi-file-text me-2 text-muted" aria-hidden="true"></i>
+                                        Relatório
+                                        <small class="text-muted ms-auto">Em breve</small>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <a href="{% url 'apps.patients:patient_detail' patient.pk %}" 
+                       class="btn btn-outline-medical-primary btn-sm w-100"
+                       aria-label="Voltar à página do paciente {{ patient.name }}">
+                        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
+                        Voltar ao Paciente
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Desktop Header Layout -->
+            <div class="d-none d-md-flex align-items-center justify-content-between">
                 <div>
                     <h1 class="text-medical-primary mb-1">
                         <i class="bi bi-clock-history me-2" aria-hidden="true"></i>
@@ -184,16 +431,16 @@
                     </p>
                 </div>
                 <div class="d-flex gap-2">
-                    <!-- Create Event Dropdown -->
+                    <!-- Create Event Dropdown - Desktop -->
                     {% if user.is_authenticated %}
                     <div class="dropdown">
                         <button class="btn btn-medical-primary dropdown-toggle" type="button" 
-                                id="createEventDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                                id="createEventDropdownDesktop" data-bs-toggle="dropdown" aria-expanded="false"
                                 aria-label="Criar novo evento para {{ patient.name }}">
                             <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>
                             Criar Evento
                         </button>
-                        <ul class="dropdown-menu" aria-labelledby="createEventDropdown">
+                        <ul class="dropdown-menu" aria-labelledby="createEventDropdownDesktop">
                             <!-- Clinical Notes Section -->
                             <li><h6 class="dropdown-header">
                                 <i class="bi bi-journal-medical me-1" aria-hidden="true"></i>
@@ -318,10 +565,10 @@
     <div class="row">
         <!-- Mobile Filter Toggle (shown only on mobile) -->
         <div class="col-12 d-lg-none mb-3">
-            <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded border">
+            <div class="d-flex align-items-center justify-content-between py-2 px-3 rounded border border-secondary-subtle">
                 <div class="d-flex align-items-center">
                     <i class="bi bi-funnel me-2 text-medical-primary" aria-hidden="true"></i>
-                    <span class="fw-semibold text-medical-primary">Filtros</span>
+                    <span class="text-medical-primary">Filtros</span>
                     <!-- Filter count badges -->
                     <div class="ms-2" id="filter-badges">
                         {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator %}
@@ -331,7 +578,7 @@
                         {% endif %}
                     </div>
                 </div>
-                <button class="btn btn-outline-medical-primary btn-sm" type="button" 
+                <button class="btn btn-outline-medical-primary" type="button" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;" 
                         data-bs-toggle="collapse" data-bs-target="#mobile-filters" 
                         aria-expanded="false" aria-controls="mobile-filters"
                         id="mobile-filter-toggle">
