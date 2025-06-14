@@ -7,7 +7,6 @@ urlpatterns = [
     # DailyNote CRUD URLs
     path("", views.DailyNoteListView.as_view(), name="dailynote_list"),
     path("<uuid:pk>/", views.DailyNoteDetailView.as_view(), name="dailynote_detail"),
-    path("create/", views.DailyNoteCreateView.as_view(), name="dailynote_create"),
     path(
         "<uuid:pk>/update/",
         views.DailyNoteUpdateView.as_view(),
