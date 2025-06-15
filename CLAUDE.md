@@ -17,7 +17,7 @@ python manage.py createsuperuser
 # Testing
 pytest                                      # All tests with coverage
 pytest --no-cov                           # Without coverage
-python manage.py test apps.patients.tests # Recommended for patients/events/dailynotes apps
+python manage.py test apps.patients.tests # Recommended for patients/events/dailynotes/sample_content apps
 python manage.py test apps.core.tests.test_permissions
 
 # Frontend
@@ -29,6 +29,7 @@ uv add package-name
 
 # Sample data
 python manage.py create_sample_tags
+python manage.py create_sample_content
 ```
 
 ## Project Architecture
@@ -42,6 +43,7 @@ python manage.py create_sample_tags
 - **patients**: Patient management with tagging system and hospital records
 - **events**: Base event model for medical records (UUID, audit trail, 24h edit window)
 - **dailynotes**: Daily evolution notes extending Event model
+- **sample_content**: Template content management for various event types
 
 ### Key Features
 - **Authentication**: django-allauth with email-based login
@@ -123,6 +125,38 @@ python manage.py create_sample_tags
 - HospitalContextMiddleware for session-based hospital selection
 - Template tag: `capacity_bar` with color-coded occupancy
 - URLs: `/hospitals/`, `/hospitals/wards/`, `/hospitals/select/`
+
+### Sample Content App
+**Template content management for various event types**
+- SampleContent model with UUID primary key, title, content, and event_type fields
+- Integrates with Event.EVENT_TYPE_CHOICES for consistent event type mapping
+- Superuser-only create/edit/delete permissions, all authenticated users can read
+- Admin interface with proper field organization and permission controls
+- Web interface with event type filtering and pagination
+- API endpoint for retrieving sample content by event type
+- URL structure: `/sample-content/`, `/sample-content/api/event-type/<id>/`
+
+#### Key Features
+- **Permission Model**: Read access for all users, write access restricted to superusers
+- **Event Type Integration**: Uses same event types as Event model for consistency
+- **Template Management**: Pre-defined content templates for common medical documentation
+- **API Access**: JSON endpoint for programmatic access to sample content
+- **Search & Filter**: Filter by event type, paginated results
+- **Audit Trail**: Standard created_by/updated_by fields for tracking changes
+
+#### Usage Examples
+```python
+# Get sample content for daily notes
+sample_contents = SampleContent.objects.filter(event_type=Event.DAILY_NOTE_EVENT)
+
+# API access
+GET /sample-content/api/event-type/1/  # Returns JSON with daily note templates
+```
+
+#### Management Commands
+```bash
+python manage.py create_sample_content  # Create initial sample content templates
+```
 
 ## Permission System
 **Comprehensive role-based access control with hospital context**
