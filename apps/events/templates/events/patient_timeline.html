@@ -30,8 +30,32 @@
     border-radius: 8px;
     border: 1px solid #dee2e6;
 }
-.timeline-container {
-    max-width: 800px;
+
+/* Desktop sticky filters */
+@media (min-width: 992px) {
+    .filter-panel {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+    }
+}
+/* Desktop: full width within column, Mobile: constrained width */
+@media (min-width: 992px) {
+    .timeline-container {
+        max-width: none; /* Use full available width on desktop */
+        padding-left: 1rem; /* Add some left padding for better spacing from sidebar */
+    }
+    
+    .timeline-card {
+        margin-bottom: 1.5rem; /* Better spacing between cards on desktop */
+    }
+}
+@media (max-width: 991.98px) {
+    .timeline-container {
+        max-width: 800px; /* Constrain width on mobile/tablet */
+        margin: 0 auto; /* Center on mobile */
+    }
 }
 .event-actions {
     opacity: 0;
@@ -819,7 +843,7 @@
 
         <!-- Timeline Content -->
         <div class="col-12 col-lg-9">
-            <div class="timeline-container">
+            <div class="timeline-container w-100">
                 {% if events_with_permissions %}
                     <!-- Events Timeline -->
                     <div id="timeline-content" class="timeline-events" role="feed" 
