@@ -1,0 +1,48 @@
+{% extends "events/partials/event_card_base.html" %}
+{% load permission_tags %}
+
+{% comment %}
+DailyNote-specific event card template
+Extends the base event card and adds the duplicate button for DailyNote events
+{% endcomment %}
+
+{% block event_actions %}
+<div class="btn-group btn-group-sm">
+    <!-- View Button -->
+    <a href="{{ event.get_absolute_url }}" 
+       class="btn btn-outline-primary btn-sm"
+       aria-label="Visualizar evolução completa">
+        <i class="bi bi-eye" aria-hidden="true"></i>
+        <span class="visually-hidden">Visualizar</span>
+    </a>
+    
+    <!-- Copy Button -->
+    <button type="button" 
+            class="btn btn-outline-secondary btn-sm copy-content-btn" 
+            aria-label="Copiar conteúdo da evolução"
+            data-content="{{ event.content|escape }}">
+        <i class="bi bi-clipboard" aria-hidden="true"></i>
+        <span class="visually-hidden">Copiar</span>
+    </button>
+    
+    <!-- Duplicate Button - Only for users with add_event permission -->
+    {% if perms.events.add_event %}
+        <a href="{% url 'apps.dailynotes:dailynote_duplicate' pk=event.pk %}" 
+           class="btn btn-outline-info btn-sm"
+           aria-label="Duplicar evolução">
+            <i class="bi bi-files" aria-hidden="true"></i>
+            <span class="visually-hidden">Duplicar</span>
+        </a>
+    {% endif %}
+    
+    <!-- Edit Button -->
+    {% if event_data.can_edit %}
+        <a href="{{ event.get_edit_url }}" 
+           class="btn btn-outline-warning btn-sm"
+           aria-label="Editar evolução">
+            <i class="bi bi-pencil" aria-hidden="true"></i>
+            <span class="visually-hidden">Editar</span>
+        </a>
+    {% endif %}
+</div>
+{% endblock event_actions %}

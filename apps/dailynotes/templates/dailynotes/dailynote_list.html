@@ -194,6 +194,15 @@
                 >
                   <i class="bi bi-eye"></i>
                 </a>
+                {% if perms.events.add_event %}
+                <a
+                  href="{% url 'dailynotes:dailynote_duplicate' pk=dailynote.pk %}"
+                  class="btn btn-outline-info"
+                  title="Duplicar evolução"
+                >
+                  <i class="bi bi-files"></i>
+                </a>
+                {% endif %}
                 {% if perms.events.change_event and dailynote.can_edit %}
                 <a
                   href="{% url 'dailynotes:dailynote_update' pk=dailynote.pk %}"

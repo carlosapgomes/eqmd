@@ -162,6 +162,79 @@ Use `.card-medical` for enhanced card styling:
 - **Box Shadow**: Subtle elevation shadow
 - **Header Background**: $medical-light-gray
 
+#### Event Timeline Cards
+
+Timeline events use a specialized card system with type-specific functionality:
+
+##### Timeline Card Class
+
+Use `.timeline-card` with `.card-medical` for event timeline cards:
+
+```html
+<article class="timeline-card card card-medical mb-3">
+  <div class="card-body">
+    <!-- Event content -->
+  </div>
+</article>
+```
+
+##### Timeline Card Properties
+
+- **Border Left**: 4px solid for visual hierarchy
+- **Hover Effect**: Subtle elevation increase and transform
+- **Responsive Actions**: Event actions visible on hover (desktop) or always (mobile)
+
+```scss
+.timeline-card {
+    border-left: 4px solid var(--bs-primary);
+    transition: all 0.2s ease;
+}
+
+.timeline-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+```
+
+##### Event Actions Pattern
+
+Event action buttons use small button groups with consistent styling:
+
+```html
+<div class="event-actions" role="group">
+  <div class="btn-group btn-group-sm">
+    <a href="#" class="btn btn-outline-primary btn-sm" title="Visualizar">
+      <i class="bi bi-eye"></i>
+    </a>
+    <a href="#" class="btn btn-outline-info btn-sm" title="Duplicar">
+      <i class="bi bi-files"></i>
+    </a>
+    <a href="#" class="btn btn-outline-warning btn-sm" title="Editar">
+      <i class="bi bi-pencil"></i>
+    </a>
+  </div>
+</div>
+```
+
+##### Event Action Responsive Behavior
+
+```scss
+.event-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.timeline-card:hover .event-actions {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .event-actions {
+        opacity: 1; /* Always show on mobile */
+    }
+}
+```
+
 ### Navigation
 
 #### Medical Navbar
@@ -239,6 +312,122 @@ Use `.table-medical` with `.thead-medical` for table headers:
 .badge-medical-success    // Green badges
 .badge-medical-light      // Light gray badges
 ```
+
+## Template Architecture
+
+### Event Card Template System
+
+The event timeline uses a modular template system for type-specific functionality:
+
+#### Template Structure
+
+```
+apps/events/templates/events/partials/
+├── event_card_base.html          # Base template with common structure
+├── event_card_dailynote.html     # DailyNote-specific card with duplicate button
+└── event_card_default.html       # Default card for other event types
+```
+
+#### Base Template Pattern
+
+The base template provides common structure that can be extended:
+
+```html
+<!-- event_card_base.html -->
+<article class="timeline-card card card-medical mb-3">
+    <div class="card-body">
+        <!-- Event Header -->
+        <header class="d-flex align-items-start justify-content-between mb-2">
+            <!-- Event badge and timestamp -->
+            
+            <!-- Event Actions - Can be overridden by specific event types -->
+            {% block event_actions %}
+            <div class="btn-group btn-group-sm">
+                <!-- Default actions: view, edit -->
+            </div>
+            {% endblock event_actions %}
+        </header>
+
+        <!-- Event Content -->
+        {% block event_content %}
+        <p class="event-excerpt">{{ event_data.excerpt }}</p>
+        {% endblock event_content %}
+
+        <!-- Event Metadata -->
+        {% block event_metadata %}
+        <!-- Creator and timestamp info -->
+        {% endblock event_metadata %}
+    </div>
+</article>
+```
+
+#### Type-Specific Templates
+
+Event types can extend the base template to add custom functionality:
+
+```html
+<!-- event_card_dailynote.html -->
+{% extends "events/partials/event_card_base.html" %}
+
+{% block event_actions %}
+<div class="btn-group btn-group-sm">
+    <!-- View Button -->
+    <a href="{{ event.get_absolute_url }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-eye"></i>
+    </a>
+    
+    <!-- Duplicate Button - DailyNote specific -->
+    {% if perms.events.add_event %}
+        <a href="{% url 'apps.dailynotes:dailynote_duplicate' pk=event.pk %}" 
+           class="btn btn-outline-info btn-sm">
+            <i class="bi bi-files"></i>
+        </a>
+    {% endif %}
+    
+    <!-- Edit Button -->
+    {% if event_data.can_edit %}
+        <a href="{{ event.get_edit_url }}" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-pencil"></i>
+        </a>
+    {% endif %}
+</div>
+{% endblock event_actions %}
+```
+
+#### Timeline Integration
+
+The main timeline template uses conditional logic to select the appropriate template:
+
+```html
+<!-- patient_timeline.html -->
+{% for event_data in events_with_permissions %}
+    {% with event=event_data.event %}
+        {% if event.event_type == 1 %}
+            {% include "events/partials/event_card_dailynote.html" %}
+        {% else %}
+            {% include "events/partials/event_card_default.html" %}
+        {% endif %}
+    {% endwith %}
+{% endfor %}
+```
+
+#### Adding New Event Types
+
+To add a new event type with custom functionality:
+
+1. **Create new template**: `event_card_[type].html` extending the base template
+2. **Override blocks**: Customize `event_actions`, `event_content`, or `event_metadata` as needed
+3. **Update timeline**: Add condition in `patient_timeline.html` for your event type
+4. **Follow styling**: Use established button patterns and medical styling classes
+
+#### Best Practices
+
+- **Extend base template**: Always extend `event_card_base.html` for consistency
+- **Use semantic HTML**: Maintain proper article structure and ARIA labels
+- **Permission checks**: Always check permissions before showing action buttons
+- **Responsive design**: Ensure actions work on both desktop and mobile
+- **Icon consistency**: Use Bootstrap Icons with established patterns
+- **Accessibility**: Include proper ARIA labels and screen reader text
 
 ## Layout System
 

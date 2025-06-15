@@ -851,75 +851,16 @@
                          
                         {% for event_data in events_with_permissions %}
                             {% with event=event_data.event %}
-                            <article class="timeline-card card card-medical mb-3" 
-                                     role="article"
-                                     aria-labelledby="event-{{ event.pk }}-title"
-                                     aria-describedby="event-{{ event.pk }}-content">
-                                
-                                <div class="card-body">
-                                    <!-- Event Header -->
-                                    <header class="d-flex align-items-start justify-content-between mb-2">
-                                        <div class="d-flex align-items-center">
-                                            <h3 id="event-{{ event.pk }}-title" class="h6 mb-0 me-2">
-                                                <span class="badge {{ event.get_event_type_badge_class }} event-type-badge">
-                                                    <i class="{{ event.get_event_type_icon }} me-1" aria-hidden="true"></i>
-                                                    {{ event.get_event_type_display }}
-                                                </span>
-                                            </h3>
-                                            <time datetime="{{ event.created_at|date:'c' }}" 
-                                                  class="text-muted small">
-                                                <i class="bi bi-clock me-1" aria-hidden="true"></i>
-                                                {{ event.created_at|date:"d/m/Y H:i" }}
-                                            </time>
-                                        </div>
-                                        
-                                        <!-- Event Actions -->
-                                        <div class="event-actions" role="group" 
-                                             aria-label="Ações para {{ event.get_event_type_display }}">
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ event.get_absolute_url }}" 
-                                                   class="btn btn-outline-primary btn-sm"
-                                                   aria-label="Visualizar {{ event.get_event_type_display }} completo">
-                                                    <i class="bi bi-eye" aria-hidden="true"></i>
-                                                    <span class="visually-hidden">Visualizar</span>
-                                                </a>
-                                                {% if event_data.can_edit %}
-                                                    <a href="{{ event.get_edit_url }}" 
-                                                       class="btn btn-outline-warning btn-sm"
-                                                       aria-label="Editar {{ event.get_event_type_display }}">
-                                                        <i class="bi bi-pencil" aria-hidden="true"></i>
-                                                        <span class="visually-hidden">Editar</span>
-                                                    </a>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </header>
-
-                                    <!-- Event Content -->
-                                    <div id="event-{{ event.pk }}-content" class="event-content">
-                                        <p class="event-excerpt">{{ event_data.excerpt }}</p>
-                                    </div>
-
-                                    <!-- Event Metadata -->
-                                    <footer class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
-                                        <small class="text-muted">
-                                            <i class="bi bi-person me-1" aria-hidden="true"></i>
-                                            <span aria-label="Criado por">{{ event.created_by.get_full_name }}</span>
-                                            {% if event.created_by.profession %}
-                                                <span aria-label="Profissão">({{ event.created_by.profession }})</span>
-                                            {% endif %}
-                                        </small>
-                                        {% if event.updated_at != event.created_at %}
-                                            <small class="text-muted">
-                                                <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>
-                                                <time datetime="{{ event.updated_at|date:'c' }}">
-                                                    Editado em {{ event.updated_at|date:"d/m/Y H:i" }}
-                                                </time>
-                                            </small>
-                                        {% endif %}
-                                    </footer>
-                                </div>
-                            </article>
+                                {% comment %}
+                                Use appropriate event card template based on event type
+                                DailyNote events (event_type=1) get the specialized template with duplicate button
+                                All other events use the default template
+                                {% endcomment %}
+                                {% if event.event_type == 1 %}
+                                    {% include "events/partials/event_card_dailynote.html" with event=event event_data=event_data %}
+                                {% else %}
+                                    {% include "events/partials/event_card_default.html" with event=event event_data=event_data %}
+                                {% endif %}
                             {% endwith %}
                         {% endfor %}
                     </div>

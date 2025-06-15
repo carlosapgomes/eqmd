@@ -90,12 +90,25 @@
         <i class="bi bi-printer me-1"></i>
         Imprimir
       </a>
+      <button type="button" 
+              class="btn btn-outline-secondary copy-content-btn" 
+              title="Copiar conteúdo para área de transferência"
+              data-content="{{ dailynote.content|escape }}">
+        <i class="bi bi-clipboard me-1"></i>
+        Copiar
+      </button>
     </div>
     
     {% if perms.events.change_event and can_edit_dailynote %}
     <a href="{% url 'dailynotes:dailynote_update' pk=dailynote.pk %}" class="btn btn-medical-primary me-2">
       <i class="bi bi-pencil me-1"></i>
       Editar
+    </a>
+    {% endif %}
+    {% if perms.events.add_event %}
+    <a href="{% url 'dailynotes:dailynote_duplicate' pk=dailynote.pk %}" class="btn btn-outline-primary me-2" title="Duplicar evolução">
+      <i class="bi bi-files me-1"></i>
+      Duplicar
     </a>
     {% endif %}
     {% if perms.events.delete_event and can_delete_dailynote %}
@@ -237,10 +250,22 @@
 <!-- Action Buttons for Mobile -->
 <div class="d-lg-none mt-4">
   <div class="d-grid gap-2">
+    <button type="button" 
+            class="btn btn-outline-secondary copy-content-btn" 
+            data-content="{{ dailynote.content|escape }}">
+      <i class="bi bi-clipboard me-1"></i>
+      Copiar Conteúdo
+    </button>
     {% if perms.events.change_event and can_edit_dailynote %}
     <a href="{% url 'dailynotes:dailynote_update' pk=dailynote.pk %}" class="btn btn-medical-primary">
       <i class="bi bi-pencil me-1"></i>
       Editar Evolução
+    </a>
+    {% endif %}
+    {% if perms.events.add_event %}
+    <a href="{% url 'dailynotes:dailynote_duplicate' pk=dailynote.pk %}" class="btn btn-outline-primary">
+      <i class="bi bi-files me-1"></i>
+      Duplicar Evolução
     </a>
     {% endif %}
     {% if perms.events.delete_event and can_delete_dailynote %}

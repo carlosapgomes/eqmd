@@ -75,6 +75,16 @@ python manage.py create_sample_tags
 - django-model-utils inheritance for extensibility
 - URLs: `/events/patient/<uuid>/`, `/events/user/`
 
+#### Timeline Template Architecture
+**Modular event card system with type-specific functionality**
+- **Template Partials**: Located in `apps/events/templates/events/partials/`
+  - `event_card_base.html` - Base template with common structure
+  - `event_card_dailynote.html` - DailyNote-specific card with duplicate button
+  - `event_card_default.html` - Standard card for other event types
+- **Dynamic Rendering**: Timeline uses `event.event_type` to select appropriate template
+- **Event Type Detection**: `event.event_type == 1` identifies DailyNote events
+- **Extensibility**: Easy to add custom cards for new event types
+
 ### Daily Notes App
 **Medical evolution notes extending Event model**
 - DailyNote model inherits from Event
@@ -89,6 +99,15 @@ python manage.py create_sample_tags
 - **Export/Print**: Print-friendly individual notes and patient evolution reports
 - **URLs**: `/dailynotes/`, `/dailynotes/patient/<uuid>/`, `/dailynotes/<uuid>/print/`
 - **Template Tags**: `recent_dailynotes_widget`, `dailynotes_count_today`, `dailynotes_count_week`
+
+#### Duplicate Functionality
+**Create new dailynotes based on existing ones**
+- **Multiple Access Points**: Available from detail page, list views, and patient timeline
+- **Pre-population**: Original content copied, datetime set to current time
+- **Permission-Based**: Only visible to users with `events.add_event` permission
+- **Timeline Integration**: Specialized event card template with duplicate button
+- **URL Pattern**: `/dailynotes/<uuid>/duplicate/`
+- **Success Redirect**: Returns to patient timeline after creation
 
 #### Performance Optimizations (Slice 6)
 - **Database Optimization**: Added indexes for common query patterns on Event model

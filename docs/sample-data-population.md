@@ -140,10 +140,12 @@ This removes:
 
 1. **Patient management** - Create, view, edit patient records
 2. **Daily notes** - Add evolution notes and test permissions
-3. **Hospital records** - View patient records across hospitals
-4. **Tag system** - Assign and filter by medical condition tags
-5. **Search functionality** - Search patients by name, ID, or health card
-6. **Dashboard widgets** - Test recent patients and notes displays
+3. **Daily note duplication** - Test duplicate functionality from detail page, list views, and patient timeline
+4. **Hospital records** - View patient records across hospitals
+5. **Tag system** - Assign and filter by medical condition tags
+6. **Search functionality** - Search patients by name, ID, or health card
+7. **Dashboard widgets** - Test recent patients and notes displays
+8. **Event timeline** - Test timeline view with type-specific event cards
 
 ### Data Relationships
 
@@ -227,7 +229,9 @@ self.client.force_login(user)
 2. **Login as student**: Limited to outpatients only
 3. **Switch hospitals**: Test hospital context switching
 4. **Create/edit notes**: Test 24-hour edit window
-5. **Search patients**: Test search and filtering
+5. **Duplicate daily notes**: Test duplication from timeline, detail page, and list views
+6. **Timeline event cards**: Verify DailyNote events show duplicate button, other events don't
+7. **Search patients**: Test search and filtering
 
 ## Related Documentation
 

@@ -416,3 +416,75 @@ body.app-layout { // Add a class to body for authenticated layout to avoid affec
         font-size: 0.9rem;
     }
 }
+
+// Clipboard functionality styling
+// --------------------------------------------------
+
+.copy-content-btn {
+  transition: all 0.2s ease-in-out;
+  
+  // Ensure proper spacing for icon
+  i {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  // Hover state
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  // Success state (temporarily applied after successful copy)
+  &.btn-success {
+    i {
+      animation: clipboard-success 0.3s ease-in-out;
+    }
+  }
+  
+  // Error state (temporarily applied after failed copy)
+  &.btn-danger {
+    i {
+      animation: clipboard-error 0.3s ease-in-out;
+    }
+  }
+}
+
+// Animation for successful clipboard operation
+@keyframes clipboard-success {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// Animation for failed clipboard operation
+@keyframes clipboard-error {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+// Toast container positioning and styling
+.toast-container {
+  .toast {
+    backdrop-filter: blur(10px);
+    
+    .toast-body {
+      font-weight: 500;
+    }
+  }
+}
