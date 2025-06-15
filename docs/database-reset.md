@@ -81,6 +81,9 @@ python manage.py setup_groups
 # Create sample tags (optional)
 python manage.py create_sample_tags
 
+# Basic usage - create all sample data
+python manage.py populate_sample_data
+
 # Assign users to hospitals if needed
 python manage.py assign_users_to_hospitals
 ```
@@ -232,4 +235,3 @@ If you encounter issues not covered in this guide:
 ---
 
 **Remember**: Database resets are powerful tools that permanently delete data. Use them carefully and always in development environments unless absolutely necessary in production.
-
