@@ -91,7 +91,7 @@ class DailyNoteForm(forms.ModelForm):
             FormActions(
                 Submit("submit", "Salvar Evolução", css_class="btn btn-primary"),
                 HTML(
-                    '<a href="{% url "dailynotes:dailynote_list" %}" class="btn btn-secondary ms-2">Cancelar</a>'
+                    '<button type="button" class="btn btn-secondary ms-2" onclick="window.history.back()">Cancelar</button>'
                 ),
             ),
         )

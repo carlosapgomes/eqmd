@@ -63,9 +63,9 @@
         <button type="submit" class="btn btn-medical-teal me-1">
           <i class="bi bi-search"></i>
         </button>
-        <a href="{% url 'dailynotes:dailynote_list' %}" class="btn btn-outline-secondary">
+        <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()">
           <i class="bi bi-x-circle"></i>
-        </a>
+        </button>
       </div>
     </form>
     
@@ -242,9 +242,9 @@
         {% endif %}
       </p>
       {% if perms.events.add_event %}
-      <a href="{% url 'dailynotes:dailynote_create' %}" class="btn btn-medical-primary">
-        <i class="bi bi-plus-circle me-1"></i>
-        Criar primeira evolução
+      <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-medical-primary">
+        <i class="bi bi-people me-1"></i>
+        Ver Pacientes
       </a>
       {% endif %}
     </div>

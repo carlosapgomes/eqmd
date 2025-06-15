@@ -29,6 +29,8 @@ from apps.core.permissions import (
     can_delete_event,
 )
 from apps.patients.models import Patient
+from apps.sample_content.models import SampleContent
+from apps.events.models import Event
 
 
 @method_decorator(hospital_context_required, name="dispatch")
@@ -263,6 +265,14 @@ class DailyNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
             "dailynotes:dailynote_detail", kwargs={"pk": self.object.pk}
         )
 
+    def get_context_data(self, **kwargs):
+        """Add sample content context."""
+        context = super().get_context_data(**kwargs)
+        context["sample_contents"] = SampleContent.objects.filter(
+            event_type=Event.DAILY_NOTE_EVENT
+        ).order_by("title")
+        return context
+
     def form_valid(self, form):
         """Handle successful form submission with patient access validation."""
         # Check if user can access the selected patient (in case patient was changed)
@@ -290,7 +300,12 @@ class DailyNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
     template_name = "dailynotes/dailynote_confirm_delete.html"
     context_object_name = "dailynote"
     permission_required = "events.delete_event"
-    success_url = reverse_lazy("dailynotes:dailynote_list")
+    def get_success_url(self):
+        """Redirect to patient timeline after successful deletion."""
+        return reverse_lazy(
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.pk},
+        )
 
     def get_object(self, queryset=None):
         """Get object and check patient access and delete permissions."""
@@ -439,9 +454,12 @@ class PatientDailyNoteCreateView(
         return kwargs
 
     def get_context_data(self, **kwargs):
-        """Add patient context."""
+        """Add patient and sample content context."""
         context = super().get_context_data(**kwargs)
         context["patient"] = self.patient
+        context["sample_contents"] = SampleContent.objects.filter(
+            event_type=Event.DAILY_NOTE_EVENT
+        ).order_by("title")
         return context
 
     def get_success_url(self):
@@ -498,10 +516,13 @@ class DailyNoteDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, Create
         return kwargs
 
     def get_context_data(self, **kwargs):
-        """Add source dailynote and patient context."""
+        """Add source dailynote, patient and sample content context."""
         context = super().get_context_data(**kwargs)
         context["source_dailynote"] = self.source_dailynote
         context["patient"] = self.source_dailynote.patient
+        context["sample_contents"] = SampleContent.objects.filter(
+            event_type=Event.DAILY_NOTE_EVENT
+        ).order_by("title")
         return context
 
     def get_success_url(self):
