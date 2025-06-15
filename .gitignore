@@ -17,3 +17,9 @@ db.sqlite3
 # Node modules
 node_modules/
 staticfiles/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
