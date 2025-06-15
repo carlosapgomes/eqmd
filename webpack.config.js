@@ -59,6 +59,19 @@ module.exports = {
           from: "node_modules/@popperjs/core/dist/umd/popper.min.js",
           to: "js/popper.min.js",
         },
+        // Add these new patterns to copy your assets
+        {
+          from: "assets/images",
+          to: "images",
+        },
+        {
+          from: "assets/*.ico",
+          to: "[name][ext]",
+        },
+        {
+          from: "assets/*.png",
+          to: "[name][ext]",
+        },
       ],
     }),
   ],
