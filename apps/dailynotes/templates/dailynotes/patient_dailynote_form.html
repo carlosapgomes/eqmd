@@ -6,107 +6,220 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/easymde.min.css' %}">
+<style>
+  .form-section {
+    background: #f8f9fa;
+    border-left: 4px solid #2c5aa0;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.375rem;
+  }
+  
+  .form-section h6 {
+    color: #2c5aa0;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  
+  .editor-container {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+  
+  .CodeMirror {
+    border: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  
+  .editor-toolbar {
+    border-bottom: 1px solid #dee2e6;
+  }
+  
+  .editor-preview {
+    background: white;
+    border-left: 1px solid #dee2e6;
+  }
+  
+  .required-field::after {
+    content: " *";
+    color: #dc3545;
+  }
+</style>
 {% endblock extra_css %}
 
 {% block app_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'dailynotes:dailynote_list' %}">
+        <i class="bi bi-journal-medical me-1"></i>
+        Evoluções
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}">
+        {{ patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Nova Evolução</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-journal-medical text-medical-primary me-2"></i>
+    Nova Evolução
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-0">
-                        {% if form.instance.pk %}Editar{% else %}Nova{% endif %} Evolução
-                    </h1>
-                    <p class="text-muted">{{ patient.name }} | {{ patient.fiscal_number }}</p>
-                </div>
-                <div>
-                    <a href="{% url 'dailynotes:patient_dailynote_list' patient_pk=patient.pk %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Voltar às Evoluções
-                    </a>
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-file-earmark-text"></i>
-                                {% if form.instance.pk %}Editar Evolução{% else %}Nova Evolução{% endif %}
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="post">
-                                {% csrf_token %}
-                                
-                                <!-- Patient is hidden and pre-filled -->
-                                <input type="hidden" name="patient" value="{{ patient.pk }}">
-                                
-                                {% crispy form %}
-                                
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-lg-4">
-                    <!-- Patient Info Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">
-                                <i class="bi bi-person"></i> Informações do Paciente
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <strong>Nome:</strong><br>
-                                {{ patient.name }}
-                            </div>
-                            <div class="mb-3">
-                                <strong>CPF:</strong><br>
-                                {{ patient.fiscal_number|default:"—" }}
-                            </div>
-                            <div class="mb-3">
-                                <strong>Cartão SUS:</strong><br>
-                                {{ patient.health_card_number|default:"—" }}
-                            </div>
-                            <div class="mb-3">
-                                <strong>Status:</strong><br>
-                                <span class="badge bg-{{ patient.status|default:'secondary' }}">
-                                    {{ patient.get_status_display|default:'Não definido' }}
-                                </span>
-                            </div>
-                            {% if patient.current_hospital %}
-                            <div class="mb-3">
-                                <strong>Hospital:</strong><br>
-                                {{ patient.current_hospital.name }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
+<!-- Form Card -->
+<div class="card shadow-sm">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-file-text me-2"></i>
+      Nova Evolução
+    </h5>
+  </div>
+  <div class="card-body">
+    <!-- Form Errors -->
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+      <h6 class="alert-heading">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Erro no formulário
+      </h6>
+      {% for error in form.non_field_errors %}
+        <p class="mb-0">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
 
-                    <!-- Help Card -->
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">
-                                <i class="bi bi-info-circle"></i> Dicas
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-unstyled small mb-0">
-                                <li class="mb-2">
-                                    <i class="bi bi-check-circle text-success"></i>
-                                    Use o editor para formatar o texto da evolução
-                                </li>
-                                <li class="mb-2">
-                                    <i class="bi bi-check-circle text-success"></i>
-                                    Evoluções podem ser editadas por 24 horas
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
+    <form method="post" class="needs-validation" novalidate>
+      {% csrf_token %}
+      
+      <!-- Patient is hidden and pre-filled -->
+      <input type="hidden" name="patient" value="{{ patient.pk }}">
+      
+      <!-- Basic Information Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-info-circle me-2"></i>
+          Informações Básicas
+        </h6>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="{{ form.event_datetime.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-calendar-event me-1"></i>
+                {{ form.event_datetime.label }}
+              </label>
+              {{ form.event_datetime }}
+              {% if form.event_datetime.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.event_datetime.errors %}
+                    {{ error }}
+                  {% endfor %}
                 </div>
+              {% endif %}
+              {% if form.event_datetime.help_text %}
+                <div class="form-text">{{ form.event_datetime.help_text }}</div>
+              {% endif %}
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-file-earmark-text me-2"></i>
+          Conteúdo da Evolução
+        </h6>
+        <div class="mb-3">
+          <label for="{{ form.content.id_for_label }}" class="form-label">
+            <i class="bi bi-markdown me-1"></i>
+            {{ form.content.label }}
+          </label>
+          <div class="editor-container">
+            {{ form.content }}
+          </div>
+          {% if form.content.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in form.content.errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if form.content.help_text %}
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>
+              {{ form.content.help_text }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <button type="submit" class="btn btn-medical-primary">
+            <i class="bi bi-check-circle me-1"></i>
+            Salvar Evolução
+          </button>
+          <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Help Section -->
+<div class="card shadow-sm mt-4">
+  <div class="card-header bg-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-question-circle me-2"></i>
+      Ajuda com Markdown
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <h6>Formatação Básica:</h6>
+        <ul class="list-unstyled">
+          <li><code>**texto**</code> - <strong>negrito</strong></li>
+          <li><code>*texto*</code> - <em>itálico</em></li>
+          <li><code># Título</code> - Título principal</li>
+          <li><code>## Subtítulo</code> - Subtítulo</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h6>Listas e Outros:</h6>
+        <ul class="list-unstyled">
+          <li><code>- item</code> - Lista com marcadores</li>
+          <li><code>1. item</code> - Lista numerada</li>
+          <li><code>> texto</code> - Citação</li>
+          <li><code>`código`</code> - Código inline</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
         </div>
     </div>
 </div>
@@ -115,18 +228,53 @@
 {% block extra_scripts %}
 <script src="{% static 'js/easymde.min.js' %}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const contentField = document.getElementById('id_content');
-    if (contentField) {
-      console.log('Initializing EasyMDE editor');
-        const easyMDE = new EasyMDE({
-            element: contentField,
-            placeholder: 'Digite o conteúdo da evolução...',
-            spellChecker: false,
-            hideIcons: ["link", "image", "side-by-side", "fullscreen"],
-            status: false,
-        });
-    }
-});
+  let easyMDE;
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize EasyMDE editor
+    easyMDE = new EasyMDE({
+      element: document.getElementById("id_content"),
+      spellChecker: false,
+      placeholder: "Conteúdo da evolução...",
+      hideIcons: ["link", "image", "side-by-side", "fullscreen"],
+      status: false,
+      toolbar: [
+        "bold", "italic", "heading", "|",
+        "unordered-list", "ordered-list", "|",
+        "quote", "code", "|",
+        "preview", "guide"
+      ],
+      previewClass: ["editor-preview", "p-3"],
+      renderingConfig: {
+        singleLineBreaks: false,
+        codeSyntaxHighlighting: false,
+      },
+      insertTexts: {
+        horizontalRule: ["", "\n\n-----\n\n"],
+        image: ["![](http://", ")"],
+        link: ["[", "](http://)"],
+        table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text      | Text     |\n\n"],
+      },
+    });
+    
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    });
+    
+    // Auto-save functionality (optional)
+    let autoSaveTimeout;
+    easyMDE.codemirror.on("change", function() {
+      clearTimeout(autoSaveTimeout);
+      autoSaveTimeout = setTimeout(function() {
+        // Auto-save logic could be implemented here
+        console.log("Content changed - could auto-save here");
+      }, 2000);
+    });
+  });
 </script>
-{% endblock extra_scripts %}
+{% endblock %}

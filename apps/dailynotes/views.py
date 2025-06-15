@@ -444,9 +444,10 @@ class PatientDailyNoteCreateView(
         return context
 
     def get_success_url(self):
-        """Redirect to patient daily notes list after successful creation."""
+        """Redirect to patient timeline after successful creation."""
         return reverse_lazy(
-            "dailynotes:patient_dailynote_list", kwargs={"patient_pk": self.patient.pk}
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.patient.pk},
         )
 
     def form_valid(self, form):

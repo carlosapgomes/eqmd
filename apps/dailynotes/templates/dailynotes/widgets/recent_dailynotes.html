@@ -49,9 +49,9 @@
       <i class="bi bi-journal-x text-muted" style="font-size: 2rem;"></i>
       <p class="text-muted mb-3 mt-2">Nenhuma evolução recente</p>
       {% if user|has_permission:"events.add_event" %}
-      <a href="{% url 'dailynotes:dailynote_create' %}" class="btn btn-medical-teal btn-sm">
+      <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-medical-teal btn-sm">
         <i class="bi bi-plus-circle me-1"></i>
-        Criar Evolução
+        Lista de Pacientes
       </a>
       {% endif %}
     </div>

@@ -67,8 +67,13 @@
     </li>
     {% if form.instance.pk %}
     <li class="breadcrumb-item">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}">
+        {{ form.instance.patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item">
       <a href="{% url 'dailynotes:dailynote_detail' pk=form.instance.pk %}">
-        {{ form.instance.patient.name }} - {{ form.instance.event_datetime|date:"d/m/Y H:i" }}
+        {{ form.instance.event_datetime|date:"d/m/Y H:i" }}
       </a>
     </li>
     <li class="breadcrumb-item active" aria-current="page">Editar</li>
@@ -94,10 +99,17 @@
       Ver Detalhes
     </a>
     {% endif %}
+    {% if form.instance.pk %}
+    <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+    {% else %}
     <a href="{% url 'dailynotes:dailynote_list' %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>
       Voltar
     </a>
+    {% endif %}
   </div>
 </div>
 
@@ -200,10 +212,17 @@
               Salvar Evolução
             {% endif %}
           </button>
+          {% if form.instance.pk %}
+          <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+          {% else %}
           <button type="button" class="btn btn-outline-secondary ms-2" onclick="window.history.back()">
             <i class="bi bi-x-circle me-1"></i>
             Cancelar
           </button>
+          {% endif %}
         </div>
         {% if form.instance.pk %}
         <div>
