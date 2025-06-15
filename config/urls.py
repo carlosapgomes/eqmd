@@ -31,6 +31,7 @@ urlpatterns = [
     path("patients/", include("apps.patients.urls", namespace="patients")),
     path("events/", include("apps.events.urls", namespace="events")),
     path("dailynotes/", include("apps.dailynotes.urls", namespace="dailynotes")),
+    path("sample-content/", include("apps.sample_content.urls", namespace="sample_content")),
 ]
 
 # Serve media and static files during development

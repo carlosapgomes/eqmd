@@ -61,6 +61,21 @@ python manage.py populate_sample_data --clear-existing
 - Crítico (pink)
 - Alérgico (teal)
 
+### 📋 Sample Content Templates
+
+Sample content templates for various event types can be created with:
+
+```bash
+python manage.py create_sample_content
+```
+
+This creates templates for:
+- Daily evolution notes (Evolução)
+- History and physical exams (Anamnese e Exame Físico)  
+- Simple observations (Nota/Observação)
+- Discharge reports (Relatório de Alta)
+- Exam requests (Requisição de Exame)
+
 ### 📝 Daily Notes (200 total)
 
 - **5 notes per patient** with realistic medical evolution content
@@ -146,6 +161,7 @@ This removes:
 6. **Search functionality** - Search patients by name, ID, or health card
 7. **Dashboard widgets** - Test recent patients and notes displays
 8. **Event timeline** - Test timeline view with type-specific event cards
+9. **Sample content templates** - Test template creation, viewing, and API access
 
 ### Data Relationships
 

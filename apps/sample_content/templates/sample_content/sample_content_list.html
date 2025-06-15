@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Conteúdo de Exemplo{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Conteúdo de Exemplo</h1>
+            </div>
+
+            <!-- Filter by event type -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="event_type" class="form-label">Filtrar por Tipo de Evento</label>
+                            <select name="event_type" id="event_type" class="form-select">
+                                <option value="">Todos os tipos</option>
+                                {% for value, label in event_types %}
+                                    <option value="{{ value }}" {% if selected_event_type == value|stringformat:"s" %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Filtrar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Sample content list -->
+            <div class="row">
+                {% for sample_content in sample_contents %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-1">{{ sample_content.title }}</h5>
+                                <small class="text-muted">{{ sample_content.get_event_type_display }}</small>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">{{ sample_content.content|truncatewords:30 }}</p>
+                            </div>
+                            <div class="card-footer text-muted">
+                                <small>
+                                    Por {{ sample_content.created_by.get_full_name|default:sample_content.created_by.username }} 
+                                    em {{ sample_content.created_at|date:"d/m/Y H:i" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Nenhum conteúdo de exemplo encontrado.
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <nav aria-label="Navegação das páginas">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if selected_event_type %}event_type={{ selected_event_type }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if selected_event_type %}event_type={{ selected_event_type }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
