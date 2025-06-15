@@ -11,7 +11,10 @@ Extends the base event card and adds the duplicate button for DailyNote events
     <!-- View Button -->
     <a href="{{ event.get_absolute_url }}" 
        class="btn btn-outline-primary btn-sm"
-       aria-label="Visualizar evolução completa">
+       aria-label="Visualizar evolução completa"
+       data-bs-toggle="tooltip" 
+       data-bs-placement="top" 
+       title="Ver evolução completa">
         <i class="bi bi-eye" aria-hidden="true"></i>
         <span class="visually-hidden">Visualizar</span>
     </a>
@@ -20,7 +23,10 @@ Extends the base event card and adds the duplicate button for DailyNote events
     <button type="button" 
             class="btn btn-outline-secondary btn-sm copy-content-btn" 
             aria-label="Copiar conteúdo da evolução"
-            data-content="{{ event.content|escape }}">
+            data-content="{{ event.content|escape }}"
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Copiar conteúdo">
         <i class="bi bi-clipboard" aria-hidden="true"></i>
         <span class="visually-hidden">Copiar</span>
     </button>
@@ -29,7 +35,10 @@ Extends the base event card and adds the duplicate button for DailyNote events
     {% if perms.events.add_event %}
         <a href="{% url 'apps.dailynotes:dailynote_duplicate' pk=event.pk %}" 
            class="btn btn-outline-info btn-sm"
-           aria-label="Duplicar evolução">
+           aria-label="Duplicar evolução"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Criar nova evolução baseada nesta">
             <i class="bi bi-files" aria-hidden="true"></i>
             <span class="visually-hidden">Duplicar</span>
         </a>
@@ -39,7 +48,10 @@ Extends the base event card and adds the duplicate button for DailyNote events
     {% if event_data.can_edit %}
         <a href="{{ event.get_edit_url }}" 
            class="btn btn-outline-warning btn-sm"
-           aria-label="Editar evolução">
+           aria-label="Editar evolução"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Editar evolução">
             <i class="bi bi-pencil" aria-hidden="true"></i>
             <span class="visually-hidden">Editar</span>
         </a>

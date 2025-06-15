@@ -34,14 +34,20 @@ Parameters expected:
                 <div class="btn-group btn-group-sm">
                     <a href="{{ event.get_absolute_url }}" 
                        class="btn btn-outline-primary btn-sm"
-                       aria-label="Visualizar {{ event.get_event_type_display }} completo">
+                       aria-label="Visualizar {{ event.get_event_type_display }} completo"
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="top" 
+                       title="Ver detalhes">
                         <i class="bi bi-eye" aria-hidden="true"></i>
                         <span class="visually-hidden">Visualizar</span>
                     </a>
                     {% if event_data.can_edit %}
                         <a href="{{ event.get_edit_url }}" 
                            class="btn btn-outline-warning btn-sm"
-                           aria-label="Editar {{ event.get_event_type_display }}">
+                           aria-label="Editar {{ event.get_event_type_display }}"
+                           data-bs-toggle="tooltip" 
+                           data-bs-placement="top" 
+                           title="Editar">
                             <i class="bi bi-pencil" aria-hidden="true"></i>
                             <span class="visually-hidden">Editar</span>
                         </a>
