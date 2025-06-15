@@ -116,11 +116,23 @@
           <div class="bg-medical-teal rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
             <i class="bi bi-person-fill text-white"></i>
           </div>
-          <span class="d-none d-md-inline text-medical-dark-gray">{{ user.profile.display_name }}</span>
+          <span class="d-none d-md-inline text-medical-dark-gray">
+            {% if user.profile.display_name %}
+              {{ user.profile.display_name }}
+            {% else %}
+              {{ user.get_full_name|default:user.username }}
+            {% endif %}
+          </span>
           <i class="bi bi-chevron-down ms-1"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
-          <li><h6 class="dropdown-header">{{ user.profile.display_name }}</h6></li>
+          <li><h6 class="dropdown-header">
+              {% if user.profile.display_name %}
+                {{ user.profile.display_name }}
+              {% else %}
+                {{ user.get_full_name|default:user.username }}
+              {% endif %}
+            </h6></li>
           <li><a class="dropdown-item" href="{% url 'apps.accounts:profile_redirect' %}"><i class="bi bi-person me-2"></i>Meu Perfil</a></li>
           <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configurações</a></li>
           <li><a class="dropdown-item" href="#"><i class="bi bi-question-circle me-2"></i>Ajuda</a></li>
