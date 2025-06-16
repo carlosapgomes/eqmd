@@ -81,7 +81,7 @@
     Duplicar Evolução
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
-    <a href="{% url 'dailynotes:dailynote_detail' pk=source_dailynote.pk %}" class="btn btn-outline-secondary">
+    <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>
       Voltar
     </a>
@@ -216,7 +216,7 @@
             <i class="bi bi-files me-1"></i>
             Criar Evolução Duplicada
           </button>
-          <a href="{% url 'dailynotes:dailynote_detail' pk=source_dailynote.pk %}" class="btn btn-outline-secondary ms-2">
+          <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary ms-2">
             <i class="bi bi-x-circle me-1"></i>
             Cancelar
           </a>
