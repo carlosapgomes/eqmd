@@ -5,7 +5,6 @@ app_name = "apps.dailynotes"
 
 urlpatterns = [
     # DailyNote CRUD URLs
-    # path("", views.DailyNoteListView.as_view(), name="dailynote_list"),
     path("<uuid:pk>/", views.DailyNoteDetailView.as_view(), name="dailynote_detail"),
     path(
         "<uuid:pk>/update/",
@@ -23,11 +22,6 @@ urlpatterns = [
         name="dailynote_duplicate",
     ),
     # Patient-specific DailyNote URLs
-    # path(
-    #     "patient/<uuid:patient_pk>/",
-    #     views.PatientDailyNoteListView.as_view(),
-    #     name="patient_dailynote_list",
-    # ),
     path(
         "patient/<uuid:patient_pk>/create/",
         views.PatientDailyNoteCreateView.as_view(),
