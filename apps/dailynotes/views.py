@@ -230,7 +230,7 @@ class DailyNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
 
     model = DailyNote
     form_class = DailyNoteForm
-    template_name = "dailynotes/dailynote_form.html"
+    template_name = "dailynotes/dailynote_update_form.html"
     permission_required = "events.change_event"
 
     def get_object(self, queryset=None):

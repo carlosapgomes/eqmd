@@ -2,11 +2,7 @@
 {% load static %}
 
 {% block title %}
-  {% if form.instance.pk %}
-    Editar Evolução - {{ form.instance.patient.name }}
-  {% else %}
-    Nova Evolução
-  {% endif %}
+  Editar Evolução - {{ form.instance.patient.name }}
 {% endblock %}
 
 {% block extra_css %}
@@ -64,7 +60,6 @@
         Pacientes
       </a>
     </li>
-    {% if form.instance.pk %}
     <li class="breadcrumb-item">
       <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}">
         {{ form.instance.patient.name }} - Timeline
@@ -76,39 +71,23 @@
       </a>
     </li>
     <li class="breadcrumb-item active" aria-current="page">Editar</li>
-    {% else %}
-    <li class="breadcrumb-item active" aria-current="page">Nova Evolução</li>
-    {% endif %}
   </ol>
 </nav>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">
     <i class="bi bi-journal-medical text-medical-primary me-2"></i>
-    {% if form.instance.pk %}
-      Editar Evolução
-    {% else %}
-      Nova Evolução
-    {% endif %}
+    Editar Evolução
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
-    {% if form.instance.pk %}
     <a href="{% url 'dailynotes:dailynote_detail' pk=form.instance.pk %}" class="btn btn-outline-secondary me-2">
       <i class="bi bi-eye me-1"></i>
       Ver Detalhes
     </a>
-    {% endif %}
-    {% if form.instance.pk %}
     <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>
       Voltar
     </a>
-    {% else %}
-    <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
-      <i class="bi bi-arrow-left me-1"></i>
-      Voltar
-    </button>
-    {% endif %}
   </div>
 </div>
 
@@ -117,11 +96,7 @@
   <div class="card-header bg-medical-light">
     <h5 class="card-title mb-0">
       <i class="bi bi-file-text me-2"></i>
-      {% if form.instance.pk %}
-        Editar Informações da Evolução
-      {% else %}
-        Informações da Nova Evolução
-      {% endif %}
+      Editar Informações da Evolução
     </h5>
   </div>
   <div class="card-body">
@@ -213,23 +188,12 @@
         <div>
           <button type="submit" class="btn btn-medical-primary">
             <i class="bi bi-check-circle me-1"></i>
-            {% if form.instance.pk %}
-              Atualizar Evolução
-            {% else %}
-              Salvar Evolução
-            {% endif %}
+            Atualizar Evolução
           </button>
-          {% if form.instance.pk %}
           <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary ms-2">
             <i class="bi bi-x-circle me-1"></i>
             Cancelar
           </a>
-          {% else %}
-          <button type="button" class="btn btn-outline-secondary ms-2" onclick="window.history.back()">
-            <i class="bi bi-x-circle me-1"></i>
-            Cancelar
-          </button>
-          {% endif %}
         </div>
         {% if form.instance.pk %}
         <div>
