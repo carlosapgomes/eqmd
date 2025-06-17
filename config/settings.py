@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "apps.patients",  # Patient management app
     "apps.events",  # Events management app
     "apps.dailynotes",  # Daily notes app
+    "apps.historyandphysicals",  # History and Physical examination app
     "apps.sample_content",  # Sample content app
     # django-allauth
     "allauth",

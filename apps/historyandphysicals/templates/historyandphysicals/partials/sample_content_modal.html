@@ -1,0 +1,180 @@
+<!-- Sample Content Modal -->
+<div class="modal fade" id="sampleContentModal" tabindex="-1" aria-labelledby="sampleContentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="sampleContentModalLabel">
+          <i class="bi bi-file-earmark-text me-2"></i>
+          Inserir Conteúdo de Amostra
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if sample_contents %}
+          <!-- Search box -->
+          <div class="mb-3">
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="bi bi-search"></i>
+              </span>
+              <input type="text" class="form-control" id="sampleContentSearch" placeholder="Pesquisar templates...">
+            </div>
+          </div>
+          
+          <!-- Sample content list -->
+          <div class="row" id="sampleContentList">
+            {% for sample_content in sample_contents %}
+            <div class="col-12 mb-3 sample-content-item" data-title="{{ sample_content.title|lower }}" data-content="{{ sample_content.content|lower }}">
+              <div class="card h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="card-title mb-0">
+                    <i class="bi bi-file-earmark me-1"></i>
+                    {{ sample_content.title }}
+                  </h6>
+                  <button type="button" 
+                          class="btn btn-sm btn-medical-primary insert-sample-content"
+                          data-content="{{ sample_content.content }}"
+                          data-title="{{ sample_content.title }}">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Inserir
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="sample-content-preview">
+                    {{ sample_content.content|truncatewords:30|linebreaksbr }}
+                  </div>
+                  {% if sample_content.content|length > 150 %}
+                  <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-full-content">
+                      <i class="bi bi-chevron-down me-1"></i>
+                      Ver mais
+                    </button>
+                  </div>
+                  <div class="full-content d-none mt-2">
+                    <div class="border-top pt-2">
+                      {{ sample_content.content|linebreaksbr }}
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center text-muted py-4">
+            <i class="bi bi-file-earmark-x display-4 mb-3"></i>
+            <p class="mb-0">Nenhum template de anamnese e exame físico disponível.</p>
+            <small>Entre em contato com o administrador para adicionar templates.</small>
+          </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .sample-content-item {
+    transition: opacity 0.3s ease;
+  }
+  
+  .sample-content-item.d-none {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  
+  .sample-content-preview {
+    max-height: 100px;
+    overflow: hidden;
+    font-size: 0.9em;
+    color: #6c757d;
+  }
+  
+  .card-header .btn {
+    transition: all 0.2s ease;
+  }
+  
+  .card-header .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .modal-lg {
+    max-width: 800px;
+  }
+  
+  @media (max-width: 768px) {
+    .modal-lg {
+      max-width: 95%;
+      margin: 1rem auto;
+    }
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Search functionality
+  const searchInput = document.getElementById('sampleContentSearch');
+  const sampleItems = document.querySelectorAll('.sample-content-item');
+  
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase().trim();
+      
+      sampleItems.forEach(function(item) {
+        const title = item.dataset.title || '';
+        const content = item.dataset.content || '';
+        const matches = title.includes(searchTerm) || content.includes(searchTerm);
+        
+        if (matches || searchTerm === '') {
+          item.classList.remove('d-none');
+        } else {
+          item.classList.add('d-none');
+        }
+      });
+    });
+  }
+  
+  // Toggle full content functionality
+  document.querySelectorAll('.toggle-full-content').forEach(function(button) {
+    button.addEventListener('click', function() {
+      const card = this.closest('.card-body');
+      const fullContent = card.querySelector('.full-content');
+      const icon = this.querySelector('i');
+      
+      if (fullContent.classList.contains('d-none')) {
+        fullContent.classList.remove('d-none');
+        this.innerHTML = '<i class="bi bi-chevron-up me-1"></i>Ver menos';
+      } else {
+        fullContent.classList.add('d-none');
+        this.innerHTML = '<i class="bi bi-chevron-down me-1"></i>Ver mais';
+      }
+    });
+  });
+  
+  // Insert sample content functionality
+  document.querySelectorAll('.insert-sample-content').forEach(function(button) {
+    button.addEventListener('click', function() {
+      const content = this.dataset.content;
+      const title = this.dataset.title;
+      
+      // Call the insert function (will be defined in the main template)
+      if (typeof insertSampleContent === 'function') {
+        insertSampleContent(content, title);
+      }
+      
+      // Close the modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('sampleContentModal'));
+      if (modal) {
+        modal.hide();
+      }
+    });
+  });
+});
+</script>
