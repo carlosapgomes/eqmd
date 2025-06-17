@@ -71,6 +71,7 @@ module.exports = {
         {
           from: "assets/*.png",
           to: "[name][ext]",
+          noErrorOnMissing: true,
         },
       ],
     }),

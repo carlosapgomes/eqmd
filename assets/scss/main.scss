@@ -76,6 +76,30 @@ $alert-border-width: 1px;
   background-color: $medical-light-gray !important;
 }
 
+.bg-medical-success {
+  background-color: $medical-green !important;
+}
+
+.bg-medical-info {
+  background-color: $medical-teal !important;
+}
+
+.bg-medical-warning {
+  background-color: $medical-warning-orange !important;
+}
+
+.bg-medical-danger {
+  background-color: $medical-danger-red !important;
+}
+
+.bg-medical-secondary {
+  background-color: $medical-gray !important;
+}
+
+.bg-medical-dark {
+  background-color: $medical-dark-gray !important;
+}
+
 .text-medical-primary {
   color: $medical-deep-blue !important;
 }

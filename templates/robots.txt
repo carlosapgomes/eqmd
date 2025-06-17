@@ -1,0 +1,17 @@
+User-agent: *
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /accounts/
+Disallow: /profiles/
+Disallow: /hospitals/
+Disallow: /patients/
+Disallow: /events/
+Disallow: /dailynotes/
+Disallow: /historyandphysicals/
+Disallow: /sample-content/
+
+# Allow landing page and public resources
+Allow: /
+Allow: /static/
+
+
