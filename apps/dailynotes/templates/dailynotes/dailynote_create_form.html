@@ -1,7 +1,7 @@
 {% extends 'base_app.html' %}
 {% load static %}
 
-{% block title %}{% if form.instance.pk %}Editar{% else %}Nova{% endif %} Evolução - {{ patient.name }}{% endblock %}
+{% block title %}Nova Evolução - {{ patient.name }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/easymde.min.css' %}">
@@ -79,9 +79,6 @@
   </div>
 </div>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
 
 <!-- Form Card -->
 <div class="card shadow-sm">
@@ -227,9 +224,6 @@
   </div>
 </div>
 
-        </div>
-    </div>
-</div>
 
 <!-- Include Sample Content Modal -->
 {% include "dailynotes/partials/sample_content_modal.html" %}
@@ -245,7 +239,7 @@
     easyMDE = new EasyMDE({
       element: document.getElementById("id_content"),
       spellChecker: false,
-      placeholder: "Conteúdo da evolução...",
+      placeholder: "Digite o conteúdo da nova evolução...",
       hideIcons: ["link", "image", "side-by-side", "fullscreen"],
       status: false,
       toolbar: [
@@ -277,15 +271,6 @@
       form.classList.add('was-validated');
     });
     
-    // Auto-save functionality (optional)
-    let autoSaveTimeout;
-    easyMDE.codemirror.on("change", function() {
-      clearTimeout(autoSaveTimeout);
-      autoSaveTimeout = setTimeout(function() {
-        // Auto-save logic could be implemented here
-        console.log("Content changed - could auto-save here");
-      }, 2000);
-    });
   });
   
   // Sample content insertion function

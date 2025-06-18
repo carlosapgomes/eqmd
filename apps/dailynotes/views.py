@@ -429,7 +429,7 @@ class PatientDailyNoteCreateView(
 
     model = DailyNote
     form_class = DailyNoteForm
-    template_name = "dailynotes/patient_dailynote_form.html"
+    template_name = "dailynotes/dailynote_create_form.html"
     permission_required = "events.add_event"
 
     def dispatch(self, request, *args, **kwargs):
