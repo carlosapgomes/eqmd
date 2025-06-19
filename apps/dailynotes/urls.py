@@ -21,7 +21,6 @@ urlpatterns = [
         views.DailyNoteDuplicateView.as_view(),
         name="dailynote_duplicate",
     ),
-    # Patient-specific DailyNote URLs
     path(
         "patient/<uuid:patient_pk>/create/",
         views.PatientDailyNoteCreateView.as_view(),

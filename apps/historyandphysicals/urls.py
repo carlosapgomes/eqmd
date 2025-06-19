@@ -5,8 +5,11 @@ app_name = "apps.historyandphysicals"
 
 urlpatterns = [
     # HistoryAndPhysical CRUD URLs
-    # path("", views.HistoryAndPhysicalListView.as_view(), name="historyandphysical_list"),
-    path("<uuid:pk>/", views.HistoryAndPhysicalDetailView.as_view(), name="historyandphysical_detail"),
+    path(
+        "<uuid:pk>/",
+        views.HistoryAndPhysicalDetailView.as_view(),
+        name="historyandphysical_detail",
+    ),
     path(
         "<uuid:pk>/update/",
         views.HistoryAndPhysicalUpdateView.as_view(),
@@ -22,12 +25,6 @@ urlpatterns = [
         views.HistoryAndPhysicalDuplicateView.as_view(),
         name="historyandphysical_duplicate",
     ),
-    # Patient-specific HistoryAndPhysical URLs
-    # path(
-    #     "patient/<uuid:patient_pk>/",
-    #     views.PatientHistoryAndPhysicalListView.as_view(),
-    #     name="patient_historyandphysical_list",
-    # ),
     path(
         "patient/<uuid:patient_pk>/create/",
         views.PatientHistoryAndPhysicalCreateView.as_view(),
@@ -40,6 +37,9 @@ urlpatterns = [
     ),
     # Print URLs
     path(
-        "<uuid:pk>/print/", views.HistoryAndPhysicalPrintView.as_view(), name="historyandphysical_print"
+        "<uuid:pk>/print/",
+        views.HistoryAndPhysicalPrintView.as_view(),
+        name="historyandphysical_print",
     ),
 ]
+
