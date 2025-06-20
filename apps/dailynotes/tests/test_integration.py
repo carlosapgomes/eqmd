@@ -1,6 +1,6 @@
 """
 Integration tests for DailyNote Slice 5 features.
-Tests patient integration, search/filtering, dashboard widgets, and export/print features.
+Tests patient integration, search/filtering, dashboard widgets, and print features.
 """
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -309,24 +309,9 @@ class ExportPrintTests(DailyNoteIntegrationTestCase):
         self.assertContains(response, self.dailynote1.content)
         self.assertContains(response, "EVOLUÇÃO MÉDICA")
     
-    def test_patient_dailynote_export_view(self):
-        """Test patient daily notes export view."""
-        self.client.login(username="doctor", password="testpass123")
-        
-        url = reverse('dailynotes:patient_dailynote_export', kwargs={'patient_pk': self.patient1.pk})
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.patient1.name)
-        self.assertContains(response, "RELATÓRIO DE EVOLUÇÕES MÉDICAS")
-        # Should contain both notes for patient1
-        self.assertContains(response, "First evolution")
-        self.assertContains(response, "Follow-up evolution")
-        # Should not contain notes from other patients
-        self.assertNotContains(response, "Second evolution")
     
-    def test_export_print_permissions(self):
-        """Test that export/print respects patient access permissions."""
+    def test_print_permissions(self):
+        """Test that print respects patient access permissions."""
         # Create patient in different hospital
         other_hospital = Hospital.objects.create(
             name="Other Hospital",
@@ -357,11 +342,6 @@ class ExportPrintTests(DailyNoteIntegrationTestCase):
         url = reverse('dailynotes:dailynote_print', kwargs={'pk': other_dailynote.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        
-        # Should not be able to export notes for patient from different hospital
-        url = reverse('dailynotes:patient_dailynote_export', kwargs={'patient_pk': other_patient.pk})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
 
 
 class TemplateIntegrationTests(DailyNoteIntegrationTestCase):
@@ -382,17 +362,6 @@ class TemplateIntegrationTests(DailyNoteIntegrationTestCase):
         self.assertContains(response, 'name="patient"')
         self.assertContains(response, 'Filtros Avançados')
     
-    def test_patient_dailynote_list_has_export_button(self):
-        """Test that patient daily note list includes export button."""
-        self.client.login(username="doctor", password="testpass123")
-        
-        url = reverse('dailynotes:patient_dailynote_list', kwargs={'patient_pk': self.patient1.pk})
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Exportar')
-        export_url = reverse('dailynotes:patient_dailynote_export', kwargs={'patient_pk': self.patient1.pk})
-        self.assertContains(response, export_url)
     
     def test_dailynote_detail_has_print_button(self):
         """Test that daily note detail view includes print button."""

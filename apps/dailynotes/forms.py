@@ -5,7 +5,6 @@ from crispy_forms.layout import Layout, Fieldset, Field, Submit, Row, Column, HT
 from crispy_forms.bootstrap import FormActions
 
 from .models import DailyNote
-from apps.patients.models import Patient
 from apps.core.permissions import can_access_patient
 from apps.events.models import Event
 

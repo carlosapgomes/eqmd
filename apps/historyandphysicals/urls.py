@@ -28,12 +28,7 @@ urlpatterns = [
     path(
         "patient/<uuid:patient_pk>/create/",
         views.PatientHistoryAndPhysicalCreateView.as_view(),
-        name="patient_historyandphysical_create",
-    ),
-    path(
-        "patient/<uuid:patient_pk>/export/",
-        views.PatientHistoryAndPhysicalExportView.as_view(),
-        name="patient_historyandphysical_export",
+        name="historyandphysical_create",
     ),
     # Print URLs
     path(

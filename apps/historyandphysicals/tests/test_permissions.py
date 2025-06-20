@@ -171,7 +171,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
         # Doctor should be able to create
         client.login(username='doctor', password='testpass123')
         
-        url = reverse('apps.historyandphysicals:patient_historyandphysical_create',
+        url = reverse('apps.historyandphysicals:historyandphysical_create',
                      kwargs={'patient_pk': self.inpatient.pk})
         
         form_data = {
@@ -271,21 +271,3 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
         response = client.get(url)
         self.assertIn(response.status_code, [403, 302])
 
-    def test_export_permissions(self):
-        """Test export permissions for patient history and physicals."""
-        client = Client()
-        
-        # Doctor should be able to export
-        client.login(username='doctor', password='testpass123')
-        
-        url = reverse('apps.historyandphysicals:patient_historyandphysical_export',
-                     kwargs={'patient_pk': self.inpatient.pk})
-        
-        response = client.get(url)
-        self.assertEqual(response.status_code, 200)
-        
-        # Student should not be able to export inpatient's history and physicals
-        client.login(username='student', password='testpass123')
-        
-        response = client.get(url)
-        self.assertIn(response.status_code, [403, 302])

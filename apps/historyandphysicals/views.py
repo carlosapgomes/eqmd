@@ -230,7 +230,7 @@ class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, 
 
     model = HistoryAndPhysical
     form_class = HistoryAndPhysicalForm
-    template_name = "historyandphysicals/historyandphysical_form.html"
+    template_name = "historyandphysicals/historyandphysical_update_form.html"
     permission_required = "events.change_event"
 
     def get_object(self, queryset=None):
@@ -351,7 +351,7 @@ class PatientHistoryAndPhysicalCreateView(
 
     model = HistoryAndPhysical
     form_class = HistoryAndPhysicalForm
-    template_name = "historyandphysicals/patient_historyandphysical_form.html"
+    template_name = "historyandphysicals/historyandphysical_create_form.html"
     permission_required = "events.add_event"
 
     def dispatch(self, request, *args, **kwargs):
@@ -493,41 +493,3 @@ class HistoryAndPhysicalPrintView(LoginRequiredMixin, DetailView):
         return HistoryAndPhysical.objects.select_related("patient", "created_by", "updated_by")
 
 
-@method_decorator(hospital_context_required, name="dispatch")
-class PatientHistoryAndPhysicalExportView(LoginRequiredMixin, ListView):
-    """
-    Export view for all history and physicals of a specific patient - print-friendly format.
-    """
-
-    model = HistoryAndPhysical
-    template_name = "historyandphysicals/patient_historyandphysical_export.html"
-    context_object_name = "historyandphysicals"
-
-    def dispatch(self, request, *args, **kwargs):
-        """Get patient and check permissions before processing request."""
-        self.patient = get_object_or_404(Patient, pk=kwargs["patient_pk"])
-
-        # Check if user can access this patient
-        if not can_access_patient(request.user, self.patient):
-            from django.core.exceptions import PermissionDenied
-
-            raise PermissionDenied(
-                "You don't have permission to access this patient's history and physicals"
-            )
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_queryset(self):
-        """Get all history and physicals for the patient, ordered by date."""
-        return (
-            HistoryAndPhysical.objects.filter(patient=self.patient)
-            .select_related("created_by", "updated_by")
-            .order_by("event_datetime")
-        )
-
-    def get_context_data(self, **kwargs):
-        """Add patient context."""
-        context = super().get_context_data(**kwargs)
-        context["patient"] = self.patient
-        context["export_date"] = timezone.now()
-        return context

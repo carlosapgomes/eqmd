@@ -1,18 +1,10 @@
-{% extends "base_app.html" %}
+{% extends 'base_app.html' %}
 {% load static %}
-{% load crispy_forms_tags %}
 
-{% block title %}
-  {% if form.instance.pk %}
-    Editar Anamnese e Exame Físico - {{ form.instance.patient.name }}
-  {% else %}
-    Nova Anamnese e Exame Físico
-  {% endif %}
-{% endblock %}
+{% block title %}Nova Anamnese e Exame Físico - {{ patient.name }}{% endblock %}
 
 {% block extra_css %}
-<!-- EasyMDE CSS -->
-<link rel="stylesheet" href="{% static 'css/easymde.min.css' %}" />
+<link rel="stylesheet" href="{% static 'css/easymde.min.css' %}">
 <style>
   .form-section {
     background: #f8f9fa;
@@ -65,51 +57,27 @@
         Pacientes
       </a>
     </li>
-    {% if form.instance.pk %}
     <li class="breadcrumb-item">
-      <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}">
-        {{ form.instance.patient.name }} - Timeline
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}">
+        {{ patient.name }} - Timeline
       </a>
     </li>
-    <li class="breadcrumb-item">
-      <a href="{% url 'historyandphysicals:historyandphysical_detail' pk=form.instance.pk %}">
-        Anamnese e Exame Físico
-      </a>
+    <li class="breadcrumb-item active" aria-current="page">
+      Nova Anamnese e Exame Físico
     </li>
-    <li class="breadcrumb-item active" aria-current="page">Editar</li>
-    {% else %}
-    <li class="breadcrumb-item active" aria-current="page">Nova Anamnese e Exame Físico</li>
-    {% endif %}
   </ol>
 </nav>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">
     <i class="bi bi-clipboard-pulse text-medical-primary me-2"></i>
-    {% if form.instance.pk %}
-      Editar Anamnese e Exame Físico
-    {% else %}
-      Nova Anamnese e Exame Físico
-    {% endif %}
+    Nova Anamnese e Exame Físico
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
-    {% if form.instance.pk %}
-    <a href="{% url 'historyandphysicals:historyandphysical_detail' pk=form.instance.pk %}" class="btn btn-outline-secondary me-2">
-      <i class="bi bi-eye me-1"></i>
-      Ver Detalhes
-    </a>
-    {% endif %}
-    {% if form.instance.pk %}
-    <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary">
+    <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>
       Voltar
     </a>
-    {% else %}
-    <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
-      <i class="bi bi-arrow-left me-1"></i>
-      Voltar
-    </button>
-    {% endif %}
   </div>
 </div>
 
@@ -118,11 +86,7 @@
   <div class="card-header bg-medical-light">
     <h5 class="card-title mb-0">
       <i class="bi bi-file-text me-2"></i>
-      {% if form.instance.pk %}
-        Editar Informações da Anamnese e Exame Físico
-      {% else %}
-        Informações da Nova Anamnese e Exame Físico
-      {% endif %}
+      Nova Anamnese e Exame Físico
     </h5>
   </div>
   <div class="card-body">
@@ -141,6 +105,9 @@
 
     <form method="post" class="needs-validation" novalidate>
       {% csrf_token %}
+      
+      <!-- Patient is hidden and pre-filled -->
+      <input type="hidden" name="patient" value="{{ patient.pk }}">
       
       <!-- Basic Information Section -->
       <div class="form-section">
@@ -214,32 +181,13 @@
         <div>
           <button type="submit" class="btn btn-medical-primary">
             <i class="bi bi-check-circle me-1"></i>
-            {% if form.instance.pk %}
-              Atualizar Anamnese e Exame Físico
-            {% else %}
-              Salvar Anamnese e Exame Físico
-            {% endif %}
+            Salvar Anamnese e Exame Físico
           </button>
-          {% if form.instance.pk %}
-          <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary ms-2">
+          <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary ms-2">
             <i class="bi bi-x-circle me-1"></i>
             Cancelar
           </a>
-          {% else %}
-          <button type="button" class="btn btn-outline-secondary ms-2" onclick="window.history.back()">
-            <i class="bi bi-x-circle me-1"></i>
-            Cancelar
-          </button>
-          {% endif %}
         </div>
-        {% if form.instance.pk %}
-        <div>
-          <a href="{% url 'historyandphysicals:historyandphysical_delete' pk=form.instance.pk %}" class="btn btn-outline-danger">
-            <i class="bi bi-trash me-1"></i>
-            Excluir
-          </a>
-        </div>
-        {% endif %}
       </div>
     </form>
   </div>
@@ -283,7 +231,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<!-- EasyMDE JavaScript -->
 <script src="{% static 'js/easymde.min.js' %}"></script>
 <script>
   let easyMDE;
@@ -313,7 +260,7 @@
         table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text      | Text     |\n\n"],
       },
     });
-    
+ 
     // Form validation
     const form = document.querySelector('.needs-validation');
     form.addEventListener('submit', function(event) {

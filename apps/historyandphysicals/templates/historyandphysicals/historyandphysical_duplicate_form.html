@@ -92,10 +92,6 @@
   </div>
 </div>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-
 <!-- Source Information -->
 <div class="source-info">
   <h6>
@@ -208,7 +204,8 @@
           {% endif %}
           <div class="form-text">
             <i class="bi bi-lightbulb me-1"></i>
-            Conteúdo copiado da anamnese e exame físico original. Você pode editar conforme necessário.
+            Conteúdo copiado da anamnese original de {{ source_historyandphysical.event_datetime|date:"d/m/Y H:i" }}.
+            Edite o conteúdo conforme necessário antes de salvar.
           </div>
         </div>
       </div>
@@ -262,10 +259,6 @@
   </div>
 </div>
 
-        </div>
-    </div>
-</div>
-
 <!-- Include Sample Content Modal -->
 {% include "historyandphysicals/partials/sample_content_modal.html" %}
 
@@ -279,7 +272,7 @@
     easyMDE = new EasyMDE({
       element: document.getElementById("id_content"),
       spellChecker: false,
-      placeholder: "Conteúdo da anamnese e exame físico duplicado...",
+      placeholder: "Conteúdo copiado da anamnese original - edite conforme necessário...",
       hideIcons: ["link", "image", "side-by-side", "fullscreen"],
       status: false,
       toolbar: [
@@ -300,7 +293,6 @@
         table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text      | Text     |\n\n"],
       },
     });
- // });
   
   // Form validation
   const form = document.querySelector('.needs-validation');

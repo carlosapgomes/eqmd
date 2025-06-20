@@ -1,10 +1,14 @@
-{% extends 'base_app.html' %}
+{% extends "base_app.html" %}
 {% load static %}
+{% load crispy_forms_tags %}
 
-{% block title %}{% if form.instance.pk %}Editar{% else %}Nova{% endif %} Anamnese e Exame Físico - {{ patient.name }}{% endblock %}
+{% block title %}
+  Editar Anamnese e Exame Físico - {{ form.instance.patient.name }}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/easymde.min.css' %}">
+<!-- EasyMDE CSS -->
+<link rel="stylesheet" href="{% static 'css/easymde.min.css' %}" />
 <style>
   .form-section {
     background: #f8f9fa;
@@ -58,39 +62,42 @@
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}">
-        {{ patient.name }} - Timeline
+      <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}">
+        {{ form.instance.patient.name }} - Timeline
       </a>
     </li>
-    <li class="breadcrumb-item active" aria-current="page">
-      {% if form.instance.pk %}Editar{% else %}Nova{% endif %} Anamnese e Exame Físico
+    <li class="breadcrumb-item">
+      <a href="{% url 'historyandphysicals:historyandphysical_detail' pk=form.instance.pk %}">
+        Anamnese e Exame Físico
+      </a>
     </li>
+    <li class="breadcrumb-item active" aria-current="page">Editar</li>
   </ol>
 </nav>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">
     <i class="bi bi-clipboard-pulse text-medical-primary me-2"></i>
-    {% if form.instance.pk %}Editar{% else %}Nova{% endif %} Anamnese e Exame Físico
+    Editar Anamnese e Exame Físico
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
-    <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
+    <a href="{% url 'historyandphysicals:historyandphysical_detail' pk=form.instance.pk %}" class="btn btn-outline-secondary me-2">
+      <i class="bi bi-eye me-1"></i>
+      Ver Detalhes
+    </a>
+    <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>
       Voltar
     </a>
   </div>
 </div>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-
 <!-- Form Card -->
 <div class="card shadow-sm">
   <div class="card-header bg-medical-light">
     <h5 class="card-title mb-0">
       <i class="bi bi-file-text me-2"></i>
-      {% if form.instance.pk %}Editar{% else %}Nova{% endif %} Anamnese e Exame Físico
+      Editar Informações da Anamnese e Exame Físico
     </h5>
   </div>
   <div class="card-body">
@@ -109,9 +116,6 @@
 
     <form method="post" class="needs-validation" novalidate>
       {% csrf_token %}
-      
-      <!-- Patient is hidden and pre-filled -->
-      <input type="hidden" name="patient" value="{{ patient.pk }}">
       
       <!-- Basic Information Section -->
       <div class="form-section">
@@ -185,11 +189,17 @@
         <div>
           <button type="submit" class="btn btn-medical-primary">
             <i class="bi bi-check-circle me-1"></i>
-            Salvar Anamnese e Exame Físico
+            Atualizar Anamnese e Exame Físico
           </button>
-          <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary ms-2">
+          <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary ms-2">
             <i class="bi bi-x-circle me-1"></i>
             Cancelar
+          </a>
+        </div>
+        <div>
+          <a href="{% url 'historyandphysicals:historyandphysical_delete' pk=form.instance.pk %}" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>
+            Excluir
           </a>
         </div>
       </div>
@@ -229,16 +239,13 @@
   </div>
 </div>
 
-        </div>
-    </div>
-</div>
-
 <!-- Include Sample Content Modal -->
 {% include "historyandphysicals/partials/sample_content_modal.html" %}
 
 {% endblock %}
 
 {% block extra_scripts %}
+<!-- EasyMDE JavaScript -->
 <script src="{% static 'js/easymde.min.js' %}"></script>
 <script>
   let easyMDE;
@@ -268,7 +275,7 @@
         table: ["", "\n\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Text     | Text      | Text     |\n\n"],
       },
     });
- 
+    
     // Form validation
     const form = document.querySelector('.needs-validation');
     form.addEventListener('submit', function(event) {

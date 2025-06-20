@@ -66,7 +66,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
 
     def test_patient_historyandphysical_create_view(self):
         """Test creating a new history and physical for a patient."""
-        url = reverse('apps.historyandphysicals:patient_historyandphysical_create',
+        url = reverse('apps.historyandphysicals:historyandphysical_create',
                      kwargs={'patient_pk': self.patient.pk})
         
         # GET request to display form
@@ -182,27 +182,6 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
         self.assertContains(response, self.historyandphysical.content)
         self.assertContains(response, self.patient.name)
 
-    def test_patient_historyandphysical_export_view(self):
-        """Test exporting all history and physicals for a patient."""
-        # Create another history and physical for the same patient
-        HistoryAndPhysical.objects.create(
-            event_datetime=timezone.now(),
-            description='Second History and Physical',
-            content='This is a second history and physical.',
-            patient=self.patient,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        url = reverse('apps.historyandphysicals:patient_historyandphysical_export',
-                     kwargs={'patient_pk': self.patient.pk})
-        
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.patient.name)
-        self.assertContains(response, 'Test History and Physical')
-        self.assertContains(response, 'Second History and Physical')
 
     def test_historyandphysical_access_permissions(self):
         """Test that users can only access history and physicals they have permission for."""
