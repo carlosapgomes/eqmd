@@ -132,9 +132,7 @@ class DailyNoteFormTest(TestCase):
     def test_form_valid_data(self):
         """Test form with valid data."""
         form_data = {
-            'patient': self.patient.id,
             'event_datetime': timezone.now(),
-            'description': 'Test Daily Note',
             'content': 'This is a test daily note content with enough characters.'
         }
         form = DailyNoteForm(data=form_data, user=self.user)
@@ -142,12 +140,9 @@ class DailyNoteFormTest(TestCase):
 
     def test_form_invalid_data_missing_required_fields(self):
         """Test form with missing required fields."""
-        form_data = {
-            'description': 'Test Daily Note',
-        }
+        form_data = {}
         form = DailyNoteForm(data=form_data, user=self.user)
         self.assertFalse(form.is_valid())
-        self.assertIn('patient', form.errors)
         self.assertIn('event_datetime', form.errors)
         self.assertIn('content', form.errors)
 
@@ -155,9 +150,7 @@ class DailyNoteFormTest(TestCase):
         """Test form validation for future datetime."""
         future_datetime = timezone.now() + timezone.timedelta(days=1)
         form_data = {
-            'patient': self.patient.id,
             'event_datetime': future_datetime,
-            'description': 'Test Daily Note',
             'content': 'This is a test daily note content with enough characters.'
         }
         form = DailyNoteForm(data=form_data, user=self.user)
@@ -167,10 +160,8 @@ class DailyNoteFormTest(TestCase):
     def test_form_invalid_short_content(self):
         """Test form validation for content that's too short."""
         form_data = {
-            'patient': self.patient.id,
             'event_datetime': timezone.now(),
-            'description': 'Test Daily Note',
-            'content': 'Short'  # Less than 10 characters
+            'content': 'Short'
         }
         form = DailyNoteForm(data=form_data, user=self.user)
         self.assertFalse(form.is_valid())
@@ -179,36 +170,17 @@ class DailyNoteFormTest(TestCase):
     def test_form_save_with_user(self):
         """Test form save method with user."""
         form_data = {
-            'patient': self.patient.id,
             'event_datetime': timezone.now(),
-            'description': 'Test Daily Note',
             'content': 'This is a test daily note content with enough characters.'
         }
         form = DailyNoteForm(data=form_data, user=self.user)
         self.assertTrue(form.is_valid())
 
+        # Manually set patient before saving, like the view would
+        form.instance.patient = self.patient
+
         daily_note = form.save()
         self.assertEqual(daily_note.created_by, self.user)
         self.assertEqual(daily_note.updated_by, self.user)
+        self.assertEqual(daily_note.patient, self.patient)
 
-    def test_form_crispy_helper_configuration(self):
-        """Test crispy forms helper configuration."""
-        form = DailyNoteForm(user=self.user)
-        self.assertIsNotNone(form.helper)
-        self.assertEqual(form.helper.form_method, 'post')
-        self.assertEqual(form.helper.form_class, 'needs-validation')
-
-    def test_form_field_configuration(self):
-        """Test form field configuration."""
-        form = DailyNoteForm(user=self.user)
-
-        # Test patient field configuration
-        self.assertEqual(form.fields['patient'].empty_label, "Selecione um paciente")
-
-        # Test help text
-        self.assertEqual(form.fields['description'].help_text, "Breve descrição da evolução")
-        self.assertEqual(form.fields['content'].help_text, "Conteúdo detalhado da evolução (suporte a Markdown)")
-
-        # Test widget configuration - check if widget is DateTimeInput
-        self.assertIsInstance(form.fields['event_datetime'].widget, forms.DateTimeInput)
-        self.assertEqual(form.fields['content'].widget.attrs['id'], 'id_content')

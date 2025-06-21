@@ -24,6 +24,6 @@
 
 ## HisptoryAndPhysicals
 
-- [] cleanup historyandphysicals app templates the same way as dailynotes app
+- [x] cleanup historyandphysicals app templates the same way as dailynotes app
 
 ## Patients

@@ -1,8 +1,5 @@
 from django import forms
 from django.utils import timezone
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Field, Submit, Row, Column, HTML
-from crispy_forms.bootstrap import FormActions
 
 from .models import DailyNote
 from apps.core.permissions import can_access_patient
@@ -63,37 +60,7 @@ class DailyNoteForm(forms.ModelForm):
         self.fields[
             "content"
         ].help_text = "Conteúdo detalhado da evolução (suporte a Markdown)"
-        self.fields["content"].required = False
 
-        # Configure crispy forms
-        self.helper = FormHelper()
-        self.helper.form_method = "post"
-        self.helper.form_class = "needs-validation"
-        self.helper.attrs = {"novalidate": ""}
-
-        self.helper.layout = Layout(
-            Fieldset(
-                "Informações da Evolução",
-                Row(
-                    Column("event_datetime", css_class="col-md-6"),
-                ),
-            ),
-            Fieldset(
-                "Conteúdo",
-                Field("content", css_class="form-control"),
-                HTML("""
-                    <small class="form-text text-muted">
-                        Use Markdown para formatação. O editor oferece uma prévia em tempo real.
-                    </small>
-                """),
-            ),
-            FormActions(
-                Submit("submit", "Salvar Evolução", css_class="btn btn-primary"),
-                HTML(
-                    '<button type="button" class="btn btn-secondary ms-2" onclick="window.history.back()">Cancelar</button>'
-                ),
-            ),
-        )
 
     def clean_event_datetime(self):
         """Validate that event_datetime is not in the future."""
@@ -104,15 +71,6 @@ class DailyNoteForm(forms.ModelForm):
             )
         return event_datetime
 
-    def clean_patient(self):
-        """Validate that user can access the selected patient."""
-        patient = self.cleaned_data.get("patient")
-        if patient and self.user:
-            if not can_access_patient(self.user, patient):
-                raise forms.ValidationError(
-                    "Você não tem permissão para criar evoluções para este paciente."
-                )
-        return patient
 
     def clean_content(self):
         """Validate content field."""
