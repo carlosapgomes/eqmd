@@ -2,7 +2,8 @@
 
 ## General
 
-- [] review use of crispy forms, consider removing it from some apps
+- [x] review use of crispy forms, consider removing it from some apps
+- [x] complete remove crispy forms from the project and update all documentation
 - [] add simplenotes app
 - [] brainstorm the best strategy to implement photos/photos series/video clips
 - [] add examsresults app

@@ -47,7 +47,7 @@ python manage.py create_sample_content
 
 ### Key Features
 - **Authentication**: django-allauth with email-based login
-- **Frontend**: Bootstrap 5.3, Webpack, Portuguese localization, Crispy Forms
+- **Frontend**: Bootstrap 5.3, Webpack, Portuguese localization
 - **Security**: UUID identifiers, CSRF protection, role-based permissions
 - **Testing**: pytest + Django test runner, factory-boy, comprehensive coverage
 

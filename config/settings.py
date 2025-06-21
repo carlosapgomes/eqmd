@@ -60,8 +60,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
-    "crispy_forms",
-    "crispy_bootstrap5",
     "taggit",
     "apps.core",  # New app for core/pages functionality
     "apps.accounts.apps.AccountsConfig",  # New accounts app
@@ -242,8 +240,3 @@ ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory"
 LOGIN_REDIRECT_URL = "core:dashboard"
 # LOGOUT_REDIRECT_URL = 'core:landing_page' # Optional: can be added later
 
-# Crispy Forms Configuration
-# https://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs
-# https://github.com/django-crispy-forms/crispy-bootstrap5
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"

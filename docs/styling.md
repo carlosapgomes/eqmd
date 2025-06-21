@@ -88,43 +88,18 @@ All headings use `$medical-dark-gray` for consistency and readability.
 
 ## Forms
 
-### Form Libraries
+### Form Styling Approach
 
-- **Recommended**: Use django-crispy-forms with crispy-bootstrap5 for form rendering
-- **Benefits**: Consistent styling, reduced boilerplate, better maintainability
-- **Implementation**: Configure in settings.py with `CRISPY_TEMPLATE_PACK = "bootstrap5"`
+EquipeMed uses **manual Bootstrap form rendering** for complete control over styling and layout. This approach provides:
 
-#### Using Crispy Forms
-
-```html
-{% load crispy_forms_tags %}
-
-<form method="post">
-  {% csrf_token %} 
-  {{ form|crispy }}
-  <button type="submit" class="btn btn-medical-primary">Submit</button>
-</form>
-```
-
-#### For Complex Forms
-
-```html
-{% load crispy_forms_tags %}
-
-<form method="post">
-  {% csrf_token %}
-  <div class="row">
-    <div class="col-md-6">{{ form.first_name|as_crispy_field }}</div>
-    <div class="col-md-6">{{ form.last_name|as_crispy_field }}</div>
-  </div>
-  {{ form.email|as_crispy_field }}
-  <button type="submit" class="btn btn-medical-primary">Submit</button>
-</form>
-```
+- **Full customization**: Complete control over form structure and appearance
+- **No dependencies**: No additional form libraries required
+- **Consistent styling**: Medical-themed form components with custom styling
+- **Performance**: Reduced JavaScript and CSS overhead
 
 #### Medical Form Class
 
-Use `.form-medical` wrapper for consistent form styling when not using crispy forms:
+Use `.form-medical` wrapper for consistent form styling:
 
 ```html
 <form class="form-medical">
