@@ -1,0 +1,320 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Notas Simples{% endblock %}
+
+{% block app_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-journal-medical text-medical-primary me-2"></i>
+    Notas Simples
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    {% if perms.events.add_event %}
+    <a href="{% url 'simplenotes:simplenote_create' %}" class="btn btn-medical-primary">
+      <i class="bi bi-plus-circle me-1"></i>
+      Nova Nota
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Search and Filter Section -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-search me-2"></i>
+      Buscar e Filtrar
+    </h5>
+  </div>
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-4">
+        <label for="search" class="form-label">Buscar</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="search" 
+          name="search" 
+          value="{{ search_query }}"
+          placeholder="Buscar por descrição, conteúdo ou paciente..."
+        >
+      </div>
+      <div class="col-md-3">
+        <label for="patient" class="form-label">Paciente</label>
+        <select class="form-select" id="patient" name="patient">
+          <option value="">Todos os pacientes</option>
+          {% for patient in available_patients %}
+          <option value="{{ patient.pk }}" {% if selected_patient == patient.pk|stringformat:"s" %}selected{% endif %}>
+            {{ patient.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="date_from" class="form-label">Data inicial</label>
+        <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+      </div>
+      <div class="col-md-2">
+        <label for="date_to" class="form-label">Data final</label>
+        <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+      </div>
+      <div class="col-md-1 d-flex align-items-end">
+        <button type="submit" class="btn btn-medical-teal me-1">
+          <i class="bi bi-search"></i>
+        </button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()">
+          <i class="bi bi-x-circle"></i>
+        </button>
+      </div>
+    </form>
+    
+    <!-- Advanced Filters Toggle -->
+    <div class="mt-3">
+      <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+        <i class="bi bi-funnel"></i> Filtros Avançados
+      </button>
+    </div>
+    
+    <!-- Advanced Filters Collapse -->
+    <div class="collapse mt-3" id="advancedFilters">
+      <form method="get" class="row g-3 border-top pt-3">
+        <input type="hidden" name="search" value="{{ search_query }}">
+        <input type="hidden" name="patient" value="{{ selected_patient }}">
+        <input type="hidden" name="date_from" value="{{ date_from }}">
+        <input type="hidden" name="date_to" value="{{ date_to }}">
+        
+        <div class="col-md-4">
+          <label for="creator" class="form-label">Criado por</label>
+          <select class="form-select" id="creator" name="creator">
+            <option value="">Todos os profissionais</option>
+            {% for creator in available_creators %}
+            <option value="{{ creator.pk }}" {% if selected_creator == creator.pk|stringformat:"s" %}selected{% endif %}>
+              {{ creator.get_full_name|default:creator.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-medical-teal">
+            <i class="bi bi-funnel"></i> Aplicar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Results Section -->
+<div class="card shadow-sm">
+  <div class="card-header bg-light d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-list-ul me-2"></i>
+      Lista de Notas
+    </h5>
+    <small class="text-muted">
+      {% if simplenote_list %}
+        {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ page_obj.paginator.count }} registros
+      {% endif %}
+    </small>
+  </div>
+  <div class="card-body p-0">
+    {% if simplenote_list %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">
+              <i class="bi bi-person me-1"></i>
+              Paciente
+            </th>
+            <th scope="col">
+              <i class="bi bi-calendar-event me-1"></i>
+              Data/Hora
+            </th>
+            <th scope="col">
+              <i class="bi bi-file-text me-1"></i>
+              Descrição
+            </th>
+            <th scope="col">
+              <i class="bi bi-person-badge me-1"></i>
+              Criado por
+            </th>
+            <th scope="col" class="text-center">
+              <i class="bi bi-gear me-1"></i>
+              Ações
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for simplenote in simplenote_list %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm bg-medical-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                  {{ simplenote.patient.name|first|upper }}
+                </div>
+                <div>
+                  <div class="fw-medium">{{ simplenote.patient.name }}</div>
+                  <small class="text-muted">ID: {{ simplenote.patient.id|slice:":8" }}...</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div>
+                <div class="fw-medium">{{ simplenote.event_datetime|date:"d/m/Y" }}</div>
+                <small class="text-muted">{{ simplenote.event_datetime|date:"H:i" }}</small>
+              </div>
+            </td>
+            <td>
+              <div class="text-truncate" style="max-width: 200px;" title="{{ simplenote.description }}">
+                {{ simplenote.description }}
+              </div>
+              {% if simplenote.content %}
+              <small class="text-muted">
+                <i class="bi bi-file-text me-1"></i>
+                {{ simplenote.content|truncatewords:5 }}...
+              </small>
+              {% endif %}
+            </td>
+            <td>
+              <div>
+                <div class="fw-medium">
+                  {{ simplenote.created_by.get_full_name|default:simplenote.created_by.username }}
+                </div>
+                <small class="text-muted">{{ simplenote.created_at|date:"d/m/Y H:i" }}</small>
+              </div>
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm" role="group">
+                <a
+                  href="{% url 'simplenotes:simplenote_detail' pk=simplenote.pk %}"
+                  class="btn btn-outline-primary"
+                  title="Ver detalhes"
+                >
+                  <i class="bi bi-eye"></i>
+                </a>
+                {% if perms.events.add_event %}
+                <a
+                  href="{% url 'simplenotes:simplenote_duplicate' pk=simplenote.pk %}"
+                  class="btn btn-outline-info"
+                  title="Duplicar nota"
+                >
+                  <i class="bi bi-files"></i>
+                </a>
+                {% endif %}
+                {% if perms.events.change_event and simplenote.can_edit %}
+                <a
+                  href="{% url 'simplenotes:simplenote_update' pk=simplenote.pk %}"
+                  class="btn btn-outline-secondary"
+                  title="Editar"
+                >
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+                {% if perms.events.delete_event and simplenote.can_delete %}
+                <a
+                  href="{% url 'simplenotes:simplenote_delete' pk=simplenote.pk %}"
+                  class="btn btn-outline-danger"
+                  title="Excluir"
+                >
+                  <i class="bi bi-trash"></i>
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <div class="mb-3">
+        <i class="bi bi-journal-x text-muted" style="font-size: 3rem;"></i>
+      </div>
+      <h5 class="text-muted">Nenhuma nota encontrada</h5>
+      <p class="text-muted mb-3">
+        {% if request.GET.search %}
+          Não foram encontradas notas com os critérios de busca informados.
+        {% else %}
+          Ainda não há notas cadastradas no sistema.
+        {% endif %}
+      </p>
+      {% if perms.events.add_event %}
+      <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-medical-primary">
+        <i class="bi bi-people me-1"></i>
+        Ver Pacientes
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Navegação das notas" class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.patient %}patient={{ request.GET.patient }}&{% endif %}page=1">
+        <i class="bi bi-chevron-double-left"></i>
+      </a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.patient %}patient={{ request.GET.patient }}&{% endif %}page={{ page_obj.previous_page_number }}">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <li class="page-item active">
+      <span class="page-link">{{ num }}</span>
+    </li>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <li class="page-item">
+      <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.patient %}patient={{ request.GET.patient }}&{% endif %}page={{ num }}">{{ num }}</a>
+    </li>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.patient %}patient={{ request.GET.patient }}&{% endif %}page={{ page_obj.next_page_number }}">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.patient %}patient={{ request.GET.patient }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+        <i class="bi bi-chevron-double-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  
+  .table td {
+    vertical-align: middle;
+  }
+  
+  .text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,291 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Excluir Nota Simples - {{ simplenote.patient.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .danger-zone {
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+  }
+  
+  .danger-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 2rem;
+  }
+  
+  .patient-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  .note-preview {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+</style>
+{% endblock %}
+
+{% block app_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'simplenotes:simplenote_detail' pk=simplenote.pk %}">
+        {{ simplenote.patient.name }} - {{ simplenote.event_datetime|date:"d/m/Y H:i" }}
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Excluir</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+    Confirmar Exclusão
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'simplenotes:simplenote_detail' pk=simplenote.pk %}" class="btn btn-outline-secondary me-2">
+      <i class="bi bi-eye me-1"></i>
+      Ver Detalhes
+    </a>
+    <a href="{% url 'patients:patient_events_timeline' patient_id=simplenote.patient.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Timeline do Paciente
+    </a>
+  </div>
+</div>
+
+<!-- Warning Section -->
+<div class="danger-zone mb-4">
+  <div class="row align-items-center">
+    <div class="col-auto">
+      <div class="danger-icon bg-danger text-white rounded-circle d-flex align-items-center justify-content-center">
+        <i class="bi bi-exclamation-triangle"></i>
+      </div>
+    </div>
+    <div class="col">
+      <h4 class="text-danger mb-2">Atenção: Ação Irreversível</h4>
+      <p class="mb-0">
+        Você está prestes a excluir permanentemente esta nota. 
+        <strong>Esta ação não pode ser desfeita</strong> e todos os dados serão perdidos.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Note Details to be Deleted -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-file-text me-2"></i>
+      Nota que será excluída
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <!-- Patient Information -->
+      <div class="col-md-6">
+        <h6 class="text-muted mb-3">Informações do Paciente</h6>
+        <div class="d-flex align-items-center mb-3">
+          <div class="patient-avatar bg-medical-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+            {{ simplenote.patient.name|first|upper }}
+          </div>
+          <div>
+            <div class="fw-medium">{{ simplenote.patient.name }}</div>
+            <small class="text-muted">{{ simplenote.patient.birthday|date:"d/m/Y" }}</small>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Note Information -->
+      <div class="col-md-6">
+        <h6 class="text-muted mb-3">Informações da Nota</h6>
+        <dl class="row">
+          <dt class="col-sm-5">Data/Hora:</dt>
+          <dd class="col-sm-7">{{ simplenote.event_datetime|date:"d/m/Y H:i" }}</dd>
+          
+          <dt class="col-sm-5">Criado por:</dt>
+          <dd class="col-sm-7">
+            {{ simplenote.created_by.get_full_name|default:simplenote.created_by.username }}
+          </dd>
+          
+          <dt class="col-sm-5">Criado em:</dt>
+          <dd class="col-sm-7">{{ simplenote.created_at|date:"d/m/Y H:i" }}</dd>
+        </dl>
+      </div>
+    </div>
+    
+    <!-- Description -->
+    <div class="mt-3">
+      <h6 class="text-muted mb-2">Descrição</h6>
+      <p class="mb-3">{{ simplenote.description }}</p>
+    </div>
+    
+    <!-- Content Preview -->
+    {% if simplenote.content %}
+    <div class="mt-3">
+      <h6 class="text-muted mb-2">Prévia do Conteúdo</h6>
+      <div class="note-preview">
+        {{ simplenote.content|linebreaks|truncatewords:50 }}
+        {% if simplenote.content|wordcount > 50 %}
+        <div class="text-muted mt-2">
+          <small>
+            <i class="bi bi-three-dots"></i>
+            Conteúdo truncado. Total: {{ simplenote.content|wordcount }} palavras.
+          </small>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Confirmation Form -->
+<div class="card shadow-sm">
+  <div class="card-header bg-danger text-white">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-trash me-2"></i>
+      Confirmar Exclusão
+    </h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="alert alert-warning" role="alert">
+        <h6 class="alert-heading">
+          <i class="bi bi-info-circle me-2"></i>
+          Antes de continuar, confirme:
+        </h6>
+        <ul class="mb-0">
+          <li>Você tem certeza de que deseja excluir esta nota?</li>
+          <li>Você entende que esta ação é irreversível?</li>
+          <li>Você verificou se não há informações importantes que precisam ser preservadas?</li>
+        </ul>
+      </div>
+      
+      <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+        <label class="form-check-label" for="confirmDelete">
+          <strong>Sim, eu entendo que esta ação é irreversível e desejo excluir esta nota permanentemente.</strong>
+        </label>
+        <div class="invalid-feedback">
+          Você deve confirmar que entende as consequências desta ação.
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+            <i class="bi bi-trash me-1"></i>
+            Sim, Excluir Permanentemente
+          </button>
+        </div>
+        <div>
+          <a href="{% url 'simplenotes:simplenote_detail' pk=simplenote.pk %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+          <a href="{% url 'simplenotes:simplenote_update' pk=simplenote.pk %}" class="btn btn-medical-primary">
+            <i class="bi bi-pencil me-1"></i>
+            Editar ao invés de excluir
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Additional Information -->
+<div class="card shadow-sm mt-4">
+  <div class="card-header bg-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-info-circle me-2"></i>
+      Informações Importantes
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <h6>O que acontece quando você exclui:</h6>
+        <ul class="list-unstyled">
+          <li><i class="bi bi-x-circle text-danger me-2"></i>A nota é removida permanentemente</li>
+          <li><i class="bi bi-x-circle text-danger me-2"></i>Todo o conteúdo é perdido</li>
+          <li><i class="bi bi-x-circle text-danger me-2"></i>Não é possível recuperar os dados</li>
+          <li><i class="bi bi-x-circle text-danger me-2"></i>O histórico de edições é perdido</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h6>Alternativas à exclusão:</h6>
+        <ul class="list-unstyled">
+          <li><i class="bi bi-pencil text-primary me-2"></i>Editar o conteúdo existente</li>
+          <li><i class="bi bi-file-text text-info me-2"></i>Criar uma nova nota</li>
+          <li><i class="bi bi-archive text-warning me-2"></i>Arquivar para referência futura</li>
+          <li><i class="bi bi-chat-text text-success me-2"></i>Adicionar comentários explicativos</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteButton = document.getElementById('deleteButton');
+    
+    // Enable/disable delete button based on checkbox
+    confirmCheckbox.addEventListener('change', function() {
+      deleteButton.disabled = !this.checked;
+      
+      if (this.checked) {
+        deleteButton.classList.remove('btn-secondary');
+        deleteButton.classList.add('btn-danger');
+      } else {
+        deleteButton.classList.remove('btn-danger');
+        deleteButton.classList.add('btn-secondary');
+      }
+    });
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(event) {
+      if (!confirmCheckbox.checked) {
+        event.preventDefault();
+        event.stopPropagation();
+        confirmCheckbox.classList.add('is-invalid');
+      } else {
+        // Double confirmation
+        const confirmed = confirm(
+          'ÚLTIMA CONFIRMAÇÃO: Tem certeza absoluta de que deseja excluir esta nota? ' +
+          'Esta ação NÃO PODE ser desfeita.'
+        );
+        
+        if (!confirmed) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

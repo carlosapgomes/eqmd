@@ -1,0 +1,60 @@
+{% load permission_tags %}
+
+<div class="card card-medical h-100">
+  <div class="card-header bg-medical-light">
+    <div class="d-flex justify-content-between align-items-center">
+      <h6 class="card-title text-medical-primary mb-0">
+        <i class="bi bi-journal-medical me-2"></i>
+        Notas Recentes
+      </h6>
+      <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-sm btn-medical-outline-teal">Ver Pacientes</a>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if recent_simplenotes %}
+    <div class="list-group list-group-flush">
+      {% for simplenote in recent_simplenotes %}
+      <div class="list-group-item border-0 px-0">
+        <div class="d-flex align-items-start">
+          <div class="bg-medical-teal rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; flex-shrink: 0;">
+            <i class="bi bi-file-earmark-text text-white"></i>
+          </div>
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="d-flex justify-content-between align-items-start flex-wrap flex-sm-nowrap">
+              <div class="flex-grow-1 overflow-hidden me-2">
+                <h6 class="mb-1 text-medical-primary text-truncate">{{ simplenote.patient.name }}</h6>
+                <p class="mb-1 small text-truncate">{{ simplenote.description }}</p>
+                <small class="text-muted d-block text-truncate">
+                  por {{ simplenote.created_by.get_full_name|default:simplenote.created_by.username }}
+                </small>
+              </div>
+              <div class="text-end flex-shrink-0 mt-2 mt-sm-0">
+                <small class="text-muted d-block">{{ simplenote.created_at|timesince }} atrás</small>
+                <div class="mt-1">
+                  <a href="{% url 'simplenotes:simplenote_detail' pk=simplenote.pk %}" 
+                     class="btn btn-sm btn-outline-primary" 
+                     title="Ver nota">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-4">
+      <i class="bi bi-journal-x text-muted" style="font-size: 2rem;"></i>
+      <p class="text-muted mb-3 mt-2">Nenhuma nota recente</p>
+      {% if user|has_permission:"events.add_event" %}
+      <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-medical-teal btn-sm">
+        <i class="bi bi-plus-circle me-1"></i>
+        Lista de Pacientes
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>

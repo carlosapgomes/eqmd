@@ -1,0 +1,502 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Nota - {{ simplenote.patient.name }}{% endblock %}
+
+{% block extra_head %}
+<!-- Markdown rendering styles -->
+<style>
+  .markdown-content {
+    line-height: 1.6;
+  }
+  
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3,
+  .markdown-content h4,
+  .markdown-content h5,
+  .markdown-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  
+  .markdown-content p {
+    margin-bottom: 1rem;
+  }
+  
+  .markdown-content ul,
+  .markdown-content ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+  }
+  
+  .markdown-content blockquote {
+    border-left: 4px solid #dee2e6;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #6c757d;
+  }
+  
+  .markdown-content code {
+    background-color: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+  }
+  
+  .markdown-content pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+  }
+  
+  .patient-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+  
+  /* Mobile-first responsive improvements */
+  @media (max-width: 991.98px) {
+    /* Compact mobile buttons */
+    .mobile-action-buttons .btn {
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+    }
+    
+    /* Reduce card padding on mobile */
+    .card-body {
+      padding: 1rem 0.75rem;
+    }
+    
+    .card-header {
+      padding: 0.75rem;
+    }
+    
+    /* Compact patient info */
+    .patient-compact-info {
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    
+    /* Better content spacing */
+    .content-section {
+      margin-top: 1rem;
+    }
+  }
+  
+  @media (min-width: 992px) {
+    /* Desktop optimizations */
+    .desktop-layout {
+      display: flex;
+      gap: 1.5rem;
+    }
+    
+    .patient-sidebar {
+      flex: 0 0 420px;
+      max-width: 420px;
+    }
+    
+    .content-main {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    /* Compact sidebar styling */
+    .patient-sidebar .card-body {
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+    
+    .patient-sidebar .collapse .row {
+      font-size: 0.875rem;
+    }
+    
+    /* Improved button styling */
+    .patient-sidebar .btn[data-bs-toggle="collapse"] {
+      border: 1px solid #dee2e6;
+      transition: all 0.2s ease;
+    }
+    
+    .patient-sidebar .btn[data-bs-toggle="collapse"]:hover {
+      background-color: #f8f9fa;
+      border-color: #adb5bd;
+    }
+    
+    .patient-sidebar .btn[data-bs-toggle="collapse"][aria-expanded="true"] .bi-chevron-down {
+      transform: rotate(180deg);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block app_content %}
+<!-- Header with breadcrumb and actions -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=simplenote.patient.id %}">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline do Paciente
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      {{ simplenote.patient.name }} - {{ simplenote.event_datetime|date:"d/m/Y H:i" }}
+    </li>
+  </ol>
+</nav>
+
+<!-- Desktop Header with actions -->
+<div class="d-none d-lg-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-journal-medical text-medical-primary me-2"></i>
+    Nota Simples
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group me-2">
+      <a href="{% url 'simplenotes:simplenote_print' pk=simplenote.pk %}" 
+         class="btn btn-outline-primary btn-sm" 
+         target="_blank" 
+         title="Imprimir nota">
+        <i class="bi bi-printer me-1"></i>
+        Imprimir
+      </a>
+      <button type="button" 
+              class="btn btn-outline-secondary btn-sm copy-content-btn" 
+              title="Copiar conteúdo para área de transferência"
+              data-content="{{ simplenote.content|escape }}">
+        <i class="bi bi-clipboard me-1"></i>
+        Copiar
+      </button>
+    </div>
+    
+    {% if perms.events.change_event and can_edit_simplenote %}
+    <a href="{% url 'simplenotes:simplenote_update' pk=simplenote.pk %}" class="btn btn-medical-primary btn-sm me-2">
+      <i class="bi bi-pencil me-1"></i>
+      Editar
+    </a>
+    {% endif %}
+    {% if perms.events.add_event %}
+    <a href="{% url 'simplenotes:simplenote_duplicate' pk=simplenote.pk %}" class="btn btn-outline-primary btn-sm me-2" title="Duplicar nota">
+      <i class="bi bi-files me-1"></i>
+      Duplicar
+    </a>
+    {% endif %}
+    {% if perms.events.delete_event and can_delete_simplenote %}
+    <a href="{% url 'simplenotes:simplenote_delete' pk=simplenote.pk %}" class="btn btn-outline-danger btn-sm me-2">
+      <i class="bi bi-trash me-1"></i>
+      Excluir
+    </a>
+    {% endif %}
+    <a href="{% url 'apps.patients:patient_events_timeline' patient_id=simplenote.patient.id %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
+<!-- Mobile Header -->
+<div class="d-lg-none pt-3 pb-2 mb-3">
+  <h1 class="h3 mb-3">
+    <i class="bi bi-journal-medical text-medical-primary me-2"></i>
+    Nota Simples
+  </h1>
+  
+  <!-- Mobile Action Buttons - Horizontal layout -->
+  <div class="mobile-action-buttons">
+    <div class="btn-group-vertical btn-group-sm d-grid gap-1">
+      <div class="btn-group" role="group">
+        <button type="button" 
+                class="btn btn-outline-secondary copy-content-btn" 
+                title="Copiar conteúdo"
+                data-content="{{ simplenote.content|escape }}">
+          <i class="bi bi-clipboard me-1"></i>
+          Copiar
+        </button>
+        <a href="{% url 'simplenotes:simplenote_print' pk=simplenote.pk %}" 
+           class="btn btn-outline-primary" 
+           target="_blank" 
+           title="Imprimir">
+          <i class="bi bi-printer me-1"></i>
+          Imprimir
+        </a>
+      </div>
+      
+      {% if perms.events.change_event and can_edit_simplenote or perms.events.add_event %}
+      <div class="btn-group" role="group">
+        {% if perms.events.change_event and can_edit_simplenote %}
+        <a href="{% url 'simplenotes:simplenote_update' pk=simplenote.pk %}" class="btn btn-medical-primary">
+          <i class="bi bi-pencil me-1"></i>
+          Editar
+        </a>
+        {% endif %}
+        {% if perms.events.add_event %}
+        <a href="{% url 'simplenotes:simplenote_duplicate' pk=simplenote.pk %}" class="btn btn-outline-primary" title="Duplicar">
+          <i class="bi bi-files me-1"></i>
+          Duplicar
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+      
+      <div class="btn-group" role="group">
+        {% if perms.events.delete_event and can_delete_simplenote %}
+        <a href="{% url 'simplenotes:simplenote_delete' pk=simplenote.pk %}" class="btn btn-outline-danger">
+          <i class="bi bi-trash me-1"></i>
+          Excluir
+        </a>
+        {% endif %}
+        <a href="{% url 'apps.patients:patient_events_timeline' patient_id=simplenote.patient.id %}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>
+          Voltar
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile: Compact patient info -->
+<div class="d-lg-none mb-3">
+  <div class="card shadow-sm patient-compact-info">
+    <div class="card-body p-2">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="patient-avatar bg-medical-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px; font-size: 1rem;">
+            {{ simplenote.patient.name|first|upper }}
+          </div>
+          <div>
+            <h6 class="mb-0 fs-6">{{ simplenote.patient.name }}</h6>
+            <small class="text-muted">{{ simplenote.event_datetime|date:"d/m/Y H:i" }}</small>
+          </div>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#patientDetailsCollapse" aria-expanded="false" aria-controls="patientDetailsCollapse">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      
+      <div class="collapse mt-2" id="patientDetailsCollapse">
+        <hr class="my-2">
+        <div class="row g-2">
+          <div class="col-6">
+            <small class="text-muted">Nascimento:</small><br>
+            <span class="fw-medium">{{ simplenote.patient.birthday|date:"d/m/Y" }}</span>
+          </div>
+          {% if simplenote.patient.phone %}
+          <div class="col-6">
+            <small class="text-muted">Telefone:</small><br>
+            <span class="fw-medium">{{ simplenote.patient.phone }}</span>
+          </div>
+          {% endif %}
+          {% if simplenote.patient.id_number %}
+          <div class="col-6">
+            <small class="text-muted">RG:</small><br>
+            <span class="fw-medium">{{ simplenote.patient.id_number }}</span>
+          </div>
+          {% endif %}
+          <div class="col-12">
+            <small class="text-muted">Criado por:</small><br>
+            <span class="fw-medium">{{ simplenote.created_by.get_full_name|default:simplenote.created_by.username }}</span>
+            <small class="text-muted ms-2">{{ simplenote.created_at|date:"d/m/Y H:i" }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Desktop: Optimized two-column layout -->
+<div class="d-none d-lg-block desktop-layout">
+  <!-- Compact Patient Information Sidebar -->
+  <div class="patient-sidebar">
+    <div class="card shadow-sm">
+      <div class="card-body p-3">
+        <!-- Patient Info Header -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="d-flex align-items-center">
+            <div class="patient-avatar bg-medical-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
+              {{ simplenote.patient.name|first|upper }}
+            </div>
+            <div>
+              <h6 class="mb-0 fs-6">{{ simplenote.patient.name }}</h6>
+              <small class="text-muted">{{ simplenote.event_datetime|date:"d/m/Y H:i" }}</small>
+            </div>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm p-1" type="button" data-bs-toggle="collapse" data-bs-target="#desktopPatientDetails" aria-expanded="false" aria-controls="desktopPatientDetails" style="width: 28px; height: 28px;">
+            <i class="bi bi-chevron-down" style="font-size: 0.75rem;"></i>
+          </button>
+        </div>
+        
+        <!-- Collapsible Details -->
+        <div class="collapse" id="desktopPatientDetails">
+          <hr class="my-2">
+          <div class="row g-2">
+            <div class="col-6">
+              <small class="text-muted">Nascimento:</small><br>
+              <span class="fw-medium fs-7">{{ simplenote.patient.birthday|date:"d/m/Y" }}</span>
+            </div>
+            {% if simplenote.patient.phone %}
+            <div class="col-6">
+              <small class="text-muted">Telefone:</small><br>
+              <span class="fw-medium fs-7">{{ simplenote.patient.phone }}</span>
+            </div>
+            {% endif %}
+            {% if simplenote.patient.id_number %}
+            <div class="col-6">
+              <small class="text-muted">RG:</small><br>
+              <span class="fw-medium fs-7">{{ simplenote.patient.id_number }}</span>
+            </div>
+            {% endif %}
+            <div class="col-12">
+              <small class="text-muted">Descrição:</small><br>
+              <span class="fw-medium fs-7">{{ simplenote.description }}</span>
+            </div>
+            <div class="col-12">
+              <small class="text-muted">Criado por:</small><br>
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm bg-medical-teal text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                  {{ simplenote.created_by.get_full_name|default:simplenote.created_by.username|first|upper }}
+                </div>
+                <div>
+                  <span class="fw-medium fs-7">{{ simplenote.created_by.get_full_name|default:simplenote.created_by.username }}</span><br>
+                  <small class="text-muted">{{ simplenote.created_at|date:"d/m/Y H:i" }}</small>
+                </div>
+              </div>
+            </div>
+            {% if simplenote.updated_at != simplenote.created_at %}
+            <div class="col-12">
+              <small class="text-muted">Atualizado por:</small><br>
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm bg-medical-gray text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                  {{ simplenote.updated_by.get_full_name|default:simplenote.updated_by.username|first|upper }}
+                </div>
+                <div>
+                  <span class="fw-medium fs-7">{{ simplenote.updated_by.get_full_name|default:simplenote.updated_by.username }}</span><br>
+                  <small class="text-muted">{{ simplenote.updated_at|date:"d/m/Y H:i" }}</small>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Main Content Area -->
+  <div class="content-main">
+    <div class="card shadow-sm">
+      <div class="card-header bg-medical-light">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-file-text me-2"></i>
+          Conteúdo da Nota
+        </h5>
+      </div>
+      <div class="card-body">
+        {% if simplenote.content %}
+        <div class="markdown-content">
+          {{ simplenote.content|linebreaks }}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-file-text text-muted" style="font-size: 2rem;"></i>
+          <p class="text-muted mt-2 mb-0">Nenhum conteúdo foi adicionado a esta nota.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Content Section -->
+<div class="d-lg-none content-section">
+  <div class="card shadow-sm">
+    <div class="card-header bg-medical-light">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-file-text me-2"></i>
+        Conteúdo da Nota
+      </h5>
+    </div>
+    <div class="card-body">
+      {% if simplenote.content %}
+      <div class="markdown-content">
+        {{ simplenote.content|linebreaks }}
+      </div>
+      {% else %}
+      <div class="text-center py-4">
+        <i class="bi bi-file-text text-muted" style="font-size: 2rem;"></i>
+        <p class="text-muted mt-2 mb-0">Nenhum conteúdo foi adicionado a esta nota.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  
+  .fs-7 {
+    font-size: 0.875rem;
+  }
+</style>
+
+<script>
+// Copy content functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const copyButtons = document.querySelectorAll('.copy-content-btn');
+    
+    copyButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            const content = this.getAttribute('data-content');
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(content).then(function() {
+                    showToast('Conteúdo copiado para área de transferência!', 'success');
+                }).catch(function() {
+                    showToast('Erro ao copiar conteúdo.', 'error');
+                });
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = content;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('Conteúdo copiado para área de transferência!', 'success');
+                } catch(err) {
+                    showToast('Erro ao copiar conteúdo.', 'error');
+                }
+                document.body.removeChild(textArea);
+            }
+        });
+    });
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 4000);
+    }
+});
+</script>
+{% endblock %}

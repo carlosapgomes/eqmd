@@ -335,10 +335,9 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
-                                        <i class="bi bi-sticky me-2 text-muted" aria-hidden="true"></i>
+                                    <a class="dropdown-item" href="{% url 'apps.simplenotes:patient_simplenote_create' patient.pk %}">
+                                        <i class="bi bi-sticky me-2 text-medical-warning" aria-hidden="true"></i>
                                         Nota/Observação
-                                        <small class="text-muted ms-auto">Em breve</small>
                                     </a>
                                 </li>
                             {% endif %}
@@ -483,10 +482,9 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
-                                        <i class="bi bi-sticky me-2 text-muted" aria-hidden="true"></i>
+                                    <a class="dropdown-item" href="{% url 'apps.simplenotes:patient_simplenote_create' patient.pk %}">
+                                        <i class="bi bi-sticky me-2 text-medical-warning" aria-hidden="true"></i>
                                         Nota/Observação
-                                        <small class="text-muted ms-auto">Em breve</small>
                                     </a>
                                 </li>
                             {% endif %}
@@ -853,12 +851,15 @@
                                 Use appropriate event card template based on event type
                                 HistoryAndPhysical events (event_type=0) get the specialized template with duplicate button
                                 DailyNote events (event_type=1) get the specialized template with duplicate button
+                                SimpleNote events (event_type=2) get the specialized template with duplicate button
                                 All other events use the default template
                                 {% endcomment %}
                                 {% if event.event_type == 0 %}
                                     {% include "events/partials/event_card_historyandphysical.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 1 %}
                                     {% include "events/partials/event_card_dailynote.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 2 %}
+                                    {% include "events/partials/event_card_simplenote.html" with event=event event_data=event_data %}
                                 {% else %}
                                     {% include "events/partials/event_card_default.html" with event=event event_data=event_data %}
                                 {% endif %}

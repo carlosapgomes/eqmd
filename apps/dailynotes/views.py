@@ -260,9 +260,10 @@ class DailyNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
         return kwargs
 
     def get_success_url(self):
-        """Redirect to detail view after successful update."""
+        """Redirect to patient timeline after successful update."""
         return reverse_lazy(
-            "dailynotes:dailynote_detail", kwargs={"pk": self.object.pk}
+            "apps.patients:patient_events_timeline", 
+            kwargs={"patient_id": self.object.patient.pk}
         )
 
     def get_context_data(self, **kwargs):

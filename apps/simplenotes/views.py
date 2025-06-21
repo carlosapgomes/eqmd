@@ -17,8 +17,8 @@ from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from datetime import datetime, timedelta
 
-from .models import HistoryAndPhysical
-from .forms import HistoryAndPhysicalForm
+from .models import SimpleNote
+from .forms import SimpleNoteForm
 from apps.core.permissions import (
     patient_access_required,
     can_edit_event_required,
@@ -34,21 +34,21 @@ from apps.events.models import Event
 
 
 @method_decorator(hospital_context_required, name="dispatch")
-class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
+class SimpleNoteListView(LoginRequiredMixin, ListView):
     """
-    List view for HistoryAndPhysical instances with search and filtering capabilities.
+    List view for SimpleNote instances with search and filtering capabilities.
     """
 
-    model = HistoryAndPhysical
-    template_name = "historyandphysicals/historyandphysical_list.html"
-    context_object_name = "historyandphysicals"
+    model = SimpleNote
+    template_name = "simplenotes/simplenote_list.html"
+    context_object_name = "simplenotes"
     paginate_by = 20
     paginate_orphans = 5
 
     def get_queryset(self):
         """Filter queryset based on search parameters and user permissions."""
         queryset = (
-            HistoryAndPhysical.objects.select_related("patient", "created_by", "updated_by")
+            SimpleNote.objects.select_related("patient", "created_by", "updated_by")
             .prefetch_related(
                 "patient__current_hospital", "patient__hospitalrecord_set"
             )
@@ -60,7 +60,7 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
             hasattr(self.request.user, "current_hospital")
             and self.request.user.current_hospital
         ):
-            # Only show history and physicals for patients in the user's current hospital
+            # Only show simple notes for patients in the user's current hospital
             queryset = queryset.filter(
                 patient__current_hospital=self.request.user.current_hospital
             )
@@ -114,7 +114,7 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
         return queryset.order_by("-event_datetime")
 
     def get_context_data(self, **kwargs):
-        """Add additional context data including permission checks for each history and physical."""
+        """Add additional context data including permission checks for each simple note."""
         context = super().get_context_data(**kwargs)
         context["search_query"] = self.request.GET.get("search", "")
         context["selected_patient"] = self.request.GET.get("patient", "")
@@ -123,7 +123,7 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
         context["selected_creator"] = self.request.GET.get("creator", "")
 
         # Cache key for filter options
-        cache_key = f"historyandphysicals_filters_{self.request.user.id}_{getattr(self.request.user, 'current_hospital_id', 'none')}"
+        cache_key = f"simplenotes_filters_{self.request.user.id}_{getattr(self.request.user, 'current_hospital_id', 'none')}"
 
         # Try to get filter options from cache
         filter_options = cache.get(cache_key)
@@ -143,7 +143,7 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
             else:
                 accessible_patients = Patient.objects.none()
 
-            # Get available creators (users who have created history and physicals in this hospital)
+            # Get available creators (users who have created simple notes in this hospital)
             from django.contrib.auth import get_user_model
 
             User = get_user_model()
@@ -153,7 +153,7 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
             ):
                 available_creators = (
                     User.objects.filter(
-                        historyandphysical_created__patient__current_hospital=self.request.user.current_hospital
+                        simplenote_created__patient__current_hospital=self.request.user.current_hospital
                     )
                     .distinct()
                     .only("id", "first_name", "last_name", "email")
@@ -171,24 +171,24 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
         context["available_patients"] = filter_options["available_patients"]
         context["available_creators"] = filter_options["available_creators"]
 
-        # Add permission information for each history and physical
-        if "historyandphysical_list" in context:
-            for historyandphysical in context["historyandphysical_list"]:
-                historyandphysical.can_edit = can_edit_event(self.request.user, historyandphysical)
-                historyandphysical.can_delete = can_delete_event(self.request.user, historyandphysical)
+        # Add permission information for each simple note
+        if "simplenote_list" in context:
+            for simplenote in context["simplenote_list"]:
+                simplenote.can_edit = can_edit_event(self.request.user, simplenote)
+                simplenote.can_delete = can_delete_event(self.request.user, simplenote)
 
         return context
 
 
 @method_decorator(hospital_context_required, name="dispatch")
-class HistoryAndPhysicalDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class SimpleNoteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
-    Detail view for HistoryAndPhysical instances.
+    Detail view for SimpleNote instances.
     """
 
-    model = HistoryAndPhysical
-    template_name = "historyandphysicals/historyandphysical_detail.html"
-    context_object_name = "historyandphysical"
+    model = SimpleNote
+    template_name = "simplenotes/simplenote_detail.html"
+    context_object_name = "simplenote"
     permission_required = "events.view_event"
 
     def get_object(self, queryset=None):
@@ -200,22 +200,22 @@ class HistoryAndPhysicalDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
             from django.core.exceptions import PermissionDenied
 
             raise PermissionDenied(
-                "You don't have permission to access this patient's history and physicals"
+                "You don't have permission to access this patient's simple notes"
             )
 
         return obj
 
     def get_queryset(self):
         """Optimize queryset with related objects."""
-        return HistoryAndPhysical.objects.select_related("patient", "created_by", "updated_by")
+        return SimpleNote.objects.select_related("patient", "created_by", "updated_by")
 
     def get_context_data(self, **kwargs):
         """Add additional context data including permission checks."""
         context = super().get_context_data(**kwargs)
 
         # Add permission context for template use
-        context["can_edit_historyandphysical"] = can_edit_event(self.request.user, self.object)
-        context["can_delete_historyandphysical"] = can_delete_event(
+        context["can_edit_simplenote"] = can_edit_event(self.request.user, self.object)
+        context["can_delete_simplenote"] = can_delete_event(
             self.request.user, self.object
         )
 
@@ -223,14 +223,14 @@ class HistoryAndPhysicalDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
 
 
 @method_decorator(hospital_context_required, name="dispatch")
-class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class SimpleNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
-    Update view for HistoryAndPhysical instances with permission checking.
+    Update view for SimpleNote instances with permission checking.
     """
 
-    model = HistoryAndPhysical
-    form_class = HistoryAndPhysicalForm
-    template_name = "historyandphysicals/historyandphysical_update_form.html"
+    model = SimpleNote
+    form_class = SimpleNoteForm
+    template_name = "simplenotes/simplenote_update_form.html"
     permission_required = "events.change_event"
 
     def get_object(self, queryset=None):
@@ -242,14 +242,14 @@ class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, 
             from django.core.exceptions import PermissionDenied
 
             raise PermissionDenied(
-                "You don't have permission to access this patient's history and physicals"
+                "You don't have permission to access this patient's simple notes"
             )
 
         # Check if user can edit this event
         if not can_edit_event(self.request.user, obj):
             from django.core.exceptions import PermissionDenied
 
-            raise PermissionDenied("You don't have permission to edit this history and physical")
+            raise PermissionDenied("You don't have permission to edit this simple note")
 
         return obj
 
@@ -270,7 +270,7 @@ class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, 
         """Add sample content context."""
         context = super().get_context_data(**kwargs)
         context["sample_contents"] = SampleContent.objects.filter(
-            event_type=Event.HISTORY_AND_PHYSICAL_EVENT
+            event_type=Event.SIMPLE_NOTE_EVENT
         ).order_by("title")
         return context
 
@@ -281,25 +281,25 @@ class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, 
             from django.core.exceptions import PermissionDenied
 
             raise PermissionDenied(
-                "You don't have permission to create history and physicals for this patient"
+                "You don't have permission to create simple notes for this patient"
             )
 
         messages.success(
             self.request,
-            f"Anamnese e Exame Físico para {form.instance.patient.name} atualizada com sucesso.",
+            f"Nota para {form.instance.patient.name} atualizada com sucesso.",
         )
         return super().form_valid(form)
 
 
 @method_decorator(hospital_context_required, name="dispatch")
-class HistoryAndPhysicalDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class SimpleNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
-    Delete view for HistoryAndPhysical instances with permission checking.
+    Delete view for SimpleNote instances with permission checking.
     """
 
-    model = HistoryAndPhysical
-    template_name = "historyandphysicals/historyandphysical_confirm_delete.html"
-    context_object_name = "historyandphysical"
+    model = SimpleNote
+    template_name = "simplenotes/simplenote_confirm_delete.html"
+    context_object_name = "simplenote"
     permission_required = "events.delete_event"
     def get_success_url(self):
         """Redirect to patient timeline after successful deletion."""
@@ -317,7 +317,7 @@ class HistoryAndPhysicalDeleteView(LoginRequiredMixin, PermissionRequiredMixin, 
             from django.core.exceptions import PermissionDenied
 
             raise PermissionDenied(
-                "You don't have permission to access this patient's history and physicals"
+                "You don't have permission to access this patient's simple notes"
             )
 
         # Check if user can delete this event
@@ -325,34 +325,34 @@ class HistoryAndPhysicalDeleteView(LoginRequiredMixin, PermissionRequiredMixin, 
             from django.core.exceptions import PermissionDenied
 
             raise PermissionDenied(
-                "You don't have permission to delete this history and physical"
+                "You don't have permission to delete this simple note"
             )
 
         return obj
 
     def get_queryset(self):
         """Optimize queryset with related objects."""
-        return HistoryAndPhysical.objects.select_related("patient", "created_by")
+        return SimpleNote.objects.select_related("patient", "created_by")
 
     def delete(self, request, *args, **kwargs):
         """Handle successful deletion."""
-        historyandphysical = self.get_object()
-        patient_name = historyandphysical.patient.name
-        messages.success(request, f"Anamnese e Exame Físico para {patient_name} excluída com sucesso.")
+        simplenote = self.get_object()
+        patient_name = simplenote.patient.name
+        messages.success(request, f"Nota para {patient_name} excluída com sucesso.")
         return super().delete(request, *args, **kwargs)
 
 
 @method_decorator(hospital_context_required, name="dispatch")
-class PatientHistoryAndPhysicalCreateView(
+class PatientSimpleNoteCreateView(
     LoginRequiredMixin, PermissionRequiredMixin, CreateView
 ):
     """
-    Create view for HistoryAndPhysical instances for a specific patient.
+    Create view for SimpleNote instances for a specific patient.
     """
 
-    model = HistoryAndPhysical
-    form_class = HistoryAndPhysicalForm
-    template_name = "historyandphysicals/historyandphysical_create_form.html"
+    model = SimpleNote
+    form_class = SimpleNoteForm
+    template_name = "simplenotes/simplenote_create_form.html"
     permission_required = "events.add_event"
 
     def dispatch(self, request, *args, **kwargs):
@@ -364,7 +364,7 @@ class PatientHistoryAndPhysicalCreateView(
             from django.core.exceptions import PermissionDenied
 
             raise PermissionDenied(
-                "You don't have permission to create history and physicals for this patient"
+                "You don't have permission to create simple notes for this patient"
             )
 
         return super().dispatch(request, *args, **kwargs)
@@ -381,7 +381,7 @@ class PatientHistoryAndPhysicalCreateView(
         context = super().get_context_data(**kwargs)
         context["patient"] = self.patient
         context["sample_contents"] = SampleContent.objects.filter(
-            event_type=Event.HISTORY_AND_PHYSICAL_EVENT
+            event_type=Event.SIMPLE_NOTE_EVENT
         ).order_by("title")
         return context
 
@@ -396,55 +396,55 @@ class PatientHistoryAndPhysicalCreateView(
         """Handle successful form submission."""
         form.instance.patient = self.patient
         messages.success(
-            self.request, f"Anamnese e Exame Físico para {self.patient.name} criada com sucesso."
+            self.request, f"Nota para {self.patient.name} criada com sucesso."
         )
         return super().form_valid(form)
 
 
 @method_decorator(hospital_context_required, name="dispatch")
-class HistoryAndPhysicalDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class SimpleNoteDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
-    Duplicate view for HistoryAndPhysical instances - creates a new history and physical based on an existing one.
+    Duplicate view for SimpleNote instances - creates a new simplenote based on an existing one.
     """
 
-    model = HistoryAndPhysical
-    form_class = HistoryAndPhysicalForm
-    template_name = "historyandphysicals/historyandphysical_duplicate_form.html"
+    model = SimpleNote
+    form_class = SimpleNoteForm
+    template_name = "simplenotes/simplenote_duplicate_form.html"
     permission_required = "events.add_event"
 
     def dispatch(self, request, *args, **kwargs):
-        """Get source history and physical and check permissions before processing request."""
-        self.source_historyandphysical = get_object_or_404(HistoryAndPhysical, pk=kwargs["pk"])
+        """Get source simplenote and check permissions before processing request."""
+        self.source_simplenote = get_object_or_404(SimpleNote, pk=kwargs["pk"])
 
         # Check if user can access the source patient
-        if not can_access_patient(request.user, self.source_historyandphysical.patient):
+        if not can_access_patient(request.user, self.source_simplenote.patient):
             from django.core.exceptions import PermissionDenied
 
             raise PermissionDenied(
-                "You don't have permission to access this patient's history and physicals"
+                "You don't have permission to access this patient's simple notes"
             )
 
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
-        """Pass current user and pre-populate form with source history and physical data."""
+        """Pass current user and pre-populate form with source simplenote data."""
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
 
-        # Pre-populate with source history and physical data, but with current datetime
+        # Pre-populate with source simplenote data, but with current datetime
         kwargs["initial"] = {
-            "content": self.source_historyandphysical.content,
+            "content": self.source_simplenote.content,
             "event_datetime": timezone.now(),
         }
         return kwargs
 
     def get_context_data(self, **kwargs):
-        """Add source history and physical, patient and sample content context."""
+        """Add source simplenote, patient and sample content context."""
         context = super().get_context_data(**kwargs)
-        context["source_historyandphysical"] = self.source_historyandphysical
-        context["patient"] = self.source_historyandphysical.patient
+        context["source_simplenote"] = self.source_simplenote
+        context["patient"] = self.source_simplenote.patient
         context["sample_contents"] = SampleContent.objects.filter(
-            event_type=Event.HISTORY_AND_PHYSICAL_EVENT
+            event_type=Event.SIMPLE_NOTE_EVENT
         ).order_by("title")
         return context
 
@@ -452,28 +452,28 @@ class HistoryAndPhysicalDuplicateView(LoginRequiredMixin, PermissionRequiredMixi
         """Redirect to patient timeline after successful creation."""
         return reverse_lazy(
             "apps.patients:patient_events_timeline",
-            kwargs={"patient_id": self.source_historyandphysical.patient.pk},
+            kwargs={"patient_id": self.source_simplenote.patient.pk},
         )
 
     def form_valid(self, form):
         """Handle successful form submission."""
-        form.instance.patient = self.source_historyandphysical.patient
+        form.instance.patient = self.source_simplenote.patient
         messages.success(
             self.request,
-            f"Nova Anamnese e Exame Físico para {self.source_historyandphysical.patient.name} criada com base na anterior.",
+            f"Nova nota para {self.source_simplenote.patient.name} criada com base na nota anterior.",
         )
         return super().form_valid(form)
 
 
 @method_decorator(hospital_context_required, name="dispatch")
-class HistoryAndPhysicalPrintView(LoginRequiredMixin, DetailView):
+class SimpleNotePrintView(LoginRequiredMixin, DetailView):
     """
-    Print view for HistoryAndPhysical instances - clean print layout.
+    Print view for SimpleNote instances - clean print layout.
     """
 
-    model = HistoryAndPhysical
-    template_name = "historyandphysicals/historyandphysical_print.html"
-    context_object_name = "historyandphysical"
+    model = SimpleNote
+    template_name = "simplenotes/simplenote_print.html"
+    context_object_name = "simplenote"
 
     def get_object(self, queryset=None):
         """Get object and check patient access permissions."""
@@ -484,13 +484,11 @@ class HistoryAndPhysicalPrintView(LoginRequiredMixin, DetailView):
             from django.core.exceptions import PermissionDenied
 
             raise PermissionDenied(
-                "You don't have permission to access this patient's history and physicals"
+                "You don't have permission to access this patient's simple notes"
             )
 
         return obj
 
     def get_queryset(self):
         """Optimize queryset with related objects."""
-        return HistoryAndPhysical.objects.select_related("patient", "created_by", "updated_by")
-
-
+        return SimpleNote.objects.select_related("patient", "created_by", "updated_by")
