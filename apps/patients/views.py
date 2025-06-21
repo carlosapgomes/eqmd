@@ -218,6 +218,7 @@ class PatientDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView)
 class HospitalRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = PatientHospitalRecord
     form_class = PatientHospitalRecordForm
+    template_name = 'patients/hospital_record_form.html'
     permission_required = 'patients.add_patienthospitalrecord'
 
     def get_initial(self):
@@ -243,6 +244,7 @@ class HospitalRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
 class HospitalRecordUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = PatientHospitalRecord
     form_class = PatientHospitalRecordForm
+    template_name = 'patients/hospital_record_form.html'
     permission_required = 'patients.change_patienthospitalrecord'
 
     def get_success_url(self):

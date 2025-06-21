@@ -1,6 +1,4 @@
 from django import forms
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column
 from .models import Hospital, Ward
 
 
@@ -107,20 +105,3 @@ class WardForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_method = 'post'
-        self.helper.layout = Layout(
-            Fieldset(
-                'Ward Information',
-                Row(
-                    Column('name', css_class='form-group col-md-6 mb-0'),
-                    Column('hospital', css_class='form-group col-md-6 mb-0'),
-                ),
-                Row(
-                    Column('capacity', css_class='form-group col-md-6 mb-0'),
-                    Column('is_active', css_class='form-group col-md-6 mb-0'),
-                ),
-                'description',
-            ),
-            Submit('submit', 'Save', css_class='btn btn-primary mt-3')
-        )

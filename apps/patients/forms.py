@@ -1,6 +1,4 @@
 from django import forms
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Row, Column, Submit, HTML, Div
 from .models import Patient, PatientHospitalRecord, AllowedTag, Tag
 
 
@@ -15,9 +13,6 @@ class TagCreationForm(forms.Form):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
 
 
 class PatientForm(forms.ModelForm):
@@ -60,87 +55,6 @@ class PatientForm(forms.ModelForm):
         self.fields['bed'].widget.attrs.update({
             'class': 'form-control bed-field'
         })
-        
-        self.helper = FormHelper()
-        self.helper.form_method = 'post'
-        self.helper.layout = Layout(
-            Fieldset(
-                'Informações do Paciente',
-                Row(
-                    Column('name', css_class='col-md-6'),
-                    Column('birthday', css_class='col-md-6'),
-                ),
-                Row(
-                    Column('id_number', css_class='col-md-4'),
-                    Column('fiscal_number', css_class='col-md-4'),
-                    Column('healthcard_number', css_class='col-md-4'),
-                ),
-                Row(
-                    Column('phone', css_class='col-md-12'),
-                ),
-            ),
-            Fieldset(
-                'Informações de Endereço',
-                Row(
-                    Column('address', css_class='col-md-8'),
-                    Column('zip_code', css_class='col-md-4'),
-                ),
-                Row(
-                    Column('city', css_class='col-md-6'),
-                    Column('state', css_class='col-md-6'),
-                ),
-            ),
-            Fieldset(
-                'Informações Hospitalares',
-                Row(
-                    Column('status', css_class='col-md-12'),
-                ),
-                Div(
-                    Row(
-                        Column('current_hospital', css_class='col-md-8'),
-                        Column('bed', css_class='col-md-4'),
-                    ),
-                    css_class='hospital-fields-container',
-                    css_id='hospital-fields'
-                ),
-                HTML("""
-                    <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const statusField = document.querySelector('#id_status');
-                        const hospitalFieldsContainer = document.querySelector('#hospital-fields');
-                        const hospitalField = document.querySelector('#id_current_hospital');
-                        const bedField = document.querySelector('#id_bed');
-                        
-                        function toggleHospitalFields() {
-                            const status = statusField.value;
-                            const requiresHospital = ['2', '3', '5']; // INPATIENT, EMERGENCY, TRANSFERRED
-                            
-                            if (requiresHospital.includes(status)) {
-                                hospitalFieldsContainer.style.display = 'block';
-                                hospitalField.required = true;
-                            } else {
-                                hospitalFieldsContainer.style.display = 'none';
-                                hospitalField.required = false;
-                                hospitalField.value = '';
-                                bedField.value = '';
-                            }
-                        }
-                        
-                        // Initial toggle
-                        toggleHospitalFields();
-                        
-                        // Toggle on status change
-                        statusField.addEventListener('change', toggleHospitalFields);
-                    });
-                    </script>
-                """)
-            ),
-            Fieldset(
-                'Tags',
-                'tag_selection',
-            ),
-            Submit('submit', 'Salvar', css_class='btn btn-primary mt-3')
-        )
 
     def clean(self):
         """Custom validation to ensure hospital is provided when required"""
@@ -200,24 +114,6 @@ class PatientHospitalRecordForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_method = 'post'
-        self.helper.layout = Layout(
-            Fieldset(
-                'Registro Hospitalar',
-                Row(
-                    Column('patient', css_class='col-md-6'),
-                    Column('hospital', css_class='col-md-6'),
-                ),
-                'record_number',
-                Row(
-                    Column('first_admission_date', css_class='col-md-4'),
-                    Column('last_admission_date', css_class='col-md-4'),
-                    Column('last_discharge_date', css_class='col-md-4'),
-                ),
-            ),
-            Submit('submit', 'Salvar', css_class='btn btn-primary mt-3')
-        )
 
 
 class AllowedTagForm(forms.ModelForm):
@@ -231,20 +127,6 @@ class AllowedTagForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_method = 'post'
-        self.helper.layout = Layout(
-            Fieldset(
-                'Informações da Tag',
-                'name',
-                'description',
-                Row(
-                    Column('color', css_class='col-md-6'),
-                    Column('is_active', css_class='col-md-6'),
-                ),
-            ),
-            Submit('submit', 'Salvar', css_class='btn btn-primary mt-3')
-        )
 
     def save(self, commit=True):
         instance = super().save(commit=False)

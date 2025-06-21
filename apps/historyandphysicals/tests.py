@@ -179,12 +179,6 @@ class HistoryAndPhysicalFormTest(TestCase):
         self.assertEqual(historyandphysical.created_by, self.user)
         self.assertEqual(historyandphysical.updated_by, self.user)
 
-    def test_form_crispy_helper_configuration(self):
-        """Test crispy forms helper configuration."""
-        form = HistoryAndPhysicalForm(user=self.user)
-        self.assertIsNotNone(form.helper)
-        self.assertEqual(form.helper.form_method, 'post')
-        self.assertEqual(form.helper.form_class, 'needs-validation')
 
     def test_form_field_configuration(self):
         """Test form field configuration."""

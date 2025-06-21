@@ -1,8 +1,5 @@
 from django import forms
 from django.utils import timezone
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Field, Submit, Row, Column, HTML
-from crispy_forms.bootstrap import FormActions
 
 from .models import HistoryAndPhysical
 from apps.patients.models import Patient
@@ -13,7 +10,7 @@ from apps.events.models import Event
 class HistoryAndPhysicalForm(forms.ModelForm):
     """
     Form for creating and updating HistoryAndPhysical instances.
-    Uses crispy forms for responsive design and EasyMDE editor for content.
+    Uses EasyMDE editor for content.
     """
 
     class Meta:
@@ -65,36 +62,6 @@ class HistoryAndPhysicalForm(forms.ModelForm):
             "content"
         ].help_text = "Conteúdo detalhado da anamnese e exame físico (suporte a Markdown)"
         self.fields["content"].required = False
-
-        # Configure crispy forms
-        self.helper = FormHelper()
-        self.helper.form_method = "post"
-        self.helper.form_class = "needs-validation"
-        self.helper.attrs = {"novalidate": ""}
-
-        self.helper.layout = Layout(
-            Fieldset(
-                "Informações da Anamnese e Exame Físico",
-                Row(
-                    Column("event_datetime", css_class="col-md-6"),
-                ),
-            ),
-            Fieldset(
-                "Conteúdo",
-                Field("content", css_class="form-control"),
-                HTML("""
-                    <small class="form-text text-muted">
-                        Use Markdown para formatação. O editor oferece uma prévia em tempo real.
-                    </small>
-                """),
-            ),
-            FormActions(
-                Submit("submit", "Salvar Anamnese e Exame Físico", css_class="btn btn-primary"),
-                HTML(
-                    '<button type="button" class="btn btn-secondary ms-2" onclick="window.history.back()">Cancelar</button>'
-                ),
-            ),
-        )
 
     def clean_event_datetime(self):
         """Validate that event_datetime is not in the future."""

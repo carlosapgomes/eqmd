@@ -25,5 +25,6 @@
 ## HisptoryAndPhysicals
 
 - [x] cleanup historyandphysicals app templates the same way as dailynotes app
+- [x] remove crispy forms from historyandphysicals app
 
 ## Patients

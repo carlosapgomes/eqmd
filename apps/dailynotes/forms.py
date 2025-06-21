@@ -9,7 +9,7 @@ from apps.events.models import Event
 class DailyNoteForm(forms.ModelForm):
     """
     Form for creating and updating DailyNote instances.
-    Uses crispy forms for responsive design and EasyMDE editor for content.
+    Uses EasyMDE editor for content.
     """
 
     class Meta:
@@ -61,7 +61,6 @@ class DailyNoteForm(forms.ModelForm):
             "content"
         ].help_text = "Conteúdo detalhado da evolução (suporte a Markdown)"
 
-
     def clean_event_datetime(self):
         """Validate that event_datetime is not in the future."""
         event_datetime = self.cleaned_data.get("event_datetime")
@@ -70,7 +69,6 @@ class DailyNoteForm(forms.ModelForm):
                 "A data e hora do evento não pode ser no futuro."
             )
         return event_datetime
-
 
     def clean_content(self):
         """Validate content field."""
