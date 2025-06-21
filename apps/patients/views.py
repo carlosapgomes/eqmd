@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Q, Case, When, IntegerField
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
+from django.views import View
 
 from .models import Patient, PatientHospitalRecord, AllowedTag
 from .forms import PatientForm, PatientHospitalRecordForm, AllowedTagForm
@@ -176,6 +178,31 @@ class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
     form_class = PatientForm
     permission_required = 'patients.add_patient'
 
+    def get_form_kwargs(self):
+        """Pass hospital record data to form if provided"""
+        kwargs = super().get_form_kwargs()
+        if self.request.method == 'POST':
+            # Extract hospital record data from POST
+            hospital_record_data = {}
+            for key, value in self.request.POST.items():
+                if key.startswith('hospital_record-'):
+                    field_name = key.replace('hospital_record-', '')
+                    hospital_record_data[field_name] = value
+            if hospital_record_data:
+                kwargs['hospital_record_data'] = hospital_record_data
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        """Add hospital record form and existing records to context"""
+        context = super().get_context_data(**kwargs)
+        if hasattr(self.get_form(), 'hospital_record_form'):
+            context['hospital_record_form'] = self.get_form().hospital_record_form
+        
+        # No existing records for new patients
+        context['existing_hospital_records'] = []
+        context['patient_id'] = None
+        return context
+
     def get_success_url(self):
         return reverse_lazy('patients:patient_detail', kwargs={'pk': self.object.pk})
 
@@ -184,14 +211,75 @@ class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
         form.instance.updated_by = self.request.user
         # Store user for tag creation
         form.current_user = self.request.user
-        messages.success(self.request, f"Patient {form.instance.name} created successfully.")
-        return super().form_valid(form)
+        
+        response = super().form_valid(form)
+        
+        # Add success message with hospital record info if created
+        if hasattr(form, 'hospital_record_form') and form.hospital_record_form.has_changed():
+            hospital_data = form.hospital_record_form.cleaned_data
+            if hospital_data.get('hospital'):
+                messages.success(
+                    self.request, 
+                    f"Patient {form.instance.name} created successfully with hospital record at {hospital_data['hospital'].name}."
+                )
+            else:
+                messages.success(self.request, f"Patient {form.instance.name} created successfully.")
+        else:
+            messages.success(self.request, f"Patient {form.instance.name} created successfully.")
+        
+        return response
 
 
 class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Patient
     form_class = PatientForm
     permission_required = 'patients.change_patient'
+
+    def get_form_kwargs(self):
+        """Pass hospital record data to form if provided"""
+        kwargs = super().get_form_kwargs()
+        if self.request.method == 'POST':
+            # Extract hospital record data from POST
+            hospital_record_data = {}
+            for key, value in self.request.POST.items():
+                if key.startswith('hospital_record-'):
+                    field_name = key.replace('hospital_record-', '')
+                    hospital_record_data[field_name] = value
+            if hospital_record_data:
+                kwargs['hospital_record_data'] = hospital_record_data
+        else:
+            # For GET requests, pre-populate with existing hospital record if available
+            patient = self.get_object()
+            if patient.pk and patient.current_hospital:
+                try:
+                    hospital_record = PatientHospitalRecord.objects.get(
+                        patient=patient,
+                        hospital=patient.current_hospital
+                    )
+                    kwargs['hospital_record_data'] = {
+                        'hospital': hospital_record.hospital.pk,
+                        'record_number': hospital_record.record_number,
+                        'first_admission_date': hospital_record.first_admission_date,
+                        'last_admission_date': hospital_record.last_admission_date,
+                        'last_discharge_date': hospital_record.last_discharge_date,
+                    }
+                except PatientHospitalRecord.DoesNotExist:
+                    pass
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        """Add hospital record form and existing records to context"""
+        context = super().get_context_data(**kwargs)
+        if hasattr(self.get_form(), 'hospital_record_form'):
+            context['hospital_record_form'] = self.get_form().hospital_record_form
+        
+        # Add existing hospital records for the patient
+        patient = self.get_object()
+        context['existing_hospital_records'] = PatientHospitalRecord.objects.filter(
+            patient=patient
+        ).select_related('hospital').order_by('-last_admission_date')
+        context['patient_id'] = str(patient.pk)
+        return context
 
     def get_success_url(self):
         return reverse_lazy('patients:patient_detail', kwargs={'pk': self.object.pk})
@@ -200,8 +288,23 @@ class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
         form.instance.updated_by = self.request.user
         # Store user for tag creation
         form.current_user = self.request.user
-        messages.success(self.request, f"Patient {form.instance.name} updated successfully.")
-        return super().form_valid(form)
+        
+        response = super().form_valid(form)
+        
+        # Add success message with hospital record info if updated
+        if hasattr(form, 'hospital_record_form') and form.hospital_record_form.has_changed():
+            hospital_data = form.hospital_record_form.cleaned_data
+            if hospital_data.get('hospital'):
+                messages.success(
+                    self.request, 
+                    f"Patient {form.instance.name} updated successfully with hospital record at {hospital_data['hospital'].name}."
+                )
+            else:
+                messages.success(self.request, f"Patient {form.instance.name} updated successfully.")
+        else:
+            messages.success(self.request, f"Patient {form.instance.name} updated successfully.")
+        
+        return response
 
 
 class PatientDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
@@ -313,5 +416,87 @@ class AllowedTagDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVi
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Tag deleted successfully.')
         return super().delete(request, *args, **kwargs)
+
+
+# API Views
+class PatientHospitalRecordsAPIView(LoginRequiredMixin, View):
+    """API view to get all hospital records for a patient"""
+    
+    def get(self, request, patient_id):
+        try:
+            patient = get_object_or_404(Patient, pk=patient_id)
+            
+            # Check permission
+            if not can_access_patient(request.user, patient):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+            records = PatientHospitalRecord.objects.filter(
+                patient=patient
+            ).select_related('hospital').order_by('-last_admission_date')
+            
+            records_data = []
+            for record in records:
+                records_data.append({
+                    'id': str(record.id),
+                    'hospital': {
+                        'id': str(record.hospital.id),
+                        'name': record.hospital.name,
+                    },
+                    'record_number': record.record_number,
+                    'first_admission_date': record.first_admission_date.isoformat() if record.first_admission_date else None,
+                    'last_admission_date': record.last_admission_date.isoformat() if record.last_admission_date else None,
+                    'last_discharge_date': record.last_discharge_date.isoformat() if record.last_discharge_date else None,
+                })
+            
+            return JsonResponse({
+                'records': records_data,
+                'count': len(records_data)
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+class HospitalRecordByHospitalAPIView(LoginRequiredMixin, View):
+    """API view to get hospital record for a specific patient and hospital"""
+    
+    def get(self, request, hospital_id):
+        try:
+            patient_id = request.GET.get('patient_id')
+            if not patient_id:
+                return JsonResponse({'error': 'patient_id parameter required'}, status=400)
+            
+            patient = get_object_or_404(Patient, pk=patient_id)
+            hospital = get_object_or_404(Hospital, pk=hospital_id)
+            
+            # Check permission
+            if not can_access_patient(request.user, patient):
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+            
+            try:
+                record = PatientHospitalRecord.objects.get(
+                    patient=patient,
+                    hospital=hospital
+                )
+                
+                return JsonResponse({
+                    'exists': True,
+                    'record': {
+                        'id': str(record.id),
+                        'record_number': record.record_number,
+                        'first_admission_date': record.first_admission_date.isoformat() if record.first_admission_date else '',
+                        'last_admission_date': record.last_admission_date.isoformat() if record.last_admission_date else '',
+                        'last_discharge_date': record.last_discharge_date.isoformat() if record.last_discharge_date else '',
+                    }
+                })
+                
+            except PatientHospitalRecord.DoesNotExist:
+                return JsonResponse({
+                    'exists': False,
+                    'record': None
+                })
+                
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 

@@ -28,3 +28,7 @@
 - [x] remove crispy forms from historyandphysicals app
 
 ## Patients
+
+- [x] update adding hospital records from edit patient form
+- [x] cleanup patients app templates
+- [x] remove crispy forms from patients app

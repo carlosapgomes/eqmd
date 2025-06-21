@@ -28,6 +28,17 @@ urlpatterns = [
         views.HospitalRecordDeleteView.as_view(),
         name="hospital_record_delete",
     ),
+    # API URLs
+    path(
+        "api/<uuid:patient_id>/hospital-records/",
+        views.PatientHospitalRecordsAPIView.as_view(),
+        name="api_patient_hospital_records",
+    ),
+    path(
+        "api/hospital-record/<uuid:hospital_id>/",
+        views.HospitalRecordByHospitalAPIView.as_view(),
+        name="api_hospital_record_by_hospital",
+    ),
     # Tag URLs
     path("tags/", views.AllowedTagListView.as_view(), name="tag_list"),
     path("tags/create/", views.AllowedTagCreateView.as_view(), name="tag_create"),

@@ -1,0 +1,66 @@
+<!-- Hospital Records Summary Component -->
+<div id="hospital-records-summary" class="mb-3">
+  {% if existing_hospital_records %}
+    <div class="card border-info">
+      <div class="card-header bg-light">
+        <h6 class="card-title mb-0">
+          <i class="bi bi-hospital me-2 text-info"></i>
+          Registros Hospitalares Existentes
+          <span class="badge bg-info ms-2">{{ existing_hospital_records|length }}</span>
+        </h6>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          {% for record in existing_hospital_records %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold text-medical-dark-gray">{{ record.hospital.name }}</div>
+                <div class="text-muted small">
+                  <span class="me-3">
+                    <i class="bi bi-card-text me-1"></i>
+                    Registro: {{ record.record_number|default:"Não informado" }}
+                  </span>
+                  {% if record.last_admission_date %}
+                    <span class="me-3">
+                      <i class="bi bi-calendar-check me-1"></i>
+                      Última admissão: {{ record.last_admission_date|date:"d/m/Y" }}
+                    </span>
+                  {% endif %}
+                  {% if record.last_discharge_date %}
+                    <span>
+                      <i class="bi bi-calendar-x me-1"></i>
+                      Última alta: {{ record.last_discharge_date|date:"d/m/Y" }}
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="btn-group btn-group-sm" role="group">
+                <button type="button" 
+                        class="btn btn-outline-primary btn-sm edit-hospital-record"
+                        data-record-id="{{ record.id }}"
+                        data-hospital-id="{{ record.hospital.id }}"
+                        data-hospital-name="{{ record.hospital.name }}"
+                        data-record-number="{{ record.record_number }}"
+                        data-first-admission="{{ record.first_admission_date|date:'Y-m-d'|default:'' }}"
+                        data-last-admission="{{ record.last_admission_date|date:'Y-m-d'|default:'' }}"
+                        data-last-discharge="{{ record.last_discharge_date|date:'Y-m-d'|default:'' }}">
+                  <i class="bi bi-pencil me-1"></i>Editar
+                </button>
+                <a href="{% url 'apps.patients:hospital_record_delete' pk=record.id %}" 
+                   class="btn btn-outline-danger btn-sm"
+                   onclick="return confirm('Tem certeza que deseja excluir este registro hospitalar?')">
+                  <i class="bi bi-trash me-1"></i>Excluir
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info d-flex align-items-center" id="no-records-alert">
+      <i class="bi bi-info-circle me-2"></i>
+      <span>Nenhum registro hospitalar encontrado para este paciente.</span>
+    </div>
+  {% endif %}
+</div>
