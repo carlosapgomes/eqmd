@@ -66,6 +66,43 @@ class EventModelTest(TestCase):
         self.assertEqual(events[0], event2)
         self.assertEqual(events[1], self.event)
 
+    def test_get_event_type_short_display(self):
+        # Test abbreviated display for long event types
+        history_event = Event.objects.create(
+            event_type=Event.HISTORY_AND_PHYSICAL_EVENT,
+            event_datetime=timezone.now(),
+            description='History and Physical',
+            patient=self.patient,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        self.assertEqual(history_event.get_event_type_short_display(), 'A&EF')
+
+        # Test already short event types remain the same
+        self.assertEqual(self.event.get_event_type_short_display(), 'Nota')
+
+        # Test other event types
+        exam_result_event = Event.objects.create(
+            event_type=Event.EXAM_RESULT_EVENT,
+            event_datetime=timezone.now(),
+            description='Exam Result',
+            patient=self.patient,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        self.assertEqual(exam_result_event.get_event_type_short_display(), 'Resultado')
+
+        # Test photo series
+        photo_series_event = Event.objects.create(
+            event_type=Event.PHOTO_SERIES_EVENT,
+            event_datetime=timezone.now(),
+            description='Photo Series',
+            patient=self.patient,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        self.assertEqual(photo_series_event.get_event_type_short_display(), 'Fotos')
+
 
 class AdminSiteTest(TestCase):
     def test_event_model_registered(self):

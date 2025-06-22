@@ -376,10 +376,9 @@
                             </h6></li>
                             {% if perms.events.add_event %}
                                 <li>
-                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
-                                        <i class="bi bi-camera me-2 text-muted" aria-hidden="true"></i>
+                                    <a class="dropdown-item" href="{% url 'mediafiles:photo_create' patient.pk %}">
+                                        <i class="bi bi-camera me-2 text-medical-primary" aria-hidden="true"></i>
                                         Imagem
-                                        <small class="text-muted ms-auto">Em breve</small>
                                     </a>
                                 </li>
                                 <li>
@@ -523,10 +522,9 @@
                             </h6></li>
                             {% if perms.events.add_event %}
                                 <li>
-                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
-                                        <i class="bi bi-camera me-2 text-muted" aria-hidden="true"></i>
+                                    <a class="dropdown-item" href="{% url 'mediafiles:photo_create' patient.pk %}">
+                                        <i class="bi bi-camera me-2 text-medical-primary" aria-hidden="true"></i>
                                         Imagem
-                                        <small class="text-muted ms-auto">Em breve</small>
                                     </a>
                                 </li>
                                 <li>
@@ -971,8 +969,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'events/js/accessibility.js' %}"></script>
-<script src="{% static 'mediafiles/js/mediafiles.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize both desktop and mobile filter forms
@@ -1027,11 +1023,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup both forms
     setupFormInteractions(desktopFilterForm);
     setupFormInteractions(mobileFilterForm);
-
-    // Initialize MediaFiles functionality for photo modals
-    if (typeof MediaFiles !== 'undefined') {
-        MediaFiles.init();
-    }
     
     // Mobile-specific enhancements
     if (mobileFilterToggle && mobileFiltersCollapse) {

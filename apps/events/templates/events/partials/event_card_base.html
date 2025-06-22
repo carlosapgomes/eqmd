@@ -15,9 +15,12 @@ Parameters expected:
         <header class="d-flex align-items-start justify-content-between mb-2">
             <div class="d-flex align-items-center">
                 <h3 id="event-{{ event.pk }}-title" class="h6 mb-0 me-2">
-                    <span class="badge {{ event.get_event_type_badge_class }} event-type-badge">
+                    <span class="badge {{ event.get_event_type_badge_class }} event-type-badge"
+                          data-bs-toggle="tooltip" 
+                          data-bs-placement="top" 
+                          title="{{ event.get_event_type_display }}">
                         <i class="{{ event.get_event_type_icon }} me-1" aria-hidden="true"></i>
-                        {{ event.get_event_type_display }}
+                        {{ event.get_event_type_short_display }}
                     </span>
                 </h3>
                 <time datetime="{{ event.created_at|date:'c' }}" 

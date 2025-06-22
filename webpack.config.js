@@ -5,7 +5,16 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = {
   entry: {
-    main: ["./assets/index.js", "./assets/scss/main.scss"],
+    main: [
+      "./assets/index.js", 
+      "./assets/scss/main.scss",
+      "./apps/mediafiles/static/mediafiles/js/mediafiles.js",
+      "./apps/events/static/events/js/timeline.js",
+      "./apps/events/static/events/js/accessibility.js",
+      "./apps/mediafiles/static/mediafiles/js/photo.js",
+      "./apps/mediafiles/static/mediafiles/css/mediafiles.css",
+      "./apps/mediafiles/static/mediafiles/css/photo.css"
+    ],
   },
   output: {
     filename: "[name]-bundle.js",

@@ -262,7 +262,9 @@ window.MediaFiles = (function() {
          */
         setupPhotoModal: function() {
             const modal = document.getElementById('photoModal');
-            if (!modal) return;
+            if (!modal) {
+                return;
+            }
 
             modal.addEventListener('show.bs.modal', this.handleModalShow.bind(this));
             modal.addEventListener('hidden.bs.modal', this.handleModalHidden.bind(this));
@@ -275,12 +277,26 @@ window.MediaFiles = (function() {
             const zoomInBtn = document.getElementById('photoZoomIn');
             const zoomOutBtn = document.getElementById('photoZoomOut');
             const zoomResetBtn = document.getElementById('photoZoomReset');
+            const fullscreenBtn = document.getElementById('photoFullscreenToggle');
             const modalImage = document.getElementById('photoModalImage');
 
             if (zoomInBtn) zoomInBtn.addEventListener('click', () => this.zoomIn());
             if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => this.zoomOut());
             if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => this.resetZoom());
-            if (modalImage) modalImage.addEventListener('click', () => this.toggleZoom());
+            if (fullscreenBtn) fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+            if (modalImage) {
+                modalImage.addEventListener('click', (e) => this.handleImageClick(e));
+                // Setup panning event handlers
+                modalImage.addEventListener('mousedown', (e) => this.startPan(e));
+                modalImage.addEventListener('mousemove', (e) => this.updatePan(e));
+                modalImage.addEventListener('mouseup', () => this.endPan());
+                modalImage.addEventListener('mouseleave', () => this.endPan());
+                
+                // Touch event handlers for mobile
+                modalImage.addEventListener('touchstart', (e) => this.startPan(e));
+                modalImage.addEventListener('touchmove', (e) => this.updatePan(e));
+                modalImage.addEventListener('touchend', () => this.endPan());
+            }
         },
 
         /**
@@ -305,6 +321,11 @@ window.MediaFiles = (function() {
                     case '0':
                         this.resetZoom();
                         break;
+                    case 'f':
+                    case 'F':
+                        e.preventDefault();
+                        this.toggleFullscreen();
+                        break;
                 }
             });
         },
@@ -314,7 +335,9 @@ window.MediaFiles = (function() {
          */
         handleModalShow: function(event) {
             const trigger = event.relatedTarget;
-            if (!trigger) return;
+            if (!trigger) {
+                return;
+            }
 
             // Reset modal state
             this.resetModalState();
@@ -350,10 +373,19 @@ window.MediaFiles = (function() {
          */
         resetModalState: function() {
             this.currentZoom = 1;
+            this.isFullscreen = false;
+            this.isPanning = false;
+            this.panX = 0;
+            this.panY = 0;
+            
+            const modal = document.getElementById('photoModal');
+            const modalDialog = modal?.querySelector('.modal-dialog');
             const container = document.getElementById('photoModalContainer');
             const loading = document.getElementById('photoModalLoading');
             const error = document.getElementById('photoModalError');
             const image = document.getElementById('photoModalImage');
+            const fullscreenBtn = document.getElementById('photoFullscreenToggle');
+            const fullscreenIcon = fullscreenBtn?.querySelector('i');
 
             if (container) container.classList.add('d-none');
             if (loading) loading.classList.remove('d-none');
@@ -361,6 +393,25 @@ window.MediaFiles = (function() {
             if (image) {
                 image.style.transform = 'scale(1)';
                 image.style.cursor = 'zoom-in';
+                image.style.maxHeight = '70vh';
+                image.style.maxWidth = '';
+                image.style.objectFit = '';
+            }
+            
+            // Reset fullscreen state
+            if (modalDialog) {
+                modalDialog.classList.remove('modal-fullscreen');
+                modalDialog.classList.add('modal-xl', 'modal-dialog-centered');
+            }
+            
+            // Reset fullscreen button
+            if (fullscreenIcon) {
+                fullscreenIcon.className = 'bi bi-arrows-fullscreen';
+            }
+            if (fullscreenBtn) {
+                fullscreenBtn.title = 'Tela cheia';
+                const hiddenSpan = fullscreenBtn.querySelector('.visually-hidden');
+                if (hiddenSpan) hiddenSpan.textContent = 'Tela cheia';
             }
         },
 
@@ -424,6 +475,16 @@ window.MediaFiles = (function() {
         zoomStep: 0.25,
         maxZoom: 3,
         minZoom: 0.5,
+        
+        // Fullscreen functionality
+        isFullscreen: false,
+        
+        // Panning functionality
+        isPanning: false,
+        panStartX: 0,
+        panStartY: 0,
+        panX: 0,
+        panY: 0,
 
         /**
          * Zoom in
@@ -450,6 +511,8 @@ window.MediaFiles = (function() {
          */
         resetZoom: function() {
             this.currentZoom = 1;
+            this.panX = 0;
+            this.panY = 0;
             this.updateImageZoom();
         },
 
@@ -466,14 +529,134 @@ window.MediaFiles = (function() {
         },
 
         /**
-         * Update image zoom
+         * Update image zoom and pan
          */
         updateImageZoom: function() {
             const image = document.getElementById('photoModalImage');
             if (image) {
-                image.style.transform = `scale(${this.currentZoom})`;
-                image.style.cursor = this.currentZoom >= this.maxZoom ? 'zoom-out' : 'zoom-in';
+                image.style.transform = `scale(${this.currentZoom}) translate(${this.panX}px, ${this.panY}px)`;
+                
+                // Update cursor based on zoom level and pan state
+                if (this.isPanning) {
+                    image.style.cursor = 'grabbing';
+                } else if (this.currentZoom > 1) {
+                    image.style.cursor = 'grab';
+                } else {
+                    image.style.cursor = this.currentZoom >= this.maxZoom ? 'zoom-out' : 'zoom-in';
+                }
             }
+        },
+
+        /**
+         * Toggle fullscreen mode
+         */
+        toggleFullscreen: function() {
+            const modal = document.getElementById('photoModal');
+            const modalDialog = modal?.querySelector('.modal-dialog');
+            const modalImage = document.getElementById('photoModalImage');
+            const fullscreenBtn = document.getElementById('photoFullscreenToggle');
+            const fullscreenIcon = fullscreenBtn?.querySelector('i');
+            
+            if (!modal || !modalDialog) return;
+            
+            this.isFullscreen = !this.isFullscreen;
+            
+            if (this.isFullscreen) {
+                // Switch to fullscreen
+                modalDialog.classList.remove('modal-xl', 'modal-dialog-centered');
+                modalDialog.classList.add('modal-fullscreen');
+                
+                if (modalImage) {
+                    modalImage.style.maxHeight = '100vh';
+                    modalImage.style.maxWidth = '100vw';
+                    modalImage.style.objectFit = 'contain';
+                }
+                
+                // Update button icon
+                if (fullscreenIcon) {
+                    fullscreenIcon.className = 'bi bi-fullscreen-exit';
+                }
+                if (fullscreenBtn) {
+                    fullscreenBtn.title = 'Sair da tela cheia';
+                    fullscreenBtn.querySelector('.visually-hidden').textContent = 'Sair da tela cheia';
+                }
+            } else {
+                // Switch back to normal
+                modalDialog.classList.remove('modal-fullscreen');
+                modalDialog.classList.add('modal-xl', 'modal-dialog-centered');
+                
+                if (modalImage) {
+                    modalImage.style.maxHeight = '70vh';
+                    modalImage.style.maxWidth = '';
+                    modalImage.style.objectFit = '';
+                }
+                
+                // Update button icon
+                if (fullscreenIcon) {
+                    fullscreenIcon.className = 'bi bi-arrows-fullscreen';
+                }
+                if (fullscreenBtn) {
+                    fullscreenBtn.title = 'Tela cheia';
+                    fullscreenBtn.querySelector('.visually-hidden').textContent = 'Tela cheia';
+                }
+            }
+        },
+
+        /**
+         * Handle image click (distinguish between click and pan)
+         */
+        handleImageClick: function(e) {
+            // Only toggle zoom if we weren't panning
+            if (!this.isPanning && Math.abs(this.panStartX - e.clientX) < 5 && Math.abs(this.panStartY - e.clientY) < 5) {
+                this.toggleZoom();
+            }
+        },
+
+        /**
+         * Start panning
+         */
+        startPan: function(e) {
+            // Only allow panning when zoomed
+            if (this.currentZoom <= 1) return;
+            
+            e.preventDefault();
+            this.isPanning = true;
+            
+            // Get initial position
+            const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+            
+            this.panStartX = clientX - this.panX;
+            this.panStartY = clientY - this.panY;
+            
+            this.updateImageZoom();
+        },
+
+        /**
+         * Update panning
+         */
+        updatePan: function(e) {
+            if (!this.isPanning) return;
+            
+            e.preventDefault();
+            
+            // Get current position
+            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+            
+            // Calculate new pan position
+            this.panX = clientX - this.panStartX;
+            this.panY = clientY - this.panStartY;
+            
+            this.updateImageZoom();
+        },
+
+        /**
+         * End panning
+         */
+        endPan: function() {
+            this.isPanning = false;
+            this.updateImageZoom();
         }
     };
 

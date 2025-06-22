@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 from model_utils.managers import InheritanceManager
 
+
 class Event(models.Model):
     HISTORY_AND_PHYSICAL_EVENT = 0
     DAILY_NOTE_EVENT = 1
@@ -58,50 +59,72 @@ class Event(models.Model):
 
     def __str__(self):
         return str(self.description)
-    
+
     def get_excerpt(self, max_length=150):
         """Generate a short excerpt from event content."""
-        content = getattr(self, 'content', None) or getattr(self, 'description', '')
+        content = getattr(self, "content", None) or getattr(self, "description", "")
         if content:
             # Remove HTML tags
             import re
-            clean_content = re.sub('<[^<]+?>', '', str(content))
-            return clean_content[:max_length] + '...' if len(clean_content) > max_length else clean_content
+
+            clean_content = re.sub("<[^<]+?>", "", str(content))
+            return (
+                clean_content[:max_length] + "..."
+                if len(clean_content) > max_length
+                else clean_content
+            )
         return "No content available"
 
     def get_event_type_badge_class(self):
         """Return CSS class for event type badge."""
         badge_classes = {
-            0: 'bg-medical-primary',     # History & Physical
-            1: 'bg-medical-success',     # Daily Notes
-            2: 'bg-medical-info',        # Simple Note
-            3: 'bg-medical-warning',     # Photos
-            4: 'bg-medical-danger',      # Exam Results
-            5: 'bg-medical-secondary',   # Exam Request
-            6: 'bg-medical-dark',        # Discharge Report
-            7: 'bg-medical-light',       # Prescription
-            8: 'bg-medical-teal',        # Report
-            9: 'bg-info',                # Photo Series
-            10: 'bg-primary'             # Video Clip
+            0: "bg-medical-primary",  # History & Physical
+            1: "bg-medical-success",  # Daily Notes
+            2: "bg-medical-info",  # Simple Note
+            3: "bg-medical-warning",  # Photos
+            4: "bg-medical-danger",  # Exam Results
+            5: "bg-medical-secondary",  # Exam Request
+            6: "bg-medical-dark",  # Discharge Report
+            7: "bg-medical-light",  # Prescription
+            8: "bg-medical-teal",  # Report
+            9: "bg-info",  # Photo Series
+            10: "bg-primary",  # Video Clip
         }
-        return badge_classes.get(self.event_type, 'bg-secondary')
+        return badge_classes.get(self.event_type, "bg-secondary")
 
     def get_event_type_icon(self):
         """Return Bootstrap icon class for event type."""
         icon_classes = {
-            0: 'bi-clipboard2-heart',    # History & Physical
-            1: 'bi-journal-text',        # Daily Notes
-            2: 'bi-sticky',              # Simple Note
-            3: 'bi-camera',              # Photos
-            4: 'bi-clipboard2-data',     # Exam Results
-            5: 'bi-clipboard2-check',    # Exam Request
-            6: 'bi-door-open',           # Discharge Report
-            7: 'bi-prescription2',       # Prescription
-            8: 'bi-file-text',           # Report
-            9: 'bi-images',              # Photo Series
-            10: 'bi-play-circle'         # Video Clip
+            0: "bi-clipboard2-heart",  # History & Physical
+            1: "bi-journal-text",  # Daily Notes
+            2: "bi-sticky",  # Simple Note
+            3: "bi-camera",  # Photos
+            4: "bi-clipboard2-data",  # Exam Results
+            5: "bi-clipboard2-check",  # Exam Request
+            6: "bi-door-open",  # Discharge Report
+            7: "bi-prescription2",  # Prescription
+            8: "bi-file-text",  # Report
+            9: "bi-images",  # Photo Series
+            10: "bi-play-circle",  # Video Clip
         }
-        return icon_classes.get(self.event_type, 'bi-file-text')
+        return icon_classes.get(self.event_type, "bi-file-text")
+
+    def get_event_type_short_display(self):
+        """Return shortened event type display for mobile-friendly badges."""
+        short_display_map = {
+            0: "Anamese",  # Anamnese e Exame Físico
+            1: "Evolução",  # Evolução (already short)
+            2: "Nota/Obs.",  # Nota/Observação
+            3: "Imagem",  # Imagem (already short)
+            4: "Resultado",  # Resultado de Exame
+            5: "Requisição",  # Requisição de Exame
+            6: "Alta",  # Relatório de Alta
+            7: "Receita",  # Receita (already short)
+            8: "Relatório",  # Relatório (already short)
+            9: "Fotos",  # Série de Fotos
+            10: "Vídeo",  # Vídeo Curto
+        }
+        return short_display_map.get(self.event_type, self.get_event_type_display())
 
     def get_absolute_url(self):
         """Return the absolute URL for this event.
@@ -109,6 +132,7 @@ class Event(models.Model):
         """
         from django.urls import reverse
         from django.core.exceptions import ImproperlyConfigured
+
         raise ImproperlyConfigured(
             f"The {self.__class__.__name__} model must define a get_absolute_url() method."
         )
@@ -119,6 +143,7 @@ class Event(models.Model):
         """
         from django.urls import reverse
         from django.core.exceptions import ImproperlyConfigured
+
         raise ImproperlyConfigured(
             f"The {self.__class__.__name__} model must define a get_edit_url() method."
         )
@@ -130,6 +155,7 @@ class Event(models.Model):
             return False
         from datetime import timedelta
         from django.utils import timezone
+
         edit_deadline = self.created_at + timedelta(hours=24)
         return timezone.now() <= edit_deadline
 
@@ -142,9 +168,18 @@ class Event(models.Model):
             ("delete_own_event_24h", "Can delete own events within 24 hours"),
         ]
         indexes = [
-            models.Index(fields=['patient', '-event_datetime'], name='event_patient_dt_idx'),
-            models.Index(fields=['created_by', '-event_datetime'], name='event_creator_dt_idx'),
-            models.Index(fields=['event_datetime'], name='event_datetime_idx'),
-            models.Index(fields=['event_type', '-event_datetime'], name='event_type_dt_idx'),
-            models.Index(fields=['patient', 'event_type', '-event_datetime'], name='event_pt_type_dt_idx'),
+            models.Index(
+                fields=["patient", "-event_datetime"], name="event_patient_dt_idx"
+            ),
+            models.Index(
+                fields=["created_by", "-event_datetime"], name="event_creator_dt_idx"
+            ),
+            models.Index(fields=["event_datetime"], name="event_datetime_idx"),
+            models.Index(
+                fields=["event_type", "-event_datetime"], name="event_type_dt_idx"
+            ),
+            models.Index(
+                fields=["patient", "event_type", "-event_datetime"],
+                name="event_pt_type_dt_idx",
+            ),
         ]

@@ -1,0 +1,289 @@
+{% extends "mediafiles/base.html" %}
+{% load static %}
+{% load mediafiles_tags %}
+
+{% block title %}
+Foto - {{ photo.patient.name }} - EquipeMed
+{% endblock title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_detail' photo.patient.id %}" class="text-decoration-none">
+        <i class="bi bi-person me-1"></i>
+        {{ photo.patient.name }}
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_events_timeline' photo.patient.id %}" class="text-decoration-none">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline
+    </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">
+    <i class="bi bi-eye me-1"></i>
+    Visualizar Foto
+</li>
+{% endblock breadcrumb_items %}
+
+{% block media_content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <h1 class="h3 text-medical-primary mb-1">
+                    <i class="bi bi-camera me-2"></i>
+                    Foto
+                </h1>
+                <p class="text-medical-gray mb-0">
+                    Paciente: <strong>{{ photo.patient.name }}</strong>
+                </p>
+                {% if photo.description %}
+                <p class="text-muted mt-1 mb-0">{{ photo.description }}</p>
+                {% endif %}
+            </div>
+            <div class="text-end">
+                <small class="text-muted d-block">
+                    Criado em: {{ photo.created_at|date:"d/m/Y H:i" }}
+                </small>
+                <small class="text-muted d-block">
+                    Por: {{ photo.created_by.get_full_name|default:photo.created_by.username }}
+                </small>
+            </div>
+        </div>
+
+        <!-- Photo Display Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-medical-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-image me-2"></i>
+                    {{ photo.media_file.original_filename }}
+                </h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#fullscreenModal">
+                        <i class="bi bi-arrows-fullscreen me-1"></i>
+                        Tela Cheia
+                    </button>
+                    <a href="{% url 'mediafiles:photo_download' photo.pk %}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-download me-1"></i>
+                        Download
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Main Image Display -->
+                <div class="text-center bg-light">
+                    <img src="{% url 'mediafiles:serve_file' photo.media_file.id %}" 
+                         class="img-fluid" 
+                         alt="{{ photo.media_file.original_filename }}"
+                         style="max-height: 70vh; width: auto;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Photo Information -->
+        <div class="row">
+            <!-- Metadata Card -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Informações da Foto
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="media-metadata">
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-file-earmark-text me-1"></i>
+                                    Nome do arquivo:
+                                </span>
+                                <span class="metadata-value">{{ photo.media_file.original_filename }}</span>
+                            </div>
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-hdd me-1"></i>
+                                    Tamanho:
+                                </span>
+                                <span class="metadata-value">{{ photo.media_file.get_display_size }}</span>
+                            </div>
+                            
+                            {% if photo.media_file.width and photo.media_file.height %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-aspect-ratio me-1"></i>
+                                    Dimensões:
+                                </span>
+                                <span class="metadata-value">{{ photo.media_file.width }} × {{ photo.media_file.height }} pixels</span>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-file-earmark-code me-1"></i>
+                                    Tipo:
+                                </span>
+                                <span class="metadata-value">{{ photo.media_file.mime_type }}</span>
+                            </div>
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-calendar-event me-1"></i>
+                                    Data do evento:
+                                </span>
+                                <span class="metadata-value">{{ photo.event_datetime|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            
+                            {% if photo.caption %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-chat-quote me-1"></i>
+                                    Legenda:
+                                </span>
+                                <span class="metadata-value">{{ photo.caption }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Card -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-gear me-2"></i>
+                            Ações
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <!-- Edit Button -->
+                            {% if can_edit %}
+                            <a href="{% url 'mediafiles:photo_update' photo.pk %}" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil me-2"></i>
+                                Editar Informações
+                            </a>
+                            {% endif %}
+                            
+                            <!-- Download Button -->
+                            <a href="{% url 'mediafiles:photo_download' photo.pk %}" class="btn btn-outline-success">
+                                <i class="bi bi-download me-2"></i>
+                                Baixar Arquivo
+                            </a>
+                            
+                            <!-- View in Timeline -->
+                            <a href="{% url 'apps.patients:patient_events_timeline' photo.patient.pk %}#event-{{ photo.pk }}" class="btn btn-outline-info">
+                                <i class="bi bi-clock-history me-2"></i>
+                                Ver na Timeline
+                            </a>
+                            
+                            <!-- Delete Button -->
+                            {% if can_delete %}
+                            <a href="{% url 'mediafiles:photo_delete' photo.pk %}" class="btn btn-outline-danger">
+                                <i class="bi bi-trash me-2"></i>
+                                Excluir Foto
+                            </a>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Technical Info -->
+                        <hr class="my-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Informações Técnicas
+                        </h6>
+                        <small class="text-muted d-block mb-1">
+                            <strong>ID:</strong> {{ photo.pk }}
+                        </small>
+                        <small class="text-muted d-block mb-1">
+                            <strong>Hash:</strong> {{ photo.media_file.file_hash|slice:":16" }}...
+                        </small>
+                        <small class="text-muted d-block">
+                            <strong>Upload:</strong> {{ photo.media_file.created_at|date:"d/m/Y H:i" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="mt-4">
+            <a href="{% url 'apps.patients:patient_events_timeline' photo.patient.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                Voltar à Timeline
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Fullscreen Modal -->
+<div class="modal fade" id="fullscreenModal" tabindex="-1" aria-labelledby="fullscreenModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-white" id="fullscreenModalLabel">
+                    {{ photo.media_file.original_filename }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body d-flex align-items-center justify-content-center p-0">
+                <img src="{% url 'mediafiles:serve_file' photo.media_file.id %}" 
+                     class="img-fluid" 
+                     alt="{{ photo.media_file.original_filename }}"
+                     style="max-height: 100vh; max-width: 100vw; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock media_content %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize fullscreen modal
+    const fullscreenModal = document.getElementById('fullscreenModal');
+    if (fullscreenModal) {
+        fullscreenModal.addEventListener('shown.bs.modal', function () {
+            // Focus on the modal for keyboard navigation
+            this.focus();
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && fullscreenModal.classList.contains('show')) {
+                bootstrap.Modal.getInstance(fullscreenModal).hide();
+            }
+        });
+    }
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Only if no input is focused
+        if (document.activeElement.tagName !== 'INPUT' && 
+            document.activeElement.tagName !== 'TEXTAREA') {
+            
+            switch(e.key) {
+                case 'f':
+                case 'F':
+                    // Open fullscreen
+                    e.preventDefault();
+                    const modal = new bootstrap.Modal(fullscreenModal);
+                    modal.show();
+                    break;
+                case 'd':
+                case 'D':
+                    // Download
+                    e.preventDefault();
+                    window.location.href = "{% url 'mediafiles:photo_download' photo.pk %}";
+                    break;
+            }
+        }
+    });
+});
+</script>
+{% endblock extra_scripts %}

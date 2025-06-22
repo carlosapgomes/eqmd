@@ -512,3 +512,50 @@ body.app-layout { // Add a class to body for authenticated layout to avoid affec
     }
   }
 }
+
+// Event Card Responsive Styling
+// --------------------------------------------------
+
+// Event type badge responsive adjustments
+.event-type-badge {
+  // Base styling for all screen sizes
+  word-break: break-word;
+  hyphens: auto;
+  
+  // Mobile-specific constraints
+  @media (max-width: 767.98px) {
+    max-width: 120px; // Limit badge width on mobile
+    font-size: 0.75rem; // Slightly smaller font
+    padding: 0.25rem 0.5rem; // Adjusted padding
+    
+    // Text truncation as fallback
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  // Small mobile devices
+  @media (max-width: 575.98px) {
+    max-width: 100px; // Even more restrictive on small screens
+    font-size: 0.7rem;
+  }
+}
+
+// Timeline card header responsive adjustments
+.timeline-card {
+  .card-body header {
+    // Ensure proper spacing and alignment on mobile
+    @media (max-width: 767.98px) {
+      .d-flex.align-items-center {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+      }
+      
+      // Ensure action buttons don't overflow
+      .event-actions {
+        flex-shrink: 0; // Prevent buttons from shrinking
+        margin-left: auto; // Push to right
+      }
+    }
+  }
+}

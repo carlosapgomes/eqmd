@@ -76,15 +76,20 @@ class MediaFileManager(models.Manager):
             **kwargs
         )
 
-        # Save file to storage
-        media_file.file.save(uploaded_file.name, uploaded_file, save=False)
+        # CRITICAL FIX: Save to database FIRST to get an ID for consistent file naming
+        # This ensures the instance has an ID before file upload, so original file and
+        # thumbnail use the same UUID (instance.id)
+        media_file.save()
 
-        # Extract metadata and generate thumbnails
+        # Now save file to storage using the MediaFile.id for consistent naming
+        media_file.file.save(uploaded_file.name, uploaded_file, save=True)
+
+        # Extract metadata and generate thumbnails (both will use same MediaFile.id)
         media_file._extract_metadata()
         media_file._generate_thumbnail()
 
-        # Save to database
-        media_file.save()
+        # Save to database again to update metadata and thumbnail fields
+        media_file.save(update_fields=['width', 'height', 'metadata', 'thumbnail'])
 
         return media_file
 
@@ -221,21 +226,36 @@ class MediaFile(models.Model):
 
     def save(self, *args, **kwargs):
         """Override save to generate secure filename and extract metadata."""
+        # Only perform automatic processing if this is not an update-only save
+        update_fields = kwargs.get('update_fields')
+        is_update_only = update_fields is not None
+
         if self.file and not self.file_hash:
             # Calculate file hash if not already set
             self.file_hash = calculate_file_hash(self.file)
 
-        # Extract metadata before saving
-        if self.file and not self.width:
-            self._extract_metadata()
+        # Extract metadata only if file exists on disk and we haven't extracted it yet
+        if self.file and not self.width and not is_update_only:
+            # Check if file actually exists on disk before trying to extract metadata
+            try:
+                if hasattr(self.file, 'path') and os.path.exists(self.file.path):
+                    self._extract_metadata()
+            except (ValueError, AttributeError):
+                # File might not be saved to disk yet, skip metadata extraction
+                pass
 
         super().save(*args, **kwargs)
 
-        # Generate thumbnail after saving
-        if self.file and not self.thumbnail:
-            self._generate_thumbnail()
-            # Save again to update thumbnail field
-            super().save(update_fields=['thumbnail'])
+        # Generate thumbnail after saving, only if we don't have one and file exists
+        if self.file and not self.thumbnail and not is_update_only:
+            try:
+                if hasattr(self.file, 'path') and os.path.exists(self.file.path):
+                    self._generate_thumbnail()
+                    # Save again to update thumbnail field
+                    super().save(update_fields=['thumbnail'])
+            except (ValueError, AttributeError):
+                # File might not be accessible, skip thumbnail generation
+                pass
 
     def _extract_metadata(self):
         """Extract metadata from image file."""
@@ -368,8 +388,15 @@ class Photo(Event):
         """Validate the photo."""
         super().clean()
 
-        if self.media_file and not self.media_file.mime_type.startswith('image/'):
-            raise ValidationError("Media file must be an image")
+        # Only validate media_file if it's actually assigned and accessible
+        # During form creation, media_file might not be assigned yet
+        try:
+            if self.media_file and not self.media_file.mime_type.startswith('image/'):
+                raise ValidationError("Media file must be an image")
+        except MediaFile.DoesNotExist:
+            # media_file relationship doesn't exist yet (during form validation)
+            # This is normal during creation process, skip validation
+            pass
 
     def get_absolute_url(self):
         """Return the absolute URL for this photo."""

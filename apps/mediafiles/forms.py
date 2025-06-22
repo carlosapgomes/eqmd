@@ -57,10 +57,13 @@ class PhotoCreateForm(BaseMediaForm, forms.ModelForm):
                 'placeholder': 'Descrição da foto (ex: Raio-X do tórax)',
                 'maxlength': 255
             }),
-            'event_datetime': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'form-control'
-            }),
+            'event_datetime': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control'
+                },
+                format='%Y-%m-%dT%H:%M'
+            ),
             'caption': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
@@ -73,9 +76,21 @@ class PhotoCreateForm(BaseMediaForm, forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
+        # Set input formats for datetime field
+        self.fields['event_datetime'].input_formats = [
+            '%Y-%m-%dT%H:%M',  # HTML5 datetime-local format
+            '%Y-%m-%dT%H:%M:%S',
+            '%d/%m/%Y %H:%M:%S',  # Format in error message
+            '%d/%m/%Y %H:%M',
+        ]
+
         # Set default event datetime to now
         if not self.instance.pk:
-            self.fields['event_datetime'].initial = timezone.now()
+            utc_now = timezone.now().astimezone(timezone.get_default_timezone())
+            self.fields['event_datetime'].initial = utc_now.strftime('%Y-%m-%dT%H:%M')
+        else:
+            dt = self.instance.event_datetime.astimezone(timezone.get_default_timezone())
+            self.fields['event_datetime'].initial = dt.strftime('%Y-%m-%dT%H:%M')
 
     def clean_image(self):
         """Validate uploaded image file"""
@@ -136,10 +151,14 @@ class PhotoCreateForm(BaseMediaForm, forms.ModelForm):
         photo.event_type = Event.PHOTO_EVENT
 
         if commit:
-            # Create MediaFile from uploaded image
+            # Create MediaFile from uploaded image first
             image = self.cleaned_data['image']
             media_file = MediaFile.objects.create_from_upload(image)
+
+            # Assign media_file before saving to avoid validation issues
             photo.media_file = media_file
+
+            # Now save the photo with the media_file assigned
             photo.save()
 
         return photo
@@ -161,10 +180,13 @@ class PhotoUpdateForm(BaseMediaForm, forms.ModelForm):
                 'placeholder': 'Descrição da foto',
                 'maxlength': 255
             }),
-            'event_datetime': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'form-control'
-            }),
+            'event_datetime': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control'
+                },
+                format='%Y-%m-%dT%H:%M'
+            ),
             'caption': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
@@ -175,6 +197,19 @@ class PhotoUpdateForm(BaseMediaForm, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
+        # Set input formats for datetime field
+        self.fields['event_datetime'].input_formats = [
+            '%Y-%m-%dT%H:%M',  # HTML5 datetime-local format
+            '%Y-%m-%dT%H:%M:%S',
+            '%d/%m/%Y %H:%M:%S',  # Format in error message
+            '%d/%m/%Y %H:%M',
+        ]
+
+        # Set proper initial value for existing instances
+        if self.instance.pk and self.instance.event_datetime:
+            dt = self.instance.event_datetime.astimezone(timezone.get_default_timezone())
+            self.fields['event_datetime'].initial = dt.strftime('%Y-%m-%dT%H:%M')
 
     def save(self, commit=True):
         """Save photo updates"""

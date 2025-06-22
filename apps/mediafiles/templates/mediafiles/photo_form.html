@@ -11,15 +11,21 @@
 
 {% block breadcrumb_items %}
 <li class="breadcrumb-item">
-    <a href="#" class="text-decoration-none">
-        <i class="bi bi-camera me-1"></i>
-        Fotos
+    <a href="{% url 'apps.patients:patient_detail' patient.id %}" class="text-decoration-none">
+        <i class="bi bi-person me-1"></i>
+        {{ patient.name }}
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_events_timeline' patient.id %}" class="text-decoration-none">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline
     </a>
 </li>
 <li class="breadcrumb-item active" aria-current="page">
     {% if form.instance.pk %}
         <i class="bi bi-pencil me-1"></i>
-        Editar
+        Editar Foto
     {% else %}
         <i class="bi bi-plus-circle me-1"></i>
         Nova Foto
@@ -223,7 +229,7 @@
 
                     <!-- Form Actions -->
                     <div class="media-actions justify-content-end">
-                        <a href="{% if patient %}{% url 'apps.patients:patient_detail' patient.id %}{% else %}{% url 'apps.core:dashboard' %}{% endif %}" 
+                        <a href="{% if patient %}{% url 'apps.patients:patient_events_timeline' patient.id %}{% else %}{% url 'apps.core:dashboard' %}{% endif %}"
                            class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left me-1"></i>
                             Cancelar

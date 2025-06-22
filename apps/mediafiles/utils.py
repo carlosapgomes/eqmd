@@ -3,7 +3,6 @@
 
 import os
 import re
-import uuid
 import hashlib
 import mimetypes
 from pathlib import Path
@@ -58,13 +57,17 @@ def get_thumbnail_upload_path(instance, filename: str) -> str:
     year_month = current_date.strftime('%Y/%m')
 
     # Determine media type based on MIME type
-    if instance.mime_type.startswith('image/'):
-        # Check if it's part of a photo series (would need to check relations)
-        media_type = 'photos'  # Default to photos for images
-    elif instance.mime_type.startswith('video/'):
-        media_type = 'videos'
+    if hasattr(instance, 'mime_type') and instance.mime_type:
+        if instance.mime_type.startswith('image/'):
+            # Check if it's part of a photo series (would need to check relations)
+            media_type = 'photos'  # Default to photos for images
+        elif instance.mime_type.startswith('video/'):
+            media_type = 'videos'
+        else:
+            media_type = 'media'
     else:
-        media_type = 'media'
+        # Fallback if no mime_type available
+        media_type = 'photos'  # Default for thumbnails
 
     # Construct secure thumbnail path
     secure_path = f"{media_type}/{year_month}/thumbnails/{secure_filename}"
@@ -113,15 +116,18 @@ def get_secure_upload_path(instance, filename: str) -> str:
     if ext not in allowed_extensions:
         raise ValueError(f"File extension {ext} not allowed")
 
-    # Generate cryptographically secure UUID-based filename
-    secure_filename = f"{uuid.uuid4()}{ext}"
+    # Generate secure filename using MediaFile instance ID for consistency
+    # This ensures original file and thumbnail use the same UUID
+    secure_filename = f"{instance.id}{ext}"
 
     # Determine media type and create path structure
     current_date = timezone.now()
     year_month = current_date.strftime('%Y/%m')
 
-    # Determine media type from instance (controlled by application logic)
+    # Determine media type from instance
+    # For MediaFile instances, we need to infer type from MIME type since they don't have event_type
     if hasattr(instance, 'event_type'):
+        # This is an Event-based instance (Photo, PhotoSeries, VideoClip)
         from apps.events.models import Event
         if instance.event_type == Event.PHOTO_EVENT:
             media_type = 'photos'
@@ -131,7 +137,16 @@ def get_secure_upload_path(instance, filename: str) -> str:
             media_type = 'videos'
         else:
             media_type = 'media'
+    elif hasattr(instance, 'mime_type') and instance.mime_type:
+        # This is a MediaFile instance, determine type from MIME type
+        if instance.mime_type.startswith('image/'):
+            media_type = 'photos'  # Default to photos for images
+        elif instance.mime_type.startswith('video/'):
+            media_type = 'videos'
+        else:
+            media_type = 'media'
     else:
+        # Fallback for unknown instances
         media_type = 'media'
 
     # Construct secure path

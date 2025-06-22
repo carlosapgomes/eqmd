@@ -112,17 +112,10 @@ class SecureFileServeView(View):
         # Get associated event
         event = self._get_event_from_media_file(media_file)
 
-        # Check patient access permissions
-        if not user.has_perm('patients.view_patient', event.patient):
+        # Check patient access permissions using custom permission system
+        from apps.core.permissions import can_access_patient
+        if not can_access_patient(user, event.patient):
             raise PermissionDenied("No permission to view patient files")
-
-        # Check hospital context
-        if hasattr(user, 'current_hospital') and user.current_hospital != event.patient.hospital:
-            raise PermissionDenied("File not accessible in current hospital context")
-
-        # Check event-specific permissions
-        if not user.has_perm('events.view_event', event):
-            raise PermissionDenied("No permission to view this event")
 
         return media_file
 
@@ -136,20 +129,36 @@ class SecureFileServeView(View):
         Returns:
             Event object
         """
-        # This will be implemented when models are created
-        # Try to find associated Photo, PhotoSeries, or VideoClip
+        # Import here to avoid circular imports
+        from .models import Photo
+
+        # Try to find associated Photo, PhotoSeries, or VideoClip using correct relationships
         try:
-            if hasattr(media_file, 'photo'):
-                return media_file.photo
-            elif hasattr(media_file, 'videoclip'):
-                return media_file.videoclip
-            elif hasattr(media_file, 'photoseriesfile_set'):
-                # Get first photo series that uses this file
-                series_file = media_file.photoseriesfile_set.first()
-                if series_file:
-                    return series_file.photo_series
-        except AttributeError:
-            pass
+            # For Photo: Use reverse OneToOneField relationship
+            try:
+                photo = Photo.objects.get(media_file=media_file)
+                return photo
+            except Photo.DoesNotExist:
+                pass
+
+            # For VideoClip: Use reverse OneToOneField relationship (when implemented)
+            # try:
+            #     videoclip = VideoClip.objects.get(media_file=media_file)
+            #     return videoclip
+            # except VideoClip.DoesNotExist:
+            #     pass
+
+            # For PhotoSeries: Use through model relationship (when implemented)
+            # if hasattr(media_file, 'photoseriesfile_set'):
+            #     series_file = media_file.photoseriesfile_set.first()
+            #     if series_file:
+            #         return series_file.photo_series
+
+        except Exception as e:
+            # Log the error for debugging
+            import logging
+            logger = logging.getLogger('mediafiles.security')
+            logger.error(f"Error finding event for media_file {media_file.id}: {str(e)}")
 
         # Fallback - this should not happen in production
         raise PermissionDenied("Could not determine associated event")
@@ -157,6 +166,8 @@ class SecureFileServeView(View):
     def _serve_file_securely(self, media_file) -> FileResponse:
         """
         Serve file with comprehensive security headers.
+
+        Includes fallback logic to handle both old (random UUID) and new (MediaFile.id) naming strategies.
 
         Args:
             media_file: MediaFile object
@@ -169,9 +180,13 @@ class SecureFileServeView(View):
         """
         file_path = Path(settings.MEDIA_ROOT) / media_file.file.name
 
-        # Validate file exists and is readable
+        # Check if file exists with current naming strategy
         if not file_path.exists() or not file_path.is_file():
-            raise Http404("File not found on disk")
+            # FALLBACK: Try to find file with old naming strategy (random UUID)
+            file_path = self._find_file_with_fallback(media_file, file_path)
+
+            if not file_path or not file_path.exists():
+                raise Http404("File not found on disk")
 
         # Get MIME type
         content_type, _ = mimetypes.guess_type(str(file_path))
@@ -197,6 +212,40 @@ class SecureFileServeView(View):
         response['Content-Length'] = file_path.stat().st_size
 
         return response
+
+    def _find_file_with_fallback(self, media_file, expected_path):
+        """
+        Find file using fallback strategy for old naming convention.
+
+        Args:
+            media_file: MediaFile object
+            expected_path: Path where file should be with new naming
+
+        Returns:
+            Path object if file found, None otherwise
+        """
+        # Get the directory where the file should be
+        file_dir = expected_path.parent
+        if not file_dir.exists():
+            return None
+
+        # Get the expected file extension
+        file_extension = expected_path.suffix
+
+        # Look for any file with the same extension in the directory
+        # This handles the case where file was saved with random UUID
+        matching_files = list(file_dir.glob(f'*{file_extension}'))
+
+        if len(matching_files) == 1:
+            # Found exactly one file with matching extension - likely our file
+            return matching_files[0]
+        elif len(matching_files) > 1:
+            # Multiple files found - log this for investigation
+            import logging
+            logger = logging.getLogger('mediafiles.serving')
+            logger.warning(f"Multiple files found for MediaFile {media_file.id} in {file_dir}: {[f.name for f in matching_files]}")
+
+        return None
 
     def _log_file_access(self, user, media_file, action: str) -> None:
         """Log file access for audit trail."""
@@ -272,11 +321,15 @@ class SecureThumbnailServeView(SecureFileServeView):
         Raises:
             Http404: If thumbnail not found
         """
-        # Get thumbnail path
-        if not media_file.thumbnail_path:
+        # Get thumbnail path - use the thumbnail ImageField
+        if not media_file.thumbnail:
             raise Http404("Thumbnail not available")
 
-        thumbnail_path = Path(settings.MEDIA_ROOT) / media_file.thumbnail_path
+        try:
+            thumbnail_path = Path(media_file.thumbnail.path)
+        except ValueError:
+            # Handle case where thumbnail field exists but file path is invalid
+            raise Http404("Thumbnail path not available")
 
         # Validate thumbnail exists
         if not thumbnail_path.exists() or not thumbnail_path.is_file():
@@ -377,8 +430,8 @@ class PhotoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         return context
 
     def get_success_url(self):
-        """Redirect to photo detail view after successful creation."""
-        return reverse_lazy("mediafiles:photo_detail", kwargs={"pk": self.object.pk})
+        """Redirect to patient timeline after successful creation."""
+        return reverse_lazy("apps.patients:patient_events_timeline", kwargs={"patient_id": self.object.patient.pk})
 
     def form_valid(self, form):
         """Handle successful form submission."""
@@ -479,8 +532,8 @@ class PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         return context
 
     def get_success_url(self):
-        """Redirect to photo detail view after successful update."""
-        return reverse_lazy("mediafiles:photo_detail", kwargs={"pk": self.object.pk})
+        """Redirect to patient timeline after successful update."""
+        return reverse_lazy("apps.patients:patient_events_timeline", kwargs={"patient_id": self.object.patient.pk})
 
     def form_valid(self, form):
         """Handle successful form submission."""
@@ -532,8 +585,8 @@ class PhotoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     def get_success_url(self):
         """Redirect to patient timeline after successful deletion."""
         return reverse_lazy(
-            "patients:patient_detail",
-            kwargs={"pk": self.object.patient.pk}
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.pk}
         )
 
     def delete(self, request, *args, **kwargs):
