@@ -1,0 +1,253 @@
+/*
+ * MediaFiles CSS
+ * 
+ * Styles for the EquipeMed MediaFiles app
+ * Provides consistent styling for media upload, display, and management
+ */
+
+/* Medical theme colors */
+:root {
+    --medical-primary: #2c5aa0;
+    --medical-teal: #20c997;
+    --medical-gray: #6c757d;
+    --medical-dark-gray: #495057;
+    --medical-light: #f8f9fa;
+    --medical-success: #155724;
+    --medical-error: #dc3545;
+    --medical-warning: #856404;
+}
+
+/* Button variants */
+.btn-medical-primary {
+    background-color: var(--medical-primary);
+    border-color: var(--medical-primary);
+    color: white;
+}
+
+.btn-medical-primary:hover {
+    background-color: #1e3f73;
+    border-color: #1e3f73;
+    color: white;
+}
+
+.btn-medical-primary:focus {
+    box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
+}
+
+.btn-medical-teal {
+    background-color: var(--medical-teal);
+    border-color: var(--medical-teal);
+    color: white;
+}
+
+.btn-medical-teal:hover {
+    background-color: #1aa085;
+    border-color: #1aa085;
+    color: white;
+}
+
+/* Text colors */
+.text-medical-primary {
+    color: var(--medical-primary) !important;
+}
+
+.text-medical-teal {
+    color: var(--medical-teal) !important;
+}
+
+.text-medical-gray {
+    color: var(--medical-gray) !important;
+}
+
+.text-medical-dark-gray {
+    color: var(--medical-dark-gray) !important;
+}
+
+/* Background colors */
+.bg-medical-primary {
+    background-color: var(--medical-primary) !important;
+}
+
+.bg-medical-teal {
+    background-color: var(--medical-teal) !important;
+}
+
+.bg-medical-light {
+    background-color: var(--medical-light) !important;
+}
+
+/* Media-specific components */
+.media-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.media-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.media-card-header {
+    background-color: var(--medical-light);
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.media-card-body {
+    padding: 1rem;
+}
+
+.media-icon {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background-color: var(--medical-primary);
+    color: white;
+    font-size: 0.875rem;
+}
+
+.media-icon.image {
+    background-color: var(--medical-teal);
+}
+
+.media-icon.video {
+    background-color: #fd7e14;
+}
+
+.media-icon.series {
+    background-color: #6f42c1;
+}
+
+/* Loading states */
+.media-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--medical-gray);
+}
+
+.media-loading .spinner-border {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* File size formatting */
+.file-size {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    color: var(--medical-gray);
+}
+
+/* Timestamp formatting */
+.timestamp {
+    font-size: 0.875rem;
+    color: var(--medical-gray);
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.status-indicator.success {
+    background-color: #d4edda;
+    color: var(--medical-success);
+}
+
+.status-indicator.error {
+    background-color: #f8d7da;
+    color: var(--medical-error);
+}
+
+.status-indicator.warning {
+    background-color: #fff3cd;
+    color: var(--medical-warning);
+}
+
+.status-indicator.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+/* Responsive utilities */
+@media (max-width: 576px) {
+    .media-card-body {
+        padding: 0.75rem;
+    }
+    
+    .media-actions .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .media-actions,
+    .btn,
+    .media-upload-area {
+        display: none !important;
+    }
+    
+    .media-preview {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+}
+
+/* Accessibility improvements */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Focus indicators */
+.media-upload-area:focus-within {
+    outline: 2px solid var(--medical-primary);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .media-thumbnail {
+        border: 2px solid currentColor;
+    }
+    
+    .media-upload-area {
+        border-width: 3px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .media-thumbnail,
+    .media-upload-area,
+    .media-progress-bar {
+        transition: none;
+    }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --medical-light: #343a40;
+        --medical-gray: #adb5bd;
+        --medical-dark-gray: #dee2e6;
+    }
+}

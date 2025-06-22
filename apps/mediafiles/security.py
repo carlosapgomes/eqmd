@@ -12,18 +12,38 @@ from django.utils import timezone
 def configure_security_logging():
     """Configure security logging for media files."""
     logger = logging.getLogger('security.mediafiles')
-    
+
     if not logger.handlers:
-        # Create file handler for security logs
-        handler = logging.FileHandler('logs/security_mediafiles.log')
-        formatter = logging.Formatter(
-            '%(asctime)s %(levelname)s %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-    
+        try:
+            # Create logs directory if it doesn't exist
+            import os
+            from django.conf import settings
+
+            logs_dir = getattr(settings, 'LOGS_DIR', 'logs')
+            if not os.path.exists(logs_dir):
+                os.makedirs(logs_dir, exist_ok=True)
+
+            # Create file handler for security logs
+            log_file = os.path.join(logs_dir, 'security_mediafiles.log')
+            handler = logging.FileHandler(log_file)
+            formatter = logging.Formatter(
+                '%(asctime)s %(levelname)s %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+        except Exception:
+            # Fall back to console logging if file logging fails
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s %(levelname)s %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+
     return logger
 
 
@@ -77,6 +97,54 @@ class RateLimiter:
             'remaining': max(0, limit - current_count),
             'is_limited': current_count >= limit
         }
+
+
+# File validation utilities
+class FileValidator:
+    """File validation utilities for media files."""
+
+    @staticmethod
+    def validate_image_file(uploaded_file):
+        """
+        Validate uploaded image file for security and format.
+
+        Args:
+            uploaded_file: Django UploadedFile object
+
+        Raises:
+            ValidationError: If file validation fails
+        """
+        from django.core.exceptions import ValidationError
+        from pathlib import Path
+
+        # Check file size
+        max_size = getattr(settings, 'MEDIA_IMAGE_MAX_SIZE', 5 * 1024 * 1024)
+        if uploaded_file.size > max_size:
+            raise ValidationError(f"File size ({uploaded_file.size} bytes) exceeds maximum allowed ({max_size} bytes)")
+
+        # Check file extension
+        ext = Path(uploaded_file.name).suffix.lower()
+        allowed_extensions = getattr(settings, 'MEDIA_ALLOWED_IMAGE_EXTENSIONS', ['.jpg', '.jpeg', '.png', '.webp'])
+        if ext not in allowed_extensions:
+            raise ValidationError(f"File extension {ext} not allowed")
+
+        # Check MIME type
+        allowed_types = getattr(settings, 'MEDIA_ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/webp'])
+        if uploaded_file.content_type not in allowed_types:
+            raise ValidationError(f"File type {uploaded_file.content_type} not allowed")
+
+        # Basic magic number validation
+        uploaded_file.seek(0)
+        header = uploaded_file.read(1024)
+        uploaded_file.seek(0)
+
+        # Check for common image magic numbers
+        if not (
+            header.startswith(b'\xff\xd8\xff') or  # JPEG
+            header.startswith(b'\x89PNG\r\n\x1a\n') or  # PNG
+            header.startswith(b'RIFF') and b'WEBP' in header[:12]  # WebP
+        ):
+            raise ValidationError("Invalid image file format")
 
 
 # Security validation utilities

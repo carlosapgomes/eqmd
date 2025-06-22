@@ -1,5 +1,17 @@
-# MediaFiles Views
-# Secure file serving and access control views
+"""
+MediaFiles Views
+
+This module implements views for media file management in EquipeMed.
+It provides secure file serving, photo CRUD operations, and access control.
+
+Views:
+- SecureFileServeView: Secure file serving with permission checks
+- SecureThumbnailServeView: Secure thumbnail serving
+- PhotoCreateView: Create new photo events
+- PhotoDetailView: Display photo details
+- PhotoUpdateView: Update photo metadata
+- PhotoDeleteView: Delete photos with confirmation
+"""
 
 import mimetypes
 import time
@@ -7,13 +19,28 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse, FileResponse, Http404
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.http import http_date
 from django.views import View
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_http_methods
+from django.views.generic import CreateView, DetailView, UpdateView, DeleteView
+from django.contrib import messages
+
+from .models import Photo, MediaFile
+from .forms import PhotoCreateForm, PhotoUpdateForm
+from apps.patients.models import Patient
+from apps.core.permissions import (
+    hospital_context_required,
+    can_access_patient,
+    can_edit_event,
+    can_delete_event,
+)
 
 
 class SecureFileServeView(View):
@@ -140,7 +167,7 @@ class SecureFileServeView(View):
         Raises:
             Http404: If file not found on disk
         """
-        file_path = Path(settings.MEDIA_ROOT) / media_file.file_path
+        file_path = Path(settings.MEDIA_ROOT) / media_file.file.name
 
         # Validate file exists and is readable
         if not file_path.exists() or not file_path.is_file():
@@ -307,3 +334,294 @@ def serve_thumbnail(request: HttpRequest, file_id: str) -> HttpResponse:
     """
     view = SecureThumbnailServeView()
     return view.get(request, file_id)
+
+
+# Photo CRUD Views
+
+@method_decorator(hospital_context_required, name="dispatch")
+class PhotoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """
+    Create view for Photo instances for a specific patient.
+
+    Handles secure file upload and photo event creation.
+    """
+
+    model = Photo
+    form_class = PhotoCreateForm
+    template_name = "mediafiles/photo_form.html"
+    permission_required = "events.add_event"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Get patient and check permissions before processing request."""
+        self.patient = get_object_or_404(Patient, pk=kwargs["patient_id"])
+
+        # Check if user can access this patient
+        if not can_access_patient(request.user, self.patient):
+            raise PermissionDenied(
+                "You don't have permission to create photos for this patient"
+            )
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        """Pass current user and patient to form."""
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        kwargs["patient"] = self.patient
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        """Add patient to context."""
+        context = super().get_context_data(**kwargs)
+        context["patient"] = self.patient
+        return context
+
+    def get_success_url(self):
+        """Redirect to photo detail view after successful creation."""
+        return reverse_lazy("mediafiles:photo_detail", kwargs={"pk": self.object.pk})
+
+    def form_valid(self, form):
+        """Handle successful form submission."""
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f"Foto adicionada com sucesso para {self.patient.name}."
+        )
+        return response
+
+
+@method_decorator(hospital_context_required, name="dispatch")
+class PhotoDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    """
+    Detail view for Photo instances.
+
+    Displays full-size photo with metadata and action buttons.
+    """
+
+    model = Photo
+    template_name = "mediafiles/photo_detail.html"
+    context_object_name = "photo"
+    permission_required = "events.view_event"
+
+    def get_object(self, queryset=None):
+        """Get object and check patient access permissions."""
+        obj = super().get_object(queryset)
+
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            raise PermissionDenied(
+                "You don't have permission to access this patient's photos"
+            )
+
+        return obj
+
+    def get_context_data(self, **kwargs):
+        """Add permission context."""
+        context = super().get_context_data(**kwargs)
+        photo = self.get_object()
+
+        # Add permission flags
+        context["can_edit"] = can_edit_event(self.request.user, photo)
+        context["can_delete"] = can_delete_event(self.request.user, photo)
+
+        return context
+
+    def get_queryset(self):
+        """Optimize queryset with related objects."""
+        return Photo.objects.select_related(
+            "patient", "created_by", "updated_by", "media_file"
+        )
+
+
+@method_decorator(hospital_context_required, name="dispatch")
+class PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """
+    Update view for Photo instances.
+
+    Allows editing photo metadata within the 24-hour window.
+    """
+
+    model = Photo
+    form_class = PhotoUpdateForm
+    template_name = "mediafiles/photo_form.html"
+    context_object_name = "photo"
+    permission_required = "events.change_event"
+
+    def get_object(self, queryset=None):
+        """Get object and check patient access and edit permissions."""
+        obj = super().get_object(queryset)
+
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            raise PermissionDenied(
+                "You don't have permission to access this patient's photos"
+            )
+
+        # Check if user can edit this event
+        if not can_edit_event(self.request.user, obj):
+            raise PermissionDenied(
+                "You don't have permission to edit this photo"
+            )
+
+        return obj
+
+    def get_form_kwargs(self):
+        """Pass current user to form."""
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        """Add context for update view."""
+        context = super().get_context_data(**kwargs)
+        context["is_update"] = True
+        context["patient"] = self.object.patient
+        return context
+
+    def get_success_url(self):
+        """Redirect to photo detail view after successful update."""
+        return reverse_lazy("mediafiles:photo_detail", kwargs={"pk": self.object.pk})
+
+    def form_valid(self, form):
+        """Handle successful form submission."""
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            "Foto atualizada com sucesso."
+        )
+        return response
+
+    def get_queryset(self):
+        """Optimize queryset with related objects."""
+        return Photo.objects.select_related(
+            "patient", "created_by", "updated_by", "media_file"
+        )
+
+
+@method_decorator(hospital_context_required, name="dispatch")
+class PhotoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """
+    Delete view for Photo instances with permission checking.
+
+    Requires confirmation and handles file cleanup.
+    """
+
+    model = Photo
+    template_name = "mediafiles/photo_confirm_delete.html"
+    context_object_name = "photo"
+    permission_required = "events.delete_event"
+
+    def get_object(self, queryset=None):
+        """Get object and check patient access and delete permissions."""
+        obj = super().get_object(queryset)
+
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            raise PermissionDenied(
+                "You don't have permission to access this patient's photos"
+            )
+
+        # Check if user can delete this event
+        if not can_delete_event(self.request.user, obj):
+            raise PermissionDenied(
+                "You don't have permission to delete this photo"
+            )
+
+        return obj
+
+    def get_success_url(self):
+        """Redirect to patient timeline after successful deletion."""
+        return reverse_lazy(
+            "patients:patient_detail",
+            kwargs={"pk": self.object.patient.pk}
+        )
+
+    def delete(self, request, *args, **kwargs):
+        """Handle deletion with success message."""
+        photo = self.get_object()
+        patient_name = photo.patient.name
+
+        # Perform deletion
+        response = super().delete(request, *args, **kwargs)
+
+        messages.success(
+            request,
+            f"Foto removida com sucesso do prontuário de {patient_name}."
+        )
+
+        return response
+
+    def get_queryset(self):
+        """Optimize queryset with related objects."""
+        return Photo.objects.select_related(
+            "patient", "created_by", "updated_by", "media_file"
+        )
+
+
+@method_decorator(hospital_context_required, name="dispatch")
+class PhotoDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    """
+    Download view for Photo instances.
+
+    Serves photo file as download with proper headers.
+    """
+
+    model = Photo
+    permission_required = "events.view_event"
+
+    def get_object(self, queryset=None):
+        """Get object and check patient access permissions."""
+        obj = super().get_object(queryset)
+
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            raise PermissionDenied(
+                "You don't have permission to access this patient's photos"
+            )
+
+        return obj
+
+    def get(self, request, *args, **kwargs):
+        """Serve photo file as download."""
+        photo = self.get_object()
+        media_file = photo.media_file
+
+        # Log download access
+        self._log_file_access(request.user, media_file, 'download')
+
+        # Serve file as download
+        file_path = Path(settings.MEDIA_ROOT) / media_file.file.name
+
+        if not file_path.exists():
+            raise Http404("File not found on disk")
+
+        # Create download response
+        response = FileResponse(
+            open(file_path, 'rb'),
+            content_type=media_file.mime_type,
+            as_attachment=True
+        )
+
+        # Set download filename
+        response['Content-Disposition'] = f'attachment; filename="{media_file.original_filename}"'
+
+        return response
+
+    def _log_file_access(self, user, media_file, action: str) -> None:
+        """Log file access for audit trail."""
+        import logging
+        security_logger = logging.getLogger('security.mediafiles')
+
+        security_logger.info(
+            f"File access: user={user.username} "
+            f"file={media_file.id} "
+            f"filename={media_file.original_filename} "
+            f"action={action} "
+            f"timestamp={time.time()}"
+        )
+
+    def get_queryset(self):
+        """Optimize queryset with related objects."""
+        return Photo.objects.select_related(
+            "patient", "created_by", "updated_by", "media_file"
+        )

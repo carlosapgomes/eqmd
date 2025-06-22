@@ -26,20 +26,24 @@ class PhotoUploadFormTests(TestCase):
         # Create test hospital
         self.hospital = Hospital.objects.create(
             name='Test Hospital',
+            short_name='TH',
             address='Test Address',
             city='Test City',
             state='TS',
             zip_code='12345',
-            phone='123-456-7890'
+            phone='123-456-7890',
+            created_by=self.user,
+            updated_by=self.user
         )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
-            birth_date='1990-01-01',
-            cpf='12345678901',
-            hospital=self.hospital,
-            created_by=self.user
+            birthday='1990-01-01',
+            status=Patient.Status.OUTPATIENT,
+            current_hospital=self.hospital,
+            created_by=self.user,
+            updated_by=self.user
         )
 
         # Load test media files
@@ -48,8 +52,8 @@ class PhotoUploadFormTests(TestCase):
         with open(os.path.join(self.test_media_dir, 'small_image.jpg'), 'rb') as f:
             self.valid_image_content = f.read()
 
-        with open(os.path.join(self.test_media_dir, 'fake_image.jpg'), 'r') as f:
-            self.invalid_image_content = f.read().encode()
+        with open(os.path.join(self.test_media_dir, 'fake_image.jpg'), 'rb') as f:
+            self.invalid_image_content = f.read()
 
     def test_valid_photo_upload(self):
         """Test valid photo upload"""
@@ -93,20 +97,24 @@ class PhotoSeriesUploadFormTests(TestCase):
         # Create test hospital
         self.hospital = Hospital.objects.create(
             name='Test Hospital',
+            short_name='TH',
             address='Test Address',
             city='Test City',
             state='TS',
             zip_code='12345',
-            phone='123-456-7890'
+            phone='123-456-7890',
+            created_by=self.user,
+            updated_by=self.user
         )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
-            birth_date='1990-01-01',
-            cpf='12345678901',
-            hospital=self.hospital,
-            created_by=self.user
+            birthday='1990-01-01',
+            status=Patient.Status.OUTPATIENT,
+            current_hospital=self.hospital,
+            created_by=self.user,
+            updated_by=self.user
         )
 
         # Load test media files
@@ -155,20 +163,24 @@ class VideoUploadFormTests(TestCase):
         # Create test hospital
         self.hospital = Hospital.objects.create(
             name='Test Hospital',
+            short_name='TH',
             address='Test Address',
             city='Test City',
             state='TS',
             zip_code='12345',
-            phone='123-456-7890'
+            phone='123-456-7890',
+            created_by=self.user,
+            updated_by=self.user
         )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
-            birth_date='1990-01-01',
-            cpf='12345678901',
-            hospital=self.hospital,
-            created_by=self.user
+            birthday='1990-01-01',
+            status=Patient.Status.OUTPATIENT,
+            current_hospital=self.hospital,
+            created_by=self.user,
+            updated_by=self.user
         )
 
         # Load test media files
@@ -177,8 +189,8 @@ class VideoUploadFormTests(TestCase):
         with open(os.path.join(self.test_media_dir, 'test_video.mp4'), 'rb') as f:
             self.valid_video_content = f.read()
 
-        with open(os.path.join(self.test_media_dir, 'malicious.mp4'), 'r') as f:
-            self.invalid_video_content = f.read().encode()
+        with open(os.path.join(self.test_media_dir, 'malicious.mp4'), 'rb') as f:
+            self.invalid_video_content = f.read()
 
     def test_valid_video_upload(self):
         """Test valid video upload"""
@@ -215,8 +227,8 @@ class FormSecurityTests(TestCase):
         self.test_media_dir = os.path.join(os.path.dirname(__file__), 'test_media')
 
         # Load malicious test files
-        with open(os.path.join(self.test_media_dir, 'malicious.jpg'), 'r') as f:
-            self.malicious_image_content = f.read().encode()
+        with open(os.path.join(self.test_media_dir, 'malicious.jpg'), 'rb') as f:
+            self.malicious_image_content = f.read()
 
         with open(os.path.join(self.test_media_dir, 'polyglot.jpg'), 'rb') as f:
             self.polyglot_content = f.read()
@@ -257,20 +269,24 @@ class FormIntegrationTests(TestCase):
         # Create test hospital
         self.hospital = Hospital.objects.create(
             name='Test Hospital',
+            short_name='TH',
             address='Test Address',
             city='Test City',
             state='TS',
             zip_code='12345',
-            phone='123-456-7890'
+            phone='123-456-7890',
+            created_by=self.user,
+            updated_by=self.user
         )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
-            birth_date='1990-01-01',
-            cpf='12345678901',
-            hospital=self.hospital,
-            created_by=self.user
+            birthday='1990-01-01',
+            status=Patient.Status.OUTPATIENT,
+            current_hospital=self.hospital,
+            created_by=self.user,
+            updated_by=self.user
         )
 
     def test_form_patient_association(self):

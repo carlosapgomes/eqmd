@@ -27,6 +27,55 @@ except ImportError:
     FFMPEG_AVAILABLE = False
 
 
+def get_thumbnail_upload_path(instance, filename: str) -> str:
+    """
+    Generate secure upload path for thumbnails with structured organization.
+
+    Security features:
+    - UUID4 provides 122 bits of entropy
+    - No predictable patterns
+    - Organized by media type and date
+    - Path traversal protection
+
+    Args:
+        instance: MediaFile instance
+        filename: Thumbnail filename
+
+    Returns:
+        Secure thumbnail path with UUID-based filename
+
+    Raises:
+        ValueError: If filename contains dangerous patterns
+    """
+    if not filename:
+        raise ValueError("Filename cannot be empty")
+
+    # Generate secure thumbnail filename
+    secure_filename = f"{instance.id}_thumb.jpg"  # Always use JPG for thumbnails
+
+    # Get date for path structure
+    current_date = timezone.now()
+    year_month = current_date.strftime('%Y/%m')
+
+    # Determine media type based on MIME type
+    if instance.mime_type.startswith('image/'):
+        # Check if it's part of a photo series (would need to check relations)
+        media_type = 'photos'  # Default to photos for images
+    elif instance.mime_type.startswith('video/'):
+        media_type = 'videos'
+    else:
+        media_type = 'media'
+
+    # Construct secure thumbnail path
+    secure_path = f"{media_type}/{year_month}/thumbnails/{secure_filename}"
+
+    # Final validation - ensure no path traversal
+    if '..' in secure_path or secure_path.startswith('/'):
+        raise ValueError("Invalid path detected")
+
+    return secure_path
+
+
 def get_secure_upload_path(instance, filename: str) -> str:
     """
     Generate secure upload path with UUID filename.
@@ -262,7 +311,7 @@ def clean_filename(filename: str) -> str:
 
 def generate_thumbnail(image_path: str, size: Tuple[int, int] = (150, 150)) -> Optional[str]:
     """
-    Generate thumbnail for image files.
+    Generate thumbnail for image files using structured path organization.
 
     Args:
         image_path: Path to the original image
@@ -284,15 +333,28 @@ def generate_thumbnail(image_path: str, size: Tuple[int, int] = (150, 150)) -> O
             # Generate thumbnail maintaining aspect ratio
             img.thumbnail(size, Image.Resampling.LANCZOS)
 
-            # Create thumbnail path
+            # Create structured thumbnail path
             path_obj = Path(image_path)
-            thumbnail_dir = path_obj.parent.parent / 'thumbnails'
+            
+            # Expected structure: media_type/YYYY/MM/originals/filename
+            # We want: media_type/YYYY/MM/thumbnails/filename_thumb.jpg
+            if 'originals' in path_obj.parts:
+                # Replace 'originals' with 'thumbnails' in the path
+                parts = list(path_obj.parts)
+                originals_index = parts.index('originals')
+                parts[originals_index] = 'thumbnails'
+                thumbnail_dir = Path(*parts[:-1])  # Remove filename
+                thumbnail_path = thumbnail_dir / f"{path_obj.stem}_thumb.jpg"
+            else:
+                # Fallback to old structure for compatibility
+                thumbnail_dir = path_obj.parent.parent / 'thumbnails'
+                thumbnail_path = thumbnail_dir / f"{path_obj.stem}_thumb.jpg"
+
+            # Create directory if it doesn't exist
             thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
-            thumbnail_path = thumbnail_dir / f"{path_obj.stem}_thumb{path_obj.suffix}"
-
             # Save thumbnail
-            img.save(thumbnail_path, quality=85, optimize=True)
+            img.save(thumbnail_path, 'JPEG', quality=85, optimize=True)
 
             return str(thumbnail_path)
 
@@ -304,7 +366,7 @@ def generate_thumbnail(image_path: str, size: Tuple[int, int] = (150, 150)) -> O
 
 def extract_video_thumbnail(video_path: str, time_offset: float = 1.0) -> Optional[str]:
     """
-    Extract thumbnail from video file.
+    Extract thumbnail from video file using structured path organization.
 
     Args:
         video_path: Path to the video file
@@ -317,12 +379,25 @@ def extract_video_thumbnail(video_path: str, time_offset: float = 1.0) -> Option
         return None
 
     try:
-        # Create thumbnail directory
+        # Create structured thumbnail path
         path_obj = Path(video_path)
-        thumbnail_dir = path_obj.parent.parent / 'thumbnails'
-        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Expected structure: media_type/YYYY/MM/originals/filename
+        # We want: media_type/YYYY/MM/thumbnails/filename_thumb.jpg
+        if 'originals' in path_obj.parts:
+            # Replace 'originals' with 'thumbnails' in the path
+            parts = list(path_obj.parts)
+            originals_index = parts.index('originals')
+            parts[originals_index] = 'thumbnails'
+            thumbnail_dir = Path(*parts[:-1])  # Remove filename
+            thumbnail_path = thumbnail_dir / f"{path_obj.stem}_thumb.jpg"
+        else:
+            # Fallback to old structure for compatibility
+            thumbnail_dir = path_obj.parent.parent / 'thumbnails'
+            thumbnail_path = thumbnail_dir / f"{path_obj.stem}_thumb.jpg"
 
-        thumbnail_path = thumbnail_dir / f"{path_obj.stem}_thumb.jpg"
+        # Create directory if it doesn't exist
+        thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
         # Extract frame using ffmpeg
         (
