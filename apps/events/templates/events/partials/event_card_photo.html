@@ -1,0 +1,141 @@
+{% extends "events/partials/event_card_base.html" %}
+{% load mediafiles_tags %}
+{% load permission_tags %}
+
+{% comment %}
+Photo-specific event card template
+Extends the base event card and adds photo-specific content and actions
+Parameters expected:
+- event: The Photo event object
+- event_data: Object containing event, can_edit, can_delete, excerpt
+{% endcomment %}
+
+{% block event_actions %}
+<div class="btn-group btn-group-sm">
+    <!-- View Photo in Modal Button -->
+    <button type="button" 
+            class="btn btn-outline-primary btn-sm photo-modal-trigger"
+            data-photo-id="{{ event.pk }}"
+            data-photo-url="{{ event.media_file.get_secure_url }}"
+            data-photo-title="{{ event.description|default:'Foto' }}"
+            data-photo-filename="{{ event.media_file.original_filename }}"
+            data-photo-size="{{ event.media_file.get_display_size }}"
+            data-photo-dimensions="{{ event.media_file.get_dimensions_display }}"
+            data-photo-created="{{ event.created_at|date:'d/m/Y H:i' }}"
+            data-photo-author="{{ event.created_by.get_full_name }}"
+            data-bs-toggle="modal"
+            data-bs-target="#photoModal"
+            aria-label="Visualizar foto em tamanho completo"
+            title="Ver foto completa">
+        <i class="bi bi-zoom-in" aria-hidden="true"></i>
+        <span class="visually-hidden">Visualizar</span>
+    </button>
+    
+    <!-- Download Button -->
+    <a href="{{ event.media_file.get_secure_url }}?download=1" 
+       class="btn btn-outline-secondary btn-sm"
+       aria-label="Baixar foto original"
+       data-bs-toggle="tooltip" 
+       data-bs-placement="top" 
+       title="Baixar foto"
+       download="{{ event.media_file.original_filename }}">
+        <i class="bi bi-download" aria-hidden="true"></i>
+        <span class="visually-hidden">Baixar</span>
+    </a>
+    
+    <!-- Detail View Button -->
+    <a href="{{ event.get_absolute_url }}" 
+       class="btn btn-outline-info btn-sm"
+       aria-label="Ver detalhes completos da foto"
+       data-bs-toggle="tooltip" 
+       data-bs-placement="top" 
+       title="Ver detalhes">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span class="visually-hidden">Detalhes</span>
+    </a>
+    
+    <!-- Edit Button -->
+    {% if event_data.can_edit %}
+        <a href="{{ event.get_edit_url }}" 
+           class="btn btn-outline-warning btn-sm"
+           aria-label="Editar foto"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Editar foto">
+            <i class="bi bi-pencil" aria-hidden="true"></i>
+            <span class="visually-hidden">Editar</span>
+        </a>
+    {% endif %}
+</div>
+{% endblock event_actions %}
+
+{% block event_content %}
+<div class="photo-event-content">
+    <!-- Photo Thumbnail Display -->
+    <div class="photo-thumbnail-container mb-3">
+        {% if event.media_file.thumbnail %}
+            <div class="photo-thumbnail-wrapper position-relative">
+                <img src="{{ event.media_file.get_thumbnail_url }}" 
+                     alt="Thumbnail: {{ event.media_file.original_filename }}"
+                     class="photo-thumbnail img-fluid rounded cursor-pointer"
+                     style="max-width: 300px; max-height: 200px; object-fit: cover;"
+                     data-photo-id="{{ event.pk }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#photoModal"
+                     loading="lazy">
+                
+                <!-- Camera Icon Overlay -->
+                <div class="photo-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center opacity-0 transition-opacity">
+                    <div class="bg-dark bg-opacity-75 rounded-circle p-2">
+                        <i class="bi bi-camera text-white fs-4" aria-hidden="true"></i>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- Fallback for missing thumbnail -->
+            <div class="photo-placeholder d-flex align-items-center justify-content-center bg-light rounded" 
+                 style="width: 300px; height: 200px;">
+                <div class="text-center text-muted">
+                    <i class="bi bi-image fs-1" aria-hidden="true"></i>
+                    <p class="mb-0 small">Miniatura não disponível</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Photo Description -->
+    {% if event.description %}
+        <div class="photo-description mb-2">
+            <p class="mb-0">{{ event.description }}</p>
+        </div>
+    {% endif %}
+    
+    <!-- Photo Caption (if different from description) -->
+    {% if event.caption and event.caption != event.description %}
+        <div class="photo-caption mb-2">
+            <small class="text-muted">
+                <i class="bi bi-chat-quote me-1" aria-hidden="true"></i>
+                {{ event.caption }}
+            </small>
+        </div>
+    {% endif %}
+    
+    <!-- Photo Metadata -->
+    <div class="photo-metadata">
+        <div class="row g-2 small text-muted">
+            <div class="col-sm-6">
+                <i class="bi bi-file-earmark-image me-1" aria-hidden="true"></i>
+                <span>{{ event.media_file.original_filename }}</span>
+            </div>
+            <div class="col-sm-3">
+                <i class="bi bi-arrows-angle-expand me-1" aria-hidden="true"></i>
+                <span>{{ event.media_file.get_dimensions_display }}</span>
+            </div>
+            <div class="col-sm-3">
+                <i class="bi bi-hdd me-1" aria-hidden="true"></i>
+                <span>{{ event.media_file.get_display_size }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock event_content %}

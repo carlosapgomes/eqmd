@@ -263,3 +263,146 @@ def media_gallery(media_files, columns=3):
         'columns': columns,
         'grid_class': f'row-cols-1 row-cols-md-{columns}'
     }
+
+
+# Photo-specific template tags (Step 3.7)
+
+@register.simple_tag
+def photo_thumbnail(photo, size="medium", css_class=""):
+    """
+    Display photo thumbnail with appropriate styling.
+
+    Args:
+        photo: Photo instance
+        size: Thumbnail size ('small', 'medium', 'large')
+        css_class: Additional CSS classes
+
+    Returns:
+        HTML for photo thumbnail display
+    """
+    if not photo or not hasattr(photo, 'media_file'):
+        return ""
+
+    # Size mappings for photos
+    size_classes = {
+        'small': 'photo-thumbnail-sm',
+        'medium': 'photo-thumbnail-md',
+        'large': 'photo-thumbnail-lg'
+    }
+
+    size_class = size_classes.get(size, 'photo-thumbnail-md')
+    all_classes = f"photo-thumbnail {size_class} {css_class}".strip()
+
+    # Get thumbnail URL
+    if hasattr(photo.media_file, 'thumbnail_path') and photo.media_file.thumbnail_path:
+        thumbnail_url = f"{settings.MEDIA_URL}{photo.media_file.thumbnail_path}"
+    else:
+        # Fallback to original file
+        thumbnail_url = f"{settings.MEDIA_URL}{photo.media_file.file.name}"
+
+    alt_text = f"Foto: {photo.description or photo.media_file.original_filename}"
+
+    return format_html(
+        '<img src="{}" alt="{}" class="{}" loading="lazy">',
+        thumbnail_url,
+        alt_text,
+        all_classes
+    )
+
+
+@register.simple_tag
+def photo_modal_trigger(photo, trigger_text="Ver foto", css_class=""):
+    """
+    Create modal trigger button for photo viewing.
+
+    Args:
+        photo: Photo instance
+        trigger_text: Text for the trigger button
+        css_class: Additional CSS classes
+
+    Returns:
+        HTML for modal trigger button
+    """
+    if not photo or not hasattr(photo, 'media_file'):
+        return ""
+
+    # Get photo data for modal
+    photo_url = f"{settings.MEDIA_URL}{photo.media_file.file.name}"
+
+    dimensions = ""
+    if photo.media_file.width and photo.media_file.height:
+        dimensions = f"{photo.media_file.width}x{photo.media_file.height}"
+
+    file_size = format_file_size(photo.media_file.file_size) if photo.media_file.file_size else ""
+
+    created_date = photo.event_datetime.strftime("%d/%m/%Y %H:%M") if photo.event_datetime else ""
+    author = photo.created_by.get_full_name() if photo.created_by else ""
+
+    button_classes = f"btn btn-outline-primary {css_class}".strip()
+
+    return format_html(
+        '''<button type="button" class="{}" data-bs-toggle="modal" data-bs-target="#photoModal"
+           data-photo-id="{}" data-photo-url="{}" data-photo-title="{}"
+           data-photo-filename="{}" data-photo-size="{}" data-photo-dimensions="{}"
+           data-photo-created="{}" data-photo-author="{}">
+           <i class="bi bi-eye me-1"></i>{}
+        </button>''',
+        button_classes,
+        photo.id,
+        photo_url,
+        photo.description or "Foto",
+        photo.media_file.original_filename,
+        file_size,
+        dimensions,
+        created_date,
+        author,
+        trigger_text
+    )
+
+
+@register.inclusion_tag('mediafiles/partials/photo_metadata.html')
+def photo_metadata(photo, show_technical=True):
+    """
+    Display photo metadata in a formatted layout.
+
+    Args:
+        photo: Photo instance
+        show_technical: Whether to show technical metadata
+
+    Returns:
+        Context for photo metadata template
+    """
+    if not photo or not hasattr(photo, 'media_file'):
+        return {}
+
+    metadata = {
+        'photo': photo,
+        'media_file': photo.media_file,
+        'show_technical': show_technical,
+        'file_size': format_file_size(photo.media_file.file_size) if photo.media_file.file_size else None,
+        'dimensions': None,
+        'created_date': photo.event_datetime.strftime("%d/%m/%Y %H:%M") if photo.event_datetime else None,
+        'author': photo.created_by.get_full_name() if photo.created_by else None,
+    }
+
+    if photo.media_file.width and photo.media_file.height:
+        metadata['dimensions'] = f"{photo.media_file.width}x{photo.media_file.height}"
+
+    return metadata
+
+
+@register.filter
+def photo_file_size(photo):
+    """
+    Format photo file size display.
+
+    Args:
+        photo: Photo instance
+
+    Returns:
+        Formatted file size string
+    """
+    if not photo or not hasattr(photo, 'media_file') or not photo.media_file.file_size:
+        return ""
+
+    return format_file_size(photo.media_file.file_size)

@@ -7,6 +7,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'events/css/print.css' %}" media="print">
+<link rel="stylesheet" href="{% static 'mediafiles/css/mediafiles.css' %}">
 <style>
 .timeline-card {
     border-left: 4px solid var(--bs-primary);
@@ -852,6 +853,7 @@
                                 HistoryAndPhysical events (event_type=0) get the specialized template with duplicate button
                                 DailyNote events (event_type=1) get the specialized template with duplicate button
                                 SimpleNote events (event_type=2) get the specialized template with duplicate button
+                                Photo events (event_type=3) get the specialized template with photo display and modal
                                 All other events use the default template
                                 {% endcomment %}
                                 {% if event.event_type == 0 %}
@@ -860,6 +862,8 @@
                                     {% include "events/partials/event_card_dailynote.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 2 %}
                                     {% include "events/partials/event_card_simplenote.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 3 %}
+                                    {% include "events/partials/event_card_photo.html" with event=event event_data=event_data %}
                                 {% else %}
                                     {% include "events/partials/event_card_default.html" with event=event event_data=event_data %}
                                 {% endif %}
@@ -960,11 +964,15 @@
     <hr>
 </div>
 
+<!-- Photo Modal for viewing photos in full size -->
+{% include "mediafiles/partials/photo_modal.html" %}
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'events/js/accessibility.js' %}"></script>
+<script src="{% static 'mediafiles/js/mediafiles.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize both desktop and mobile filter forms
@@ -1019,6 +1027,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup both forms
     setupFormInteractions(desktopFilterForm);
     setupFormInteractions(mobileFilterForm);
+
+    // Initialize MediaFiles functionality for photo modals
+    if (typeof MediaFiles !== 'undefined') {
+        MediaFiles.init();
+    }
     
     // Mobile-specific enhancements
     if (mobileFilterToggle && mobileFiltersCollapse) {

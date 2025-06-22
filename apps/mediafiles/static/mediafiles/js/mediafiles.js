@@ -246,7 +246,238 @@ window.MediaFiles = (function() {
         }
     };
 
-    // Image viewer functionality
+    // Photo modal functionality
+    const photoModal = {
+        /**
+         * Initialize photo modal functionality
+         */
+        init: function() {
+            this.setupPhotoModal();
+            this.setupZoomControls();
+            this.setupKeyboardNavigation();
+        },
+
+        /**
+         * Setup photo modal event listeners
+         */
+        setupPhotoModal: function() {
+            const modal = document.getElementById('photoModal');
+            if (!modal) return;
+
+            modal.addEventListener('show.bs.modal', this.handleModalShow.bind(this));
+            modal.addEventListener('hidden.bs.modal', this.handleModalHidden.bind(this));
+        },
+
+        /**
+         * Setup zoom controls
+         */
+        setupZoomControls: function() {
+            const zoomInBtn = document.getElementById('photoZoomIn');
+            const zoomOutBtn = document.getElementById('photoZoomOut');
+            const zoomResetBtn = document.getElementById('photoZoomReset');
+            const modalImage = document.getElementById('photoModalImage');
+
+            if (zoomInBtn) zoomInBtn.addEventListener('click', () => this.zoomIn());
+            if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => this.zoomOut());
+            if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => this.resetZoom());
+            if (modalImage) modalImage.addEventListener('click', () => this.toggleZoom());
+        },
+
+        /**
+         * Setup keyboard navigation
+         */
+        setupKeyboardNavigation: function() {
+            const modal = document.getElementById('photoModal');
+            if (!modal) return;
+
+            modal.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case 'Escape':
+                        bootstrap.Modal.getInstance(modal).hide();
+                        break;
+                    case '+':
+                    case '=':
+                        this.zoomIn();
+                        break;
+                    case '-':
+                        this.zoomOut();
+                        break;
+                    case '0':
+                        this.resetZoom();
+                        break;
+                }
+            });
+        },
+
+        /**
+         * Handle modal show event
+         */
+        handleModalShow: function(event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+
+            // Reset modal state
+            this.resetModalState();
+
+            // Get photo data from trigger element
+            const photoData = {
+                id: trigger.dataset.photoId,
+                url: trigger.dataset.photoUrl,
+                title: trigger.dataset.photoTitle || 'Foto',
+                filename: trigger.dataset.photoFilename || '-',
+                size: trigger.dataset.photoSize || '-',
+                dimensions: trigger.dataset.photoDimensions || '-',
+                created: trigger.dataset.photoCreated || '-',
+                author: trigger.dataset.photoAuthor || '-'
+            };
+
+            // Update modal content
+            this.updateModalContent(photoData);
+
+            // Load the image
+            this.loadPhotoImage(photoData.url);
+        },
+
+        /**
+         * Handle modal hidden event
+         */
+        handleModalHidden: function() {
+            this.resetModalState();
+        },
+
+        /**
+         * Reset modal state
+         */
+        resetModalState: function() {
+            this.currentZoom = 1;
+            const container = document.getElementById('photoModalContainer');
+            const loading = document.getElementById('photoModalLoading');
+            const error = document.getElementById('photoModalError');
+            const image = document.getElementById('photoModalImage');
+
+            if (container) container.classList.add('d-none');
+            if (loading) loading.classList.remove('d-none');
+            if (error) error.classList.add('d-none');
+            if (image) {
+                image.style.transform = 'scale(1)';
+                image.style.cursor = 'zoom-in';
+            }
+        },
+
+        /**
+         * Update modal content with photo data
+         */
+        updateModalContent: function(photoData) {
+            const elements = {
+                title: document.getElementById('photoModalTitle'),
+                filename: document.getElementById('photoModalFilename'),
+                dimensions: document.getElementById('photoModalDimensions'),
+                size: document.getElementById('photoModalSize'),
+                created: document.getElementById('photoModalCreated'),
+                author: document.getElementById('photoModalAuthor'),
+                downloadBtn: document.getElementById('photoDownloadBtn')
+            };
+
+            if (elements.title) elements.title.textContent = photoData.title;
+            if (elements.filename) elements.filename.textContent = photoData.filename;
+            if (elements.dimensions) elements.dimensions.textContent = photoData.dimensions;
+            if (elements.size) elements.size.textContent = photoData.size;
+            if (elements.created) elements.created.textContent = photoData.created;
+            if (elements.author) elements.author.textContent = photoData.author;
+
+            // Update download link
+            if (elements.downloadBtn) {
+                elements.downloadBtn.href = photoData.url + '?download=1';
+                elements.downloadBtn.download = photoData.filename;
+            }
+        },
+
+        /**
+         * Load photo image
+         */
+        loadPhotoImage: function(imageUrl) {
+            const img = new Image();
+            const modalImage = document.getElementById('photoModalImage');
+            const loading = document.getElementById('photoModalLoading');
+            const container = document.getElementById('photoModalContainer');
+            const error = document.getElementById('photoModalError');
+
+            img.onload = () => {
+                if (modalImage) {
+                    modalImage.src = imageUrl;
+                    modalImage.alt = document.getElementById('photoModalFilename')?.textContent || 'Photo';
+                }
+                if (loading) loading.classList.add('d-none');
+                if (container) container.classList.remove('d-none');
+            };
+
+            img.onerror = () => {
+                if (loading) loading.classList.add('d-none');
+                if (error) error.classList.remove('d-none');
+            };
+
+            img.src = imageUrl;
+        },
+
+        // Zoom functionality
+        currentZoom: 1,
+        zoomStep: 0.25,
+        maxZoom: 3,
+        minZoom: 0.5,
+
+        /**
+         * Zoom in
+         */
+        zoomIn: function() {
+            if (this.currentZoom < this.maxZoom) {
+                this.currentZoom += this.zoomStep;
+                this.updateImageZoom();
+            }
+        },
+
+        /**
+         * Zoom out
+         */
+        zoomOut: function() {
+            if (this.currentZoom > this.minZoom) {
+                this.currentZoom -= this.zoomStep;
+                this.updateImageZoom();
+            }
+        },
+
+        /**
+         * Reset zoom
+         */
+        resetZoom: function() {
+            this.currentZoom = 1;
+            this.updateImageZoom();
+        },
+
+        /**
+         * Toggle zoom (click to zoom)
+         */
+        toggleZoom: function() {
+            if (this.currentZoom < this.maxZoom) {
+                this.currentZoom += this.zoomStep;
+            } else {
+                this.currentZoom = 1;
+            }
+            this.updateImageZoom();
+        },
+
+        /**
+         * Update image zoom
+         */
+        updateImageZoom: function() {
+            const image = document.getElementById('photoModalImage');
+            if (image) {
+                image.style.transform = `scale(${this.currentZoom})`;
+                image.style.cursor = this.currentZoom >= this.maxZoom ? 'zoom-out' : 'zoom-in';
+            }
+        }
+    };
+
+    // Image viewer functionality (legacy support)
     const imageViewer = {
         /**
          * Initialize image viewer
@@ -261,7 +492,7 @@ window.MediaFiles = (function() {
          */
         setupImageModals: function() {
             const imageLinks = document.querySelectorAll('[data-bs-toggle="modal"][data-bs-target*="imageModal"]');
-            
+
             imageLinks.forEach(link => {
                 link.addEventListener('click', this.handleImageModalOpen.bind(this));
             });
@@ -272,7 +503,7 @@ window.MediaFiles = (function() {
          */
         setupZoomFunctionality: function() {
             const zoomableImages = document.querySelectorAll('.zoomable-image');
-            
+
             zoomableImages.forEach(img => {
                 img.addEventListener('click', this.toggleZoom.bind(this));
             });
@@ -284,7 +515,7 @@ window.MediaFiles = (function() {
         handleImageModalOpen: function(e) {
             const imageSrc = e.currentTarget.dataset.imageSrc;
             const modal = document.querySelector(e.currentTarget.dataset.bsTarget);
-            
+
             if (modal && imageSrc) {
                 const modalImage = modal.querySelector('.modal-body img');
                 if (modalImage) {
@@ -310,10 +541,11 @@ window.MediaFiles = (function() {
         init: function() {
             fileUpload.init();
             imageViewer.init();
-            
+            photoModal.init();
+
             // Initialize tooltips
             const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => 
+            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl =>
                 new bootstrap.Tooltip(tooltipTriggerEl)
             );
         },
@@ -321,7 +553,8 @@ window.MediaFiles = (function() {
         // Expose utilities
         utils: utils,
         fileUpload: fileUpload,
-        imageViewer: imageViewer
+        imageViewer: imageViewer,
+        photoModal: photoModal
     };
 })();
 
