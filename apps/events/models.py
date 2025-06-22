@@ -14,6 +14,7 @@ class Event(models.Model):
     OUTPT_PRESCRIPTION_EVENT = 7
     REPORT_EVENT = 8
     PHOTO_SERIES_EVENT = 9
+    VIDEO_CLIP_EVENT = 10
 
     EVENT_TYPE_CHOICES = (
         (HISTORY_AND_PHYSICAL_EVENT, "Anamnese e Exame Físico"),
@@ -26,6 +27,7 @@ class Event(models.Model):
         (OUTPT_PRESCRIPTION_EVENT, "Receita"),
         (REPORT_EVENT, "Relatório"),
         (PHOTO_SERIES_EVENT, "Série de Fotos"),
+        (VIDEO_CLIP_EVENT, "Vídeo Curto"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -79,7 +81,8 @@ class Event(models.Model):
             6: 'bg-medical-dark',        # Discharge Report
             7: 'bg-medical-light',       # Prescription
             8: 'bg-medical-teal',        # Report
-            9: 'bg-info'                 # Photo Series
+            9: 'bg-info',                # Photo Series
+            10: 'bg-primary'             # Video Clip
         }
         return badge_classes.get(self.event_type, 'bg-secondary')
 
@@ -95,7 +98,8 @@ class Event(models.Model):
             6: 'bi-door-open',           # Discharge Report
             7: 'bi-prescription2',       # Prescription
             8: 'bi-file-text',           # Report
-            9: 'bi-images'               # Photo Series
+            9: 'bi-images',              # Photo Series
+            10: 'bi-play-circle'         # Video Clip
         }
         return icon_classes.get(self.event_type, 'bi-file-text')
 

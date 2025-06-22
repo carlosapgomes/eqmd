@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "apps.events",  # Events management app
     "apps.dailynotes",  # Daily notes app
     "apps.simplenotes",  # Simple notes app
+    # "apps.mediafiles",  # Media files app - will be uncommented when app is created in Step 1
     "apps.historyandphysicals",  # History and Physical examination app
     "apps.sample_content",  # Sample content app
     # django-allauth
@@ -204,6 +205,24 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/topics/files/
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB for images
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB for videos
+
+# Media-specific settings
+MEDIA_IMAGE_MAX_SIZE = 5 * 1024 * 1024  # 5MB
+MEDIA_VIDEO_MAX_SIZE = 50 * 1024 * 1024  # 50MB
+MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes in seconds
+MEDIA_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+MEDIA_ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
+
+# Security settings for media files
+MEDIA_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
+MEDIA_ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov']
+MEDIA_MAX_FILENAME_LENGTH = 100
+MEDIA_USE_UUID_FILENAMES = True  # Use UUID-based secure filenames
+MEDIA_ENABLE_FILE_DEDUPLICATION = True  # Enable SHA-256 hash deduplication
 
 STORAGES = {
     "default": {

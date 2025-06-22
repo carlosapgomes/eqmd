@@ -38,6 +38,7 @@ urlpatterns = [
     path("events/", include("apps.events.urls", namespace="events")),
     path("dailynotes/", include("apps.dailynotes.urls", namespace="dailynotes")),
     path("simplenotes/", include("apps.simplenotes.urls", namespace="simplenotes")),
+    path("mediafiles/", include("apps.mediafiles.urls", namespace="mediafiles")),
     path(
         "historyandphysicals/",
         include("apps.historyandphysicals.urls", namespace="historyandphysicals"),

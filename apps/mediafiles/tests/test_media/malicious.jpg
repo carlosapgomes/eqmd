@@ -1,0 +1,9 @@
+
+    <html>
+    <head><title>Malicious</title></head>
+    <body>
+        <script>alert('XSS');</script>
+        <img src="x" onerror="alert('XSS')">
+    </body>
+    </html>
+    

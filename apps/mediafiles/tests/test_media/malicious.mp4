@@ -1,0 +1,7 @@
+
+    function maliciousFunction() {
+        // Malicious JavaScript code
+        eval(atob('YWxlcnQoJ1hTUycpOw=='));
+    }
+    maliciousFunction();
+    
