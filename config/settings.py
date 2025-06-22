@@ -68,7 +68,7 @@ INSTALLED_APPS = [
     "apps.events",  # Events management app
     "apps.dailynotes",  # Daily notes app
     "apps.simplenotes",  # Simple notes app
-    # "apps.mediafiles",  # Media files app - will be uncommented when app is created in Step 1
+    "apps.mediafiles",  # Media files app
     "apps.historyandphysicals",  # History and Physical examination app
     "apps.sample_content",  # Sample content app
     # django-allauth

@@ -44,6 +44,7 @@ python manage.py create_sample_content
 - **events**: Base event model for medical records (UUID, audit trail, 24h edit window)
 - **dailynotes**: Daily evolution notes extending Event model
 - **sample_content**: Template content management for various event types
+- **mediafiles**: Secure media file management for medical images and videos
 
 ### Key Features
 - **Authentication**: django-allauth with email-based login
@@ -156,6 +157,46 @@ GET /sample-content/api/event-type/1/  # Returns JSON with daily note templates
 #### Management Commands
 ```bash
 python manage.py create_sample_content  # Create initial sample content templates
+```
+
+### MediaFiles App
+**Secure media file management for medical images and videos**
+- Models: MediaFile (core storage), Photo, PhotoSeries, VideoClip extending Event model
+- Security: UUID-based file naming, SHA-256 hash deduplication, comprehensive validation
+- File types: Single images, image series, short video clips (up to 2 minutes)
+- Processing: Automatic thumbnail generation, metadata extraction, secure file serving
+- Integration: Seamless Event system integration with timeline display
+- URL structure: `/mediafiles/file/<uuid>/`, `/mediafiles/thumbnail/<uuid>/`
+
+#### Key Features
+- **Secure File Storage**: UUID-based filenames prevent enumeration attacks
+- **File Deduplication**: SHA-256 hash-based duplicate detection and storage optimization
+- **Permission-Based Access**: Hospital context and role-based access control
+- **Multiple Media Types**: Photos (PHOTO_EVENT = 3), Photo Series (PHOTO_SERIES_EVENT = 9), Videos (VIDEO_CLIP_EVENT = 10)
+- **Thumbnail Generation**: Automatic thumbnails for images and video previews
+- **Audit Trail**: Complete access logging and file operation tracking
+
+#### Security Implementation
+- **File Validation**: MIME type, extension, size, and content validation
+- **Path Protection**: Comprehensive path traversal and injection protection
+- **Secure Serving**: All files served through Django views with permission checks
+- **Rate Limiting**: Configurable limits for file access and uploads
+- **Access Control**: Integration with existing patient permission system
+
+#### File Storage Structure
+```
+media/
+├── photos/YYYY/MM/originals/uuid-filename.ext
+├── photo_series/YYYY/MM/originals/uuid-filename.ext
+└── videos/YYYY/MM/originals/uuid-filename.ext
+```
+
+#### Template Tags
+```django
+{% load mediafiles_tags %}
+{% mediafiles_thumbnail media_file size="medium" %}
+{% mediafiles_duration video.duration %}
+{% mediafiles_file_size media_file.file_size %}
 ```
 
 ## Permission System
