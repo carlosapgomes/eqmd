@@ -38,6 +38,13 @@
 }
 
 /* Timeline photo metadata specific styles */
+.photo-metadata {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+}
+
 .photo-metadata .row {
     font-size: 0.875rem;
 }
