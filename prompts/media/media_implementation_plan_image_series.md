@@ -4,6 +4,32 @@
 
 This plan implements the PhotoSeries model for multiple image uploads in the EquipeMed media system. PhotoSeries will extend the base Event model and use the existing PHOTO_SERIES_EVENT type (9). Each series will contain multiple MediaFile instances with ordering capabilities and batch operations.
 
+## Extra Requirements and Navigation Guidelines
+
+### Navigation Requirements
+- All photoseries operations (Create, Update, Delete, Detail) must return to the patient's timeline view
+- PhotoSeries is accessible only from the "Criar Evento" dropdown in the patient's timeline view
+- All photoseries pages must have consistent breadcrumb navigation: Patient Detail → Timeline → PhotoSeries page
+
+### Styling Requirements
+- Follow the overall styling and structure used for the photo feature from @app/mediafiles
+- Maintain consistency with existing media file interfaces
+
+### PhotoSeries Detail Page Requirements
+- Display photoseries as a carousel with navigation between photos
+- Each photo must have action buttons: zoom in, zoom out, original size, full page, download
+- Similar to photo detail page but with carousel functionality
+
+### Timeline Card Requirements
+- Show number of photos in the series
+- Display first photo as thumbnail
+- Template location: @app/events/templates/events/partials/event_card_photoseries.html
+- No zoom (bi-zoom-in) button - only download, details, and edit buttons
+
+### Editing Requirements
+- Users can only change: description, datetime, and caption
+- Similar to photo editing functionality
+
 ## Vertical Slice 1: Model and Admin
 
 ### Step 1.1: Create PhotoSeriesFile Through Model
@@ -42,8 +68,9 @@ This plan implements the PhotoSeries model for multiple image uploads in the Equ
 - `save()` - Set event_type and call super()
 - `get_absolute_url()` - Return detail view URL
 - `get_edit_url()` - Return edit view URL
-- `get_primary_thumbnail()` - Return first image thumbnail
-- `get_photo_count()` - Return number of images in series
+- `get_timeline_return_url()` - Return patient timeline URL for navigation
+- `get_primary_thumbnail()` - Return first image thumbnail (for timeline card)
+- `get_photo_count()` - Return number of images in series (for timeline card)
 - `get_ordered_photos()` - Return MediaFiles in order
 - `add_photo(media_file, order=None, description='')` - Add photo to series
 - `remove_photo(media_file)` - Remove photo from series
@@ -200,7 +227,7 @@ def validate_series_files(files):
 - Bootstrap styling with drag-and-drop interface
 
 **PhotoSeriesUpdateForm specifications**:
-- Fields: description, event_datetime
+- Fields: description, event_datetime, caption (limited editing per extra requirements)
 - Separate form for adding/removing photos
 - Photo reordering interface
 - Individual photo description editing
@@ -228,30 +255,37 @@ def validate_series_files(files):
 - Handles multiple file upload
 - Progress tracking for batch upload
 - Patient parameter from URL
-- Success redirect to patient timeline
+- Success redirect to patient timeline (required by navigation guidelines)
+- Breadcrumb navigation: Patient Detail → Timeline → Create PhotoSeries
 
 **PhotoSeriesDetailView specifications**:
 - Extends DetailView
 - Permission check with patient access validation
-- Gallery display with navigation
+- Carousel display with navigation between photos (per extra requirements)
 - Photo ordering display
 - Individual photo metadata
+- Action buttons for each photo: zoom in, zoom out, original size, full page, download
 - Edit/delete action buttons (if permitted)
+- Breadcrumb navigation: Patient Detail → Timeline → PhotoSeries Detail
+- Return to timeline navigation
 
 **PhotoSeriesUpdateView specifications**:
 - Extends UpdateView
 - Permission check: can_edit_event (24-hour rule)
 - Form with current photos preview
+- Limited editing: only description, datetime, and caption (per extra requirements)
 - Add/remove photo functionality
 - Reorder interface
-- Success redirect to detail view
+- Success redirect to patient timeline (required by navigation guidelines)
+- Breadcrumb navigation: Patient Detail → Timeline → Edit PhotoSeries
 
 **PhotoSeriesDeleteView specifications**:
 - Extends DeleteView
 - Permission check: can_delete_event (24-hour rule)
 - Confirmation page with photo previews
 - Batch file cleanup on deletion
-- Success redirect to patient timeline
+- Success redirect to patient timeline (required by navigation guidelines)
+- Breadcrumb navigation: Patient Detail → Timeline → Delete PhotoSeries
 
 ### Step 2.3: Create AJAX Views
 
@@ -331,32 +365,35 @@ def validate_series_files(files):
 
 **File**: `apps/mediafiles/templates/mediafiles/photoseries_detail.html`
 
-**Action**: Create photo series detail view template
+**Action**: Create photo series detail view template (per extra requirements)
 
 **Template features**:
-- Photo gallery with thumbnail grid
-- Lightbox/modal for full-size viewing
-- Navigation between photos in series
+- Carousel display with navigation between photos (per extra requirements)
+- Action buttons for each photo: zoom in, zoom out, original size, full page, download (per extra requirements)
 - Photo ordering display with reorder controls
 - Individual photo metadata display
 - Series metadata (total count, upload date)
-- Action buttons (edit, delete, download ZIP)
-- Responsive grid layout
+- Series action buttons (edit, delete, download ZIP)
+- Breadcrumb navigation: Patient Detail → Timeline → PhotoSeries Detail
+- Return to timeline navigation
+- Follow styling from @app/mediafiles photo feature
+- Responsive design for mobile
 
 ### Step 3.2: Create Event Card Template
 
 **File**: `apps/events/templates/events/partials/event_card_photoseries.html`
 
-**Action**: Create specialized event card for photo series
+**Action**: Create specialized event card for photo series (per extra requirements)
 
 **Template features**:
-- Primary photo thumbnail display
-- Photo count badge (e.g., "5 photos")
+- First photo as thumbnail display (per extra requirements)
+- Photo count badge showing number of photos in series (per extra requirements)
 - Images icon overlay
 - Event metadata (datetime, description)
 - Click to open series detail view
-- Edit/delete buttons (if permitted)
+- Download, details, and edit buttons ONLY (no zoom/bi-zoom-in button per extra requirements)
 - Responsive design for mobile
+- Follow styling from @app/mediafiles photo feature
 
 ### Step 3.3: Create Photo Gallery Components
 
@@ -404,16 +441,19 @@ def validate_series_files(files):
 
 **File**: `apps/mediafiles/static/mediafiles/css/photoseries.css`
 
-**Action**: Create photo series specific styling
+**Action**: Create photo series specific styling (following @app/mediafiles photo feature styling)
 
 **CSS features**:
-- Gallery grid layout (responsive)
-- Lightbox modal styling
-- Upload interface styling
+- Carousel layout (responsive) instead of gallery grid
+- Action buttons styling for each photo (zoom in, zoom out, original size, full page, download)
+- Upload interface styling consistent with photo feature
 - Progress indicator animations
 - Drag-and-drop visual feedback
 - Photo ordering controls
+- Timeline card styling (first photo thumbnail, photo count badge)
+- Breadcrumb navigation styling
 - Mobile-optimized layouts
+- Consistent styling with existing photo feature
 
 ### Step 3.6: Add JavaScript Functionality
 
@@ -426,10 +466,13 @@ def validate_series_files(files):
 - Drag-and-drop functionality
 - Photo reordering (sortable interface)
 - AJAX photo addition/removal
-- Lightbox gallery navigation
+- Carousel navigation between photos (per extra requirements)
+- Photo action buttons functionality: zoom in, zoom out, original size, full page, download
 - Client-side image resizing
 - Upload progress tracking
 - Error handling and user feedback
+- Breadcrumb navigation handling
+- Return to timeline functionality
 
 ### Step 3.7: Create Template Tags
 
@@ -438,10 +481,11 @@ def validate_series_files(files):
 **Action**: Add photo series specific template tags
 
 **Template tags**:
-- `{% photoseries_gallery series %}` - Display photo gallery
-- `{% photoseries_thumbnail series %}` - Display primary thumbnail
-- `{% photoseries_count series %}` - Display photo count badge
-- `{% photoseries_lightbox series %}` - Create lightbox trigger
+- `{% photoseries_carousel series %}` - Display photo carousel (per extra requirements)
+- `{% photoseries_thumbnail series %}` - Display first photo thumbnail (per extra requirements)
+- `{% photoseries_count series %}` - Display photo count badge (per extra requirements)
+- `{% photoseries_action_buttons photo %}` - Create action buttons for each photo
+- `{% photoseries_breadcrumb series %}` - Generate breadcrumb navigation
 
 ### Step 3.8: Security Testing
 
@@ -507,12 +551,18 @@ Image Series implementation is complete when:
 - [ ] PhotoSeriesFile through model handles ordering and relationships
 - [ ] Admin interface provides full series management with inline editing
 - [ ] Multi-file upload form includes drag-and-drop and progress tracking
-- [ ] Gallery view displays photos with navigation and lightbox
-- [ ] Event cards show primary thumbnail with photo count badge
+- [ ] Carousel view displays photos with navigation (per extra requirements)
+- [ ] Each photo has action buttons: zoom in, zoom out, original size, full page, download (per extra requirements)
+- [ ] Event cards show first photo thumbnail with photo count badge (per extra requirements)
+- [ ] Event cards have only download, details, and edit buttons (no zoom button per extra requirements)
 - [ ] Photo reordering works via drag-and-drop interface
 - [ ] AJAX photo addition/removal functions properly
 - [ ] ZIP download provides all photos in series
 - [ ] Permission system enforces 24-hour edit window
+- [ ] Editing limited to description, datetime, and caption only (per extra requirements)
+- [ ] All operations return to patient timeline (per navigation requirements)
+- [ ] Breadcrumb navigation works: Patient Detail → Timeline → PhotoSeries (per navigation requirements)
+- [ ] Styling follows @app/mediafiles photo feature (per styling requirements)
 - [ ] All tests pass with >90% coverage
 - [ ] Performance meets requirements (<5s for 10 photos upload)
 - [ ] Integration with patient timeline works seamlessly

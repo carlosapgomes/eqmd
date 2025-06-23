@@ -25,3 +25,4 @@ staticfiles/
 /playwright/.cache/
 logs/
 media/
+!prompts/media

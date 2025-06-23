@@ -19,14 +19,6 @@
                     Dashboard
                 </a>
             </li>
-            {% if patient %}
-            <li class="breadcrumb-item">
-                <a href="{% url 'apps.patients:patient_detail' patient.id %}" class="text-decoration-none">
-                    <i class="bi bi-person me-1"></i>
-                    {{ patient.name }}
-                </a>
-            </li>
-            {% endif %}
             {% block breadcrumb_items %}
             <li class="breadcrumb-item active" aria-current="page">
                 <i class="bi bi-camera me-1"></i>
