@@ -9,11 +9,8 @@
 window.Photo = (function() {
     'use strict';
 
-    // Configuration
+    // Photo-specific configuration (extends MediaFiles config)
     const config = {
-        maxImageSize: 5 * 1024 * 1024, // 5MB
-        allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp'],
-        allowedImageExtensions: ['.jpg', '.jpeg', '.png', '.webp'],
         maxImageWidth: 4000,
         maxImageHeight: 4000,
         thumbnailSize: 150,
@@ -21,48 +18,31 @@ window.Photo = (function() {
         previewMaxHeight: 600
     };
 
-    // Utility functions
-    const utils = {
-        /**
-         * Format file size in human readable format
-         */
+    // Use shared utilities from MediaFiles
+    const utils = window.MediaFiles ? window.MediaFiles.utils : {
         formatFileSize: function(bytes) {
+            console.warn('MediaFiles not loaded, using fallback formatFileSize');
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
             const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         },
-
-        /**
-         * Get file extension from filename
-         */
         getFileExtension: function(filename) {
+            console.warn('MediaFiles not loaded, using fallback getFileExtension');
             return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
         },
-
-        /**
-         * Show toast notification
-         */
         showToast: function(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            toast.innerHTML = `
-                <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.body.appendChild(toast);
-            
-            // Auto-remove after 4 seconds
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
-            }, 4000);
+            console.warn('MediaFiles not loaded, using fallback showToast');
+            alert(message);
         }
+    };
+
+    // Get shared config from MediaFiles
+    const sharedConfig = window.MediaFiles ? window.MediaFiles.config : {
+        maxImageSize: 5 * 1024 * 1024,
+        allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        allowedImageExtensions: ['.jpg', '.jpeg', '.png', '.webp']
     };
 
     // Photo upload handler
@@ -98,6 +78,17 @@ window.Photo = (function() {
             fileInputs.forEach(input => {
                 input.addEventListener('change', this.handleFileSelect.bind(this));
             });
+
+            // Setup click handler for upload area
+            const uploadArea = document.getElementById('uploadArea');
+            if (uploadArea) {
+                uploadArea.addEventListener('click', function() {
+                    const fileInput = uploadArea.querySelector('input[type="file"]');
+                    if (fileInput) {
+                        fileInput.click();
+                    }
+                });
+            }
         },
 
         /**
@@ -174,21 +165,21 @@ window.Photo = (function() {
          */
         validatePhoto: function(file) {
             // Check file type
-            if (!config.allowedImageTypes.includes(file.type)) {
+            if (!sharedConfig.allowedImageTypes.includes(file.type)) {
                 utils.showToast('Tipo de arquivo não permitido. Use JPG, PNG ou WebP.', 'danger');
                 return false;
             }
 
             // Check file extension
             const extension = '.' + utils.getFileExtension(file.name);
-            if (!config.allowedImageExtensions.includes(extension)) {
+            if (!sharedConfig.allowedImageExtensions.includes(extension)) {
                 utils.showToast('Extensão de arquivo não permitida.', 'danger');
                 return false;
             }
 
             // Check file size
-            if (file.size > config.maxImageSize) {
-                const maxSizeMB = config.maxImageSize / (1024 * 1024);
+            if (file.size > sharedConfig.maxImageSize) {
+                const maxSizeMB = sharedConfig.maxImageSize / (1024 * 1024);
                 utils.showToast(`Arquivo muito grande. Máximo: ${maxSizeMB}MB`, 'danger');
                 return false;
             }
@@ -246,13 +237,15 @@ window.Photo = (function() {
          * Show photo preview
          */
         showPhotoPreview: function(imageSrc, file, width, height) {
-            const previewContainer = document.getElementById('photoPreview');
-            const uploadForm = document.querySelector('.photo-upload-form');
+            const previewContainer = document.getElementById('photoPreview') || document.getElementById('imagePreview');
+            const uploadForm = document.querySelector('.photo-upload-form') || document.getElementById('uploadArea');
             
             if (!previewContainer) return;
 
-            // Update preview image
-            const previewImage = previewContainer.querySelector('.photo-preview-image');
+            // Update preview image - try multiple selectors for compatibility
+            const previewImage = previewContainer.querySelector('.photo-preview-image') || 
+                                 previewContainer.querySelector('#previewImage') ||
+                                 previewContainer.querySelector('img');
             if (previewImage) {
                 previewImage.src = imageSrc;
                 previewImage.alt = file.name;
@@ -273,10 +266,10 @@ window.Photo = (function() {
          */
         updatePhotoMetadata: function(file, width, height) {
             const elements = {
-                fileName: document.getElementById('photoFileName'),
-                fileSize: document.getElementById('photoFileSize'),
-                dimensions: document.getElementById('photoDimensions'),
-                fileType: document.getElementById('photoFileType')
+                fileName: document.getElementById('photoFileName') || document.getElementById('fileName'),
+                fileSize: document.getElementById('photoFileSize') || document.getElementById('fileSize'),
+                dimensions: document.getElementById('photoDimensions') || document.getElementById('dimensions'),
+                fileType: document.getElementById('photoFileType') || document.getElementById('fileType')
             };
 
             if (elements.fileName) elements.fileName.textContent = file.name;
@@ -291,8 +284,8 @@ window.Photo = (function() {
         removePreview: function(e) {
             e.preventDefault();
             
-            const previewContainer = document.getElementById('photoPreview');
-            const uploadForm = document.querySelector('.photo-upload-form');
+            const previewContainer = document.getElementById('photoPreview') || document.getElementById('imagePreview');
+            const uploadForm = document.querySelector('.photo-upload-form') || document.getElementById('uploadArea');
             const fileInput = document.querySelector('input[type="file"][accept*="image"]');
 
             // Clear file input
@@ -307,6 +300,10 @@ window.Photo = (function() {
             if (uploadForm) {
                 uploadForm.style.display = 'block';
             }
+
+            // Clear any error messages
+            const errors = document.querySelectorAll('.media-error');
+            errors.forEach(error => error.remove());
         },
 
         /**

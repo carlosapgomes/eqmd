@@ -1,6 +1,12 @@
 {% extends "mediafiles/base.html" %}
 {% load static %}
 
+{% block extra_head %}
+{{ block.super }}
+<!-- Photo-specific CSS -->
+<link rel="stylesheet" href="{% static 'mediafiles/css/photo.css' %}">
+{% endblock extra_head %}
+
 {% block title %}
 {% if form.instance.pk %}
     Editar Foto - {{ patient.name }} - EquipeMed
@@ -252,166 +258,38 @@
 
 {% block extra_scripts %}
 {{ block.super }}
+<!-- Load photo-specific JavaScript -->
+<script src="{% static 'mediafiles/js/photo.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.getElementById('{{ form.image.id_for_label }}');
-    const uploadArea = document.getElementById('uploadArea');
-    const imagePreview = document.getElementById('imagePreview');
-    const previewImage = document.getElementById('previewImage');
-    const removeImageBtn = document.getElementById('removeImage');
-    const submitBtn = document.getElementById('submitBtn');
+    // Initialize photo upload functionality
+    if (typeof Photo !== 'undefined') {
+        Photo.init();
+    }
+
+    // Form submission handler with loading state
     const form = document.getElementById('photoForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Disable submit button to prevent double submission
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processando...';
 
-    // Only initialize upload functionality for new photos
-    if (fileInput && uploadArea) {
-        // File input change handler
-        fileInput.addEventListener('change', function(e) {
-            handleFileSelect(e.target.files[0]);
+            // Re-enable button after 5 seconds as fallback
+            setTimeout(function() {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '{% if form.instance.pk %}<i class="bi bi-check-circle me-1"></i>Salvar Alterações{% else %}<i class="bi bi-plus-circle me-1"></i>Criar Foto{% endif %}';
+            }, 5000);
         });
-
-        // Drag and drop handlers
-        uploadArea.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-
-        uploadArea.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-        });
-
-        uploadArea.addEventListener('drop', function(e) {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleFileSelect(files[0]);
-            }
-        });
-
-        // Click to upload
-        uploadArea.addEventListener('click', function() {
-            fileInput.click();
-        });
-
-        // Remove image handler
-        if (removeImageBtn) {
-            removeImageBtn.addEventListener('click', function() {
-                fileInput.value = '';
-                imagePreview.style.display = 'none';
-                uploadArea.style.display = 'block';
-            });
-        }
     }
 
-    // File selection handler
-    function handleFileSelect(file) {
-        if (!file) return;
-
-        // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            showError('Tipo de arquivo não permitido. Use JPEG, PNG ou WebP.');
-            return;
-        }
-
-        // Validate file size (5MB)
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            showError('Arquivo muito grande. Máximo permitido: 5MB');
-            return;
-        }
-
-        // Show preview
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImage.src = e.target.result;
-            updateMetadata(file);
-            uploadArea.style.display = 'none';
-            imagePreview.style.display = 'block';
-            clearErrors();
-        };
-        reader.readAsDataURL(file);
-    }
-
-    // Update metadata display
-    function updateMetadata(file) {
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileSize').textContent = formatFileSize(file.size);
-        document.getElementById('fileType').textContent = file.type;
-    }
-
-    // Format file size
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    // Show error message
-    function showError(message) {
-        // Remove existing error messages
-        clearErrors();
-
-        // Create error element
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'media-error';
-        errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>' + message;
-
-        // Insert after upload area
-        uploadArea.parentNode.insertBefore(errorDiv, uploadArea.nextSibling);
-    }
-
-    // Clear error messages
-    function clearErrors() {
-        const errors = document.querySelectorAll('.media-error');
-        errors.forEach(error => error.remove());
-    }
-
-    // Form submission handler
-    form.addEventListener('submit', function(e) {
-        // Disable submit button to prevent double submission
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processando...';
-
-        // Re-enable button after 5 seconds as fallback
-        setTimeout(function() {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '{% if form.instance.pk %}<i class="bi bi-check-circle me-1"></i>Salvar Alterações{% else %}<i class="bi bi-plus-circle me-1"></i>Criar Foto{% endif %}';
-        }, 5000);
-    });
-
-    // Client-side form validation
-    function validateForm() {
-        let isValid = true;
-
-        // Check required fields
-        const requiredFields = ['{{ form.description.id_for_label }}', '{{ form.event_datetime.id_for_label }}'];
-        {% if not form.instance.pk %}
-        requiredFields.push('{{ form.image.id_for_label }}');
-        {% endif %}
-
-        requiredFields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field && !field.value.trim()) {
-                field.classList.add('is-invalid');
-                isValid = false;
-            } else if (field) {
-                field.classList.remove('is-invalid');
-            }
-        });
-
-        return isValid;
-    }
-
-    // Real-time validation
-    const inputs = form.querySelectorAll('input, textarea');
+    // Basic form validation
+    const inputs = document.querySelectorAll('#photoForm input[required], #photoForm textarea[required]');
     inputs.forEach(input => {
         input.addEventListener('blur', function() {
-            if (this.hasAttribute('required') && !this.value.trim()) {
+            if (!this.value.trim()) {
                 this.classList.add('is-invalid');
             } else {
                 this.classList.remove('is-invalid');

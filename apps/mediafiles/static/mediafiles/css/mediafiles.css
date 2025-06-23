@@ -243,96 +243,205 @@
     }
 }
 
-/* Photo Event Card Styles */
-.photo-event-content {
-    position: relative;
-}
+/* Common Media Components */
 
-.photo-thumbnail-container {
-    display: flex;
-    justify-content: center;
-}
-
-.photo-thumbnail-wrapper {
-    display: inline-block;
+/* Media thumbnail base styling - shared across all media types */
+.media-thumbnail {
     border-radius: 8px;
-    overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    object-fit: cover;
 }
 
-.photo-thumbnail-wrapper:hover {
+.media-thumbnail:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.photo-thumbnail-wrapper:hover .photo-overlay {
-    opacity: 1 !important;
-}
-
-.photo-thumbnail {
+/* Media upload area - shared styling */
+.media-upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+    background-color: #f8f9fa;
     cursor: pointer;
-    transition: transform 0.2s ease;
 }
 
-.photo-overlay {
-    transition: opacity 0.3s ease;
-    backdrop-filter: blur(2px);
+.media-upload-area:hover {
+    border-color: var(--medical-primary);
+    background-color: #f0f4f8;
 }
 
-.photo-placeholder {
-    border: 2px dashed var(--medical-gray);
-    background-color: var(--medical-light);
+.media-upload-area.dragover {
+    border-color: var(--medical-teal);
+    background-color: #e8f5f0;
 }
 
-.photo-metadata .row {
-    font-size: 0.875rem;
-}
-
-.photo-metadata i {
-    opacity: 0.7;
-}
-
-/* Photo Modal Styles */
-.photo-modal-image {
-    transition: transform 0.3s ease;
+/* Media preview - shared styling */
+.media-preview {
     max-width: 100%;
-    height: auto;
+    max-height: 300px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.photo-display-container {
+/* Media metadata - shared layout */
+.media-metadata {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.media-metadata .metadata-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.media-metadata .metadata-item:last-child {
+    border-bottom: none;
+}
+
+.media-metadata .metadata-label {
+    font-weight: 500;
+    color: var(--medical-dark-gray);
+}
+
+.media-metadata .metadata-value {
+    color: var(--medical-gray);
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+/* Media progress - shared styling */
+.media-progress {
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background-color: #e9ecef;
+    margin-top: 1rem;
+}
+
+.media-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--medical-primary), var(--medical-teal));
+    transition: width 0.3s ease;
+}
+
+/* Media status messages - shared styling */
+.media-error {
+    color: var(--medical-error);
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 1rem;
+}
+
+.media-success {
+    color: var(--medical-success);
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 1rem;
+}
+
+/* Breadcrumb styling - shared across all media pages */
+.media-breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 1.5rem;
+}
+
+.media-breadcrumb .breadcrumb-item {
+    color: var(--medical-gray);
+}
+
+.media-breadcrumb .breadcrumb-item.active {
+    color: var(--medical-primary);
+    font-weight: 500;
+}
+
+.media-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #adb5bd;
+}
+
+/* Action buttons - shared styling */
+.media-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.media-actions .btn {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+}
+
+/* Common display containers for all media types */
+.media-display-container {
     min-height: 400px;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: #000;
+    border-radius: 8px;
+    position: relative;
 }
 
-.photo-controls {
-    background: rgba(0, 0, 0, 0.7);
+/* Common modal controls for all media types */
+.media-modal-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.8);
     border-radius: 8px;
+    padding: 0.5rem;
     backdrop-filter: blur(4px);
 }
 
-.photo-controls .btn {
+.media-modal-controls .btn {
     border: none;
     background: rgba(255, 255, 255, 0.1);
     color: white;
+    margin: 0.125rem;
+    padding: 0.5rem;
+    border-radius: 4px;
     transition: background-color 0.2s ease;
 }
 
-.photo-controls .btn:hover {
+.media-modal-controls .btn:hover {
     background: rgba(255, 255, 255, 0.2);
     color: white;
 }
 
-.photo-metadata-overlay {
-    background: rgba(0, 0, 0, 0.8);
-    border-radius: 4px;
-    padding: 0.5rem;
+.media-modal-controls .btn:focus {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
-/* Cursor styles for zoom functionality */
+/* Common placeholder styling */
+.media-placeholder {
+    border: 2px dashed var(--medical-gray);
+    background-color: var(--medical-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: var(--medical-gray);
+    text-align: center;
+}
+
+/* Cursor utilities - shared */
 .cursor-pointer {
     cursor: pointer;
 }
@@ -345,7 +454,7 @@
     cursor: zoom-out;
 }
 
-/* Transition utilities */
+/* Transition utilities - shared */
 .transition-opacity {
     transition: opacity 0.3s ease;
 }
@@ -354,34 +463,74 @@
     transition: transform 0.3s ease;
 }
 
-/* Responsive adjustments for photo cards */
+/* Event card container styles - for timeline integration */
+.media-event-content {
+    position: relative;
+}
+
+.media-thumbnail-container {
+    display: flex;
+    justify-content: center;
+}
+
+.media-thumbnail-wrapper {
+    display: inline-block;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.media-thumbnail-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.media-thumbnail-wrapper:hover .media-overlay {
+    opacity: 1 !important;
+}
+
+.media-overlay {
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+/* Common responsive adjustments */
 @media (max-width: 768px) {
-    .photo-thumbnail-wrapper {
+    .media-upload-area {
+        padding: 1.5rem 1rem;
+    }
+    
+    .media-actions {
+        justify-content: center;
+    }
+    
+    .media-actions .btn {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .media-thumbnail-wrapper {
         max-width: 100%;
     }
 
-    .photo-thumbnail {
+    .media-thumbnail {
         max-width: 100%;
         height: auto;
     }
 
-    .photo-metadata .col-sm-6,
-    .photo-metadata .col-sm-3 {
-        margin-bottom: 0.25rem;
-    }
-
-    .photo-controls {
+    .media-modal-controls {
         position: static !important;
         margin: 1rem;
         display: flex;
         justify-content: center;
     }
 
-    .photo-controls .btn-group-vertical {
+    .media-modal-controls .btn-group-vertical {
         flex-direction: row;
     }
 
-    .photo-controls .btn {
+    .media-modal-controls .btn {
         margin: 0 0.25rem;
     }
 }

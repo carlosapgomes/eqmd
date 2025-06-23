@@ -716,6 +716,16 @@ window.MediaFiles = (function() {
         }
     };
 
+    // Shared configuration accessible to other modules
+    const sharedConfig = {
+        maxImageSize: config.maxImageSize,
+        maxVideoSize: config.maxVideoSize,
+        allowedImageTypes: config.allowedImageTypes,
+        allowedVideoTypes: config.allowedVideoTypes,
+        allowedImageExtensions: config.allowedImageExtensions,
+        allowedVideoExtensions: config.allowedVideoExtensions
+    };
+
     // Public API
     return {
         /**
@@ -733,8 +743,9 @@ window.MediaFiles = (function() {
             );
         },
 
-        // Expose utilities
+        // Expose utilities for shared use
         utils: utils,
+        config: sharedConfig,
         fileUpload: fileUpload,
         imageViewer: imageViewer,
         photoModal: photoModal
