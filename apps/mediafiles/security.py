@@ -386,9 +386,16 @@ def validate_security_settings() -> List[str]:
         'MEDIA_ALLOWED_VIDEO_EXTENSIONS',
         'MEDIA_ALLOWED_IMAGE_TYPES',
         'MEDIA_ALLOWED_VIDEO_TYPES',
+        'MEDIA_ALLOWED_VIDEO_CODECS',
+        'MEDIA_ALLOWED_VIDEO_FORMATS',
         'MEDIA_IMAGE_MAX_SIZE',
         'MEDIA_VIDEO_MAX_SIZE',
+        'MEDIA_VIDEO_MAX_DURATION',
+        'MEDIA_VIDEO_MAX_DIMENSION',
+        'MEDIA_VIDEO_MAX_RANGE_SIZE',
+        'MEDIA_MAX_FILENAME_LENGTH',
         'MEDIA_USE_UUID_FILENAMES',
+        'MEDIA_ENABLE_FILE_DEDUPLICATION',
     ]
     
     for setting in required_settings:
@@ -408,10 +415,104 @@ def validate_security_settings() -> List[str]:
     if not getattr(settings, 'MEDIA_USE_UUID_FILENAMES', False):
         warnings.append("UUID-based filenames not enabled (security risk)")
     
+    # Check video-specific settings
+    if hasattr(settings, 'MEDIA_VIDEO_MAX_DURATION'):
+        if settings.MEDIA_VIDEO_MAX_DURATION > 300:  # 5 minutes
+            warnings.append("Video duration limit is very high (>5 minutes)")
+
+    if hasattr(settings, 'MEDIA_VIDEO_MAX_DIMENSION'):
+        if settings.MEDIA_VIDEO_MAX_DIMENSION > 8192:  # 8K
+            warnings.append("Video dimension limit is very high (>8K)")
+
+    if hasattr(settings, 'MEDIA_VIDEO_MAX_RANGE_SIZE'):
+        if settings.MEDIA_VIDEO_MAX_RANGE_SIZE > 50 * 1024 * 1024:  # 50MB
+            warnings.append("Video range request size limit is very high (>50MB)")
+
+    # Check codec security
+    if hasattr(settings, 'MEDIA_ALLOWED_VIDEO_CODECS'):
+        dangerous_codecs = ['wmv', 'asf', 'rm', 'rmvb', 'flv']
+        for codec in settings.MEDIA_ALLOWED_VIDEO_CODECS:
+            if codec.lower() in dangerous_codecs:
+                warnings.append(f"Potentially unsafe video codec allowed: {codec}")
+
+    # Check container format security
+    if hasattr(settings, 'MEDIA_ALLOWED_VIDEO_FORMATS'):
+        dangerous_formats = ['asf', 'wmv', 'rm', 'rmvb', 'flv']
+        for format_name in settings.MEDIA_ALLOWED_VIDEO_FORMATS:
+            if format_name.lower() in dangerous_formats:
+                warnings.append(f"Potentially unsafe video format allowed: {format_name}")
+
+    # Check filename length
+    if hasattr(settings, 'MEDIA_MAX_FILENAME_LENGTH'):
+        if settings.MEDIA_MAX_FILENAME_LENGTH > 255:
+            warnings.append("Maximum filename length is very high (>255 characters)")
+        elif settings.MEDIA_MAX_FILENAME_LENGTH < 50:
+            warnings.append("Maximum filename length is very low (<50 characters)")
+
     # Check debug mode
     if settings.DEBUG:
         warnings.append("DEBUG mode is enabled (not recommended for production)")
-    
+
+    return warnings
+
+
+def validate_video_security_settings() -> List[str]:
+    """
+    Validate video-specific security settings.
+
+    Returns:
+        List of validation warnings/errors specific to video security
+    """
+    warnings = []
+
+    # Check video file size limits
+    video_max_size = getattr(settings, 'MEDIA_VIDEO_MAX_SIZE', 0)
+    if video_max_size == 0:
+        warnings.append("Video file size limit not set")
+    elif video_max_size > 100 * 1024 * 1024:  # 100MB
+        warnings.append(f"Video file size limit is very high: {video_max_size // (1024 * 1024)}MB")
+
+    # Check video duration limits
+    video_max_duration = getattr(settings, 'MEDIA_VIDEO_MAX_DURATION', 0)
+    if video_max_duration == 0:
+        warnings.append("Video duration limit not set")
+    elif video_max_duration > 600:  # 10 minutes
+        warnings.append(f"Video duration limit is very high: {video_max_duration} seconds")
+
+    # Check video codec whitelist
+    allowed_codecs = getattr(settings, 'MEDIA_ALLOWED_VIDEO_CODECS', [])
+    if not allowed_codecs:
+        warnings.append("No video codecs are allowed (video uploads will fail)")
+    else:
+        safe_codecs = ['h264', 'h265', 'vp8', 'vp9', 'av1']
+        for codec in allowed_codecs:
+            if codec.lower() not in safe_codecs:
+                warnings.append(f"Video codec '{codec}' may not be secure")
+
+    # Check video format whitelist
+    allowed_formats = getattr(settings, 'MEDIA_ALLOWED_VIDEO_FORMATS', [])
+    if not allowed_formats:
+        warnings.append("No video formats are allowed (video uploads will fail)")
+    else:
+        safe_formats = ['mp4', 'webm', 'mov']
+        for format_name in allowed_formats:
+            if format_name.lower() not in safe_formats:
+                warnings.append(f"Video format '{format_name}' may not be secure")
+
+    # Check streaming security settings
+    max_range_size = getattr(settings, 'MEDIA_VIDEO_MAX_RANGE_SIZE', 0)
+    if max_range_size == 0:
+        warnings.append("Video range request size limit not set (potential DoS risk)")
+    elif max_range_size > 100 * 1024 * 1024:  # 100MB
+        warnings.append(f"Video range request size limit is very high: {max_range_size // (1024 * 1024)}MB")
+
+    # Check video dimension limits
+    max_dimension = getattr(settings, 'MEDIA_VIDEO_MAX_DIMENSION', 0)
+    if max_dimension == 0:
+        warnings.append("Video dimension limit not set")
+    elif max_dimension > 8192:  # 8K
+        warnings.append(f"Video dimension limit is very high: {max_dimension}px")
+
     return warnings
 
 

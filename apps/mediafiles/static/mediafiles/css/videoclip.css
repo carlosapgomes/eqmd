@@ -1,0 +1,409 @@
+/*
+ * VideoClip-specific CSS for EquipeMed MediaFiles
+ * 
+ * Styles specifically for video upload, display, and interaction
+ * Depends on mediafiles.css for common media styles
+ * Follows photo.css patterns for consistency
+ */
+
+/* Video event card styles - for timeline integration */
+.videoclip-event-content {
+    position: relative;
+}
+
+.video-thumbnail-container {
+    display: flex;
+    justify-content: center;
+}
+
+.video-thumbnail-wrapper {
+    display: inline-block;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.video-thumbnail-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.video-thumbnail-wrapper:hover .video-play-overlay {
+    opacity: 1 !important;
+}
+
+.video-play-overlay {
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+/* Duration badge overlay */
+.video-duration-overlay {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    z-index: 2;
+}
+
+.video-duration-badge {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Timeline video metadata specific styles */
+.video-metadata {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.video-metadata .row {
+    font-size: 0.875rem;
+}
+
+.video-metadata i {
+    opacity: 0.7;
+}
+
+/* Video thumbnail sizes */
+.video-thumbnail-sm {
+    width: 80px;
+    height: 60px;
+}
+
+.video-thumbnail-md {
+    width: 150px;
+    height: 100px;
+}
+
+.video-thumbnail-lg {
+    width: 300px;
+    height: 200px;
+}
+
+/* Video upload form - video-specific styling */
+.video-upload-form {
+    /* Extends media-upload-area with video-specific styling */
+    border-radius: 12px; /* More rounded than default media upload */
+}
+
+.video-upload-icon {
+    font-size: 3rem;
+    color: var(--medical-gray);
+    margin-bottom: 1rem;
+}
+
+.video-upload-text {
+    color: var(--medical-dark-gray);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.video-upload-hint {
+    color: var(--medical-gray);
+    font-size: 0.9rem;
+}
+
+/* Video preview styling */
+.video-preview-container {
+    position: relative;
+    display: inline-block;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    background: black;
+    padding: 1rem;
+}
+
+.video-preview-player {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 8px;
+    display: block;
+}
+
+.video-preview-overlay {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.video-preview-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+/* Video player - video-specific functionality */
+.video-player {
+    max-width: 100%;
+    max-height: 80vh;
+    background: #000;
+    border-radius: 8px;
+}
+
+.video-player:focus {
+    outline: 2px solid var(--medical-primary);
+    outline-offset: 2px;
+}
+
+/* Video modal - video-specific functionality */
+.video-modal-player {
+    max-width: 100%;
+    max-height: 70vh;
+    background: #000;
+}
+
+/* Video metadata - video-specific styling overrides */
+.video-metadata .metadata-item {
+    padding: 0.5rem 0; /* Slightly more padding than default media metadata */
+}
+
+.video-metadata .metadata-label {
+    font-weight: 600; /* Stronger font weight for video metadata */
+}
+
+/* Video loading states */
+.video-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: var(--medical-gray);
+    background: #000;
+    border-radius: 8px;
+}
+
+.video-loading .spinner-border {
+    margin-right: 0.5rem;
+    color: white;
+}
+
+.video-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: var(--medical-error);
+    text-align: center;
+    background: #000;
+    border-radius: 8px;
+}
+
+.video-error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+    color: white;
+}
+
+/* Video validation feedback */
+.video-validation-feedback {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.video-validation-feedback.valid {
+    background: #d4edda;
+    color: var(--medical-success);
+    border: 1px solid #c3e6cb;
+}
+
+.video-validation-feedback.invalid {
+    background: #f8d7da;
+    color: var(--medical-error);
+    border: 1px solid #f5c6cb;
+}
+
+/* Video progress indicator */
+.video-upload-progress {
+    margin-top: 1rem;
+}
+
+.video-progress-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.video-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--medical-primary), var(--medical-teal));
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.video-progress-text {
+    text-align: center;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--medical-gray);
+}
+
+/* Video controls styling */
+.video-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+}
+
+.video-controls .btn {
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 0.25rem;
+}
+
+.video-controls .btn:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Video-specific responsive design */
+@media (max-width: 768px) {
+    .video-thumbnail-lg {
+        width: 100%;
+        height: auto;
+        max-width: 300px;
+    }
+
+    .video-upload-icon {
+        font-size: 2rem;
+    }
+
+    .video-metadata .metadata-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    /* Timeline video metadata responsive */
+    .video-metadata .col-sm-6,
+    .video-metadata .col-sm-3 {
+        margin-bottom: 0.25rem;
+    }
+
+    .video-thumbnail-wrapper {
+        max-width: 100%;
+    }
+
+    .video-thumbnail {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .video-duration-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+
+    /* Video controls responsive */
+    .video-controls {
+        position: static;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 0 0 8px 8px;
+    }
+
+    .video-controls .btn-group-vertical {
+        flex-direction: row;
+        gap: 0.5rem;
+    }
+
+    .video-controls .btn {
+        margin-bottom: 0;
+    }
+}
+
+@media (max-width: 576px) {
+    .video-thumbnail-md {
+        width: 120px;
+        height: 80px;
+    }
+
+    .video-preview-actions {
+        flex-direction: column;
+    }
+
+    .video-preview-actions .btn {
+        width: 100%;
+    }
+
+    .video-modal-player {
+        max-height: 50vh !important;
+    }
+}
+
+/* Video-specific print styles */
+@media print {
+    .video-upload-form,
+    .video-preview-actions,
+    .video-controls {
+        display: none !important;
+    }
+
+    .video-player,
+    .video-preview-player {
+        display: none !important;
+    }
+
+    /* Show a placeholder for videos in print */
+    .video-player::after,
+    .video-preview-player::after {
+        content: "Vídeo não disponível na versão impressa";
+        display: block;
+        padding: 2rem;
+        text-align: center;
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+    }
+}
+
+/* Video-specific accessibility */
+@media (prefers-contrast: high) {
+    .video-upload-form {
+        border-width: 3px;
+    }
+
+    .video-duration-badge {
+        border-width: 2px;
+        border-color: white;
+    }
+
+    .video-controls .btn {
+        border-width: 2px;
+        border-color: white;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .video-player,
+    .video-progress-fill,
+    .video-thumbnail-wrapper {
+        transition: none;
+    }
+
+    .video-play-overlay {
+        transition: none;
+    }
+}

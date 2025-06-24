@@ -1,0 +1,438 @@
+{% load static %}
+{% load mediafiles_tags %}
+
+<!-- PhotoSeries Event Card for Timeline -->
+<div class="event-card photoseries-event-card" id="event-{{ event.pk }}">
+    <div class="event-card-header">
+        <div class="event-type-badge">
+            <i class="bi bi-images"></i>
+            <span>Série de Fotos</span>
+        </div>
+        <div class="event-meta">
+            <small class="event-datetime">{{ event.event_datetime|date:"d/m/Y H:i" }}</small>
+            <small class="event-author">{{ event.created_by.get_full_name|default:event.created_by.username }}</small>
+        </div>
+    </div>
+    
+    <div class="event-card-body">
+        <!-- PhotoSeries Content -->
+        <div class="photoseries-event-content">
+            <!-- Series Header with Photo Count -->
+            <div class="photoseries-header mb-3">
+                <h6 class="fw-bold mb-1">
+                    {{ event.description|default:"Série de Fotos" }}
+                    <span class="badge bg-medical-primary ms-2">
+                        {{ event.get_photo_count }} foto{{ event.get_photo_count|pluralize:"s" }}
+                    </span>
+                </h6>
+                {% if event.caption %}
+                <p class="text-muted small mb-0">{{ event.caption }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Primary Photo Thumbnail -->
+            <div class="photoseries-thumbnail-container">
+                {% with primary_thumbnail=event.get_primary_thumbnail %}
+                {% if primary_thumbnail %}
+                <div class="photoseries-thumbnail-wrapper">
+                    <img src="{{ primary_thumbnail }}" 
+                         class="photoseries-thumbnail" 
+                         alt="Primeira foto da série"
+                         loading="lazy">
+                    
+                    <!-- Photo Count Overlay -->
+                    <div class="photoseries-overlay">
+                        <div class="photoseries-count-badge">
+                            <i class="bi bi-images me-1"></i>
+                            {{ event.get_photo_count }}
+                        </div>
+                    </div>
+                    
+                    <!-- Click to View Overlay -->
+                    <div class="photoseries-view-overlay">
+                        <div class="photoseries-view-content">
+                            <i class="bi bi-eye display-6 text-white mb-2"></i>
+                            <p class="text-white small mb-0">Clique para visualizar série</p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- No Photo Placeholder -->
+                <div class="photoseries-placeholder">
+                    <i class="bi bi-images display-4 text-muted"></i>
+                    <p class="text-muted small mb-0">Série sem fotos</p>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+            
+            <!-- Series Metadata -->
+            {% if event.get_photo_count > 0 %}
+            <div class="photoseries-metadata mt-3">
+                <div class="row g-2">
+                    <div class="col-sm-6">
+                        <small class="text-muted">
+                            <i class="bi bi-hash me-1"></i>
+                            {{ event.get_photo_count }} imagem{{ event.get_photo_count|pluralize:"ns" }}
+                        </small>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar-event me-1"></i>
+                            {{ event.event_datetime|date:"d/m/Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="event-card-actions">
+        <!-- Action Buttons (NO zoom button per requirements) -->
+        <div class="btn-group" role="group">
+            <!-- Download Series Button -->
+            <a href="{% url 'mediafiles:photoseries_download' event.pk %}" 
+               class="btn btn-outline-success btn-sm"
+               data-bs-toggle="tooltip" 
+               title="Baixar série (ZIP)">
+                <i class="bi bi-download"></i>
+            </a>
+            
+            <!-- Details Button -->
+            <a href="{% url 'mediafiles:photoseries_detail' event.pk %}" 
+               class="btn btn-outline-primary btn-sm"
+               data-bs-toggle="tooltip" 
+               title="Ver detalhes da série">
+                <i class="bi bi-eye"></i>
+            </a>
+            
+            <!-- Edit Button (if user can edit) -->
+            {% if user|can_edit_event:event %}
+            <a href="{% url 'mediafiles:photoseries_update' event.pk %}" 
+               class="btn btn-outline-secondary btn-sm"
+               data-bs-toggle="tooltip" 
+               title="Editar série">
+                <i class="bi bi-pencil"></i>
+            </a>
+            {% endif %}
+        </div>
+        
+        <!-- Dropdown Menu for More Actions -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                    type="button" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false">
+                <i class="bi bi-three-dots"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="{% url 'mediafiles:photoseries_detail' event.pk %}">
+                        <i class="bi bi-eye me-2"></i>
+                        Visualizar Série
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{% url 'mediafiles:photoseries_download' event.pk %}">
+                        <i class="bi bi-file-earmark-zip me-2"></i>
+                        Download ZIP
+                    </a>
+                </li>
+                {% if user|can_edit_event:event %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="{% url 'mediafiles:photoseries_update' event.pk %}">
+                        <i class="bi bi-pencil me-2"></i>
+                        Editar Informações
+                    </a>
+                </li>
+                {% endif %}
+                {% if user|can_delete_event:event %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="{% url 'mediafiles:photoseries_delete' event.pk %}">
+                        <i class="bi bi-trash me-2"></i>
+                        Excluir Série
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+/* PhotoSeries Event Card Specific Styles */
+.photoseries-event-card {
+    border-left: 4px solid var(--medical-teal);
+}
+
+.photoseries-event-card .event-type-badge {
+    background: var(--medical-teal);
+    color: white;
+}
+
+/* PhotoSeries Content */
+.photoseries-event-content {
+    position: relative;
+}
+
+.photoseries-header h6 {
+    color: var(--medical-dark-gray);
+}
+
+/* Primary Thumbnail Display */
+.photoseries-thumbnail-container {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.photoseries-thumbnail-wrapper {
+    position: relative;
+    display: inline-block;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    max-width: 300px;
+    width: 100%;
+}
+
+.photoseries-thumbnail-wrapper:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.photoseries-thumbnail {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-thumbnail {
+    transform: scale(1.05);
+}
+
+/* Photo Count Overlay */
+.photoseries-overlay {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+}
+
+.photoseries-count-badge {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    backdrop-filter: blur(4px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* View Overlay */
+.photoseries-view-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-view-overlay {
+    opacity: 1;
+}
+
+.photoseries-view-content {
+    text-align: center;
+    transform: translateY(10px);
+    transition: transform 0.3s ease;
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-view-content {
+    transform: translateY(0);
+}
+
+/* No Photo Placeholder */
+.photoseries-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px dashed #dee2e6;
+    max-width: 300px;
+    width: 100%;
+}
+
+/* PhotoSeries Metadata */
+.photoseries-metadata {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+
+.photoseries-metadata .row {
+    font-size: 0.875rem;
+}
+
+.photoseries-metadata i {
+    opacity: 0.7;
+}
+
+/* Click Behavior */
+.photoseries-thumbnail-wrapper {
+    position: relative;
+}
+
+.photoseries-thumbnail-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    cursor: pointer;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .photoseries-thumbnail {
+        height: 150px;
+    }
+    
+    .photoseries-thumbnail-wrapper {
+        max-width: 250px;
+    }
+    
+    .photoseries-count-badge {
+        padding: 0.375rem 0.625rem;
+        font-size: 0.75rem;
+    }
+    
+    .photoseries-view-overlay .display-6 {
+        font-size: 2rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .photoseries-thumbnail {
+        height: 120px;
+    }
+    
+    .photoseries-thumbnail-wrapper {
+        max-width: 200px;
+    }
+    
+    .photoseries-metadata .col-sm-6 {
+        margin-bottom: 0.25rem;
+    }
+    
+    .photoseries-placeholder {
+        height: 120px;
+        max-width: 200px;
+    }
+    
+    .photoseries-placeholder .display-4 {
+        font-size: 2rem !important;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .photoseries-view-overlay,
+    .event-card-actions {
+        display: none !important;
+    }
+    
+    .photoseries-thumbnail {
+        height: auto !important;
+        max-height: 150px;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .photoseries-thumbnail-wrapper,
+    .photoseries-thumbnail,
+    .photoseries-view-content {
+        transition: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .photoseries-count-badge {
+        background: rgba(0, 0, 0, 1);
+        border: 3px solid white;
+    }
+    
+    .photoseries-placeholder {
+        border-width: 3px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle PhotoSeries thumbnail click to open detail view
+    const photoSeriesThumbnails = document.querySelectorAll('.photoseries-thumbnail-wrapper');
+    
+    photoSeriesThumbnails.forEach(thumbnail => {
+        thumbnail.addEventListener('click', function(e) {
+            // Prevent click if it's on an action button
+            if (e.target.closest('.btn') || e.target.closest('.dropdown')) {
+                return;
+            }
+            
+            // Find the event card and get the event ID
+            const eventCard = this.closest('.event-card');
+            if (eventCard) {
+                const eventId = eventCard.id.replace('event-', '');
+                
+                // Navigate to PhotoSeries detail view
+                const detailUrl = `/mediafiles/photo-series/${eventId}/`;
+                window.location.href = detailUrl;
+            }
+        });
+    });
+    
+    // Initialize tooltips for PhotoSeries action buttons
+    const tooltips = document.querySelectorAll('.photoseries-event-card [data-bs-toggle="tooltip"]');
+    tooltips.forEach(tooltip => {
+        new bootstrap.Tooltip(tooltip);
+    });
+    
+    // Handle keyboard navigation for PhotoSeries cards
+    photoSeriesThumbnails.forEach(thumbnail => {
+        thumbnail.setAttribute('tabindex', '0');
+        thumbnail.setAttribute('role', 'button');
+        thumbnail.setAttribute('aria-label', 'Visualizar série de fotos');
+        
+        thumbnail.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.click();
+            }
+        });
+    });
+});
+</script>

@@ -216,13 +216,25 @@ MEDIA_VIDEO_MAX_SIZE = 50 * 1024 * 1024  # 50MB
 MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes in seconds
 MEDIA_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 MEDIA_ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
+MEDIA_ALLOWED_VIDEO_CODECS = ['h264', 'vp8', 'vp9', 'av1']
 
 # Security settings for media files
 MEDIA_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 MEDIA_ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov']
+MEDIA_ALLOWED_VIDEO_FORMATS = ['mp4', 'webm', 'mov']  # Container formats
 MEDIA_MAX_FILENAME_LENGTH = 100
 MEDIA_USE_UUID_FILENAMES = True  # Use UUID-based secure filenames
 MEDIA_ENABLE_FILE_DEDUPLICATION = True  # Enable SHA-256 hash deduplication
+
+# Video streaming security settings
+MEDIA_VIDEO_MAX_DIMENSION = 4096  # Maximum video width/height (4K)
+MEDIA_VIDEO_MAX_RANGE_SIZE = 10 * 1024 * 1024  # 10MB max range request size
+MEDIA_VIDEO_STREAM_TIMEOUT = 30  # 30 seconds timeout for video operations
+
+# Rate limiting settings for media access
+MEDIA_RATE_LIMIT_UPLOADS = 10  # uploads per hour per user
+MEDIA_RATE_LIMIT_DOWNLOADS = 100  # downloads per hour per user
+MEDIA_RATE_LIMIT_STREAMS = 50  # video streams per hour per user
 
 STORAGES = {
     "default": {

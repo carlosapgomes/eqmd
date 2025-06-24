@@ -1,0 +1,381 @@
+{% extends "mediafiles/base.html" %}
+{% load static %}
+{% load mediafiles_tags %}
+
+{% block extra_head %}
+{{ block.super }}
+<!-- VideoClip-specific CSS -->
+<link rel="stylesheet" href="{% static 'mediafiles/css/videoclip.css' %}">
+{% endblock extra_head %}
+
+{% block title %}
+Vídeo - {{ videoclip.patient.name }} - EquipeMed
+{% endblock title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_detail' videoclip.patient.id %}" class="text-decoration-none">
+        <i class="bi bi-person me-1"></i>
+        {{ videoclip.patient.name }}
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_events_timeline' videoclip.patient.id %}" class="text-decoration-none">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline
+    </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">
+    <i class="bi bi-eye me-1"></i>
+    Visualizar Vídeo
+</li>
+{% endblock breadcrumb_items %}
+
+{% block media_content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <h1 class="h3 text-medical-primary mb-1">
+                    <i class="bi bi-camera-video me-2"></i>
+                    Vídeo
+                </h1>
+                <p class="text-medical-gray mb-0">
+                    Paciente: <strong>{{ videoclip.patient.name }}</strong>
+                </p>
+                {% if videoclip.description %}
+                <p class="text-muted mt-1 mb-0">{{ videoclip.description }}</p>
+                {% endif %}
+            </div>
+            <div class="text-end">
+                <small class="text-muted d-block">
+                    Criado em: {{ videoclip.created_at|date:"d/m/Y H:i" }}
+                </small>
+                <small class="text-muted d-block">
+                    Por: {{ videoclip.created_by.get_full_name|default:videoclip.created_by.username }}
+                </small>
+            </div>
+        </div>
+
+        <!-- Video Display Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-medical-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-camera-video me-2"></i>
+                    {{ videoclip.media_file.original_filename }}
+                    {% if videoclip.media_file.duration %}
+                    <span class="badge bg-light text-dark ms-2">
+                        <i class="bi bi-clock me-1"></i>
+                        {{ videoclip.media_file.get_duration_display }}
+                    </span>
+                    {% endif %}
+                </h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#fullscreenModal">
+                        <i class="bi bi-arrows-fullscreen me-1"></i>
+                        Tela Cheia
+                    </button>
+                    <a href="{% url 'mediafiles:videoclip_download' videoclip.pk %}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-download me-1"></i>
+                        Download
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Main Video Display -->
+                <div class="text-center bg-light">
+                    <video class="video-player" controls style="max-height: 70vh; width: 100%; max-width: 100%;" preload="metadata">
+                        <source src="{% url 'mediafiles:videoclip_stream' videoclip.pk %}" type="{{ videoclip.media_file.mime_type }}">
+                        Seu navegador não suporta o elemento de vídeo.
+                    </video>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Information -->
+        <div class="row">
+            <!-- Metadata Card -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Informações do Vídeo
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="media-metadata">
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-file-earmark-play me-1"></i>
+                                    Nome do arquivo:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.media_file.original_filename }}</span>
+                            </div>
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-hdd me-1"></i>
+                                    Tamanho:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.media_file.get_display_size }}</span>
+                            </div>
+                            
+                            {% if videoclip.media_file.duration %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Duração:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.media_file.get_duration_display }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            {% if videoclip.media_file.video_codec %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-gear me-1"></i>
+                                    Codec:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.media_file.video_codec }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            {% if videoclip.media_file.fps %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-speedometer me-1"></i>
+                                    FPS:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.media_file.fps|floatformat:1 }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-file-earmark-code me-1"></i>
+                                    Tipo:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.media_file.mime_type }}</span>
+                            </div>
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-calendar-event me-1"></i>
+                                    Data do evento:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.event_datetime|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            
+                            {% if videoclip.caption %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-chat-quote me-1"></i>
+                                    Legenda:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.caption }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Card -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-gear me-2"></i>
+                            Ações
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <!-- Edit Button -->
+                            {% if can_edit %}
+                            <a href="{% url 'mediafiles:videoclip_update' videoclip.pk %}" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil me-2"></i>
+                                Editar Informações
+                            </a>
+                            {% endif %}
+                            
+                            <!-- Download Button -->
+                            <a href="{% url 'mediafiles:videoclip_download' videoclip.pk %}" class="btn btn-outline-success">
+                                <i class="bi bi-download me-2"></i>
+                                Baixar Arquivo
+                            </a>
+                            
+                            <!-- View in Timeline -->
+                            <a href="{% url 'apps.patients:patient_events_timeline' videoclip.patient.pk %}#event-{{ videoclip.pk }}" class="btn btn-outline-info">
+                                <i class="bi bi-clock-history me-2"></i>
+                                Ver na Timeline
+                            </a>
+                            
+                            <!-- Delete Button -->
+                            {% if can_delete %}
+                            <a href="{% url 'mediafiles:videoclip_delete' videoclip.pk %}" class="btn btn-outline-danger">
+                                <i class="bi bi-trash me-2"></i>
+                                Excluir Vídeo
+                            </a>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Technical Info -->
+                        <hr class="my-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Informações Técnicas
+                        </h6>
+                        <small class="text-muted d-block mb-1">
+                            <strong>ID:</strong> {{ videoclip.pk }}
+                        </small>
+                        <small class="text-muted d-block mb-1">
+                            <strong>Hash:</strong> {{ videoclip.media_file.file_hash|slice:":16" }}...
+                        </small>
+                        <small class="text-muted d-block">
+                            <strong>Upload:</strong> {{ videoclip.media_file.created_at|date:"d/m/Y H:i" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="mt-4">
+            <a href="{% url 'apps.patients:patient_events_timeline' videoclip.patient.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                Voltar à Timeline
+            </a>
+        </div>
+    </div>
+</div>
+<!-- Fullscreen Modal -->
+<div class="modal fade" id="fullscreenModal" tabindex="-1" aria-labelledby="fullscreenModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-white" id="fullscreenModalLabel">
+                    {{ videoclip.media_file.original_filename }}
+                    {% if videoclip.media_file.duration %}
+                    <span class="badge bg-light text-dark ms-2">
+                        <i class="bi bi-clock me-1"></i>
+                        {{ videoclip.media_file.get_duration_display }}
+                    </span>
+                    {% endif %}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body d-flex align-items-center justify-content-center p-0">
+                <video class="video-player-fullscreen" controls style="max-height: 100vh; max-width: 100vw; width: 100%;" preload="metadata">
+                    <source src="{% url 'mediafiles:videoclip_stream' videoclip.pk %}" type="{{ videoclip.media_file.mime_type }}">
+                    Seu navegador não suporta o elemento de vídeo.
+                </video>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock media_content %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<!-- Load video-specific JavaScript -->
+<script src="{% static 'mediafiles/js/videoclip.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize video player functionality
+    if (typeof VideoClip !== 'undefined') {
+        VideoClip.initPlayer();
+    }
+
+    // Initialize fullscreen modal
+    const fullscreenModal = document.getElementById('fullscreenModal');
+    if (fullscreenModal) {
+        fullscreenModal.addEventListener('shown.bs.modal', function () {
+            // Focus on the modal for keyboard navigation
+            this.focus();
+
+            // Pause main video when modal opens
+            const mainVideo = document.querySelector('.video-player');
+            if (mainVideo) {
+                mainVideo.pause();
+            }
+        });
+
+        fullscreenModal.addEventListener('hidden.bs.modal', function () {
+            // Pause modal video when modal closes
+            const modalVideo = document.querySelector('.video-player-fullscreen');
+            if (modalVideo) {
+                modalVideo.pause();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && fullscreenModal.classList.contains('show')) {
+                bootstrap.Modal.getInstance(fullscreenModal).hide();
+            }
+        });
+    }
+
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Only if no input is focused
+        if (document.activeElement.tagName !== 'INPUT' &&
+            document.activeElement.tagName !== 'TEXTAREA') {
+
+            switch(e.key) {
+                case 'f':
+                case 'F':
+                    // Open fullscreen
+                    e.preventDefault();
+                    const modal = new bootstrap.Modal(fullscreenModal);
+                    modal.show();
+                    break;
+                case 'd':
+                case 'D':
+                    // Download
+                    e.preventDefault();
+                    window.location.href = "{% url 'mediafiles:videoclip_download' videoclip.pk %}";
+                    break;
+                case ' ':
+                    // Space to play/pause
+                    e.preventDefault();
+                    const video = document.querySelector('.video-player');
+                    if (video) {
+                        if (video.paused) {
+                            video.play();
+                        } else {
+                            video.pause();
+                        }
+                    }
+                    break;
+            }
+        }
+    });
+
+    // Video player enhancements
+    const videos = document.querySelectorAll('video');
+    videos.forEach(video => {
+        // Add loading indicator
+        video.addEventListener('loadstart', function() {
+            this.style.cursor = 'wait';
+        });
+
+        video.addEventListener('canplay', function() {
+            this.style.cursor = 'default';
+        });
+
+        // Error handling
+        video.addEventListener('error', function() {
+            console.error('Video loading error:', this.error);
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'alert alert-danger text-center';
+            errorMsg.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Erro ao carregar o vídeo. Tente novamente ou baixe o arquivo.';
+            this.parentNode.replaceChild(errorMsg, this);
+        });
+    });
+});
+</script>
+{% endblock extra_scripts %}

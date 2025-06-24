@@ -371,6 +371,49 @@ class VideoValidator:
                 pass
 
 
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize filename by removing dangerous characters.
+    
+    Args:
+        filename: Original filename
+        
+    Returns:
+        Sanitized filename safe for filesystem use
+    """
+    if not filename:
+        return "unnamed_file"
+    
+    # Remove path components
+    filename = os.path.basename(filename)
+    
+    # Remove dangerous characters
+    dangerous_chars = ['<', '>', '|', ';', '`', '$', '&', '\x00', '\n', '\r', '..', '/', '\\']
+    for char in dangerous_chars:
+        filename = filename.replace(char, '_')
+    
+    # Remove script-related content
+    filename = re.sub(r'script', '', filename, flags=re.IGNORECASE)
+    
+    # Normalize spaces and other whitespace to underscores
+    filename = re.sub(r'\s+', '_', filename)
+    
+    # Remove multiple consecutive underscores
+    filename = re.sub(r'_+', '_', filename)
+    
+    # Ensure it doesn't start with a dot
+    if filename.startswith('.'):
+        filename = 'file' + filename
+    
+    # Limit length
+    max_length = 255
+    if len(filename) > max_length:
+        name, ext = os.path.splitext(filename)
+        filename = name[:max_length - len(ext)] + ext
+    
+    return filename or "unnamed_file"
+
+
 def validate_media_file(file_obj: UploadedFile, file_type: str) -> Dict[str, Any]:
     """
     Comprehensive media file validation.
@@ -407,3 +450,21 @@ def validate_media_file(file_obj: UploadedFile, file_type: str) -> Dict[str, Any
         'metadata': metadata,
         'mime_type': mime_type
     }
+
+
+def validate_video_file_upload(file_obj: UploadedFile) -> None:
+    """
+    Validate video file upload with comprehensive security checks.
+    
+    Args:
+        file_obj: Django UploadedFile object
+        
+    Raises:
+        ValidationError: If file fails validation checks
+    """
+    # Use the comprehensive validation function
+    try:
+        validate_media_file(file_obj, 'video')
+    except ValidationError:
+        # Re-raise validation errors
+        raise

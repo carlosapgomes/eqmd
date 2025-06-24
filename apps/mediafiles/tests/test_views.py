@@ -761,3 +761,5 @@ class PhotoTemplateTests(TestCase):
         # But view and download buttons should still be present
         self.assertIn('photo-modal-trigger', template_content)
         self.assertIn('btn-outline-secondary', template_content)  # Download button
+
+

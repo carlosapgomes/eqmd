@@ -1,0 +1,84 @@
+{% comment %}
+PhotoSeries Carousel Template
+Displays photos in a carousel format with navigation (per extra requirements)
+{% endcomment %}
+
+{% if photos %}
+<div id="{{ carousel_id }}" class="carousel slide photoseries-carousel" data-bs-ride="false">
+    <!-- Carousel Indicators -->
+    <div class="carousel-indicators">
+        {% for photo in photos %}
+        <button type="button" data-bs-target="#{{ carousel_id }}" data-bs-slide-to="{{ forloop.counter0 }}" 
+                {% if forloop.first %}class="active" aria-current="true"{% endif %}
+                aria-label="Foto {{ forloop.counter }}"></button>
+        {% endfor %}
+    </div>
+
+    <!-- Carousel Inner -->
+    <div class="carousel-inner">
+        {% for photo in photos %}
+        <div class="carousel-item {% if forloop.first %}active{% endif %}" data-photo-index="{{ forloop.counter0 }}">
+            <div class="position-relative">
+                <img src="{% url 'mediafiles:serve_file' photo.id %}" 
+                     class="d-block w-100" 
+                     alt="Foto {{ forloop.counter }} da série"
+                     loading="{% if forloop.first %}eager{% else %}lazy{% endif %}">
+                
+                <!-- Photo Action Controls (per extra requirements) -->
+                <div class="photo-controls">
+                    <button type="button" id="zoomInBtn" class="btn" title="Ampliar">
+                        <i class="bi bi-zoom-in"></i>
+                    </button>
+                    <button type="button" id="zoomOutBtn" class="btn" title="Reduzir">
+                        <i class="bi bi-zoom-out"></i>
+                    </button>
+                    <button type="button" id="originalSizeBtn" class="btn" title="Tamanho Original">
+                        <i class="bi bi-aspect-ratio"></i>
+                    </button>
+                    <button type="button" id="fullPageBtn" class="btn" title="Tela Cheia">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                    <a href="{% url 'mediafiles:media_download' photo.id %}" 
+                       id="downloadBtn" class="btn" title="Download" download>
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Carousel Controls -->
+    {% if photos|length > 1 %}
+    <button class="carousel-control-prev" type="button" data-bs-target="#{{ carousel_id }}" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Anterior</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#{{ carousel_id }}" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Próxima</span>
+    </button>
+    {% endif %}
+</div>
+
+<!-- Loading State -->
+<div id="photoLoading" class="photoseries-loading d-none">
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Carregando...</span>
+    </div>
+</div>
+
+<!-- Error State -->
+<div id="photoError" class="photoseries-error d-none">
+    <i class="bi bi-exclamation-triangle"></i>
+    <h5>Erro ao carregar foto</h5>
+    <p class="error-message">Ocorreu um erro ao carregar a foto.</p>
+</div>
+
+{% else %}
+<div class="photoseries-error">
+    <i class="bi bi-images"></i>
+    <h5>Nenhuma foto encontrada</h5>
+    <p>Esta série de fotos não contém imagens.</p>
+</div>
+{% endif %}

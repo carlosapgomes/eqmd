@@ -1,0 +1,871 @@
+/* PhotoSeries Specific Styling */
+/* Following existing photo.css patterns and Bootstrap 5 conventions */
+
+/* PhotoSeries Form Styling */
+.photoseries-form {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.photoseries-form .card-header {
+    background: linear-gradient(135deg, var(--medical-primary), var(--medical-teal));
+    color: white;
+    border-radius: 12px 12px 0 0;
+    border: none;
+}
+
+.photoseries-form .form-label {
+    font-weight: 600;
+    color: var(--medical-dark-gray);
+    margin-bottom: 0.5rem;
+}
+
+.photoseries-form .form-control,
+.photoseries-form .form-select {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.photoseries-form .form-control:focus,
+.photoseries-form .form-select:focus {
+    border-color: var(--medical-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--medical-primary-rgb), 0.25);
+}
+
+/* Multi-upload integration in forms */
+.photoseries-form .multi-upload-interface {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+/* PhotoSeries Detail Page */
+.photoseries-detail {
+    min-height: 100vh;
+}
+
+.photoseries-header {
+    background: linear-gradient(135deg, var(--medical-primary), var(--medical-teal));
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.photoseries-header .container {
+    position: relative;
+}
+
+.photoseries-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.photoseries-subtitle {
+    opacity: 0.9;
+    margin-bottom: 1rem;
+}
+
+.photoseries-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    opacity: 0.8;
+}
+
+.photoseries-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.photoseries-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.photoseries-actions .btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.photoseries-actions .btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* PhotoSeries Carousel */
+.photoseries-carousel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.photoseries-carousel .carousel-inner {
+    border-radius: 12px;
+}
+
+.photoseries-carousel .carousel-item img {
+    width: 100%;
+    height: 70vh;
+    object-fit: contain;
+    background: #f8f9fa;
+}
+
+.photoseries-carousel .carousel-control-prev,
+.photoseries-carousel .carousel-control-next {
+    width: 60px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 0 8px 8px 0;
+    margin: 20px 0;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.photoseries-carousel .carousel-control-next {
+    border-radius: 8px 0 0 8px;
+}
+
+.photoseries-carousel .carousel-control-prev:hover,
+.photoseries-carousel .carousel-control-next:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.photoseries-carousel .carousel-control-prev-icon,
+.photoseries-carousel .carousel-control-next-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.photoseries-carousel .carousel-indicators {
+    margin-bottom: 1rem;
+}
+
+.photoseries-carousel .carousel-indicators [data-bs-target] {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin: 0 4px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 2px solid white;
+}
+
+.photoseries-carousel .carousel-indicators .active {
+    background: var(--medical-primary);
+}
+
+/* Photo Action Controls */
+.photo-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.photo-controls .btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.photo-controls .btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.6);
+    color: white;
+    transform: scale(1.1);
+}
+
+.photo-controls .btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+}
+
+/* Photo Info Panel */
+.photo-info-panel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.photo-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.photo-info-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--medical-dark-gray);
+    margin: 0;
+}
+
+.photo-counter {
+    background: var(--medical-primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.photo-metadata {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.metadata-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.metadata-label {
+    font-weight: 500;
+    color: var(--medical-gray);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.metadata-value {
+    font-weight: 600;
+    color: var(--medical-dark-gray);
+    text-align: right;
+}
+
+/* PhotoSeries Gallery Integration */
+.photoseries-gallery {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 1.5rem;
+}
+
+.photoseries-gallery .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.photoseries-gallery .gallery-item {
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.photoseries-gallery .gallery-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.photoseries-gallery .gallery-thumbnail {
+    aspect-ratio: 1;
+    border-radius: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .photoseries-header {
+        padding: 1.5rem 0;
+    }
+    
+    .photoseries-actions {
+        position: static;
+        margin-top: 1rem;
+        justify-content: center;
+    }
+    
+    .photoseries-carousel .carousel-item img {
+        height: 50vh;
+    }
+    
+    .photo-metadata {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .photoseries-title {
+        font-size: 1.5rem;
+    }
+    
+    .photoseries-meta {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .photoseries-carousel .carousel-item img {
+        height: 40vh;
+    }
+    
+    .photo-controls {
+        top: 10px;
+        right: 10px;
+        gap: 0.25rem;
+    }
+    
+    .photo-controls .btn {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .photo-info-panel {
+        padding: 1rem;
+    }
+    
+    .photo-info-header {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+        text-align: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .photoseries-header {
+        padding: 1rem 0;
+    }
+    
+    .photoseries-carousel .carousel-item img {
+        height: 35vh;
+    }
+    
+    .metadata-item {
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
+    }
+    
+    .metadata-value {
+        text-align: center;
+    }
+    
+    .photoseries-gallery .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .photoseries-actions,
+    .photo-controls,
+    .carousel-control-prev,
+    .carousel-control-next,
+    .carousel-indicators {
+        display: none !important;
+    }
+    
+    .photoseries-carousel .carousel-item img {
+        height: auto !important;
+        max-height: 80vh;
+    }
+    
+    .photoseries-header {
+        background: transparent !important;
+        color: var(--medical-dark-gray) !important;
+        border-bottom: 2px solid #dee2e6;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .photoseries-carousel .carousel-item,
+    .photo-controls .btn,
+    .gallery-item {
+        transition: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .photo-controls .btn {
+        background: rgba(0, 0, 0, 0.9);
+        border-color: white;
+    }
+    
+    .photoseries-carousel .carousel-indicators [data-bs-target] {
+        border-width: 3px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .photoseries-form,
+    .photo-info-panel,
+    .photoseries-gallery {
+        background: #212529;
+        color: white;
+    }
+    
+    .metadata-item {
+        background: #343a40;
+    }
+    
+    .photoseries-carousel .carousel-item img {
+        background: #343a40;
+    }
+}
+
+/* Focus Styles for Accessibility */
+.photo-controls .btn:focus-visible,
+.photoseries-actions .btn:focus-visible {
+    outline: 3px solid var(--medical-primary);
+    outline-offset: 2px;
+}
+
+/* Loading States */
+.photoseries-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 400px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.photoseries-loading .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    color: var(--medical-primary);
+}
+
+/* Error States */
+.photoseries-error {
+    text-align: center;
+    padding: 3rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    color: var(--medical-gray);
+}
+
+.photoseries-error i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--medical-error);
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Multi-Upload Interface Styles */
+.photoseries-upload-area {
+    border: 3px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.photoseries-upload-area:hover {
+    border-color: var(--medical-primary);
+    background: rgba(var(--medical-primary-rgb), 0.05);
+}
+
+.photoseries-upload-area.drag-over {
+    border-color: var(--medical-primary);
+    background: rgba(var(--medical-primary-rgb), 0.1);
+    transform: scale(1.02);
+}
+
+.photoseries-upload-area .upload-content {
+    pointer-events: none;
+}
+
+.photoseries-upload-area input[type="file"] {
+    position: absolute;
+    left: -9999px;
+    opacity: 0;
+}
+
+/* Upload Preview Styles */
+.upload-preview-container {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.upload-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.upload-preview-item {
+    position: relative;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.3s ease;
+}
+
+.upload-preview-item:hover {
+    border-color: var(--medical-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.preview-thumbnail {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+}
+
+.preview-info {
+    text-align: left;
+}
+
+.preview-filename {
+    font-weight: 600;
+    color: var(--medical-dark-gray);
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+    word-break: break-word;
+}
+
+.preview-size {
+    color: var(--medical-gray);
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.preview-progress {
+    margin-bottom: 0.5rem;
+}
+
+.preview-progress .progress {
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+}
+
+.preview-progress .progress-bar {
+    background: var(--medical-primary);
+    transition: width 0.3s ease;
+}
+
+.preview-remove {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* Drag and Drop Visual Feedback */
+.upload-drag-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(var(--medical-primary-rgb), 0.1);
+    backdrop-filter: blur(2px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-drag-overlay.active {
+    display: flex;
+}
+
+.upload-drag-message {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    border: 3px dashed var(--medical-primary);
+}
+
+/* Upload Error Styles */
+.upload-error {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    color: #721c24;
+}
+
+/* Responsive Upload Interface */
+@media (max-width: 768px) {
+    .photoseries-upload-area {
+        padding: 2rem 1rem;
+    }
+
+    .upload-preview-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .preview-thumbnail {
+        height: 100px;
+    }
+}
+
+@media (max-width: 576px) {
+    .upload-preview-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .preview-thumbnail {
+        height: 80px;
+    }
+
+    .upload-preview-item {
+        padding: 0.75rem;
+    }
+}
+
+/* Sortable Photo Reordering */
+.sortable-photo-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.sortable-photo-item {
+    position: relative;
+    cursor: move;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.sortable-photo-item:hover {
+    border-color: var(--medical-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.sortable-photo-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.sortable-photo-item .photo-thumbnail {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+}
+
+.sortable-photo-item .photo-order {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.sortable-photo-item .photo-actions {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.sortable-photo-item .photo-actions .btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+/* Breadcrumb Navigation Styles */
+.photoseries-breadcrumb {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.photoseries-breadcrumb .breadcrumb {
+    margin: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.photoseries-breadcrumb .breadcrumb-item {
+    font-size: 0.875rem;
+}
+
+.photoseries-breadcrumb .breadcrumb-item a {
+    color: var(--medical-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.photoseries-breadcrumb .breadcrumb-item a:hover {
+    color: var(--medical-teal);
+    text-decoration: underline;
+}
+
+.photoseries-breadcrumb .breadcrumb-item.active {
+    color: var(--medical-dark-gray);
+    font-weight: 500;
+}
+
+/* Loading States for Breadcrumbs */
+.breadcrumb-link.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.breadcrumb-link.loading::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-left: 0.5rem;
+    border: 2px solid transparent;
+    border-top: 2px solid var(--medical-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Return to Timeline Button */
+.return-to-timeline {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 1000;
+    background: var(--medical-primary);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 0.75rem 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.return-to-timeline:hover {
+    background: var(--medical-teal);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+    .return-to-timeline {
+        bottom: 1rem;
+        right: 1rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}

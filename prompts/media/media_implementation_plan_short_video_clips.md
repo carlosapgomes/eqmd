@@ -4,6 +4,23 @@
 
 This plan implements the VideoClip model for short video uploads (up to 2 minutes) in the EquipeMed media system. VideoClip will extend the base Event model and use the new VIDEO_CLIP_EVENT type (10). Each video will have a single associated MediaFile with automatic thumbnail generation from the first frame and duration validation.
 
+## Key Implementation Requirements
+
+Based on extra instructions, this implementation must strictly follow:
+
+1. **Navigation**: All video clip operations (Create, Update, Delete, Detail) MUST return to patient's timeline view
+2. **Breadcrumbs**: All video clip pages use same breadcrumb: Patient detail → Timeline → Video clip page  
+3. **Styling**: Follow the overall styling and structure used for the photo feature from @app/mediafiles
+4. **Detail Page**: Very similar to photo detail page with video player controls (play, pause, forward, backward, replay), responsive for mobile devices, NO download button
+5. **Timeline Card**: 
+   - Template at `@app/events/templates/events/partials/event_card_videoclip.html`
+   - Show duration like photo series shows photo count
+   - Auto-generate thumbnail from first frame
+   - NO zoom (bi-zoom-in) button - only download, details, edit buttons
+   - Clicking thumbnail opens video in modal (NOT detail view)
+   - Modal has play, pause, forward, backward controls
+6. **Editing**: Similar to photo editing - only allow changing description, datetime, and caption
+
 ## Vertical Slice 1: Model and Admin
 
 ### Step 1.1: Update MediaFile Model for Video Support
@@ -140,7 +157,7 @@ uv run python manage.py makemigrations mediafiles
 - Mock ffmpeg responses for testing
 - Video file cleanup utilities
 
-## Security Implementation for Video Clips
+## Vertical Slice 2: Security Implementation for Video Clips
 
 ### Security Requirements for Videos
 
@@ -199,9 +216,9 @@ def validate_video_security(video_file):
         raise ValidationError("Unsupported or unsafe video codec")
 ```
 
-## Vertical Slice 2: Forms and Views
+## Vertical Slice 3: Forms and Views
 
-### Step 2.1: Create VideoClip Forms
+### Step 3.1: Create VideoClip Forms
 
 **File**: `apps/mediafiles/forms.py`
 
@@ -217,7 +234,7 @@ def validate_video_security(video_file):
 - Bootstrap styling with video preview
 
 **VideoClipUpdateForm specifications**:
-- Fields: description, event_datetime (no video change)
+- Fields: description, event_datetime, caption (no video change - similar to photo editing)
 - Inherits validation from VideoClipCreateForm
 - Displays current video thumbnail and metadata
 
@@ -227,7 +244,7 @@ def validate_video_security(video_file):
 - `validate_video_security()` - Comprehensive security validation
 - `save()` - Handle secure MediaFile creation, metadata extraction, and VideoClip instance
 
-### Step 2.2: Create VideoClip Views
+### Step 3.2: Create VideoClip Views
 
 **File**: `apps/mediafiles/views.py`
 
@@ -240,22 +257,28 @@ def validate_video_security(video_file):
 - Patient parameter from URL
 - Async video processing (thumbnail generation)
 - Progress tracking for upload and processing
-- Success redirect to patient timeline
+- Success redirect to patient timeline (mandatory - all video operations return to timeline)
+- Breadcrumb navigation: Patient detail → Timeline → Video clip page
 
 **VideoClipDetailView specifications**:
 - Extends DetailView
 - Permission check with patient access validation
-- Video player with controls
+- Video player with controls (play, pause, forward, backward, replay)
 - Video metadata display (duration, size, format)
 - Thumbnail display as fallback
 - Edit/delete action buttons (if permitted)
-- Download video button
+- Responsive design for mobile devices (cellphone recordings)
+- Similar structure to photo detail page
+- Success navigation back to patient timeline
+- Breadcrumb navigation: Patient detail → Timeline → Video clip page
 
 **VideoClipUpdateView specifications**:
 - Extends UpdateView
 - Permission check: can_edit_event (24-hour rule)
 - Form with current video preview
-- Success redirect to detail view
+- Only allows editing description, datetime, and caption (similar to photo editing)
+- Success redirect to patient timeline
+- Breadcrumb navigation: Patient detail → Timeline → Video clip page
 
 **VideoClipDeleteView specifications**:
 - Extends DeleteView
@@ -263,8 +286,9 @@ def validate_video_security(video_file):
 - Confirmation page with video preview
 - File cleanup on deletion (video + thumbnail)
 - Success redirect to patient timeline
+- Breadcrumb navigation: Patient detail → Timeline → Video clip page
 
-### Step 2.3: Create Video Streaming Views
+### Step 3.3: Create Video Streaming Views
 
 **File**: `apps/mediafiles/views.py`
 
@@ -287,7 +311,7 @@ def validate_video_security(video_file):
 - Proper filename handling
 - Download progress support
 
-### Step 2.4: Create URL Patterns
+### Step 3.4: Create URL Patterns
 
 **File**: `apps/mediafiles/urls.py`
 
@@ -305,7 +329,7 @@ def validate_video_security(video_file):
 - `videoclip_create`, `videoclip_detail`, `videoclip_update`, `videoclip_delete`
 - `videoclip_stream`, `videoclip_download`
 
-### Step 2.5: Create View Tests
+### Step 3.5: Create View Tests
 
 **File**: `apps/mediafiles/tests/test_views.py`
 
@@ -321,9 +345,9 @@ def validate_video_security(video_file):
 - 24-hour edit window enforcement
 - Async processing handling
 
-## Vertical Slice 3: Templates and Testing
+## Vertical Slice 4: Templates and Testing
 
-### Step 3.1: Create VideoClip Templates
+### Step 4.1: Create VideoClip Templates
 
 **File**: `apps/mediafiles/templates/mediafiles/videoclip_form.html`
 
@@ -352,22 +376,23 @@ def validate_video_security(video_file):
 - Navigation back to patient timeline
 - Responsive video player
 
-### Step 3.2: Create Event Card Template
+### Step 4.2: Create Event Card Template
 
 **File**: `apps/events/templates/events/partials/event_card_videoclip.html`
 
 **Action**: Create specialized event card for video clips
 
 **Template features**:
-- Video thumbnail display
-- Duration badge (e.g., "1:30")
+- Video thumbnail display (auto-generated from first frame)
+- Duration badge similar to photo series count (e.g., "1:30")
 - Play icon overlay
 - Event metadata (datetime, description)
-- Click to open video detail view
-- Edit/delete buttons (if permitted)
+- Click on thumbnail opens video in modal (not detail view)
+- Action buttons: download, details, edit (NO zoom/bi-zoom-in button)
+- Modal video player with play, pause, forward, backward controls
 - Responsive design for mobile
 
-### Step 3.3: Create Video Player Components
+### Step 4.3: Create Video Player Components
 
 **File**: `apps/mediafiles/templates/mediafiles/partials/video_player.html`
 
@@ -384,49 +409,51 @@ def validate_video_security(video_file):
 
 **File**: `apps/mediafiles/templates/mediafiles/partials/video_modal.html`
 
-**Action**: Create modal for video viewing
+**Action**: Create modal for video viewing (similar to photo modal)
 
 **Template features**:
-- Modal video player
+- Modal video player with play, pause, forward, backward controls
 - Video metadata overlay
 - Download button
 - Close button
 - Keyboard controls (space to play/pause, escape to close)
 - Responsive modal sizing
+- Similar structure to photo modal
 
-### Step 3.4: Add CSS Styling
+### Step 4.4: Add CSS Styling
 
 **File**: `apps/mediafiles/static/mediafiles/css/videoclip.css`
 
-**Action**: Create video-specific styling
+**Action**: Create video-specific styling (following photo feature styling structure)
 
 **CSS features**:
-- Video player styling
+- Video player styling (following photo styling patterns)
 - Thumbnail styling with play overlay
-- Upload form styling
+- Upload form styling (consistent with photo upload forms)
 - Progress indicator styling
-- Modal video player styling
+- Modal video player styling (similar to photo modal)
 - Responsive video containers
 - Loading animations
 - Error state styling
+- Duration badge styling (similar to photo count badges)
 
-### Step 3.5: Add JavaScript Functionality
+### Step 4.5: Add JavaScript Functionality
 
 **File**: `apps/mediafiles/static/mediafiles/js/videoclip.js`
 
-**Action**: Create video-specific JavaScript
+**Action**: Create video-specific JavaScript (following photo feature JS patterns)
 
 **JavaScript features**:
-- Video upload progress tracking
+- Video upload progress tracking (similar to photo upload)
 - Client-side duration validation
 - Video preview during upload
-- Custom video player controls
-- Modal video player functionality
+- Custom video player controls (play, pause, forward, backward)
+- Modal video player functionality (similar to photo modal)
 - Video metadata display
-- Error handling and user feedback
+- Error handling and user feedback (consistent with photo handling)
 - Video compression (optional, client-side)
 
-### Step 3.6: Create Template Tags
+### Step 4.6: Create Template Tags
 
 **File**: `apps/mediafiles/templatetags/mediafiles_tags.py`
 
@@ -438,7 +465,7 @@ def validate_video_security(video_file):
 - `{% video_duration videoclip %}` - Format and display duration
 - `{% video_modal_trigger videoclip %}` - Create modal trigger button
 
-### Step 3.7: Security Testing
+### Step 4.7: Security Testing
 
 **File**: `apps/mediafiles/tests/test_security.py`
 
@@ -454,7 +481,7 @@ def validate_video_security(video_file):
 - Video streaming security validation
 - Thumbnail generation security
 
-### Step 3.8: Integration Testing
+### Step 4.8: Integration Testing
 
 **File**: `apps/mediafiles/tests/test_integration.py`
 
@@ -471,7 +498,7 @@ def validate_video_security(video_file):
 - Cross-browser compatibility
 - Security integration across all video components
 
-### Step 3.9: Performance Testing
+### Step 4.9: Performance Testing
 
 **File**: `apps/mediafiles/tests/test_performance.py`
 
@@ -485,7 +512,7 @@ def validate_video_security(video_file):
 - Database query optimization
 - Memory usage during video processing
 
-### Step 3.10: Browser Compatibility Testing
+### Step 4.10: Browser Compatibility Testing
 
 **Action**: Test video functionality across browsers
 
@@ -497,7 +524,7 @@ def validate_video_security(video_file):
 - Video format support testing
 - HTML5 video controls functionality
 
-### Step 3.11: User Acceptance Testing
+### Step 4.11: User Acceptance Testing
 
 **Action**: Create UAT scenarios for video functionality
 
@@ -518,16 +545,23 @@ Short Video Clips implementation is complete when:
 - [ ] MediaFile model handles video metadata and thumbnails
 - [ ] Admin interface provides full video management
 - [ ] Upload form includes duration and format validation
-- [ ] Video detail view displays player with controls
-- [ ] Event cards show video thumbnails with duration badges
+- [ ] Video detail view displays player with controls (play, pause, forward, backward, replay)
+- [ ] Event cards show video thumbnails with duration badges (similar to photo series count)
 - [ ] Video streaming works efficiently with range requests
-- [ ] Thumbnail generation from first frame works reliably
+- [ ] Thumbnail generation from first frame works reliably and automatically
 - [ ] Permission system enforces 24-hour edit window
 - [ ] All tests pass with >90% coverage
 - [ ] Performance meets requirements (<10s upload for 2min video)
 - [ ] Cross-browser video playback works
 - [ ] Integration with patient timeline works seamlessly
 - [ ] File cleanup works properly on deletion
+- [ ] **Navigation**: All video operations return to patient timeline (not detail view)
+- [ ] **Breadcrumbs**: Consistent breadcrumb navigation implemented across all video pages
+- [ ] **Styling**: Follows photo feature styling patterns consistently
+- [ ] **Timeline Card**: Located at event_card_videoclip.html with NO zoom button, click opens modal
+- [ ] **Modal**: Video modal with full player controls (play, pause, forward, backward)
+- [ ] **Editing**: Only allows description, datetime, and caption changes (like photo editing)
+- [ ] **Mobile**: Responsive design works well on mobile devices for cellphone recordings
 
 ## Final Integration Steps
 
