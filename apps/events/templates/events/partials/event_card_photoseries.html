@@ -92,8 +92,30 @@ Extends the base event card and adds PhotoSeries-specific content and actions
             </div>
         </div>
         
-        <!-- Hidden photo data for lightbox -->
-        <div class="d-none" data-gallery-id="timeline-photoseries-{{ event.pk }}">
+        <!-- JSON data for lightbox (Primary method) -->
+        <script type="application/json" id="photoSeriesData-{{ event.pk }}">
+        {
+            "photos": [
+                {% for photo in photos %}
+                {
+                    "id": "{{ photo.id }}",
+                    "url": "{% url 'mediafiles:serve_file' photo.id %}",
+                    "downloadUrl": "{% url 'mediafiles:photo_download' photo.id %}",
+                    "filename": "{{ photo.original_filename|escapejs }}",
+                    "size": "{{ photo.get_display_size }}",
+                    "dimensions": "{{ photo.get_dimensions_display }}",
+                    "mimeType": "{{ photo.mime_type }}",
+                    "index": {{ forloop.counter }}
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            "totalPhotos": {{ photos.count }},
+            "galleryId": "timeline-photoseries-{{ event.pk }}"
+        }
+        </script>
+
+        <!-- Hidden photo data for lightbox (Fallback method) -->
+        <div class="d-none gallery-data" data-gallery-id="timeline-photoseries-{{ event.pk }}">
             {% for photo in photos %}
             <div class="gallery-item" 
                  data-photo-index="{{ forloop.counter0 }}"
@@ -108,6 +130,9 @@ Extends the base event card and adds PhotoSeries-specific content and actions
                      data-dimensions="{{ photo.get_dimensions_display }}"
                      data-mime-type="{{ photo.mime_type }}">
             </div>
+            {% empty %}
+            <!-- Debug: No photos found -->
+            <div class="debug-no-photos">No photos in series</div>
             {% endfor %}
         </div>
         {% else %}

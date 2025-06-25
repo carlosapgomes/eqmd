@@ -324,12 +324,30 @@ window.PhotoLightbox = (function() {
     }
     
     function loadPhotosFromGallery(galleryId) {
-        // Try to load from script tag first (for PhotoSeries detail page)
+        // Try to load from gallery-specific script tag first (for timeline cards)
+        const galleryDataScript = document.getElementById(`photoSeriesData-${galleryId.replace('timeline-photoseries-', '')}`);
+        if (galleryDataScript) {
+            try {
+                const data = JSON.parse(galleryDataScript.textContent);
+                photos = data.photos || [];
+                console.log('PhotoLightbox: Loaded photos from gallery-specific script tag:', photos.length, 'for gallery:', galleryId);
+                return;
+            } catch (e) {
+                console.error('PhotoLightbox: Error parsing gallery-specific photoSeriesData:', e);
+            }
+        }
+        
+        // Try to load from general script tag (for PhotoSeries detail page)
         const dataScript = document.getElementById('photoSeriesData');
         if (dataScript) {
-            const data = JSON.parse(dataScript.textContent);
-            photos = data.photos || [];
-            return;
+            try {
+                const data = JSON.parse(dataScript.textContent);
+                photos = data.photos || [];
+                console.log('PhotoLightbox: Loaded photos from general script tag:', photos.length);
+                return;
+            } catch (e) {
+                console.error('PhotoLightbox: Error parsing general photoSeriesData:', e);
+            }
         }
         
         // Fallback: load from gallery DOM
@@ -338,6 +356,10 @@ window.PhotoLightbox = (function() {
             const items = gallery.querySelectorAll('.gallery-item');
             photos = Array.from(items).map(item => {
                 const img = item.querySelector('img');
+                if (!img) {
+                    console.warn('PhotoLightbox: Gallery item missing img element:', item);
+                    return null;
+                }
                 return {
                     id: item.dataset.photoId,
                     url: img.dataset.fullUrl || img.src,
@@ -348,14 +370,30 @@ window.PhotoLightbox = (function() {
                     mimeType: img.dataset.mimeType,
                     index: parseInt(item.dataset.photoIndex) + 1
                 };
-            });
+            }).filter(photo => photo !== null);
+            
+            console.log('PhotoLightbox: Loaded photos from DOM gallery:', photos.length);
+        } else {
+            console.error('PhotoLightbox: Gallery not found for ID:', galleryId);
+            photos = [];
         }
     }
     
     function loadCurrentPhoto() {
-        if (!photos[currentIndex]) return;
+        if (!photos || photos.length === 0) {
+            console.error('PhotoLightbox: No photos available');
+            showError('Nenhuma foto disponível');
+            return;
+        }
+        
+        if (!photos[currentIndex]) {
+            console.error('PhotoLightbox: No photo at index:', currentIndex);
+            showError('Foto não encontrada');
+            return;
+        }
         
         const photo = photos[currentIndex];
+        console.log('PhotoLightbox: Loading photo:', photo);
         
         // Show loading
         showLoading(true);
@@ -370,9 +408,11 @@ window.PhotoLightbox = (function() {
             image.src = this.src;
             showLoading(false);
             resetZoom();
+            console.log('PhotoLightbox: Photo loaded successfully:', this.src);
         };
         img.onerror = function() {
-            showError();
+            console.error('PhotoLightbox: Error loading image:', this.src);
+            showError('Erro ao carregar imagem');
         };
         img.src = photo.url;
     }
@@ -547,9 +587,16 @@ window.PhotoLightbox = (function() {
         }
     }
     
-    function showError() {
+    function showError(message) {
         showLoading(false);
         if (error) {
+            // Update error message if provided
+            if (message) {
+                const errorText = error.querySelector('h5');
+                if (errorText) {
+                    errorText.textContent = message;
+                }
+            }
             error.classList.remove('d-none');
         }
     }

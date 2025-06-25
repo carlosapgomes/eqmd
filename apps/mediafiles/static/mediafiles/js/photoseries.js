@@ -754,20 +754,33 @@ window.PhotoSeries = (function() {
                 const trigger = this.getAttribute('data-trigger');
                 const galleryId = this.getAttribute('data-gallery-id');
                 
-                if (trigger === 'lightbox' && galleryId && typeof PhotoLightbox !== 'undefined') {
+                if (trigger === 'lightbox' && galleryId && window.PhotoLightbox && window.PhotoLightbox.open) {
                     // Open lightbox
                     e.preventDefault();
-                    PhotoLightbox.open(0, galleryId);
-                } else {
-                    // Fallback to detail page navigation
-                    const timelineCard = this.closest('.timeline-card');
-                    if (timelineCard) {
-                        const eventId = timelineCard.getAttribute('aria-labelledby').replace('event-', '').replace('-title', '');
-                        
-                        // Navigate to PhotoSeries detail view
-                        const detailUrl = `/mediafiles/photo-series/${eventId}/`;
-                        window.location.href = detailUrl;
+                    console.log('PhotoSeries: Opening lightbox for gallery:', galleryId);
+                    try {
+                        PhotoLightbox.open(0, galleryId);
+                        return; // Exit early if lightbox opened successfully
+                    } catch (error) {
+                        console.warn('PhotoSeries: Failed to open PhotoLightbox:', error);
+                        // Fall through to detail page navigation
                     }
+                } else {
+                    console.warn('PhotoSeries: Lightbox not available or missing data:', {
+                        trigger: trigger,
+                        galleryId: galleryId,
+                        hasPhotoLightbox: !!(window.PhotoLightbox && window.PhotoLightbox.open)
+                    });
+                }
+                
+                // Fallback to detail page navigation
+                const timelineCard = this.closest('.timeline-card');
+                if (timelineCard) {
+                    const eventId = timelineCard.getAttribute('aria-labelledby').replace('event-', '').replace('-title', '');
+                    
+                    // Navigate to PhotoSeries detail view
+                    const detailUrl = `/mediafiles/photo-series/${eventId}/`;
+                    window.location.href = detailUrl;
                 }
             });
         });
