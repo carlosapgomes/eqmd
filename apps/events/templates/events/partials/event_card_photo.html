@@ -74,14 +74,21 @@ Parameters expected:
     <!-- Photo Thumbnail Display -->
     <div class="photo-thumbnail-container mb-3">
         {% if event.media_file.thumbnail %}
-            <div class="photo-thumbnail-wrapper position-relative">
+            <div class="photo-thumbnail-wrapper position-relative cursor-pointer"
+                 data-photo-id="{{ event.pk }}"
+                 data-photo-url="{{ event.media_file.get_secure_url }}"
+                 data-photo-title="{{ event.description|default:'Foto' }}"
+                 data-photo-filename="{{ event.media_file.original_filename }}"
+                 data-photo-size="{{ event.media_file.get_display_size }}"
+                 data-photo-dimensions="{{ event.media_file.get_dimensions_display }}"
+                 data-photo-created="{{ event.created_at|date:'d/m/Y H:i' }}"
+                 data-photo-author="{{ event.created_by.get_full_name }}"
+                 data-bs-toggle="modal"
+                 data-bs-target="#photoModal">
                 <img src="{{ event.media_file.get_thumbnail_url }}" 
                      alt="Thumbnail: {{ event.media_file.original_filename }}"
-                     class="photo-thumbnail img-fluid rounded cursor-pointer"
+                     class="photo-thumbnail img-fluid rounded"
                      style="max-width: 300px; max-height: 200px; object-fit: cover;"
-                     data-photo-id="{{ event.pk }}"
-                     data-bs-toggle="modal"
-                     data-bs-target="#photoModal"
                      loading="lazy">
                 
                 <!-- Camera Icon Overlay -->

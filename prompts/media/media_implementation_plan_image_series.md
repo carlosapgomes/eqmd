@@ -7,26 +7,31 @@ This plan implements the PhotoSeries model for multiple image uploads in the Equ
 ## Extra Requirements and Navigation Guidelines
 
 ### Navigation Requirements
+
 - All photoseries operations (Create, Update, Delete, Detail) must return to the patient's timeline view
 - PhotoSeries is accessible only from the "Criar Evento" dropdown in the patient's timeline view
 - All photoseries pages must have consistent breadcrumb navigation: Patient Detail → Timeline → PhotoSeries page
 
 ### Styling Requirements
+
 - Follow the overall styling and structure used for the photo feature from @app/mediafiles
 - Maintain consistency with existing media file interfaces
 
 ### PhotoSeries Detail Page Requirements
+
 - Display photoseries as a carousel with navigation between photos
 - Each photo must have action buttons: zoom in, zoom out, original size, full page, download
 - Similar to photo detail page but with carousel functionality
 
 ### Timeline Card Requirements
+
 - Show number of photos in the series
 - Display first photo as thumbnail
 - Template location: @app/events/templates/events/partials/event_card_photoseries.html
 - No zoom (bi-zoom-in) button - only download, details, and edit buttons
 
 ### Editing Requirements
+
 - Users can only change: description, datetime, and caption
 - Similar to photo editing functionality
 
@@ -39,6 +44,7 @@ This plan implements the PhotoSeries model for multiple image uploads in the Equ
 **Action**: Implement through model for PhotoSeries-MediaFile relationship
 
 **Model specifications**:
+
 - UUID primary key
 - ForeignKey to PhotoSeries
 - ForeignKey to MediaFile
@@ -47,6 +53,7 @@ This plan implements the PhotoSeries model for multiple image uploads in the Equ
 - Created/updated timestamps
 
 **Key methods to implement**:
+
 - `save()` - Auto-assign order if not provided
 - `__str__()` - Return series and order information
 - Meta class with ordering by 'order'
@@ -59,12 +66,14 @@ This plan implements the PhotoSeries model for multiple image uploads in the Equ
 **Action**: Implement PhotoSeries model extending Event
 
 **Model specifications**:
+
 - Inherits from Event model
 - ManyToManyField to MediaFile through PhotoSeriesFile
 - Auto-set event_type to PHOTO_SERIES_EVENT in save()
 - Custom manager for series-specific queries
 
 **Key methods to implement**:
+
 - `save()` - Set event_type and call super()
 - `get_absolute_url()` - Return detail view URL
 - `get_edit_url()` - Return edit view URL
@@ -84,6 +93,7 @@ This plan implements the PhotoSeries model for multiple image uploads in the Equ
 **Action**: Add series-related methods to MediaFile with security enhancements
 
 **New methods to add**:
+
 - `get_series_info()` - Return series and order if part of series
 - `is_in_series()` - Check if file is part of a series
 - `get_series_position()` - Return position in series
@@ -91,6 +101,7 @@ This plan implements the PhotoSeries model for multiple image uploads in the Equ
 - `validate_series_file()` - Validate file for series inclusion
 
 **Security enhancements for series**:
+
 - Consistent UUID naming across series files
 - Series-specific file validation
 - Batch security validation for multiple uploads
@@ -104,6 +115,7 @@ uv run python manage.py makemigrations mediafiles
 ```
 
 **Migration review checklist**:
+
 - PhotoSeries model creation with Event inheritance
 - PhotoSeriesFile through model creation
 - ManyToMany relationship properly defined
@@ -117,6 +129,7 @@ uv run python manage.py makemigrations mediafiles
 **Action**: Create comprehensive admin interface for PhotoSeries management
 
 **PhotoSeriesFileInline specifications**:
+
 - TabularInline for PhotoSeriesFile
 - Fields: media_file (thumbnail preview), order, description
 - Extra = 0
@@ -124,15 +137,17 @@ uv run python manage.py makemigrations mediafiles
 - Custom thumbnail display method
 
 **PhotoSeriesAdmin specifications**:
+
 - List display: primary_thumbnail, description, photo_count, patient, event_datetime
-- List filters: event_datetime, created_by, patient__current_hospital
-- Search fields: description, patient__name
+- List filters: event_datetime, created_by, patient\_\_current_hospital
+- Search fields: description, patient\_\_name
 - Inlines: PhotoSeriesFileInline
 - Readonly fields: created_at, updated_at, photo_count
 - Fieldsets: Event Info, Photos, Audit Trail
 - Custom queryset with prefetch_related optimization
 
 **Admin actions**:
+
 - Bulk reorder photos action
 - Export series as ZIP action
 - Duplicate series action
@@ -144,12 +159,14 @@ uv run python manage.py makemigrations mediafiles
 **Action**: Implement comprehensive model testing for PhotoSeries
 
 **Test cases for PhotoSeriesFile**:
+
 - Through model creation and relationships
 - Ordering functionality
 - Unique constraints
 - Description handling
 
 **Test cases for PhotoSeries**:
+
 - Event type auto-assignment
 - Photo addition and removal
 - Ordering and reordering
@@ -159,6 +176,7 @@ uv run python manage.py makemigrations mediafiles
 - Manager methods
 
 **Test utilities**:
+
 - Factory classes for PhotoSeries and PhotoSeriesFile
 - Helper methods for creating test series
 - Bulk photo creation utilities
@@ -168,6 +186,7 @@ uv run python manage.py makemigrations mediafiles
 ### Security Requirements for Series
 
 **Batch Upload Security**:
+
 - Individual file validation for each image in series
 - Consistent UUID naming across all series files
 - Batch file size validation (total series size limits)
@@ -175,12 +194,14 @@ uv run python manage.py makemigrations mediafiles
 - Atomic upload operations (all or nothing)
 
 **Series Access Security**:
+
 - Permission validation for entire series
 - Individual photo access control within series
 - Secure batch download (ZIP) functionality
 - Series modification audit logging
 
 **File Organization Security**:
+
 - Secure series file grouping
 - Prevention of series file enumeration
 - Consistent security policies across all series files
@@ -188,6 +209,7 @@ uv run python manage.py makemigrations mediafiles
 ### Security Implementation for Series
 
 **Secure Series Upload Path**:
+
 ```python
 def get_secure_series_upload_path(instance, filename):
     ext = Path(filename).suffix.lower()
@@ -200,6 +222,7 @@ def get_secure_series_upload_path(instance, filename):
 ```
 
 **Batch File Validation**:
+
 ```python
 def validate_series_files(files):
     total_size = 0
@@ -220,6 +243,7 @@ def validate_series_files(files):
 **Action**: Implement forms for photo series upload and editing
 
 **PhotoSeriesCreateForm specifications**:
+
 - Fields: description, event_datetime, images (MultipleFileField)
 - Custom images field with multiple file validation
 - Individual file size and type validation
@@ -227,17 +251,20 @@ def validate_series_files(files):
 - Bootstrap styling with drag-and-drop interface
 
 **PhotoSeriesUpdateForm specifications**:
+
 - Fields: description, event_datetime, caption (limited editing per extra requirements)
 - Separate form for adding/removing photos
 - Photo reordering interface
 - Individual photo description editing
 
 **PhotoSeriesPhotoForm specifications**:
+
 - Form for adding individual photos to existing series
 - Fields: image, description, order
 - AJAX-compatible for dynamic addition
 
 **Form validation methods**:
+
 - `clean_images()` - Validate multiple files with security checks
 - `clean()` - Ensure at least one image and validate series constraints
 - `validate_batch_security()` - Comprehensive security validation for all files
@@ -250,6 +277,7 @@ def validate_series_files(files):
 **Action**: Implement CRUD views for photo series management
 
 **PhotoSeriesCreateView specifications**:
+
 - Extends CreateView
 - Permission required: 'events.add_event'
 - Handles multiple file upload
@@ -259,6 +287,7 @@ def validate_series_files(files):
 - Breadcrumb navigation: Patient Detail → Timeline → Create PhotoSeries
 
 **PhotoSeriesDetailView specifications**:
+
 - Extends DetailView
 - Permission check with patient access validation
 - Carousel display with navigation between photos (per extra requirements)
@@ -270,6 +299,7 @@ def validate_series_files(files):
 - Return to timeline navigation
 
 **PhotoSeriesUpdateView specifications**:
+
 - Extends UpdateView
 - Permission check: can_edit_event (24-hour rule)
 - Form with current photos preview
@@ -280,6 +310,7 @@ def validate_series_files(files):
 - Breadcrumb navigation: Patient Detail → Timeline → Edit PhotoSeries
 
 **PhotoSeriesDeleteView specifications**:
+
 - Extends DeleteView
 - Permission check: can_delete_event (24-hour rule)
 - Confirmation page with photo previews
@@ -294,18 +325,21 @@ def validate_series_files(files):
 **Action**: Implement AJAX views for dynamic photo management
 
 **PhotoSeriesAddPhotoView specifications**:
+
 - AJAX view for adding photos to existing series
 - JSON response with new photo data
 - Permission validation
 - File processing and thumbnail generation
 
 **PhotoSeriesRemovePhotoView specifications**:
+
 - AJAX view for removing photos from series
 - JSON response with success/error status
 - File cleanup handling
 - Order adjustment for remaining photos
 
 **PhotoSeriesReorderView specifications**:
+
 - AJAX view for reordering photos in series
 - Accepts new order array
 - Batch update of PhotoSeriesFile orders
@@ -318,6 +352,7 @@ def validate_series_files(files):
 **Action**: Define URL patterns for photo series views
 
 **URL patterns**:
+
 - `photo-series/create/<uuid:patient_id>/` - PhotoSeriesCreateView
 - `photo-series/<uuid:pk>/` - PhotoSeriesDetailView
 - `photo-series/<uuid:pk>/edit/` - PhotoSeriesUpdateView
@@ -328,6 +363,7 @@ def validate_series_files(files):
 - `photo-series/<uuid:pk>/download/` - ZIP download
 
 **URL naming convention**:
+
 - `photoseries_create`, `photoseries_detail`, `photoseries_update`, `photoseries_delete`
 - `photoseries_add_photo`, `photoseries_remove_photo`, `photoseries_reorder`
 
@@ -338,6 +374,7 @@ def validate_series_files(files):
 **Action**: Implement comprehensive view testing for PhotoSeries
 
 **Test cases**:
+
 - Series creation with multiple photos
 - Photo addition/removal via AJAX
 - Photo reordering functionality
@@ -355,6 +392,7 @@ def validate_series_files(files):
 **Action**: Create photo series upload/edit form template
 
 **Template features**:
+
 - Multiple file upload with drag-and-drop
 - Upload progress indicators for each file
 - Photo preview grid during upload
@@ -368,6 +406,7 @@ def validate_series_files(files):
 **Action**: Create photo series detail view template (per extra requirements)
 
 **Template features**:
+
 - Carousel display with navigation between photos (per extra requirements)
 - Action buttons for each photo: zoom in, zoom out, original size, full page, download (per extra requirements)
 - Photo ordering display with reorder controls
@@ -386,6 +425,7 @@ def validate_series_files(files):
 **Action**: Create specialized event card for photo series (per extra requirements)
 
 **Template features**:
+
 - First photo as thumbnail display (per extra requirements)
 - Photo count badge showing number of photos in series (per extra requirements)
 - Images icon overlay
@@ -402,6 +442,7 @@ def validate_series_files(files):
 **Action**: Create reusable photo gallery component
 
 **Template features**:
+
 - Responsive thumbnail grid
 - Lazy loading for performance
 - Click to open in lightbox
@@ -414,6 +455,7 @@ def validate_series_files(files):
 **Action**: Create lightbox modal for photo viewing
 
 **Template features**:
+
 - Full-size photo display
 - Navigation arrows (previous/next)
 - Photo counter (e.g., "3 of 8")
@@ -429,6 +471,7 @@ def validate_series_files(files):
 **Action**: Create advanced multi-file upload interface
 
 **Template features**:
+
 - Drag-and-drop zone
 - File selection button
 - Upload queue with progress bars
@@ -444,6 +487,7 @@ def validate_series_files(files):
 **Action**: Create photo series specific styling (following @app/mediafiles photo feature styling)
 
 **CSS features**:
+
 - Carousel layout (responsive) instead of gallery grid
 - Action buttons styling for each photo (zoom in, zoom out, original size, full page, download)
 - Upload interface styling consistent with photo feature
@@ -462,6 +506,7 @@ def validate_series_files(files):
 **Action**: Create photo series specific JavaScript
 
 **JavaScript features**:
+
 - Multi-file upload handling
 - Drag-and-drop functionality
 - Photo reordering (sortable interface)
@@ -481,6 +526,7 @@ def validate_series_files(files):
 **Action**: Add photo series specific template tags
 
 **Template tags**:
+
 - `{% photoseries_carousel series %}` - Display photo carousel (per extra requirements)
 - `{% photoseries_thumbnail series %}` - Display first photo thumbnail (per extra requirements)
 - `{% photoseries_count series %}` - Display photo count badge (per extra requirements)
@@ -494,6 +540,7 @@ def validate_series_files(files):
 **Action**: Create comprehensive security tests for PhotoSeries
 
 **Security test scenarios**:
+
 - Batch upload security validation
 - Series file enumeration prevention
 - Mixed file type upload prevention
@@ -509,6 +556,7 @@ def validate_series_files(files):
 **Action**: Create end-to-end integration tests for PhotoSeries
 
 **Test scenarios**:
+
 - Complete photo series upload workflow
 - Photo series viewing in patient timeline
 - Gallery and lightbox functionality
@@ -525,6 +573,7 @@ def validate_series_files(files):
 **Action**: Create performance tests for photo series
 
 **Performance tests**:
+
 - Large batch upload handling (10+ photos)
 - Gallery loading with many photos
 - Thumbnail generation performance
@@ -536,6 +585,7 @@ def validate_series_files(files):
 **Action**: Create UAT scenarios for photo series functionality
 
 **UAT scenarios**:
+
 - Medical professional uploads wound progression series
 - Series appears in patient timeline with count badge
 - Individual photos can be viewed in gallery
@@ -547,6 +597,7 @@ def validate_series_files(files):
 ## Success Criteria
 
 Image Series implementation is complete when:
+
 - [ ] PhotoSeries model properly extends Event with PHOTO_SERIES_EVENT type
 - [ ] PhotoSeriesFile through model handles ordering and relationships
 - [ ] Admin interface provides full series management with inline editing
@@ -571,6 +622,7 @@ Image Series implementation is complete when:
 ## Next Steps
 
 After completing Image Series implementation:
+
 1. Proceed to Short Video Clips implementation
 2. Test integration between all media types
 3. Ensure consistent UI/UX across all media types

@@ -507,6 +507,164 @@
     }
 }
 
+/* Timeline Card PhotoSeries Styles */
+/* These styles are specific to PhotoSeries cards in the timeline view */
+
+.photoseries-content {
+    position: relative;
+}
+
+/* Primary Thumbnail Display for Timeline */
+.photoseries-thumbnail-container {
+    display: flex;
+    justify-content: center;
+    margin: 0.75rem 0 0.5rem 0;
+}
+
+.photoseries-thumbnail-wrapper {
+    position: relative;
+    display: inline-block;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    max-width: 300px;
+    width: 100%;
+}
+
+.photoseries-thumbnail-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.photoseries-thumbnail {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-thumbnail {
+    transform: scale(1.02);
+}
+
+/* Photo Count Overlay for Timeline */
+.photoseries-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+}
+
+.photoseries-count-badge {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    backdrop-filter: blur(4px);
+}
+
+/* View Overlay for Timeline */
+.photoseries-view-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    backdrop-filter: blur(2px);
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-view-overlay {
+    opacity: 1;
+}
+
+.photoseries-view-content {
+    text-align: center;
+    transform: translateY(5px);
+    transition: transform 0.2s ease;
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-view-content {
+    transform: translateY(0);
+}
+
+.photoseries-view-content .display-6 {
+    font-size: 1.5rem;
+}
+
+/* No Photo Placeholder for Timeline */
+.photoseries-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+    max-width: 300px;
+    width: 100%;
+}
+
+/* Timeline Responsive Design */
+@media (max-width: 768px) {
+    .timeline-card .photoseries-thumbnail {
+        height: 160px;
+    }
+    
+    .timeline-card .photoseries-thumbnail-wrapper {
+        max-width: 250px;
+    }
+    
+    .timeline-card .photoseries-count-badge {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+    }
+    
+    .timeline-card .photoseries-view-content .display-6 {
+        font-size: 1.25rem;
+    }
+    
+    .timeline-card .photoseries-placeholder {
+        height: 160px;
+        max-width: 250px;
+    }
+}
+
+/* Timeline Print Styles */
+@media print {
+    .timeline-card .photoseries-view-overlay {
+        display: none !important;
+    }
+    
+    .timeline-card .photoseries-thumbnail {
+        height: auto !important;
+        max-height: 100px;
+    }
+}
+
+/* Timeline Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .timeline-card .photoseries-thumbnail-wrapper,
+    .timeline-card .photoseries-thumbnail,
+    .timeline-card .photoseries-view-content {
+        transition: none;
+    }
+}
+
 /* Multi-Upload Interface Styles */
 .photoseries-upload-area {
     border: 3px dashed #dee2e6;
@@ -695,6 +853,58 @@
     }
 }
 
+/* Current Photos Display for Update Form */
+.current-photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.current-photo-item {
+    position: relative;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.current-photo-item:hover {
+    border-color: var(--medical-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.current-photo-thumbnail {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.current-photo-info {
+    padding: 0.5rem;
+    text-align: center;
+}
+
+.current-photo-info .fw-bold {
+    color: var(--medical-primary);
+    font-size: 0.75rem;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.current-photo-info .text-muted {
+    font-size: 0.625rem;
+    line-height: 1.2;
+    max-width: 100%;
+}
+
 /* Sortable Photo Reordering */
 .sortable-photo-list {
     display: grid;
@@ -867,5 +1077,163 @@
     to {
         opacity: 1;
         transform: translateX(0);
+    }
+}
+
+/* Timeline Card PhotoSeries Styles */
+/* These styles are specific to PhotoSeries cards in the timeline view */
+
+.photoseries-content {
+    position: relative;
+}
+
+/* Primary Thumbnail Display for Timeline */
+.photoseries-thumbnail-container {
+    display: flex;
+    justify-content: center;
+    margin: 0.75rem 0 0.5rem 0;
+}
+
+.photoseries-thumbnail-wrapper {
+    position: relative;
+    display: inline-block;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    max-width: 300px;
+    width: 100%;
+}
+
+.photoseries-thumbnail-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.photoseries-thumbnail {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-thumbnail {
+    transform: scale(1.02);
+}
+
+/* Photo Count Overlay for Timeline */
+.photoseries-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+}
+
+.photoseries-count-badge {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    backdrop-filter: blur(4px);
+}
+
+/* View Overlay for Timeline */
+.photoseries-view-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    backdrop-filter: blur(2px);
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-view-overlay {
+    opacity: 1;
+}
+
+.photoseries-view-content {
+    text-align: center;
+    transform: translateY(5px);
+    transition: transform 0.2s ease;
+}
+
+.photoseries-thumbnail-wrapper:hover .photoseries-view-content {
+    transform: translateY(0);
+}
+
+.photoseries-view-content .display-6 {
+    font-size: 1.5rem;
+}
+
+/* No Photo Placeholder for Timeline */
+.photoseries-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+    max-width: 300px;
+    width: 100%;
+}
+
+/* Timeline Responsive Design */
+@media (max-width: 768px) {
+    .timeline-card .photoseries-thumbnail {
+        height: 160px;
+    }
+    
+    .timeline-card .photoseries-thumbnail-wrapper {
+        max-width: 250px;
+    }
+    
+    .timeline-card .photoseries-count-badge {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+    }
+    
+    .timeline-card .photoseries-view-content .display-6 {
+        font-size: 1.25rem;
+    }
+    
+    .timeline-card .photoseries-placeholder {
+        height: 160px;
+        max-width: 250px;
+    }
+}
+
+/* Timeline Print Styles */
+@media print {
+    .timeline-card .photoseries-view-overlay {
+        display: none !important;
+    }
+    
+    .timeline-card .photoseries-thumbnail {
+        height: auto !important;
+        max-height: 100px;
+    }
+}
+
+/* Timeline Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .timeline-card .photoseries-thumbnail-wrapper,
+    .timeline-card .photoseries-thumbnail,
+    .timeline-card .photoseries-view-content {
+        transition: none;
     }
 }

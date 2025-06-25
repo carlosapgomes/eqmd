@@ -256,18 +256,24 @@ class SecureFileServeView(View):
 
         return None
 
-    def _log_file_access(self, user, media_file, action: str) -> None:
+    def _log_file_access(self, user, media_file, action: str, extra_data: dict = None) -> None:
         """Log file access for audit trail."""
         import logging
         security_logger = logging.getLogger('security.mediafiles')
 
-        security_logger.info(
+        log_message = (
             f"File access: user={user.username} "
             f"file={media_file.id} "
             f"filename={media_file.original_filename} "
             f"action={action} "
             f"timestamp={time.time()}"
         )
+        
+        if extra_data:
+            extra_info = " ".join([f"{k}={v}" for k, v in extra_data.items()])
+            log_message += f" {extra_info}"
+
+        security_logger.info(log_message)
 
     def _log_security_event(self, user, event_type: str, details: str) -> None:
         """Log security-related events."""
@@ -469,6 +475,11 @@ class SecureVideoStreamView(SecureFileServeView):
         try:
             range_start, range_end = self._parse_range_header(range_header, file_size)
         except ValueError as e:
+            # Log the actual range header for debugging
+            import logging
+            logger = logging.getLogger('mediafiles.debug')
+            logger.warning(f"Failed to parse range header: '{range_header}', error: {e}")
+            
             # Invalid range request
             response = HttpResponse(status=416)  # Range Not Satisfiable
             response['Content-Range'] = f'bytes */{file_size}'
@@ -476,6 +487,10 @@ class SecureVideoStreamView(SecureFileServeView):
 
         # Validate range for security
         if not self._validate_range_security(range_start, range_end, file_size):
+            # Log the actual range values for debugging
+            import logging
+            logger = logging.getLogger('mediafiles.debug')
+            logger.warning(f"Range validation failed: start={range_start}, end={range_end}, file_size={file_size}")
             raise PermissionDenied("Invalid range request")
 
         # Create partial content response
@@ -594,14 +609,28 @@ class SecureVideoStreamView(SecureFileServeView):
             True if range is valid and secure
         """
         # Check for reasonable range size (prevent DoS)
-        max_range_size = getattr(settings, 'MEDIA_VIDEO_MAX_RANGE_SIZE', 10 * 1024 * 1024)  # 10MB
+        # For video streaming, be more permissive with range requests
         range_size = end - start + 1
+        
+        # Allow full file requests or large chunks for video streaming
+        if range_size == file_size or range_size >= file_size * 0.8:
+            # Browser requesting entire file or most of it - always allow for video streaming
+            return True
+            
+        # For video files, allow much larger ranges (up to 100MB)
+        max_range_size = getattr(settings, 'MEDIA_VIDEO_MAX_RANGE_SIZE', 100 * 1024 * 1024)  # 100MB
 
         if range_size > max_range_size:
+            import logging
+            logger = logging.getLogger('mediafiles.debug')
+            logger.warning(f"Range size too large: {range_size} > {max_range_size}")
             return False
 
         # Check for valid bounds
         if start < 0 or end >= file_size or start > end:
+            import logging
+            logger = logging.getLogger('mediafiles.debug')
+            logger.warning(f"Invalid bounds: start={start}, end={end}, file_size={file_size}")
             return False
 
         return True
@@ -977,18 +1006,24 @@ class PhotoDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
 
         return response
 
-    def _log_file_access(self, user, media_file, action: str) -> None:
+    def _log_file_access(self, user, media_file, action: str, extra_data: dict = None) -> None:
         """Log file access for audit trail."""
         import logging
         security_logger = logging.getLogger('security.mediafiles')
 
-        security_logger.info(
+        log_message = (
             f"File access: user={user.username} "
             f"file={media_file.id} "
             f"filename={media_file.original_filename} "
             f"action={action} "
             f"timestamp={time.time()}"
         )
+        
+        if extra_data:
+            extra_info = " ".join([f"{k}={v}" for k, v in extra_data.items()])
+            log_message += f" {extra_info}"
+
+        security_logger.info(log_message)
 
     def get_queryset(self):
         """Optimize queryset with related objects."""
@@ -1005,11 +1040,13 @@ class PhotoSeriesCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateV
     Create view for PhotoSeries instances for a specific patient.
 
     Handles multiple file upload with batch processing and series creation.
+    Features advanced multi-upload interface with drag-and-drop, progress tracking,
+    and file management capabilities.
     """
 
     model = PhotoSeries
     form_class = PhotoSeriesCreateForm
-    template_name = "mediafiles/photoseries_form.html"
+    template_name = "mediafiles/photoseries_create.html"
     permission_required = "events.add_event"
 
     def dispatch(self, request, *args, **kwargs):
@@ -1116,11 +1153,12 @@ class PhotoSeriesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateV
     Update view for PhotoSeries instances.
 
     Limited editing per extra requirements: only description, datetime, and caption.
+    Features streamlined interface focused on metadata editing with current photos display.
     """
 
     model = PhotoSeries
     form_class = PhotoSeriesUpdateForm
-    template_name = "mediafiles/photoseries_form.html"
+    template_name = "mediafiles/photoseries_update.html"
     context_object_name = "photoseries"
     permission_required = "events.change_event"
 

@@ -480,7 +480,7 @@ window.MultiUpload = (function() {
         
         // Make file list sortable if SortableJS is available
         if (typeof Sortable !== 'undefined' && fileList) {
-            Sortable.create(fileList, {
+            const sortableInstance = Sortable.create(fileList, {
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 chosenClass: 'sortable-chosen',
@@ -488,8 +488,19 @@ window.MultiUpload = (function() {
                 handle: '.file-drag-handle',
                 onUpdate: function(evt) {
                     updateFileOrder();
+                    
+                    // Provide visual feedback
+                    const fileItem = evt.item;
+                    fileItem.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        fileItem.style.transform = '';
+                    }, 200);
                 }
             });
+            
+            console.log('SortableJS initialized for file reordering');
+        } else {
+            console.warn('SortableJS not available - drag and drop reordering disabled');
         }
     }
     
@@ -557,45 +568,71 @@ window.MultiUpload = (function() {
             showError('Alguns arquivos foram ignorados. Apenas imagens são aceitas.');
         }
         
-        // Add to selected files
-        imageFiles.forEach((file, index) => {
-            const fileId = generateFileId();
-            const fileData = {
-                id: fileId,
-                file: file,
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                status: 'pending',
-                progress: 0,
-                preview: null,
-                order: selectedFiles.length + index
-            };
-            
-            selectedFiles.push(fileData);
-            createFilePreview(fileData);
-        });
-        
-        updateFileCount();
+        // Show queue first
         showUploadQueue(true);
-        showProcessingOverlay(false);
+        
+        // Add to selected files with delay for visual feedback
+        imageFiles.forEach((file, index) => {
+            setTimeout(() => {
+                const fileId = generateFileId();
+                const fileData = {
+                    id: fileId,
+                    file: file,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    status: 'pending',
+                    progress: 0,
+                    preview: null,
+                    order: selectedFiles.length + index
+                };
+                
+                selectedFiles.push(fileData);
+                createFilePreview(fileData);
+                updateFileCount();
+                
+                // Hide processing overlay after last file
+                if (index === imageFiles.length - 1) {
+                    setTimeout(() => showProcessingOverlay(false), 200);
+                }
+            }, index * 150); // Stagger file processing for better UX
+        });
     }
     
     function createFilePreview(fileData) {
-        // Create preview URL
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            fileData.preview = e.target.result;
-            updateFileItem(fileData);
-        };
-        reader.readAsDataURL(fileData.file);
-        
-        // Create file item
+        // Create file item first
         const fileItem = createFileItemHTML(fileData);
         const fileList = document.querySelector('#fileList');
         if (fileList) {
             fileList.appendChild(fileItem);
         }
+        
+        // Show processing state immediately
+        setTimeout(() => {
+            fileData.status = 'uploading';
+            fileData.progress = 30;
+            updateFileItem(fileData);
+        }, 50);
+        
+        // Create preview URL with progress simulation
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            fileData.preview = e.target.result;
+            
+            // Simulate reading progress
+            setTimeout(() => {
+                fileData.status = 'uploading';
+                fileData.progress = 70;
+                updateFileItem(fileData);
+                
+                setTimeout(() => {
+                    fileData.status = 'success';
+                    fileData.progress = 100;
+                    updateFileItem(fileData);
+                }, 200);
+            }, 300);
+        };
+        reader.readAsDataURL(fileData.file);
     }
     
     function createFileItemHTML(fileData) {

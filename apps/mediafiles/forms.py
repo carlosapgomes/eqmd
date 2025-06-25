@@ -18,6 +18,30 @@ from django.utils import timezone
 from django.conf import settings
 
 from .models import Photo, MediaFile, PhotoSeries, VideoClip
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    """Custom widget for multiple file uploads following Django 5.2 pattern"""
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """Custom field that handles multiple file uploads following Django 5.2 pattern"""
+    
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        """Clean multiple files"""
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(d, initial) for d in data]
+        else:
+            result = [single_file_clean(data, initial)]
+        return result
+
+
 from apps.events.models import Event
 
 
@@ -233,12 +257,11 @@ class PhotoSeriesCreateForm(BaseMediaForm, forms.ModelForm):
     Handles multiple file upload, validation, and secure MediaFile creation.
     """
 
-    # Note: Multiple file upload will be handled via JavaScript and AJAX
-    # This field is for the primary image when creating a series
-    images = forms.FileField(
-        label="Imagem Principal",
-        help_text="Selecione a primeira imagem da série (JPEG, PNG, WebP). Máximo 5MB.",
-        widget=forms.FileInput(attrs={
+    # Multiple file upload field for photo series
+    images = MultipleFileField(
+        label="Imagens da Série",
+        help_text="Selecione múltiplas imagens (JPEG, PNG, WebP). Máximo 5MB por arquivo.",
+        widget=MultipleFileInput(attrs={
             'class': 'form-control',
             'accept': 'image/jpeg,image/png,image/webp',
             'data-preview': 'true'
@@ -292,14 +315,9 @@ class PhotoSeriesCreateForm(BaseMediaForm, forms.ModelForm):
 
     def clean_images(self):
         """Validate multiple uploaded image files"""
-        # Handle both QueryDict (normal form submission) and dict (test cases)
-        if hasattr(self.files, 'getlist'):
-            files = self.files.getlist('images')
-        else:
-            # Fallback for test cases where files is a regular dict
-            files = self.files.get('images', [])
-            if not isinstance(files, list):
-                files = [files] if files else []
+        # The MultipleFileField already handles the file extraction and basic validation
+        files = self.cleaned_data.get('images', [])
+        
         if not files:
             raise ValidationError("Pelo menos uma imagem deve ser selecionada.")
 

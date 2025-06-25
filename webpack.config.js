@@ -12,8 +12,12 @@ module.exports = {
       "./apps/events/static/events/js/timeline.js",
       "./apps/events/static/events/js/accessibility.js",
       "./apps/mediafiles/static/mediafiles/js/photo.js",
+      "./apps/mediafiles/static/mediafiles/js/photoseries.js",
+      "./apps/mediafiles/static/mediafiles/js/videoclip.js",
       "./apps/mediafiles/static/mediafiles/css/mediafiles.css",
-      "./apps/mediafiles/static/mediafiles/css/photo.css"
+      "./apps/mediafiles/static/mediafiles/css/photo.css",
+      "./apps/mediafiles/static/mediafiles/css/photoseries.css",
+      "./apps/mediafiles/static/mediafiles/css/videoclip.css"
     ],
   },
   output: {

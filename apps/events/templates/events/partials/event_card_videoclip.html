@@ -131,6 +131,7 @@ Parameters expected:
 </div>
 {% endblock event_content %}
 
+{% block extra_html %}
 <!-- Video Modal for inline playback -->
 <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -171,7 +172,9 @@ Parameters expected:
         </div>
     </div>
 </div>
+{% endblock extra_html %}
 
+{% block extra_css %}
 <style>
 /* VideoClip Event Card Specific Styles */
 .videoclip-event-content {
@@ -293,11 +296,14 @@ Parameters expected:
     }
 }
 </style>
+{% endblock extra_css %}
 
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle video thumbnail click to open modal
-    const videoThumbnails = document.querySelectorAll('.video-thumbnail-wrapper');
+    try {
+        // Handle video thumbnail click to open modal
+        const videoThumbnails = document.querySelectorAll('.video-thumbnail-wrapper');
 
     videoThumbnails.forEach(thumbnail => {
         thumbnail.addEventListener('click', function(e) {
@@ -306,8 +312,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // Check if modal exists
+            const modalElement = document.getElementById('videoModal');
+            if (!modalElement) {
+                console.error('Video modal not found!');
+                return;
+            }
+
+            // Check if Bootstrap is available
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap is not loaded!');
+                return;
+            }
+
             // Open video modal
-            const videoModal = new bootstrap.Modal(document.getElementById('videoModal'));
+            const videoModal = new bootstrap.Modal(modalElement);
             videoModal.show();
         });
     });
@@ -334,6 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
 
     // Initialize tooltips for video action buttons
     const tooltips = document.querySelectorAll('.videoclip-event-content [data-bs-toggle="tooltip"]');
@@ -376,5 +396,10 @@ document.addEventListener('DOMContentLoaded', function() {
             this.parentNode.replaceChild(errorMsg, this);
         });
     });
+    
+    } catch (error) {
+        console.error('Error in VideoClip script:', error);
+    }
 });
 </script>
+{% endblock extra_js %}

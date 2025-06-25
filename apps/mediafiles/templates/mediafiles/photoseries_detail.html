@@ -59,93 +59,36 @@ Série de Fotos - {{ photoseries.patient.name }} - EquipeMed
             </div>
         </div>
 
-        <!-- Photo Carousel Card -->
+        <!-- Photo Series Gallery -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-medical-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-image me-2"></i>
-                    <span id="currentPhotoTitle">Foto 1 de {{ photoseries.get_photo_count }}</span>
+                    <i class="bi bi-images me-2"></i>
+                    Galeria de Fotos
+                    <span class="badge bg-light text-medical-primary ms-2">{{ photoseries.get_photo_count }} fotos</span>
                 </h5>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-light btn-sm" id="zoomInBtn">
-                        <i class="bi bi-zoom-in me-1"></i>
-                        Zoom +
-                    </button>
-                    <button type="button" class="btn btn-outline-light btn-sm" id="zoomOutBtn">
-                        <i class="bi bi-zoom-out me-1"></i>
-                        Zoom -
-                    </button>
-                    <button type="button" class="btn btn-outline-light btn-sm" id="originalSizeBtn">
-                        <i class="bi bi-aspect-ratio me-1"></i>
-                        Tamanho Original
-                    </button>
-                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#fullscreenModal">
-                        <i class="bi bi-arrows-fullscreen me-1"></i>
-                        Tela Cheia
-                    </button>
-                    <button type="button" class="btn btn-outline-light btn-sm" id="downloadCurrentBtn">
-                        <i class="bi bi-download me-1"></i>
-                        Download
-                    </button>
+                    {% if can_edit %}
+                    <a href="{% url 'mediafiles:photoseries_update' photoseries.pk %}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-pencil me-1"></i>
+                        Editar
+                    </a>
+                    {% endif %}
                 </div>
             </div>
-            <div class="card-body p-0">
-                <!-- Carousel Navigation -->
-                <div class="carousel-header bg-light px-3 py-2 d-flex justify-content-between align-items-center">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="prevPhotoBtn" disabled>
-                        <i class="bi bi-chevron-left me-1"></i>
-                        Anterior
-                    </button>
-                    <div class="carousel-counter">
-                        <span id="currentPhotoIndex">1</span> de <span id="totalPhotos">{{ photoseries.get_photo_count }}</span>
-                    </div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="nextPhotoBtn">
-                        <i class="bi bi-chevron-right me-1"></i>
-                        Próxima
-                    </button>
-                </div>
-                
-                <!-- Main Carousel Display -->
-                <div class="carousel-container">
-                    <div class="carousel-viewport" id="carouselViewport">
-                        {% for photo in photoseries.get_ordered_photos %}
-                        <div class="carousel-slide{% if forloop.first %} active{% endif %}" 
-                             data-photo-id="{{ photo.id }}" 
-                             data-photo-index="{{ forloop.counter }}">
-                            <img src="{% url 'mediafiles:serve_file' photo.id %}" 
-                                 class="carousel-image" 
-                                 alt="{{ photo.original_filename }}"
-                                 data-original-filename="{{ photo.original_filename }}"
-                                 data-file-size="{{ photo.get_display_size }}"
-                                 data-dimensions="{{ photo.get_dimensions_display }}"
-                                 data-mime-type="{{ photo.mime_type }}">
-                        </div>
-                        {% endfor %}
-                    </div>
+            <div class="card-body p-2 p-md-3">
+                <!-- Include Photo Gallery Component -->
+                <div class="photoseries-gallery-container">
+                    {% include "mediafiles/partials/photo_gallery.html" with photos=photoseries.get_ordered_photos show_order=True show_info=True show_download=False show_actions=False show_select_all=False show_download_all=False editable=False gallery_id="photoseries" title="" lightbox_disabled=False %}
                 </div>
             </div>
         </div>
 
-        <!-- Photo Information -->
+        <!-- Series Information and Actions -->
         <div class="row">
-            <!-- Current Photo Metadata Card -->
+            <!-- Series Information Card -->
             <div class="col-lg-8">
                 <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h6 class="card-title mb-0">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Informações da Foto Atual
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="media-metadata" id="currentPhotoMetadata">
-                            <!-- Metadata will be dynamically updated -->
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Series Information Card -->
-                <div class="card shadow-sm mt-3">
                     <div class="card-header">
                         <h6 class="card-title mb-0">
                             <i class="bi bi-images me-2"></i>
@@ -169,6 +112,16 @@ Série de Fotos - {{ photoseries.patient.name }} - EquipeMed
                                 </span>
                                 <span class="metadata-value">{{ photoseries.event_datetime|date:"d/m/Y H:i" }}</span>
                             </div>
+                            
+                            {% if photoseries.description %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-file-text me-1"></i>
+                                    Descrição:
+                                </span>
+                                <span class="metadata-value">{{ photoseries.description }}</span>
+                            </div>
+                            {% endif %}
                             
                             {% if photoseries.caption %}
                             <div class="metadata-item">
@@ -203,11 +156,6 @@ Série de Fotos - {{ photoseries.patient.name }} - EquipeMed
                             </a>
                             {% endif %}
                             
-                            <!-- Download Series Button -->
-                            <a href="{% url 'mediafiles:photoseries_download' photoseries.pk %}" class="btn btn-outline-success">
-                                <i class="bi bi-file-earmark-zip me-2"></i>
-                                Baixar Série (ZIP)
-                            </a>
                             
                             <!-- View in Timeline -->
                             <a href="{% url 'apps.patients:patient_events_timeline' photoseries.patient.pk %}#event-{{ photoseries.pk }}" class="btn btn-outline-info">
@@ -224,29 +172,29 @@ Série de Fotos - {{ photoseries.patient.name }} - EquipeMed
                             {% endif %}
                         </div>
                         
-                        <!-- Keyboard Shortcuts Info -->
+                        <!-- Gallery Help -->
                         <hr class="my-3">
                         <h6 class="text-muted mb-2">
-                            <i class="bi bi-keyboard me-1"></i>
-                            Atalhos do Teclado
+                            <i class="bi bi-info-circle me-1"></i>
+                            Como usar a galeria
                         </h6>
                         <small class="text-muted d-block mb-1">
-                            <kbd>←</kbd> / <kbd>→</kbd> Navegar fotos
+                            • Clique em uma foto para visualizar em tela cheia
                         </small>
                         <small class="text-muted d-block mb-1">
-                            <kbd>F</kbd> Tela cheia
+                            • Use <kbd>←</kbd> / <kbd>→</kbd> para navegar
                         </small>
                         <small class="text-muted d-block mb-1">
-                            <kbd>+</kbd> / <kbd>-</kbd> Zoom
+                            • Zoom com <kbd>+</kbd> / <kbd>-</kbd> ou scroll do mouse
                         </small>
                         <small class="text-muted d-block">
-                            <kbd>D</kbd> Download foto atual
+                            • <kbd>Esc</kbd> para fechar visualização
                         </small>
                         
                         <!-- Technical Info -->
                         <hr class="my-3">
                         <h6 class="text-muted mb-2">
-                            <i class="bi bi-info-circle me-1"></i>
+                            <i class="bi bi-gear me-1"></i>
                             Informações Técnicas
                         </h6>
                         <small class="text-muted d-block mb-1">
@@ -270,34 +218,6 @@ Série de Fotos - {{ photoseries.patient.name }} - EquipeMed
     </div>
 </div>
 
-<!-- Fullscreen Modal -->
-<div class="modal fade" id="fullscreenModal" tabindex="-1" aria-labelledby="fullscreenModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen">
-        <div class="modal-content bg-dark">
-            <div class="modal-header border-0">
-                <h5 class="modal-title text-white" id="fullscreenModalLabel">
-                    Série de Fotos - Foto <span id="modalPhotoIndex">1</span> de {{ photoseries.get_photo_count }}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body d-flex align-items-center justify-content-center p-0 position-relative">
-                <img src="" 
-                     class="img-fluid" 
-                     id="modalImage"
-                     alt=""
-                     style="max-height: 100vh; max-width: 100vw; object-fit: contain;">
-                     
-                <!-- Navigation Controls in Modal -->
-                <button type="button" class="btn btn-outline-light position-absolute start-0 top-50 translate-middle-y ms-3" id="modalPrevBtn">
-                    <i class="bi bi-chevron-left"></i>
-                </button>
-                <button type="button" class="btn btn-outline-light position-absolute end-0 top-50 translate-middle-y me-3" id="modalNextBtn">
-                    <i class="bi bi-chevron-right"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Hidden data for JavaScript -->
 <script type="application/json" id="photoSeriesData">
@@ -307,7 +227,7 @@ Série de Fotos - {{ photoseries.patient.name }} - EquipeMed
         {
             "id": "{{ photo.id }}",
             "url": "{% url 'mediafiles:serve_file' photo.id %}",
-            "downloadUrl": "{% url 'mediafiles:media_download' photo.id %}",
+            "downloadUrl": "{% url 'mediafiles:photo_download' photo.id %}",
             "filename": "{{ photo.original_filename }}",
             "size": "{{ photo.get_display_size }}",
             "dimensions": "{{ photo.get_dimensions_display }}",
@@ -323,14 +243,70 @@ Série de Fotos - {{ photoseries.patient.name }} - EquipeMed
 
 {% block extra_scripts %}
 {{ block.super }}
-<!-- Load photoseries-specific JavaScript -->
-<script src="{% static 'mediafiles/js/photoseries.js' %}"></script>
+<style>
+/* PhotoSeries Gallery Container - Mobile Overflow Fix */
+.photoseries-gallery-container {
+    width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.photoseries-gallery-container .photo-gallery {
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+@media (max-width: 576px) {
+    .photoseries-gallery-container .gallery-grid {
+        margin: 0;
+        padding: 0;
+        gap: 0.5rem;
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .photoseries-gallery-container .gallery-item {
+        margin: 0;
+        min-width: 0;
+        width: 100%;
+    }
+    
+    .photoseries-gallery-container .gallery-thumbnail-wrapper {
+        border-radius: 6px;
+    }
+    
+    .photoseries-gallery-container .gallery-info {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-body.p-2 {
+        padding: 0.75rem !important;
+    }
+    
+    .photoseries-gallery-container .gallery-grid {
+        gap: 0.375rem;
+    }
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize photoseries carousel functionality
-    if (typeof PhotoSeriesCarousel !== 'undefined') {
-        PhotoSeriesCarousel.init();
-    }
+    // Initialize gallery and lightbox functionality
+    console.log('PhotoSeries detail page loaded with gallery components');
+    
+    // The photo gallery and lightbox components are auto-initialized
+    // via their own scripts included in the partials
+    
+    // Add any custom PhotoSeries-specific functionality here if needed
+    const downloadButtons = document.querySelectorAll('[data-action="download"]');
+    downloadButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent gallery lightbox from opening
+        });
+    });
 });
 </script>
 {% endblock extra_scripts %}

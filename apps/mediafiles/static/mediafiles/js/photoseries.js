@@ -88,6 +88,7 @@ window.PhotoSeries = (function() {
             
             // Update initial photo info
             updatePhotoInfo(currentPhotoIndex);
+            updateNavigationButtons();
         }
     }
     
@@ -118,9 +119,21 @@ window.PhotoSeries = (function() {
         }
         
         // Download button
-        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadBtn = document.getElementById('downloadCurrentBtn');
         if (downloadBtn) {
             downloadBtn.addEventListener('click', downloadCurrentPhoto);
+        }
+        
+        // Custom navigation buttons
+        const prevPhotoBtn = document.getElementById('prevPhotoBtn');
+        const nextPhotoBtn = document.getElementById('nextPhotoBtn');
+        
+        if (prevPhotoBtn) {
+            prevPhotoBtn.addEventListener('click', previousPhoto);
+        }
+        
+        if (nextPhotoBtn) {
+            nextPhotoBtn.addEventListener('click', nextPhoto);
         }
         
         // Initialize image dragging for zoomed photos
@@ -191,21 +204,8 @@ window.PhotoSeries = (function() {
      * Handle carousel slide start
      */
     function handleCarouselSlide(event) {
-        const direction = event.direction;
-        const relatedTarget = event.relatedTarget;
-        
         // Reset zoom when changing photos
         resetZoom();
-        
-        // Update current index based on direction
-        if (direction === 'left') {
-            currentPhotoIndex = Math.min(currentPhotoIndex + 1, totalPhotos - 1);
-        } else {
-            currentPhotoIndex = Math.max(currentPhotoIndex - 1, 0);
-        }
-        
-        // Update photo info
-        updatePhotoInfo(currentPhotoIndex);
     }
     
     /**
@@ -218,6 +218,7 @@ window.PhotoSeries = (function() {
             const index = parseInt(activeItem.dataset.photoIndex) || 0;
             currentPhotoIndex = index;
             updatePhotoInfo(currentPhotoIndex);
+            updateNavigationButtons();
         }
     }
     
@@ -229,9 +230,16 @@ window.PhotoSeries = (function() {
         
         const photo = photos[index];
         
-        // Update counter
+        // Update counters
+        const photoCounter = document.getElementById('photoCounter');
+        const currentPhotoIndexSpan = document.getElementById('currentPhotoIndex');
+        
         if (photoCounter) {
             photoCounter.textContent = `${index + 1} de ${totalPhotos}`;
+        }
+        
+        if (currentPhotoIndexSpan) {
+            currentPhotoIndexSpan.textContent = index + 1;
         }
         
         // Update metadata
@@ -240,9 +248,25 @@ window.PhotoSeries = (function() {
         }
         
         // Update download link
-        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadBtn = document.getElementById('downloadCurrentBtn');
         if (downloadBtn && photo.downloadUrl) {
             downloadBtn.href = photo.downloadUrl;
+        }
+    }
+    
+    /**
+     * Update navigation button states
+     */
+    function updateNavigationButtons() {
+        const prevBtn = document.getElementById('prevPhotoBtn');
+        const nextBtn = document.getElementById('nextPhotoBtn');
+        
+        if (prevBtn) {
+            prevBtn.disabled = currentPhotoIndex <= 0;
+        }
+        
+        if (nextBtn) {
+            nextBtn.disabled = currentPhotoIndex >= totalPhotos - 1;
         }
     }
     
@@ -591,268 +615,12 @@ window.PhotoSeries = (function() {
     document.addEventListener('msfullscreenchange', handleFullscreenChange);
     
     /**
-     * Multi-file upload handling
+     * Multi-file upload handling (Simplified - delegates to MultiUpload)
      */
     function initializeMultiUpload() {
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('id_images');
-        const previewContainer = document.getElementById('uploadPreview');
-
-        if (!uploadArea || !fileInput) return;
-
-        // Drag and drop functionality
-        uploadArea.addEventListener('dragover', handleDragOver);
-        uploadArea.addEventListener('dragleave', handleDragLeave);
-        uploadArea.addEventListener('drop', handleFileDrop);
-
-        // File input change
-        fileInput.addEventListener('change', handleFileSelect);
-
-        // Click to select files
-        uploadArea.addEventListener('click', () => fileInput.click());
-    }
-
-    /**
-     * Handle drag over event
-     */
-    function handleDragOver(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.currentTarget.classList.add('drag-over');
-    }
-
-    /**
-     * Handle drag leave event
-     */
-    function handleDragLeave(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.currentTarget.classList.remove('drag-over');
-    }
-
-    /**
-     * Handle file drop event
-     */
-    function handleFileDrop(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.currentTarget.classList.remove('drag-over');
-
-        const files = e.dataTransfer.files;
-        handleFiles(files);
-    }
-
-    /**
-     * Handle file selection
-     */
-    function handleFileSelect(e) {
-        const files = e.target.files;
-        handleFiles(files);
-    }
-
-    /**
-     * Process selected files
-     */
-    function handleFiles(files) {
-        const previewContainer = document.getElementById('uploadPreview');
-        if (!previewContainer) return;
-
-        // Clear existing previews
-        previewContainer.innerHTML = '';
-
-        // Validate and preview each file
-        Array.from(files).forEach((file, index) => {
-            if (validateFile(file)) {
-                createFilePreview(file, index, previewContainer);
-            }
-        });
-
-        // Show preview container
-        previewContainer.classList.remove('d-none');
-
-        // Update upload area state
-        updateUploadAreaState(files.length);
-    }
-
-    /**
-     * Validate individual file
-     */
-    function validateFile(file) {
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        const maxSize = 10 * 1024 * 1024; // 10MB
-
-        if (!allowedTypes.includes(file.type)) {
-            showUploadError(`Tipo de arquivo não permitido: ${file.name}`);
-            return false;
-        }
-
-        if (file.size > maxSize) {
-            showUploadError(`Arquivo muito grande: ${file.name}`);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Create file preview
-     */
-    function createFilePreview(file, index, container) {
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'upload-preview-item';
-        previewDiv.dataset.index = index;
-
-        const img = document.createElement('img');
-        img.className = 'preview-thumbnail';
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-
-        const info = document.createElement('div');
-        info.className = 'preview-info';
-        info.innerHTML = `
-            <div class="preview-filename">${file.name}</div>
-            <div class="preview-size">${formatFileSize(file.size)}</div>
-            <div class="preview-progress">
-                <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                </div>
-            </div>
-        `;
-
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'btn btn-sm btn-outline-danger preview-remove';
-        removeBtn.innerHTML = '<i class="bi bi-x"></i>';
-        removeBtn.addEventListener('click', () => removeFilePreview(previewDiv, index));
-
-        previewDiv.appendChild(img);
-        previewDiv.appendChild(info);
-        previewDiv.appendChild(removeBtn);
-
-        container.appendChild(previewDiv);
-    }
-
-    // Public API
-    return {
-        init: init,
-        previousPhoto: previousPhoto,
-        nextPhoto: nextPhoto,
-        goToPhoto: goToPhoto,
-        zoomPhoto: zoomPhoto,
-        resetZoom: resetZoom,
-        toggleFullscreen: toggleFullscreen,
-        downloadCurrentPhoto: downloadCurrentPhoto,
-        initializeMultiUpload: initializeMultiUpload,
-        initializeBreadcrumbNavigation: initializeBreadcrumbNavigation,
-        addPhotoToSeries: addPhotoToSeries,
-        removePhotoFromSeries: removePhotoFromSeries,
-        reorderPhotos: reorderPhotos,
-        returnToTimeline: returnToTimeline,
-        getCurrentIndex: () => currentPhotoIndex,
-        getTotalPhotos: () => totalPhotos,
-        getPhotos: () => photos
-    };
-})();
-
-    /**
-     * Remove file preview
-     */
-    function removeFilePreview(previewDiv, index) {
-        const fileInput = document.getElementById('id_images');
-        if (fileInput) {
-            // Create new FileList without the removed file
-            const dt = new DataTransfer();
-            Array.from(fileInput.files).forEach((file, i) => {
-                if (i !== index) {
-                    dt.items.add(file);
-                }
-            });
-            fileInput.files = dt.files;
-        }
-
-        previewDiv.remove();
-
-        // Update indices of remaining previews
-        const remainingPreviews = document.querySelectorAll('.upload-preview-item');
-        remainingPreviews.forEach((preview, newIndex) => {
-            preview.dataset.index = newIndex;
-        });
-
-        // Hide preview container if no files
-        const previewContainer = document.getElementById('uploadPreview');
-        if (previewContainer && remainingPreviews.length === 0) {
-            previewContainer.classList.add('d-none');
-        }
-    }
-
-    /**
-     * Format file size for display
-     */
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    /**
-     * Update upload area state
-     */
-    function updateUploadAreaState(fileCount) {
-        const uploadArea = document.getElementById('uploadArea');
-        if (!uploadArea) return;
-
-        const content = uploadArea.querySelector('.upload-content');
-        if (content) {
-            if (fileCount > 0) {
-                content.innerHTML = `
-                    <i class="bi bi-check-circle display-4 text-success mb-3"></i>
-                    <h5 class="text-success">${fileCount} arquivo(s) selecionado(s)</h5>
-                    <p class="text-muted">Clique para selecionar mais arquivos</p>
-                `;
-            } else {
-                content.innerHTML = `
-                    <i class="bi bi-cloud-upload display-4 text-medical-gray mb-3"></i>
-                    <h5 class="text-medical-primary">Clique para selecionar ou arraste as imagens aqui</h5>
-                    <p class="text-muted">Formatos aceitos: JPG, PNG, GIF, WebP (máx. 10MB cada)</p>
-                `;
-            }
-        }
-    }
-
-    /**
-     * Show upload error
-     */
-    function showUploadError(message) {
-        // Create or update error alert
-        let errorAlert = document.getElementById('uploadError');
-        if (!errorAlert) {
-            errorAlert = document.createElement('div');
-            errorAlert.id = 'uploadError';
-            errorAlert.className = 'alert alert-danger alert-dismissible fade show mt-3';
-
-            const uploadArea = document.getElementById('uploadArea');
-            if (uploadArea) {
-                uploadArea.parentNode.insertBefore(errorAlert, uploadArea.nextSibling);
-            }
-        }
-
-        errorAlert.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            if (errorAlert) {
-                errorAlert.remove();
-            }
-        }, 5000);
+        // Delegate to the MultiUpload interface from multi_upload.html
+        // This avoids conflicts and ensures proper functionality
+        console.log('PhotoSeries multi-upload: Delegating to MultiUpload interface');
     }
 
     /**
@@ -968,6 +736,84 @@ window.PhotoSeries = (function() {
         }
     }
 
+    /**
+     * Initialize PhotoSeries functionality in timeline cards
+     */
+    function initializeTimelinePhotoSeries() {
+        // Handle PhotoSeries thumbnail click to open lightbox or detail view
+        const photoSeriesThumbnails = document.querySelectorAll('.photoseries-thumbnail-wrapper');
+        
+        photoSeriesThumbnails.forEach(thumbnail => {
+            thumbnail.addEventListener('click', function(e) {
+                // Prevent click if it's on an action button
+                if (e.target.closest('.btn') || e.target.closest('.dropdown')) {
+                    return;
+                }
+                
+                // Check if this thumbnail should trigger lightbox
+                const trigger = this.getAttribute('data-trigger');
+                const galleryId = this.getAttribute('data-gallery-id');
+                
+                if (trigger === 'lightbox' && galleryId && typeof PhotoLightbox !== 'undefined') {
+                    // Open lightbox
+                    e.preventDefault();
+                    PhotoLightbox.open(0, galleryId);
+                } else {
+                    // Fallback to detail page navigation
+                    const timelineCard = this.closest('.timeline-card');
+                    if (timelineCard) {
+                        const eventId = timelineCard.getAttribute('aria-labelledby').replace('event-', '').replace('-title', '');
+                        
+                        // Navigate to PhotoSeries detail view
+                        const detailUrl = `/mediafiles/photo-series/${eventId}/`;
+                        window.location.href = detailUrl;
+                    }
+                }
+            });
+        });
+        
+        // Handle keyboard navigation for PhotoSeries cards
+        photoSeriesThumbnails.forEach(thumbnail => {
+            if (!thumbnail.hasAttribute('tabindex')) {
+                thumbnail.setAttribute('tabindex', '0');
+            }
+            if (!thumbnail.hasAttribute('role')) {
+                thumbnail.setAttribute('role', 'button');
+            }
+            if (!thumbnail.hasAttribute('aria-label')) {
+                thumbnail.setAttribute('aria-label', 'Visualizar série de fotos');
+            }
+            
+            thumbnail.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
+            });
+        });
+    }
+
+    // Public API
+    return {
+        init: init,
+        previousPhoto: previousPhoto,
+        nextPhoto: nextPhoto,
+        goToPhoto: goToPhoto,
+        zoomPhoto: zoomPhoto,
+        resetZoom: resetZoom,
+        toggleFullscreen: toggleFullscreen,
+        downloadCurrentPhoto: downloadCurrentPhoto,
+        initializeMultiUpload: initializeMultiUpload,
+        initializeBreadcrumbNavigation: initializeBreadcrumbNavigation,
+        addPhotoToSeries: addPhotoToSeries,
+        removePhotoFromSeries: removePhotoFromSeries,
+        reorderPhotos: reorderPhotos,
+        returnToTimeline: returnToTimeline,
+        initializeTimelinePhotoSeries: initializeTimelinePhotoSeries,
+        getCurrentIndex: () => currentPhotoIndex,
+        getTotalPhotos: () => totalPhotos,
+        getPhotos: () => photos
+    };
 })();
 
 // Auto-initialize when DOM is ready
@@ -983,4 +829,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize breadcrumb navigation
     PhotoSeries.initializeBreadcrumbNavigation();
+    
+    // Initialize timeline PhotoSeries functionality
+    PhotoSeries.initializeTimelinePhotoSeries();
 });

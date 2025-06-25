@@ -191,6 +191,89 @@ media/
 └── videos/YYYY/MM/originals/uuid-filename.ext
 ```
 
+#### Multiple File Upload Implementation
+**PhotoSeries supports multiple file uploads using Django 5.2 best practices**
+
+##### Custom Multiple File Field
+Located in `apps/mediafiles/forms.py`:
+```python
+class MultipleFileInput(forms.ClearableFileInput):
+    """Custom widget for multiple file uploads following Django 5.2 pattern"""
+    allow_multiple_selected = True
+
+class MultipleFileField(forms.FileField):
+    """Custom field that handles multiple file uploads following Django 5.2 pattern"""
+    
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        """Clean multiple files"""
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(d, initial) for d in data]
+        else:
+            result = [single_file_clean(data, initial)]
+        return result
+```
+
+##### PhotoSeries Form Implementation
+```python
+class PhotoSeriesCreateForm(BaseMediaForm, forms.ModelForm):
+    images = MultipleFileField(
+        label="Imagens da Série",
+        help_text="Selecione múltiplas imagens (JPEG, PNG, WebP). Máximo 5MB por arquivo.",
+        widget=MultipleFileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/jpeg,image/png,image/webp',
+            'data-preview': 'true'
+        }),
+        required=True
+    )
+    
+    def clean_images(self):
+        """Validate multiple uploaded image files"""
+        files = self.cleaned_data.get('images', [])
+        if not files:
+            raise ValidationError("Pelo menos uma imagem deve ser selecionada.")
+        # Additional validation for each file...
+        return files
+```
+
+##### Key Features
+- **Django 5.2 Compatibility**: Uses `allow_multiple_selected = True` pattern
+- **Batch Validation**: Individual file validation for size, type, and security
+- **Template Integration**: Works with existing drag-and-drop upload interface
+- **Security**: Comprehensive validation and secure file handling
+- **User Experience**: Preview thumbnails and upload progress tracking
+
+##### Usage in Views
+```python
+def form_valid(self, form):
+    photoseries = form.save(commit=False)
+    # ... set required fields ...
+    photoseries.save()
+    
+    # Handle multiple files
+    images = form.cleaned_data['images']
+    photoseries.add_photos_batch(images)
+    return super().form_valid(form)
+```
+
+##### Implementation Notes
+**Important:** Django's built-in `FileField` and `FileInput` widgets do NOT support multiple file uploads by default. The implementation above is required for multiple file functionality.
+
+**Common Issues:**
+- `ValueError: FileInput doesn't support uploading multiple files` - Use `MultipleFileInput` with `allow_multiple_selected = True`
+- Single file upload only - Ensure the form field uses `MultipleFileField` instead of `forms.FileField`
+- Form validation errors - The `clean_images()` method expects a list of files from `cleaned_data['images']`
+
+**Template Requirements:**
+- The upload interface in `photoseries_form.html` includes drag-and-drop functionality
+- JavaScript in `photoseries.js` handles the upload preview and progress tracking
+- The `multi_upload.html` partial provides advanced upload UI components
+
 #### Template Tags
 ```django
 {% load mediafiles_tags %}
@@ -258,3 +341,48 @@ python manage.py permission_performance --action=stats  # Performance stats
 {% if user|in_group:"Medical Doctors" %}...{% endif %}
 {% check_multiple_permissions user "perm1" "perm2" as has_all %}
 ```
+
+## Django Template Development Best Practices
+
+### Template Block Architecture
+**Critical Rule**: When extending Django templates, ALWAYS ensure content is placed within proper template blocks.
+
+#### Event Card Template Structure
+Event card templates extend `event_card_base.html` which provides these blocks:
+- `{% block event_actions %}` - Action buttons (view, edit, delete, etc.)
+- `{% block event_content %}` - Main event content display
+- `{% block event_metadata %}` - Footer metadata (creator, timestamps, etc.)
+- `{% block extra_html %}` - Additional HTML (modals, hidden elements)
+- `{% block extra_css %}` - Event-specific CSS styles
+- `{% block extra_js %}` - Event-specific JavaScript
+
+#### Template Development Checklist
+**Before creating/modifying templates:**
+
+1. **Identify Base Template**: Check which template is being extended
+2. **Review Available Blocks**: Read the base template to see all available blocks
+3. **Block Content Placement**: Ensure ALL content is within appropriate blocks
+4. **Content Outside Blocks**: Verify nothing exists outside block definitions
+5. **Testing**: Test that CSS, JavaScript, and HTML render correctly
+
+#### Common Mistakes to Avoid
+```django
+<!-- ❌ WRONG: Content outside blocks will be ignored -->
+{% extends "base.html" %}
+<style>/* This CSS will NOT be rendered */</style>
+{% block content %}...{% endblock %}
+<script>/* This JS will NOT be executed */</script>
+
+<!-- ✅ CORRECT: All content within blocks -->
+{% extends "base.html" %}
+{% block content %}...{% endblock %}
+{% block extra_css %}<style>/* This CSS renders */</style>{% endblock %}
+{% block extra_js %}<script>/* This JS executes */</script>{% endblock %}
+```
+
+#### Debugging Template Issues
+If functionality doesn't work (CSS not applied, JavaScript not executing):
+1. Check if content is outside template blocks
+2. Verify block names match base template
+3. Ensure base template defines required blocks
+4. Test with browser dev tools for missing resources
