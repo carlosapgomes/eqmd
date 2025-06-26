@@ -1,0 +1,250 @@
+{% comment %}
+Video Player Component Template
+Provides a reusable video player component with controls and responsive design
+This component can be included in various templates for video playback
+
+Parameters expected:
+- videoclip: The VideoClip object
+- controls: Boolean to show/hide controls (default: true)
+- autoplay: Boolean for autoplay (default: false)
+- muted: Boolean for muted start (default: false)
+- poster: URL for poster image (optional)
+- class: Additional CSS classes (optional)
+- style: Additional inline styles (optional)
+
+Features:
+- HTML5 video element with controls
+- Responsive design
+- Error handling
+- Loading states
+- Keyboard controls
+- Accessibility features
+{% endcomment %}
+
+{% load static %}
+
+<div class="video-player-component {% if class %}{{ class }}{% endif %}" 
+     {% if style %}style="{{ style }}"{% endif %}>
+    
+    <!-- Video Element -->
+    <video class="video-player w-100" 
+           {% if controls|default:true %}controls{% endif %}
+           {% if autoplay %}autoplay{% endif %}
+           {% if muted %}muted{% endif %}
+           {% if poster %}poster="{{ poster }}"{% endif %}
+           preload="metadata"
+           data-video-id="{{ videoclip.pk }}"
+           aria-label="Vídeo: {{ videoclip.description|default:'Vídeo médico' }}">
+        
+        <!-- Video Source -->
+        <source src="{% url 'mediafiles:videoclip_stream' videoclip.pk %}" 
+                type="{{ videoclip.media_file.mime_type }}">
+        
+        <!-- Fallback message -->
+        <div class="video-fallback alert alert-warning text-center">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Seu navegador não suporta o elemento de vídeo.
+            <br>
+            <a href="{% url 'mediafiles:videoclip_download' videoclip.pk %}" 
+               class="btn btn-outline-primary btn-sm mt-2">
+                <i class="bi bi-download me-1"></i>
+                Baixar Vídeo
+            </a>
+        </div>
+    </video>
+    
+    <!-- Loading Overlay -->
+    <div class="video-loading-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50 d-none">
+        <div class="text-center text-white">
+            <div class="spinner-border mb-2" role="status">
+                <span class="visually-hidden">Carregando vídeo...</span>
+            </div>
+            <p class="mb-0 small">Carregando vídeo...</p>
+        </div>
+    </div>
+    
+    <!-- Error Overlay -->
+    <div class="video-error-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-danger bg-opacity-75 d-none">
+        <div class="text-center text-white">
+            <i class="bi bi-exclamation-triangle fs-1 mb-3"></i>
+            <h6>Erro ao carregar vídeo</h6>
+            <p class="mb-3 small">Não foi possível reproduzir o vídeo.</p>
+            <a href="{% url 'mediafiles:videoclip_download' videoclip.pk %}" 
+               class="btn btn-outline-light btn-sm">
+                <i class="bi bi-download me-1"></i>
+                Baixar Vídeo
+            </a>
+        </div>
+    </div>
+    
+    <!-- Video Metadata (optional overlay) -->
+    {% if show_metadata %}
+    <div class="video-metadata-overlay position-absolute bottom-0 start-0 w-100 bg-dark bg-opacity-75 text-white p-2 small">
+        <div class="row g-1">
+            {% if videoclip.media_file.duration %}
+            <div class="col-auto">
+                <i class="bi bi-clock me-1"></i>
+                {{ videoclip.media_file.get_duration_display }}
+            </div>
+            {% endif %}
+            <div class="col-auto">
+                <i class="bi bi-hdd me-1"></i>
+                {{ videoclip.media_file.get_display_size }}
+            </div>
+            {% if videoclip.media_file.video_codec %}
+            <div class="col-auto">
+                <i class="bi bi-gear me-1"></i>
+                {{ videoclip.media_file.video_codec }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Video Player Component Styles */
+.video-player-component {
+    position: relative;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.video-player {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.video-player:focus {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+/* Loading and Error Overlays */
+.video-loading-overlay,
+.video-error-overlay {
+    border-radius: 8px;
+    z-index: 10;
+}
+
+.video-metadata-overlay {
+    border-radius: 0 0 8px 8px;
+    z-index: 5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .video-metadata-overlay {
+        font-size: 0.75rem;
+    }
+    
+    .video-metadata-overlay .col-auto {
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .video-player-component {
+        display: none;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .video-player-component {
+        border: 2px solid;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .video-loading-overlay .spinner-border {
+        animation: none;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize video player component
+    const videoPlayer = document.querySelector('.video-player-component .video-player');
+    const loadingOverlay = document.querySelector('.video-player-component .video-loading-overlay');
+    const errorOverlay = document.querySelector('.video-player-component .video-error-overlay');
+    
+    if (videoPlayer) {
+        // Show loading overlay when video starts loading
+        videoPlayer.addEventListener('loadstart', function() {
+            if (loadingOverlay) {
+                loadingOverlay.classList.remove('d-none');
+            }
+            errorOverlay?.classList.add('d-none');
+        });
+        
+        // Hide loading overlay when video can play
+        videoPlayer.addEventListener('canplay', function() {
+            if (loadingOverlay) {
+                loadingOverlay.classList.add('d-none');
+            }
+        });
+        
+        // Handle video errors
+        videoPlayer.addEventListener('error', function(e) {
+            console.error('Video player error:', this.error);
+            if (loadingOverlay) {
+                loadingOverlay.classList.add('d-none');
+            }
+            if (errorOverlay) {
+                errorOverlay.classList.remove('d-none');
+            }
+        });
+        
+        // Keyboard controls
+        videoPlayer.addEventListener('keydown', function(e) {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    if (this.paused) {
+                        this.play();
+                    } else {
+                        this.pause();
+                    }
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.currentTime = Math.max(0, this.currentTime - 10);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.currentTime = Math.min(this.duration, this.currentTime + 10);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.volume = Math.min(1, this.volume + 0.1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.volume = Math.max(0, this.volume - 0.1);
+                    break;
+                case 'm':
+                case 'M':
+                    e.preventDefault();
+                    this.muted = !this.muted;
+                    break;
+                case 'f':
+                case 'F':
+                    e.preventDefault();
+                    if (this.requestFullscreen) {
+                        this.requestFullscreen();
+                    }
+                    break;
+            }
+        });
+        
+        // Add focus capability for keyboard navigation
+        videoPlayer.setAttribute('tabindex', '0');
+    }
+});
+</script>

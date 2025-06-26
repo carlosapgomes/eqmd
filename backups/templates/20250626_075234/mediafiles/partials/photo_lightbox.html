@@ -1,0 +1,630 @@
+{% load static %}
+
+<!-- Photo Lightbox Modal -->
+<div class="modal fade" id="photoLightboxModal" tabindex="-1" aria-labelledby="photoLightboxLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content bg-dark">
+            <!-- Modal Header -->
+            <div class="modal-header border-0 bg-transparent">
+                <h5 class="modal-title text-white d-flex align-items-center" id="photoLightboxLabel">
+                    <i class="bi bi-image me-2"></i>
+                    <span id="lightboxTitle">Foto</span>
+                </h5>
+                <div class="d-flex align-items-center">
+                    <!-- Photo Counter -->
+                    <span class="text-white me-3" id="lightboxCounter">1 de 1</span>
+                    
+                    <!-- Zoom Controls -->
+                    <div class="btn-group me-3" role="group">
+                        <button type="button" class="btn btn-outline-light btn-sm" id="lightboxZoomOut" title="Diminuir Zoom">
+                            <i class="bi bi-zoom-out"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-light btn-sm" id="lightboxZoomReset" title="Tamanho Original">
+                            <i class="bi bi-aspect-ratio"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-light btn-sm" id="lightboxZoomIn" title="Aumentar Zoom">
+                            <i class="bi bi-zoom-in"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Download Button -->
+                    <a href="#" class="btn btn-outline-light btn-sm me-3" id="lightboxDownload" title="Download">
+                        <i class="bi bi-download"></i>
+                    </a>
+                    
+                    <!-- Close Button -->
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="modal-body p-0 position-relative d-flex align-items-center justify-content-center">
+                <!-- Main Image Container -->
+                <div class="lightbox-image-container" id="lightboxImageContainer">
+                    <img src="" 
+                         class="lightbox-image" 
+                         id="lightboxImage"
+                         alt=""
+                         style="max-height: 100vh; max-width: 100vw; object-fit: contain; transition: transform 0.3s ease;">
+                </div>
+                
+                <!-- Navigation Controls -->
+                <button type="button" 
+                        class="btn btn-outline-light position-absolute start-0 top-50 translate-middle-y ms-3 lightbox-nav-btn" 
+                        id="lightboxPrevBtn"
+                        title="Foto Anterior">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-outline-light position-absolute end-0 top-50 translate-middle-y me-3 lightbox-nav-btn" 
+                        id="lightboxNextBtn"
+                        title="Próxima Foto">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+                
+                <!-- Loading Spinner -->
+                <div class="lightbox-loading position-absolute top-50 start-50 translate-middle d-none" id="lightboxLoading">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+                
+                <!-- Error State -->
+                <div class="lightbox-error position-absolute top-50 start-50 translate-middle text-center d-none" id="lightboxError">
+                    <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+                    <h5 class="text-white">Erro ao carregar imagem</h5>
+                    <p class="text-muted">Tente novamente ou verifique sua conexão</p>
+                    <button type="button" class="btn btn-outline-light" id="lightboxRetry">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Tentar Novamente
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Footer with Photo Info -->
+            <div class="modal-footer border-0 bg-transparent">
+                <div class="w-100">
+                    <div class="row text-white">
+                        <div class="col-md-8">
+                            <div class="lightbox-metadata" id="lightboxMetadata">
+                                <!-- Metadata will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="lightbox-shortcuts">
+                                <h6 class="text-white mb-2">
+                                    <i class="bi bi-keyboard me-1"></i>
+                                    Atalhos
+                                </h6>
+                                <small class="text-muted d-block">
+                                    <kbd>←</kbd> / <kbd>→</kbd> Navegar
+                                </small>
+                                <small class="text-muted d-block">
+                                    <kbd>+</kbd> / <kbd>-</kbd> Zoom
+                                </small>
+                                <small class="text-muted d-block">
+                                    <kbd>0</kbd> Tamanho original
+                                </small>
+                                <small class="text-muted d-block">
+                                    <kbd>Esc</kbd> Fechar
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Lightbox Modal Styling */
+.lightbox-image-container {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.lightbox-image-container:active {
+    cursor: grabbing;
+}
+
+.lightbox-image {
+    display: block;
+    margin: 0 auto;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.lightbox-image.zoomed {
+    cursor: grab;
+}
+
+.lightbox-image.zoomed:active {
+    cursor: grabbing;
+}
+
+/* Navigation Buttons */
+.lightbox-nav-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.lightbox-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    border-color: rgba(255, 255, 255, 0.8);
+    transform: scale(1.1);
+}
+
+.lightbox-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Metadata Display */
+.lightbox-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.lightbox-metadata-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lightbox-metadata-label {
+    color: #adb5bd;
+    font-size: 0.875rem;
+}
+
+.lightbox-metadata-value {
+    color: white;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .lightbox-nav-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+    
+    .modal-header .btn-group,
+    .modal-header .btn {
+        font-size: 0.875rem;
+    }
+    
+    .lightbox-metadata {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .lightbox-shortcuts {
+        text-align: left !important;
+        margin-top: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal-header {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+    
+    .modal-header .d-flex {
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .lightbox-nav-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .lightbox-image,
+    .lightbox-nav-btn {
+        transition: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .lightbox-nav-btn {
+        background: rgba(0, 0, 0, 0.9);
+        border-color: white;
+    }
+}
+</style>
+
+<script>
+// Photo Lightbox JavaScript
+window.PhotoLightbox = (function() {
+    let currentIndex = 0;
+    let photos = [];
+    let currentGalleryId = 'default';
+    let zoomLevel = 1;
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let imagePosition = { x: 0, y: 0 };
+    
+    const modal = document.getElementById('photoLightboxModal');
+    const image = document.getElementById('lightboxImage');
+    const imageContainer = document.getElementById('lightboxImageContainer');
+    const title = document.getElementById('lightboxTitle');
+    const counter = document.getElementById('lightboxCounter');
+    const loading = document.getElementById('lightboxLoading');
+    const error = document.getElementById('lightboxError');
+    const metadata = document.getElementById('lightboxMetadata');
+    const downloadBtn = document.getElementById('lightboxDownload');
+    const prevBtn = document.getElementById('lightboxPrevBtn');
+    const nextBtn = document.getElementById('lightboxNextBtn');
+    const zoomInBtn = document.getElementById('lightboxZoomIn');
+    const zoomOutBtn = document.getElementById('lightboxZoomOut');
+    const zoomResetBtn = document.getElementById('lightboxZoomReset');
+    const retryBtn = document.getElementById('lightboxRetry');
+    
+    function init() {
+        if (!modal) return;
+        
+        // Event listeners
+        prevBtn.addEventListener('click', showPrevious);
+        nextBtn.addEventListener('click', showNext);
+        zoomInBtn.addEventListener('click', () => zoom(1.2));
+        zoomOutBtn.addEventListener('click', () => zoom(0.8));
+        zoomResetBtn.addEventListener('click', resetZoom);
+        retryBtn.addEventListener('click', retryLoad);
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', handleKeyboard);
+        
+        // Image dragging for zoomed images
+        setupImageDragging();
+        
+        // Modal events
+        modal.addEventListener('shown.bs.modal', function() {
+            loadCurrentPhoto();
+        });
+        
+        modal.addEventListener('hidden.bs.modal', function() {
+            resetZoom();
+        });
+    }
+    
+    function open(photoIndex, galleryId = 'default') {
+        currentIndex = photoIndex;
+        currentGalleryId = galleryId;
+        
+        // Load photos from gallery or global data
+        loadPhotosFromGallery(galleryId);
+        
+        // Show modal
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+    }
+    
+    function loadPhotosFromGallery(galleryId) {
+        // Try to load from gallery-specific script tag first (for timeline cards)
+        const galleryDataScript = document.getElementById(`photoSeriesData-${galleryId.replace('timeline-photoseries-', '')}`);
+        if (galleryDataScript) {
+            try {
+                const data = JSON.parse(galleryDataScript.textContent);
+                photos = data.photos || [];
+                console.log('PhotoLightbox: Loaded photos from gallery-specific script tag:', photos.length, 'for gallery:', galleryId);
+                return;
+            } catch (e) {
+                console.error('PhotoLightbox: Error parsing gallery-specific photoSeriesData:', e);
+            }
+        }
+        
+        // Try to load from general script tag (for PhotoSeries detail page)
+        const dataScript = document.getElementById('photoSeriesData');
+        if (dataScript) {
+            try {
+                const data = JSON.parse(dataScript.textContent);
+                photos = data.photos || [];
+                console.log('PhotoLightbox: Loaded photos from general script tag:', photos.length);
+                return;
+            } catch (e) {
+                console.error('PhotoLightbox: Error parsing general photoSeriesData:', e);
+            }
+        }
+        
+        // Fallback: load from gallery DOM
+        const gallery = document.querySelector(`[data-gallery-id="${galleryId}"]`);
+        if (gallery) {
+            const items = gallery.querySelectorAll('.gallery-item');
+            photos = Array.from(items).map(item => {
+                const img = item.querySelector('img');
+                if (!img) {
+                    console.warn('PhotoLightbox: Gallery item missing img element:', item);
+                    return null;
+                }
+                return {
+                    id: item.dataset.photoId,
+                    url: img.dataset.fullUrl || img.src,
+                    downloadUrl: img.dataset.downloadUrl,
+                    filename: img.dataset.filename || img.alt,
+                    size: img.dataset.size,
+                    dimensions: img.dataset.dimensions,
+                    mimeType: img.dataset.mimeType,
+                    index: parseInt(item.dataset.photoIndex) + 1
+                };
+            }).filter(photo => photo !== null);
+            
+            console.log('PhotoLightbox: Loaded photos from DOM gallery:', photos.length);
+        } else {
+            console.error('PhotoLightbox: Gallery not found for ID:', galleryId);
+            photos = [];
+        }
+    }
+    
+    function loadCurrentPhoto() {
+        if (!photos || photos.length === 0) {
+            console.error('PhotoLightbox: No photos available');
+            showError('Nenhuma foto disponível');
+            return;
+        }
+        
+        if (!photos[currentIndex]) {
+            console.error('PhotoLightbox: No photo at index:', currentIndex);
+            showError('Foto não encontrada');
+            return;
+        }
+        
+        const photo = photos[currentIndex];
+        console.log('PhotoLightbox: Loading photo:', photo);
+        
+        // Show loading
+        showLoading(true);
+        hideError();
+        
+        // Update UI
+        updateUI(photo);
+        
+        // Load image
+        const img = new Image();
+        img.onload = function() {
+            image.src = this.src;
+            showLoading(false);
+            resetZoom();
+            console.log('PhotoLightbox: Photo loaded successfully:', this.src);
+        };
+        img.onerror = function() {
+            console.error('PhotoLightbox: Error loading image:', this.src);
+            showError('Erro ao carregar imagem');
+        };
+        img.src = photo.url;
+    }
+    
+    function updateUI(photo) {
+        // Update title and counter
+        title.textContent = photo.filename;
+        counter.textContent = `${currentIndex + 1} de ${photos.length}`;
+        
+        // Update download link
+        if (downloadBtn && photo.downloadUrl) {
+            downloadBtn.href = photo.downloadUrl;
+        }
+        
+        // Update navigation buttons
+        prevBtn.disabled = currentIndex === 0;
+        nextBtn.disabled = currentIndex === photos.length - 1;
+        
+        // Update metadata
+        updateMetadata(photo);
+    }
+    
+    function updateMetadata(photo) {
+        if (!metadata) return;
+        
+        const metadataHTML = `
+            <div class="lightbox-metadata-item">
+                <span class="lightbox-metadata-label">
+                    <i class="bi bi-file-earmark-text me-1"></i>
+                    Arquivo:
+                </span>
+                <span class="lightbox-metadata-value">${photo.filename}</span>
+            </div>
+            <div class="lightbox-metadata-item">
+                <span class="lightbox-metadata-label">
+                    <i class="bi bi-hdd me-1"></i>
+                    Tamanho:
+                </span>
+                <span class="lightbox-metadata-value">${photo.size || 'N/A'}</span>
+            </div>
+            <div class="lightbox-metadata-item">
+                <span class="lightbox-metadata-label">
+                    <i class="bi bi-aspect-ratio me-1"></i>
+                    Dimensões:
+                </span>
+                <span class="lightbox-metadata-value">${photo.dimensions || 'N/A'}</span>
+            </div>
+            <div class="lightbox-metadata-item">
+                <span class="lightbox-metadata-label">
+                    <i class="bi bi-file-earmark-code me-1"></i>
+                    Tipo:
+                </span>
+                <span class="lightbox-metadata-value">${photo.mimeType || 'N/A'}</span>
+            </div>
+        `;
+        
+        metadata.innerHTML = metadataHTML;
+    }
+    
+    function showPrevious() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            loadCurrentPhoto();
+        }
+    }
+    
+    function showNext() {
+        if (currentIndex < photos.length - 1) {
+            currentIndex++;
+            loadCurrentPhoto();
+        }
+    }
+    
+    function zoom(factor) {
+        zoomLevel *= factor;
+        zoomLevel = Math.max(0.1, Math.min(zoomLevel, 5)); // Limit zoom range
+        
+        image.style.transform = `scale(${zoomLevel}) translate(${imagePosition.x}px, ${imagePosition.y}px)`;
+        
+        // Toggle cursor
+        if (zoomLevel > 1) {
+            image.classList.add('zoomed');
+        } else {
+            image.classList.remove('zoomed');
+            imagePosition = { x: 0, y: 0 }; // Reset position when zoomed out
+        }
+    }
+    
+    function resetZoom() {
+        zoomLevel = 1;
+        imagePosition = { x: 0, y: 0 };
+        image.style.transform = 'scale(1) translate(0, 0)';
+        image.classList.remove('zoomed');
+    }
+    
+    function setupImageDragging() {
+        image.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', endDrag);
+        
+        // Touch events for mobile
+        image.addEventListener('touchstart', startDrag);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('touchend', endDrag);
+    }
+    
+    function startDrag(e) {
+        if (zoomLevel <= 1) return;
+        
+        isDragging = true;
+        const event = e.type.includes('touch') ? e.touches[0] : e;
+        dragStart.x = event.clientX - imagePosition.x;
+        dragStart.y = event.clientY - imagePosition.y;
+        
+        e.preventDefault();
+    }
+    
+    function drag(e) {
+        if (!isDragging || zoomLevel <= 1) return;
+        
+        const event = e.type.includes('touch') ? e.touches[0] : e;
+        imagePosition.x = event.clientX - dragStart.x;
+        imagePosition.y = event.clientY - dragStart.y;
+        
+        image.style.transform = `scale(${zoomLevel}) translate(${imagePosition.x}px, ${imagePosition.y}px)`;
+        
+        e.preventDefault();
+    }
+    
+    function endDrag() {
+        isDragging = false;
+    }
+    
+    function handleKeyboard(e) {
+        if (!modal.classList.contains('show')) return;
+        
+        switch(e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                showPrevious();
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                showNext();
+                break;
+            case '+':
+            case '=':
+                e.preventDefault();
+                zoom(1.2);
+                break;
+            case '-':
+                e.preventDefault();
+                zoom(0.8);
+                break;
+            case '0':
+                e.preventDefault();
+                resetZoom();
+                break;
+            case 'Escape':
+                e.preventDefault();
+                bootstrap.Modal.getInstance(modal).hide();
+                break;
+        }
+    }
+    
+    function showLoading(show) {
+        if (loading) {
+            loading.classList.toggle('d-none', !show);
+        }
+        if (image) {
+            image.classList.toggle('d-none', show);
+        }
+    }
+    
+    function showError(message) {
+        showLoading(false);
+        if (error) {
+            // Update error message if provided
+            if (message) {
+                const errorText = error.querySelector('h5');
+                if (errorText) {
+                    errorText.textContent = message;
+                }
+            }
+            error.classList.remove('d-none');
+        }
+    }
+    
+    function hideError() {
+        if (error) {
+            error.classList.add('d-none');
+        }
+    }
+    
+    function retryLoad() {
+        hideError();
+        loadCurrentPhoto();
+    }
+    
+    // Public API
+    return {
+        init: init,
+        open: open,
+        showNext: showNext,
+        showPrevious: showPrevious,
+        zoom: zoom,
+        resetZoom: resetZoom
+    };
+})();
+
+// Auto-initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    PhotoLightbox.init();
+});
+</script>

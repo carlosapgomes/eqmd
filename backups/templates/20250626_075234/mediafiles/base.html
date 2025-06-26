@@ -49,15 +49,8 @@
 </div>
 {% endblock app_content %}
 
-{% block mediafiles_scripts %}
-<!-- MediaFiles core JavaScript (must load first) -->
-<script src="{% static 'mediafiles/js/mediafiles.js' %}"></script>
-{% endblock mediafiles_scripts %}
-
-{% block page_specific_scripts %}
-<!-- Individual pages override this -->
-{% endblock page_specific_scripts %}
-
 {% block extra_scripts %}
 {{ block.super }}
+<!-- MediaFiles core JavaScript (must load first) -->
+<script src="{% static 'mediafiles/js/mediafiles.js' %}"></script>
 {% endblock extra_scripts %}

@@ -1,0 +1,128 @@
+{% comment %}
+Photo Metadata Template
+Displays photo metadata in a formatted layout
+Used by the photo_metadata template tag
+{% endcomment %}
+
+{% load mediafiles_tags %}
+
+{% if photo and media_file %}
+<div class="photo-metadata">
+    <div class="row g-2">
+        <!-- Basic Information -->
+        <div class="col-sm-6">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-file-earmark-text me-1"></i>
+                    Arquivo:
+                </span>
+                <span class="metadata-value">{{ media_file.original_filename }}</span>
+            </div>
+        </div>
+        
+        {% if file_size %}
+        <div class="col-sm-3">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-hdd me-1"></i>
+                    Tamanho:
+                </span>
+                <span class="metadata-value">{{ file_size }}</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if dimensions %}
+        <div class="col-sm-3">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-aspect-ratio me-1"></i>
+                    Dimensões:
+                </span>
+                <span class="metadata-value">{{ dimensions }}</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Event Information -->
+        {% if created_date %}
+        <div class="col-sm-6">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-calendar-event me-1"></i>
+                    Data do Evento:
+                </span>
+                <span class="metadata-value">{{ created_date }}</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if author %}
+        <div class="col-sm-6">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-person me-1"></i>
+                    Criado por:
+                </span>
+                <span class="metadata-value">{{ author }}</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if photo.description %}
+        <div class="col-12">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-chat-text me-1"></i>
+                    Descrição:
+                </span>
+                <span class="metadata-value">{{ photo.description }}</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Technical Information -->
+        {% if show_technical %}
+        <div class="col-12">
+            <hr class="my-2">
+            <h6 class="text-muted mb-2">
+                <i class="bi bi-gear me-1"></i>
+                Informações Técnicas
+            </h6>
+        </div>
+        
+        <div class="col-sm-4">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-file-earmark-code me-1"></i>
+                    Tipo MIME:
+                </span>
+                <span class="metadata-value">{{ media_file.mime_type }}</span>
+            </div>
+        </div>
+        
+        <div class="col-sm-4">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-hash me-1"></i>
+                    Hash SHA-256:
+                </span>
+                <span class="metadata-value text-truncate" title="{{ media_file.file_hash }}">
+                    {{ media_file.file_hash|slice:":16" }}...
+                </span>
+            </div>
+        </div>
+        
+        <div class="col-sm-4">
+            <div class="metadata-item">
+                <span class="metadata-label">
+                    <i class="bi bi-clock me-1"></i>
+                    Upload:
+                </span>
+                <span class="metadata-value">{{ media_file.created_at|date:"d/m/Y H:i" }}</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

@@ -3,6 +3,8 @@
 
 {% block extra_head %}
 {{ block.super }}
+<!-- VideoClip-specific CSS -->
+<link rel="stylesheet" href="{% static 'mediafiles/css/videoclip.css' %}">
 {% endblock extra_head %}
 
 {% block title %}
@@ -269,38 +271,15 @@
 </div>
 {% endblock media_content %}
 
-{% block page_specific_scripts %}
-<script src="{% static 'videoclip-bundle.js' %}"></script>
+{% block extra_scripts %}
+{{ block.super }}
+<!-- Load video-specific JavaScript -->
+<script src="{% static 'mediafiles/js/videoclip.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize video upload functionality with error handling
-    try {
-        if (typeof VideoClip !== 'undefined') {
-            VideoClip.init();
-        } else {
-            console.warn('VideoClip module not loaded - falling back to basic functionality');
-            // Basic fallback for video input
-            const fileInput = document.querySelector('input[type="file"][name="video"]');
-            if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        console.log('Video file selected:', file.name);
-                        // Basic validation
-                        const maxSize = 50 * 1024 * 1024; // 50MB
-                        if (file.size > maxSize) {
-                            alert('Arquivo muito grande. Máximo 50MB permitido.');
-                            this.value = '';
-                        }
-                    }
-                });
-            }
-        }
-    } catch (error) {
-        console.error('VideoClip initialization failed:', error);
-        if (window.errorReporting) {
-            window.errorReporting.captureException(error);
-        }
+    // Initialize video upload functionality
+    if (typeof VideoClip !== 'undefined') {
+        VideoClip.init();
     }
 
     // Form submission handler with loading state
@@ -367,4 +346,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-{% endblock page_specific_scripts %}
+{% endblock extra_scripts %}

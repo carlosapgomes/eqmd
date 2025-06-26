@@ -37,6 +37,8 @@
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.6",
     "bootstrap-icons": "^1.13.1",
-    "easymde": "^2.20.0"
+    "browser-image-compression": "^2.0.2",
+    "easymde": "^2.20.0",
+    "heic2any": "^0.0.4"
   }
 }

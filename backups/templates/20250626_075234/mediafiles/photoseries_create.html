@@ -166,39 +166,14 @@ Nova Série de Fotos - {{ patient.name }} - EquipeMed
 </div>
 {% endblock media_content %}
 
-{% block page_specific_scripts %}
-<script src="{% static 'photoseries-bundle.js' %}"></script>
+{% block extra_scripts %}
+{{ block.super }}
+<!-- Load photoseries-specific JavaScript -->
+<script src="{% static 'mediafiles/js/photoseries.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize photoseries upload functionality with error handling
-    try {
-        if (typeof PhotoSeries !== 'undefined') {
-            PhotoSeries.init();
-        } else {
-            console.warn('PhotoSeries module not loaded - falling back to basic functionality');
-            // Basic fallback for file input
-            const fileInput = document.querySelector('input[type="file"][name="images"]');
-            if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
-                    const files = e.target.files;
-                    if (files.length > 0) {
-                        console.log(`${files.length} files selected`);
-                        // Basic validation
-                        const maxFiles = 10;
-                        if (files.length > maxFiles) {
-                            alert(`Máximo ${maxFiles} arquivos permitidos.`);
-                            this.value = '';
-                        }
-                    }
-                });
-            }
-        }
-    } catch (error) {
-        console.error('PhotoSeries initialization failed:', error);
-        if (window.errorReporting) {
-            window.errorReporting.captureException(error);
-        }
-    }
+    // Initialize multi-upload interface
+    MultiUpload.init('photoseries_create');
     
     const form = document.getElementById('photoSeriesCreateForm');
     const submitBtn = document.getElementById('submitBtn');
@@ -327,4 +302,4 @@ document.addEventListener('DOMContentLoaded', function() {
     updateSubmitButton();
 });
 </script>
-{% endblock page_specific_scripts %}
+{% endblock extra_scripts %}

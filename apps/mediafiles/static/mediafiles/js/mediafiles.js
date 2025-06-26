@@ -752,9 +752,3 @@ window.MediaFiles = (function() {
     };
 })();
 
-// Auto-initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof bootstrap !== 'undefined') {
-        MediaFiles.init();
-    }
-});

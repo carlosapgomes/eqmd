@@ -1,0 +1,409 @@
+{% load static %}
+
+<!-- Photo Gallery Component -->
+<div class="photo-gallery" data-gallery-id="{{ gallery_id|default:'default' }}">
+    <!-- Gallery Header (Optional) -->
+    {% if title %}
+    <div class="gallery-header mb-3">
+        <h6 class="fw-bold mb-0">
+            <i class="bi bi-images me-2"></i>
+            {{ title }}
+            {% if total_count %}
+            <span class="badge bg-medical-primary ms-2">{{ total_count }}</span>
+            {% endif %}
+        </h6>
+    </div>
+    {% endif %}
+    
+    <!-- Gallery Grid -->
+    <div class="gallery-grid" data-gallery-layout="{{ layout|default:'grid' }}">
+        {% for photo in photos %}
+        <div class="gallery-item" 
+             data-photo-index="{{ forloop.counter0 }}"
+             data-photo-id="{{ photo.id }}">
+            <div class="gallery-thumbnail-wrapper">
+                <!-- Photo Thumbnail -->
+                <img src="{% if photo.get_thumbnail_url %}{{ photo.get_thumbnail_url }}{% else %}{% url 'mediafiles:serve_file' photo.id %}{% endif %}" 
+                     class="gallery-thumbnail" 
+                     alt="{{ photo.original_filename }}"
+                     loading="lazy"
+                     data-full-url="{% url 'mediafiles:serve_file' photo.id %}"
+                     data-filename="{{ photo.original_filename }}"
+                     data-size="{{ photo.get_display_size }}"
+                     data-dimensions="{{ photo.get_dimensions_display }}"
+                     data-mime-type="{{ photo.mime_type }}">
+                
+                <!-- Order Indicator (for series) -->
+                {% if show_order %}
+                <div class="gallery-order-badge">{{ forloop.counter }}</div>
+                {% endif %}
+                
+                <!-- Hover Overlay -->
+                <div class="gallery-overlay">
+                    <div class="gallery-overlay-content">
+                        <button type="button" class="btn btn-light btn-sm gallery-view-btn" 
+                                data-bs-toggle="tooltip" title="Visualizar">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        {% if show_download %}
+                        <a href="{% url 'mediafiles:photo_download' photo.id %}" 
+                           class="btn btn-light btn-sm"
+                           data-bs-toggle="tooltip" title="Download">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        {% endif %}
+                        {% if editable %}
+                        <button type="button" class="btn btn-light btn-sm gallery-remove-btn" 
+                                data-bs-toggle="tooltip" title="Remover">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div class="gallery-loading d-none">
+                    <div class="spinner-border spinner-border-sm text-medical-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Photo Info (Optional) -->
+            {% if show_info %}
+            <div class="gallery-info">
+                <small class="text-muted d-block text-truncate" title="{{ photo.original_filename }}">
+                    {{ photo.original_filename }}
+                </small>
+                <small class="text-muted">{{ photo.get_display_size }}</small>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <!-- Empty State -->
+        <div class="gallery-empty">
+            <div class="text-center py-4">
+                <i class="bi bi-images display-4 text-muted mb-3"></i>
+                <h6 class="text-muted">{{ empty_message|default:"Nenhuma foto encontrada" }}</h6>
+                {% if show_upload_hint %}
+                <p class="text-muted small mb-0">
+                    Faça upload das primeiras fotos para começar a galeria
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Gallery Actions (Optional) -->
+    {% if show_actions %}
+    <div class="gallery-actions mt-3">
+        <div class="btn-group" role="group">
+            {% if show_select_all %}
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="selectAllBtn">
+                <i class="bi bi-check-all me-1"></i>
+                Selecionar Todas
+            </button>
+            {% endif %}
+            {% if show_download_all %}
+            <button type="button" class="btn btn-outline-primary btn-sm" id="downloadAllBtn">
+                <i class="bi bi-file-earmark-zip me-1"></i>
+                Download ZIP
+            </button>
+            {% endif %}
+            {% if editable %}
+            <button type="button" class="btn btn-outline-danger btn-sm" id="removeSelectedBtn" disabled>
+                <i class="bi bi-trash me-1"></i>
+                Remover Selecionadas
+            </button>
+            {% endif %}
+        </div>
+        
+        <!-- Selection Counter -->
+        <small class="text-muted ms-3">
+            <span id="selectedCount">0</span> de {{ photos|length }} selecionadas
+        </small>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Include Lightbox Modal if not already included -->
+{% if not lightbox_disabled %}
+{% include "mediafiles/partials/photo_lightbox.html" %}
+{% endif %}
+
+<style>
+/* Gallery Grid Layout */
+.gallery-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.gallery-grid[data-gallery-layout="list"] {
+    grid-template-columns: 1fr;
+}
+
+.gallery-grid[data-gallery-layout="large"] {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+/* Gallery Items */
+.gallery-item {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.gallery-item:hover {
+    transform: translateY(-2px);
+}
+
+.gallery-thumbnail-wrapper {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.gallery-thumbnail-wrapper:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.gallery-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.gallery-item:hover .gallery-thumbnail {
+    transform: scale(1.05);
+}
+
+/* Order Badge */
+.gallery-order-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    z-index: 2;
+}
+
+/* Overlay */
+.gallery-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+.gallery-item:hover .gallery-overlay {
+    opacity: 1;
+}
+
+.gallery-overlay-content {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.gallery-overlay-content .btn {
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+}
+
+/* Photo Info */
+.gallery-info {
+    padding: 0.5rem 0;
+}
+
+/* Loading State */
+.gallery-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+}
+
+/* Empty State */
+.gallery-empty {
+    grid-column: 1 / -1;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Selection States */
+.gallery-item.selected .gallery-thumbnail-wrapper {
+    ring: 3px solid var(--medical-primary);
+    box-shadow: 0 0 0 3px rgba(var(--medical-primary-rgb), 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
+        padding: 0.5rem;
+    }
+    
+    .gallery-overlay-content {
+        flex-direction: row;
+        gap: 0.25rem;
+    }
+    
+    .gallery-overlay-content .btn {
+        padding: 0.25rem;
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        padding: 0.25rem;
+        margin: 0;
+    }
+    
+    .gallery-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .gallery-actions .btn-group {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .gallery-actions .btn {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.875rem;
+        padding: 0.5rem 0.25rem;
+    }
+    
+    .gallery-thumbnail-wrapper {
+        margin: 0;
+        border-radius: 6px;
+    }
+    
+    .gallery-item {
+        margin: 0;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.25rem;
+        padding: 0;
+    }
+    
+    .gallery-thumbnail-wrapper {
+        aspect-ratio: 1;
+        border-radius: 4px;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .gallery-item,
+    .gallery-thumbnail,
+    .gallery-overlay {
+        transition: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .gallery-overlay {
+        background: rgba(0, 0, 0, 0.9);
+    }
+    
+    .gallery-order-badge {
+        background: rgba(0, 0, 0, 1);
+        border: 2px solid white;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize gallery functionality
+    const galleries = document.querySelectorAll('.photo-gallery');
+    
+    galleries.forEach(gallery => {
+        initializeGallery(gallery);
+    });
+    
+    function initializeGallery(gallery) {
+        const galleryId = gallery.dataset.galleryId || 'default';
+        const items = gallery.querySelectorAll('.gallery-item');
+        const viewButtons = gallery.querySelectorAll('.gallery-view-btn');
+        
+        // Handle photo viewing
+        viewButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const item = this.closest('.gallery-item');
+                const photoIndex = parseInt(item.dataset.photoIndex);
+                
+                // Trigger lightbox (assumes lightbox component is available)
+                if (typeof PhotoLightbox !== 'undefined') {
+                    PhotoLightbox.open(photoIndex, galleryId);
+                }
+            });
+        });
+        
+        // Handle direct item clicking
+        items.forEach(item => {
+            item.addEventListener('click', function() {
+                const photoIndex = parseInt(this.dataset.photoIndex);
+                
+                // Trigger lightbox
+                if (typeof PhotoLightbox !== 'undefined') {
+                    PhotoLightbox.open(photoIndex, galleryId);
+                }
+            });
+        });
+        
+        // Initialize tooltips
+        const tooltips = gallery.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltips.forEach(tooltip => {
+            new bootstrap.Tooltip(tooltip);
+        });
+    }
+});
+</script>

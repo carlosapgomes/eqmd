@@ -1,0 +1,254 @@
+{% extends "mediafiles/base.html" %}
+{% load static %}
+
+{% block extra_head %}
+{{ block.super }}
+<!-- PhotoSeries update-specific CSS -->
+<link rel="stylesheet" href="{% static 'mediafiles/css/photoseries.css' %}">
+{% endblock extra_head %}
+
+{% block title %}
+Editar Série de Fotos - {{ patient.name }} - EquipeMed
+{% endblock title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_detail' patient.id %}" class="text-decoration-none">
+        <i class="bi bi-person me-1"></i>
+        {{ patient.name }}
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_events_timeline' patient.id %}" class="text-decoration-none">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'mediafiles:photoseries_detail' object.pk %}" class="text-decoration-none">
+        <i class="bi bi-images me-1"></i>
+        Série de Fotos
+    </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">
+    <i class="bi bi-pencil me-1"></i>
+    Editar
+</li>
+{% endblock breadcrumb_items %}
+
+{% block media_content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 text-medical-primary mb-1">
+                    <i class="bi bi-pencil me-2"></i>
+                    Editar Série de Fotos
+                </h1>
+                <p class="text-medical-gray mb-0">
+                    Paciente: <strong>{{ patient.name }}</strong>
+                </p>
+            </div>
+            <div class="text-end">
+                <small class="text-muted">
+                    Criado em: {{ object.created_at|date:"d/m/Y H:i" }}
+                </small>
+            </div>
+        </div>
+
+        <!-- Current Photos Display -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-images me-2"></i>
+                    Fotos Atuais
+                    <span class="badge bg-medical-primary ms-2">{{ photo_count }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="current-photos-grid">
+                    {% for photo in ordered_photos %}
+                    <div class="current-photo-item">
+                        <img src="{{ photo.get_thumbnail_url }}" 
+                             class="current-photo-thumbnail" 
+                             alt="{{ photo.original_filename }}"
+                             data-bs-toggle="tooltip" 
+                             title="{{ photo.original_filename }}">
+                        <div class="current-photo-info">
+                            <small class="fw-bold">#{{ forloop.counter }}</small>
+                            <small class="text-muted d-block text-truncate">{{ photo.original_filename }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="form-text mt-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Para gerenciar fotos individuais (adicionar, remover, reordenar), 
+                    <a href="{% url 'mediafiles:photoseries_detail' object.pk %}" class="text-decoration-none">visualize a série completa</a>.
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Form -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-medical-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pencil me-2"></i>
+                    Editar Informações
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="photoSeriesUpdateForm" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Description Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">
+                            <i class="bi bi-card-text me-1"></i>
+                            {{ form.description.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.description.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Descreva o conjunto de fotos (ex: "Evolução da ferida", "Exames radiológicos sequenciais")
+                        </div>
+                    </div>
+
+                    <!-- Event DateTime Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.event_datetime.id_for_label }}" class="form-label fw-bold">
+                            <i class="bi bi-calendar-event me-1"></i>
+                            {{ form.event_datetime.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.event_datetime }}
+                        {% if form.event_datetime.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.event_datetime.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Data e hora do evento médico
+                        </div>
+                    </div>
+
+                    <!-- Caption Field -->
+                    <div class="mb-4">
+                        <label for="{{ form.caption.id_for_label }}" class="form-label fw-bold">
+                            <i class="bi bi-chat-quote me-1"></i>
+                            {{ form.caption.label }}
+                        </label>
+                        {{ form.caption }}
+                        {% if form.caption.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.caption.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Legenda opcional para fornecer contexto adicional sobre a série de fotos
+                        </div>
+                    </div>
+
+                    <!-- Edit Limitation Notice -->
+                    <div class="alert alert-info border-0">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-info-circle me-3 mt-1"></i>
+                            <div>
+                                <h6 class="alert-heading mb-1">Limitações de Edição</h6>
+                                <p class="mb-0">
+                                    Apenas a <strong>descrição</strong>, <strong>data/hora</strong> e <strong>legenda</strong> podem ser editadas.
+                                    Para gerenciar as fotos da série, use a 
+                                    <a href="{% url 'mediafiles:photoseries_detail' object.pk %}" class="alert-link">visualização detalhada</a>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="media-actions justify-content-between">
+                        <div>
+                            <a href="{% url 'mediafiles:photoseries_detail' object.pk %}" 
+                               class="btn btn-outline-info">
+                                <i class="bi bi-eye me-1"></i>
+                                Ver Série Completa
+                            </a>
+                        </div>
+                        <div>
+                            <a href="{% url 'apps.patients:patient_events_timeline' patient.id %}"
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-medical-primary" id="submitBtn">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock media_content %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('photoSeriesUpdateForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Form submission handler with loading state
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Disable submit button to prevent double submission
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
+
+            // Re-enable button after 5 seconds as fallback
+            setTimeout(function() {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Salvar Alterações';
+            }, 5000);
+        });
+    }
+
+    // Basic form validation
+    const inputs = document.querySelectorAll('#photoSeriesUpdateForm input[required], #photoSeriesUpdateForm textarea[required]');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (!this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+
+    // Initialize tooltips for photo thumbnails
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock extra_scripts %}

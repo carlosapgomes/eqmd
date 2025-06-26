@@ -1,0 +1,276 @@
+{% extends "mediafiles/base.html" %}
+{% load static %}
+
+{% block title %}
+Excluir Vídeo - {{ videoclip.patient.name }} - EquipeMed
+{% endblock title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_detail' videoclip.patient.id %}" class="text-decoration-none">
+        <i class="bi bi-person me-1"></i>
+        {{ videoclip.patient.name }}
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_events_timeline' videoclip.patient.id %}" class="text-decoration-none">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'mediafiles:videoclip_detail' videoclip.pk %}" class="text-decoration-none">
+        <i class="bi bi-eye me-1"></i>
+        Visualizar Vídeo
+    </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">
+    <i class="bi bi-trash me-1"></i>
+    Excluir
+</li>
+{% endblock breadcrumb_items %}
+
+{% block media_content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Page Header -->
+        <div class="text-center mb-4">
+            <div class="text-danger mb-3">
+                <i class="bi bi-exclamation-triangle display-1"></i>
+            </div>
+            <h1 class="h3 text-danger mb-1">
+                Confirmar Exclusão
+            </h1>
+            <p class="text-muted">
+                Esta ação não pode ser desfeita
+            </p>
+        </div>
+
+        <!-- Confirmation Card -->
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-trash me-2"></i>
+                    Excluir Vídeo
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Video Preview -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <video class="img-thumbnail" style="max-height: 200px; max-width: 100%;" controls>
+                                <source src="{% url 'mediafiles:videoclip_stream' videoclip.pk %}" type="{{ videoclip.media_file.mime_type }}">
+                                Seu navegador não suporta o elemento de vídeo.
+                            </video>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <!-- Video Information -->
+                        <div class="media-metadata">
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-person me-1"></i>
+                                    Paciente:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.patient.name }}</span>
+                            </div>
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-file-earmark-play me-1"></i>
+                                    Arquivo:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.media_file.original_filename }}</span>
+                            </div>
+                            
+                            {% if videoclip.description %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-chat-text me-1"></i>
+                                    Descrição:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.description }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            {% if videoclip.media_file.duration %}
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Duração:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.media_file.get_duration_display }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-calendar-event me-1"></i>
+                                    Data do evento:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.event_datetime|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-person-check me-1"></i>
+                                    Criado por:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.created_by.get_full_name|default:videoclip.created_by.username }}</span>
+                            </div>
+                            
+                            <div class="metadata-item">
+                                <span class="metadata-label">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Criado em:
+                                </span>
+                                <span class="metadata-value">{{ videoclip.created_at|date:"d/m/Y H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Warning Message -->
+                <div class="alert alert-danger mt-4" role="alert">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="alert-heading">Atenção!</h6>
+                            <p class="mb-2">
+                                Você está prestes a excluir permanentemente este vídeo do prontuário de <strong>{{ videoclip.patient.name }}</strong>.
+                            </p>
+                            <ul class="mb-0">
+                                <li>O arquivo de vídeo será removido do servidor</li>
+                                <li>O vídeo será removido da timeline do paciente</li>
+                                <li>Esta ação não pode ser desfeita</li>
+                                <li>Todos os metadados associados serão perdidos</li>
+                                <li>Miniaturas geradas serão excluídas</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confirmation Form -->
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    
+                    <!-- Confirmation Checkbox -->
+                    <div class="card border-warning bg-warning bg-opacity-10 mb-3 p-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmDelete" required style="transform: scale(1.2);">
+                            <label class="form-check-label fs-5 fw-bold text-warning-emphasis" for="confirmDelete" style="cursor: pointer;">
+                                Confirmo que desejo excluir este vídeo permanentemente
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="media-actions justify-content-end">
+                        <a href="{% url 'apps.patients:patient_events_timeline' videoclip.patient.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger" id="deleteBtn" disabled>
+                            <i class="bi bi-trash me-1"></i>
+                            Excluir Vídeo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="card mt-4 border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações Importantes
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-info">Alternativas à Exclusão:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Editar as informações do vídeo</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Baixar uma cópia antes de excluir</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Consultar outros profissionais</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-info">Políticas de Retenção:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-shield-check text-primary me-2"></i>Dados médicos são protegidos por lei</li>
+                            <li><i class="bi bi-shield-check text-primary me-2"></i>Exclusões são registradas no log de auditoria</li>
+                            <li><i class="bi bi-shield-check text-primary me-2"></i>Consulte as políticas do hospital</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock media_content %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteBtn = document.getElementById('deleteBtn');
+
+    // Auto-focus the confirmation checkbox
+    confirmCheckbox.focus();
+
+    // Enable/disable delete button based on checkbox
+    confirmCheckbox.addEventListener('change', function() {
+        deleteBtn.disabled = !this.checked;
+
+        if (this.checked) {
+            deleteBtn.classList.remove('btn-outline-danger');
+            deleteBtn.classList.add('btn-danger');
+        } else {
+            deleteBtn.classList.remove('btn-danger');
+            deleteBtn.classList.add('btn-outline-danger');
+        }
+    });
+
+    // Form submission confirmation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        if (!confirmCheckbox.checked) {
+            e.preventDefault();
+            alert('Por favor, confirme que deseja excluir o vídeo.');
+            return false;
+        }
+
+        // Double confirmation for safety
+        const confirmed = confirm(
+            'ÚLTIMA CONFIRMAÇÃO:\n\n' +
+            'Tem certeza absoluta de que deseja excluir este vídeo?\n\n' +
+            'Esta ação é IRREVERSÍVEL!'
+        );
+
+        if (!confirmed) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Disable button to prevent double submission
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Excluindo...';
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Escape key to cancel
+        if (e.key === 'Escape') {
+            window.location.href = "{% url 'apps.patients:patient_events_timeline' videoclip.patient.pk %}";
+        }
+    });
+});
+</script>
+{% endblock extra_scripts %}

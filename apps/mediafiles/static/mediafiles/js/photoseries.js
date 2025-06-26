@@ -829,20 +829,3 @@ window.PhotoSeries = (function() {
     };
 })();
 
-// Auto-initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('photoSeriesData')) {
-        PhotoSeries.init();
-    }
-
-    // Initialize multi-upload if on form page
-    if (document.getElementById('uploadArea')) {
-        PhotoSeries.initializeMultiUpload();
-    }
-
-    // Initialize breadcrumb navigation
-    PhotoSeries.initializeBreadcrumbNavigation();
-    
-    // Initialize timeline PhotoSeries functionality
-    PhotoSeries.initializeTimelinePhotoSeries();
-});

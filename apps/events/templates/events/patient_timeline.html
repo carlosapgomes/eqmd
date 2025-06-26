@@ -986,10 +986,22 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<!-- Include PhotoSeries JavaScript for timeline functionality -->
-<script src="{% static 'mediafiles/js/photoseries.js' %}"></script>
+{% block page_specific_scripts %}
+<!-- Load all mediafiles bundles for timeline functionality -->
+<script src="{% static 'mediafiles-bundle.js' %}"></script>
+<script src="{% static 'photoseries-bundle.js' %}"></script>
+<script src="{% static 'videoclip-bundle.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all mediafiles functionality for timeline
+    if (typeof MediaFiles !== 'undefined') MediaFiles.init();
+    if (typeof PhotoSeries !== 'undefined') PhotoSeries.initializeTimelinePhotoSeries();
+    if (typeof VideoClip !== 'undefined') VideoClip.init();
+});
+</script>
+{% endblock page_specific_scripts %}
 
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize both desktop and mobile filter forms

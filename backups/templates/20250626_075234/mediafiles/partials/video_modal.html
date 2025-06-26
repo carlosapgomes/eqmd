@@ -1,0 +1,361 @@
+{% comment %}
+Video Modal Template
+Provides a modal for viewing videos with full controls and metadata
+This modal is triggered from video event cards and other video displays
+
+Features:
+- Full-size video display with controls
+- Play, pause, forward, backward controls
+- Metadata overlay
+- Download button
+- Responsive design for mobile
+- Keyboard controls
+- Error handling
+{% endcomment %}
+
+{% load static %}
+
+<!-- Video Modal -->
+<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <!-- Modal Header -->
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white" id="videoModalLabel">
+                    <i class="bi bi-camera-video me-2" aria-hidden="true"></i>
+                    <span id="videoModalTitle">Visualizar Vídeo</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="modal-body p-0 position-relative">
+                <!-- Loading Indicator -->
+                <div id="videoModalLoading" class="d-flex align-items-center justify-content-center" style="min-height: 400px;">
+                    <div class="text-center text-white">
+                        <div class="spinner-border mb-3" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p>Carregando vídeo...</p>
+                    </div>
+                </div>
+                
+                <!-- Video Container -->
+                <div id="videoModalContainer" class="position-relative d-none">
+                    <!-- Main Video Display -->
+                    <div class="video-display-container">
+                        <video id="videoModalPlayer" 
+                               class="w-100 video-modal-player"
+                               controls
+                               preload="metadata"
+                               style="max-height: 70vh;">
+                            <source id="videoModalSource" src="" type="">
+                            Seu navegador não suporta o elemento de vídeo.
+                        </video>
+                    </div>
+                    
+                    <!-- Video Controls Overlay -->
+                    <div class="video-controls position-absolute top-0 end-0 p-3">
+                        <div class="btn-group-vertical">
+                            <!-- Play/Pause -->
+                            <button type="button" class="btn btn-dark btn-sm mb-1" id="videoPlayPause" title="Reproduzir/Pausar">
+                                <i class="bi bi-play-fill" aria-hidden="true"></i>
+                                <span class="visually-hidden">Reproduzir/Pausar</span>
+                            </button>
+                            
+                            <!-- Backward 10s -->
+                            <button type="button" class="btn btn-dark btn-sm mb-1" id="videoBackward" title="Voltar 10 segundos">
+                                <i class="bi bi-skip-backward" aria-hidden="true"></i>
+                                <span class="visually-hidden">Voltar 10s</span>
+                            </button>
+                            
+                            <!-- Forward 10s -->
+                            <button type="button" class="btn btn-dark btn-sm mb-1" id="videoForward" title="Avançar 10 segundos">
+                                <i class="bi bi-skip-forward" aria-hidden="true"></i>
+                                <span class="visually-hidden">Avançar 10s</span>
+                            </button>
+                            
+                            <!-- Replay -->
+                            <button type="button" class="btn btn-dark btn-sm mb-1" id="videoReplay" title="Reiniciar vídeo">
+                                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                                <span class="visually-hidden">Reiniciar</span>
+                            </button>
+                            
+                            <!-- Fullscreen Toggle -->
+                            <button type="button" class="btn btn-dark btn-sm mb-1" id="videoFullscreenToggle" title="Tela cheia">
+                                <i class="bi bi-arrows-fullscreen" aria-hidden="true"></i>
+                                <span class="visually-hidden">Tela cheia</span>
+                            </button>
+                            
+                            <!-- Download -->
+                            <a id="videoDownloadBtn" href="#" class="btn btn-primary btn-sm" title="Baixar vídeo" download>
+                                <i class="bi bi-download" aria-hidden="true"></i>
+                                <span class="visually-hidden">Baixar</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Error State -->
+                <div id="videoModalError" class="d-none text-center text-white p-5">
+                    <i class="bi bi-exclamation-triangle fs-1 mb-3" aria-hidden="true"></i>
+                    <h6>Erro ao carregar o vídeo</h6>
+                    <p class="text-muted">Não foi possível carregar o vídeo. Tente novamente.</p>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="videoRetryBtn">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Tentar Novamente
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Footer with Metadata -->
+            <div class="modal-footer border-secondary bg-dark">
+                <div class="video-metadata-overlay w-100">
+                    <div class="row g-2 small text-white-50">
+                        <div class="col-md-3">
+                            <i class="bi bi-file-earmark-play me-1" aria-hidden="true"></i>
+                            <span id="videoModalFilename">-</span>
+                        </div>
+                        <div class="col-md-2">
+                            <i class="bi bi-clock me-1" aria-hidden="true"></i>
+                            <span id="videoModalDuration">-</span>
+                        </div>
+                        <div class="col-md-2">
+                            <i class="bi bi-hdd me-1" aria-hidden="true"></i>
+                            <span id="videoModalSize">-</span>
+                        </div>
+                        <div class="col-md-3">
+                            <i class="bi bi-calendar me-1" aria-hidden="true"></i>
+                            <span id="videoModalCreated">-</span>
+                        </div>
+                        <div class="col-md-2">
+                            <i class="bi bi-person me-1" aria-hidden="true"></i>
+                            <span id="videoModalAuthor">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Video Modal Specific Styles */
+.video-modal-player {
+    background: #000;
+}
+
+.video-controls {
+    z-index: 10;
+}
+
+.video-controls .btn {
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.video-controls .btn:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .video-controls {
+        position: static !important;
+        padding: 1rem !important;
+        background: rgba(0, 0, 0, 0.8);
+    }
+    
+    .video-controls .btn-group-vertical {
+        flex-direction: row;
+        gap: 0.5rem;
+    }
+    
+    .video-controls .btn {
+        margin-bottom: 0 !important;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .video-modal-player {
+        max-height: 50vh !important;
+    }
+}
+
+/* Accessibility */
+.video-controls .btn:focus {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .video-controls .btn {
+        border-width: 2px;
+        border-color: white;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const videoModal = document.getElementById('videoModal');
+    const videoPlayer = document.getElementById('videoModalPlayer');
+    const videoSource = document.getElementById('videoModalSource');
+    const loadingDiv = document.getElementById('videoModalLoading');
+    const containerDiv = document.getElementById('videoModalContainer');
+    const errorDiv = document.getElementById('videoModalError');
+    
+    // Control buttons
+    const playPauseBtn = document.getElementById('videoPlayPause');
+    const backwardBtn = document.getElementById('videoBackward');
+    const forwardBtn = document.getElementById('videoForward');
+    const replayBtn = document.getElementById('videoReplay');
+    const fullscreenBtn = document.getElementById('videoFullscreenToggle');
+    const retryBtn = document.getElementById('videoRetryBtn');
+    
+    if (videoModal && videoPlayer) {
+        // Modal event handlers
+        videoModal.addEventListener('shown.bs.modal', function() {
+            videoPlayer.focus();
+        });
+        
+        videoModal.addEventListener('hidden.bs.modal', function() {
+            videoPlayer.pause();
+            videoPlayer.currentTime = 0;
+        });
+        
+        // Video event handlers
+        videoPlayer.addEventListener('loadstart', function() {
+            showLoading();
+        });
+        
+        videoPlayer.addEventListener('canplay', function() {
+            hideLoading();
+            showContainer();
+        });
+        
+        videoPlayer.addEventListener('error', function() {
+            hideLoading();
+            hideContainer();
+            showError();
+        });
+        
+        videoPlayer.addEventListener('play', function() {
+            updatePlayPauseButton(false);
+        });
+        
+        videoPlayer.addEventListener('pause', function() {
+            updatePlayPauseButton(true);
+        });
+        
+        // Control button handlers
+        playPauseBtn?.addEventListener('click', function() {
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+            } else {
+                videoPlayer.pause();
+            }
+        });
+        
+        backwardBtn?.addEventListener('click', function() {
+            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+        });
+        
+        forwardBtn?.addEventListener('click', function() {
+            videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+        });
+        
+        replayBtn?.addEventListener('click', function() {
+            videoPlayer.currentTime = 0;
+            videoPlayer.play();
+        });
+        
+        fullscreenBtn?.addEventListener('click', function() {
+            if (videoPlayer.requestFullscreen) {
+                videoPlayer.requestFullscreen();
+            }
+        });
+        
+        retryBtn?.addEventListener('click', function() {
+            videoPlayer.load();
+        });
+        
+        // Keyboard controls
+        videoModal.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    playPauseBtn?.click();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    backwardBtn?.click();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    forwardBtn?.click();
+                    break;
+                case 'r':
+                case 'R':
+                    e.preventDefault();
+                    replayBtn?.click();
+                    break;
+                case 'f':
+                case 'F':
+                    e.preventDefault();
+                    fullscreenBtn?.click();
+                    break;
+            }
+        });
+    }
+    
+    // Helper functions
+    function showLoading() {
+        loadingDiv?.classList.remove('d-none');
+        containerDiv?.classList.add('d-none');
+        errorDiv?.classList.add('d-none');
+    }
+    
+    function hideLoading() {
+        loadingDiv?.classList.add('d-none');
+    }
+    
+    function showContainer() {
+        containerDiv?.classList.remove('d-none');
+        errorDiv?.classList.add('d-none');
+    }
+    
+    function hideContainer() {
+        containerDiv?.classList.add('d-none');
+    }
+    
+    function showError() {
+        errorDiv?.classList.remove('d-none');
+    }
+    
+    function updatePlayPauseButton(isPaused) {
+        const icon = playPauseBtn?.querySelector('i');
+        if (icon) {
+            if (isPaused) {
+                icon.className = 'bi bi-play-fill';
+                playPauseBtn.title = 'Reproduzir';
+            } else {
+                icon.className = 'bi bi-pause-fill';
+                playPauseBtn.title = 'Pausar';
+            }
+        }
+    }
+});
+</script>
+
+{% comment %}
+Video Modal JavaScript functionality is also handled by the VideoClip module
+in apps/mediafiles/static/mediafiles/js/videoclip.js
+{% endcomment %}

@@ -256,15 +256,43 @@
 </div>
 {% endblock media_content %}
 
-{% block extra_scripts %}
-{{ block.super }}
-<!-- Load photo-specific JavaScript -->
-<script src="{% static 'mediafiles/js/photo.js' %}"></script>
+{% block page_specific_scripts %}
+<!-- Image processing libraries (heavy dependencies loaded only when needed) -->
+<script src="{% static 'image-processing-859f9a89-bundle.js' %}"></script>
+<script src="{% static 'image-processing-c2965a6b-bundle.js' %}"></script>
+<!-- Photo-specific functionality -->
+<script src="{% static 'photo-bundle.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize photo upload functionality
-    if (typeof Photo !== 'undefined') {
-        Photo.init();
+    // Initialize photo upload functionality with error handling
+    try {
+        if (typeof Photo !== 'undefined') {
+            Photo.init();
+        } else {
+            console.warn('Photo module not loaded - falling back to basic functionality');
+            // Basic fallback: ensure file input still works
+            const fileInput = document.querySelector('input[type="file"][name="image"]');
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        console.log('File selected:', file.name);
+                        // Basic validation
+                        const maxSize = 5 * 1024 * 1024; // 5MB
+                        if (file.size > maxSize) {
+                            alert('Arquivo muito grande. Máximo 5MB permitido.');
+                            this.value = '';
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Photo initialization failed:', error);
+        // Report error to monitoring system if available
+        if (window.errorReporting) {
+            window.errorReporting.captureException(error);
+        }
     }
 
     // Form submission handler with loading state
@@ -304,4 +332,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-{% endblock extra_scripts %}
+{% endblock page_specific_scripts %}

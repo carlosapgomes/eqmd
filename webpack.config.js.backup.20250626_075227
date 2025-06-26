@@ -8,29 +8,20 @@ module.exports = {
     main: [
       "./assets/index.js", 
       "./assets/scss/main.scss",
-      "./apps/events/static/events/js/timeline.js",
-      "./apps/events/static/events/js/accessibility.js"
-    ],
-    mediafiles: [
       "./apps/mediafiles/static/mediafiles/js/mediafiles.js",
-      "./apps/mediafiles/static/mediafiles/css/mediafiles.css"
-    ],
-    photo: [
+      "./apps/events/static/events/js/timeline.js",
+      "./apps/events/static/events/js/accessibility.js",
       "./apps/mediafiles/static/mediafiles/js/photo.js",
-      "./apps/mediafiles/static/mediafiles/css/photo.css"
-    ],
-    photoseries: [
       "./apps/mediafiles/static/mediafiles/js/photoseries.js",
-      "./apps/mediafiles/static/mediafiles/css/photoseries.css"
-    ],
-    videoclip: [
       "./apps/mediafiles/static/mediafiles/js/videoclip.js",
+      "./apps/mediafiles/static/mediafiles/css/mediafiles.css",
+      "./apps/mediafiles/static/mediafiles/css/photo.css",
+      "./apps/mediafiles/static/mediafiles/css/photoseries.css",
       "./apps/mediafiles/static/mediafiles/css/videoclip.css"
-    ]
+    ],
   },
   output: {
     filename: "[name]-bundle.js",
-    chunkFilename: "[name]-chunk.js",
     path: path.resolve(__dirname, "./static"),
     clean: true,
   },
@@ -100,35 +91,6 @@ module.exports = {
   ],
   optimization: {
     minimizer: [`...`, new CssMinimizerPlugin()],
-    minimize: true,
-    splitChunks: {
-      chunks: 'all',
-      maxSize: 244000, // 244KB limit per chunk
-      cacheGroups: {
-        // Heavy image processing libraries - separate chunk
-        imageProcessing: {
-          test: /[\\/]node_modules[\\/](browser-image-compression|heic2any)[\\/]/,
-          name: 'image-processing',
-          chunks: 'all',
-          priority: 30,
-        },
-        // Other vendor libraries
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all',
-          priority: 10,
-        },
-        // Shared mediafiles utilities
-        mediafiles: {
-          test: /[\\/]apps[\\/]mediafiles[\\/].*\.js$/,
-          name: 'mediafiles-common',
-          chunks: 'all',
-          minChunks: 2,
-          priority: 20,
-        }
-      }
-    }
   },
   resolve: {
     extensions: [".js", ".scss", ".css"],

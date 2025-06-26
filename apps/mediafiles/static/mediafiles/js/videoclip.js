@@ -467,7 +467,3 @@ window.VideoClip = (function() {
     };
 })();
 
-// Auto-initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    VideoClip.init();
-});

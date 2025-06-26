@@ -72,7 +72,7 @@ Parameters expected:
 {% block event_content %}
 <div class="photo-event-content">
     <!-- Photo Thumbnail Display -->
-    <div class="photo-thumbnail-container mb-3">
+    <div class="photo-thumbnail-container mb-3 d-flex justify-content-center">
         {% if event.media_file.thumbnail %}
             <div class="photo-thumbnail-wrapper position-relative cursor-pointer"
                  data-photo-id="{{ event.pk }}"

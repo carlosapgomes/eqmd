@@ -42,6 +42,7 @@
 
     <script src="{% static 'js/popper.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <!-- Load only core main bundle without mediafiles -->
     <script src="{% static 'main-bundle.js' %}"></script>
     <script>
         // Initialize Bootstrap tooltips
@@ -50,6 +51,15 @@
             const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
         });
     </script>
+    
+    {% block mediafiles_scripts %}
+    <!-- Mediafiles-specific bundles loaded here -->
+    {% endblock mediafiles_scripts %}
+    
+    {% block page_specific_scripts %}
+    <!-- Page-specific JavaScript bundles loaded here -->
+    {% endblock page_specific_scripts %}
+    
     {% block extra_scripts %}
     {% endblock extra_scripts %}
 </body>
