@@ -987,16 +987,78 @@
 {% endblock %}
 
 {% block page_specific_scripts %}
-<!-- Load all mediafiles bundles for timeline functionality -->
+<!-- Load mediafiles bundles for timeline functionality -->
 <script src="{% static 'mediafiles-bundle.js' %}"></script>
-<script src="{% static 'photoseries-bundle.js' %}"></script>
 <script src="{% static 'videoclip-bundle.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize all mediafiles functionality for timeline
-    if (typeof MediaFiles !== 'undefined') MediaFiles.init();
-    if (typeof PhotoSeries !== 'undefined') PhotoSeries.initializeTimelinePhotoSeries();
-    if (typeof VideoClip !== 'undefined') VideoClip.init();
+    // Initialize mediafiles functionality for timeline
+    if (typeof MediaFiles !== 'undefined') {
+        MediaFiles.init();
+    }
+    if (typeof VideoClip !== 'undefined') {
+        VideoClip.init();
+    }
+    
+    // PhotoSeries timeline functionality
+    
+    function initializeTimelinePhotoSeries() {
+        const photoSeriesThumbnails = document.querySelectorAll('.photoseries-thumbnail-wrapper');
+        
+        photoSeriesThumbnails.forEach(thumbnail => {
+            thumbnail.addEventListener('click', function(e) {
+                // Prevent click if it's on an action button
+                if (e.target.closest('.btn') || e.target.closest('.dropdown')) {
+                    return;
+                }
+                
+                // Check if this thumbnail should trigger lightbox
+                const trigger = this.getAttribute('data-trigger');
+                const galleryId = this.getAttribute('data-gallery-id');
+                
+                if (trigger === 'lightbox' && galleryId && window.PhotoLightbox && window.PhotoLightbox.open) {
+                    e.preventDefault();
+                    try {
+                        PhotoLightbox.open(0, galleryId);
+                        return;
+                    } catch (error) {
+                        // Fall through to detail page navigation
+                    }
+                }
+                
+                // Fallback to detail page navigation
+                const timelineCard = this.closest('.timeline-card');
+                if (timelineCard) {
+                    const ariaLabel = timelineCard.getAttribute('aria-labelledby');
+                    if (ariaLabel) {
+                        const eventId = ariaLabel.replace('event-', '').replace('-title', '');
+                        const detailUrl = `/mediafiles/photo-series/${eventId}/`;
+                        window.location.href = detailUrl;
+                    }
+                }
+            });
+            
+            // Add keyboard accessibility
+            if (!thumbnail.hasAttribute('tabindex')) {
+                thumbnail.setAttribute('tabindex', '0');
+            }
+            if (!thumbnail.hasAttribute('role')) {
+                thumbnail.setAttribute('role', 'button');
+            }
+            if (!thumbnail.hasAttribute('aria-label')) {
+                thumbnail.setAttribute('aria-label', 'Visualizar série de fotos');
+            }
+            
+            thumbnail.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
+            });
+        });
+    }
+    
+    initializeTimelinePhotoSeries();
 });
 </script>
 {% endblock page_specific_scripts %}

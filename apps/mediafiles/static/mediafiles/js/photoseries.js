@@ -3,6 +3,8 @@
  * Handles carousel navigation, photo controls, and interactions
  */
 
+import { processImage } from "./image-processing.js";
+
 window.PhotoSeries = (function() {
     'use strict';
     
@@ -737,6 +739,38 @@ window.PhotoSeries = (function() {
     }
 
     /**
+     * Initialize multi-upload with image processing
+     */
+    function initializeMultiUploadWithProcessing() {
+        // Override MultiUpload's processFiles function to include image processing
+        if (window.MultiUpload && window.MultiUpload.processFiles) {
+            const originalProcessFiles = window.MultiUpload.processFiles;
+
+            window.MultiUpload.processFiles = async function (files) {
+                const processedFiles = [];
+
+                for (const file of files) {
+                    try {
+                        const processedFile = await processImage(file);
+                        processedFiles.push(processedFile);
+                    } catch (error) {
+                        console.error("Failed to process file:", file.name, error);
+                        // Optionally skip failed files or show error
+                        if (window.MultiUpload.showError) {
+                            window.MultiUpload.showError(
+                                `Erro ao processar ${file.name}: ${error.message}`,
+                            );
+                        }
+                    }
+                }
+
+                // Call original function with processed files
+                return originalProcessFiles.call(this, processedFiles);
+            };
+        }
+    }
+
+    /**
      * Initialize PhotoSeries functionality in timeline cards
      */
     function initializeTimelinePhotoSeries() {
@@ -817,12 +851,14 @@ window.PhotoSeries = (function() {
         toggleFullscreen: toggleFullscreen,
         downloadCurrentPhoto: downloadCurrentPhoto,
         initializeMultiUpload: initializeMultiUpload,
+        initializeMultiUploadWithProcessing: initializeMultiUploadWithProcessing,
         initializeBreadcrumbNavigation: initializeBreadcrumbNavigation,
         addPhotoToSeries: addPhotoToSeries,
         removePhotoFromSeries: removePhotoFromSeries,
         reorderPhotos: reorderPhotos,
         returnToTimeline: returnToTimeline,
         initializeTimelinePhotoSeries: initializeTimelinePhotoSeries,
+        processImage: processImage,
         getCurrentIndex: () => currentPhotoIndex,
         getTotalPhotos: () => totalPhotos,
         getPhotos: () => photos

@@ -558,45 +558,56 @@ window.MultiUpload = (function() {
         e.target.value = '';
     }
     
-    function processFiles(files) {
+    // Make processFiles async to support image processing
+    async function processFiles(files) {
         showProcessingOverlay(true);
-        
-        // Filter image files
-        const imageFiles = files.filter(file => file.type.startsWith('image/'));
-        
+
+        // Filter image files (including HEIC by extension)
+        const imageFiles = files.filter(
+            (file) =>
+                file.type.startsWith("image/") || /\.(heic|heif)$/i.test(file.name),
+        );
+
         if (imageFiles.length !== files.length) {
-            showError('Alguns arquivos foram ignorados. Apenas imagens são aceitas.');
+            showError("Alguns arquivos foram ignorados. Apenas imagens são aceitas.");
         }
-        
-        // Show queue first
-        showUploadQueue(true);
-        
-        // Add to selected files with delay for visual feedback
-        imageFiles.forEach((file, index) => {
-            setTimeout(() => {
+
+        if (imageFiles.length > 0) {
+            showUploadQueue(true);
+        }
+
+        // Process files one by one to avoid overwhelming the system
+        for (const file of imageFiles) {
+            try {
+                // Check if image processing is available
+                let processedFile = file;
+                if (window.PhotoSeries && window.PhotoSeries.processImage) {
+                    processedFile = await window.PhotoSeries.processImage(file);
+                }
+
                 const fileId = generateFileId();
                 const fileData = {
                     id: fileId,
-                    file: file,
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                    status: 'pending',
-                    progress: 0,
+                    file: processedFile,
+                    name: processedFile.name,
+                    size: processedFile.size,
+                    type: processedFile.type,
+                    status: "success", // Mark as success since processing completed
+                    progress: 100,
                     preview: null,
-                    order: selectedFiles.length + index
+                    order: selectedFiles.length,
                 };
-                
+
                 selectedFiles.push(fileData);
                 createFilePreview(fileData);
                 updateFileCount();
-                
-                // Hide processing overlay after last file
-                if (index === imageFiles.length - 1) {
-                    setTimeout(() => showProcessingOverlay(false), 200);
-                }
-            }, index * 150); // Stagger file processing for better UX
-        });
+            } catch (error) {
+                console.error("Error processing file:", file.name, error);
+                showError(`Erro ao processar ${file.name}: ${error.message}`);
+            }
+        }
+
+        showProcessingOverlay(false);
     }
     
     function createFilePreview(fileData) {
@@ -810,6 +821,8 @@ window.MultiUpload = (function() {
         getFiles: () => selectedFiles,
         clearFiles: clearAllFiles,
         addFiles: processFiles,
+        processFiles: processFiles,
+        showError: showError,
         updateFileStatus: (fileId, status, progress = 0) => {
             const file = selectedFiles.find(f => f.id === fileId);
             if (file) {

@@ -21,6 +21,7 @@ module.exports = {
     ],
     photoseries: [
       "./apps/mediafiles/static/mediafiles/js/photoseries.js",
+      "./apps/mediafiles/static/mediafiles/js/image-processing.js",
       "./apps/mediafiles/static/mediafiles/css/photoseries.css"
     ],
     videoclip: [

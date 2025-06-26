@@ -167,6 +167,10 @@ Nova Série de Fotos - {{ patient.name }} - EquipeMed
 {% endblock media_content %}
 
 {% block page_specific_scripts %}
+<!-- Load image processing libraries (heavy dependencies loaded only when needed) -->
+<script src="{% static 'image-processing-859f9a89-bundle.js' %}"></script>
+<script src="{% static 'image-processing-c2965a6b-bundle.js' %}"></script>
+<!-- PhotoSeries-specific functionality -->
 <script src="{% static 'photoseries-bundle.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -174,6 +178,8 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         if (typeof PhotoSeries !== 'undefined') {
             PhotoSeries.init();
+            // Initialize multi-upload with image processing
+            PhotoSeries.initializeMultiUploadWithProcessing();
         } else {
             console.warn('PhotoSeries module not loaded - falling back to basic functionality');
             // Basic fallback for file input
