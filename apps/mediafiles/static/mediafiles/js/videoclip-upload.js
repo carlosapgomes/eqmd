@@ -1,12 +1,11 @@
 /**
  * VideoClip-specific JavaScript for EquipeMed MediaFiles
  * 
- * Handles video upload, preview, validation, player controls, and modal interactions
- * Implements video functionality following photo.js patterns
+ * Handles video upload, preview, validation, and compression
  */
 
 // VideoClip namespace
-window.VideoClip = (function() {
+window.VideoClipUpload = (function() {
     'use strict';
 
     // Video-specific configuration (extends MediaFiles config)
@@ -57,6 +56,12 @@ window.VideoClip = (function() {
          * Initialize video upload functionality
          */
         init: function() {
+            // Check if the video upload form exists before initializing
+            const uploadForm = document.querySelector('.video-upload-form');
+            if (!uploadForm) {
+                return; // Don't initialize if the form isn't on the page
+            }
+
             this.setupDragAndDrop();
             this.setupFileInputs();
             this.setupPreviewControls();
@@ -519,129 +524,18 @@ window.VideoClip = (function() {
         }
     };
 
-    // Video player controls
-    const videoPlayer = {
-        /**
-         * Initialize video player functionality
-         */
-        init: function() {
-            this.setupVideoPlayers();
-            this.setupModalControls();
-        },
-
-        /**
-         * Setup video players
-         */
-        setupVideoPlayers: function() {
-            const videos = document.querySelectorAll('video');
-
-            videos.forEach(video => {
-                this.enhanceVideoPlayer(video);
-            });
-        },
-
-        /**
-         * Enhance individual video player
-         */
-        enhanceVideoPlayer: function(video) {
-            // Add loading indicator
-            video.addEventListener('loadstart', function() {
-                this.style.cursor = 'wait';
-            });
-
-            video.addEventListener('canplay', function() {
-                this.style.cursor = 'default';
-            });
-
-            // Error handling
-            video.addEventListener('error', function() {
-                console.error('Video loading error:', this.error);
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'alert alert-danger text-center';
-                errorMsg.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Erro ao carregar o vídeo. Tente novamente ou baixe o arquivo.';
-                this.parentNode.replaceChild(errorMsg, this);
-            });
-
-            // Keyboard controls
-            video.addEventListener('keydown', function(e) {
-                switch(e.key) {
-                    case ' ':
-                        e.preventDefault();
-                        if (this.paused) {
-                            this.play();
-                        } else {
-                            this.pause();
-                        }
-                        break;
-                    case 'ArrowLeft':
-                        e.preventDefault();
-                        this.currentTime = Math.max(0, this.currentTime - 10);
-                        break;
-                    case 'ArrowRight':
-                        e.preventDefault();
-                        this.currentTime = Math.min(this.duration, this.currentTime + 10);
-                        break;
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        this.volume = Math.min(1, this.volume + 0.1);
-                        break;
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        this.volume = Math.max(0, this.volume - 0.1);
-                        break;
-                    case 'm':
-                    case 'M':
-                        e.preventDefault();
-                        this.muted = !this.muted;
-                        break;
-                }
-            });
-
-            // Add focus capability for keyboard navigation
-            video.setAttribute('tabindex', '0');
-        },
-
-        /**
-         * Setup modal controls
-         */
-        setupModalControls: function() {
-            const videoModal = document.getElementById('videoModal');
-            const modalVideo = document.getElementById('modalVideo');
-
-            if (videoModal && modalVideo) {
-                videoModal.addEventListener('shown.bs.modal', function() {
-                    modalVideo.focus();
-                });
-
-                videoModal.addEventListener('hidden.bs.modal', function() {
-                    modalVideo.pause();
-                    modalVideo.currentTime = 0;
-                });
-            }
-        }
-    };
-
     // Public API
     return {
         /**
-         * Initialize all video functionality
+         * Initialize all video upload functionality
          */
         init: function() {
             videoUpload.init();
         },
 
-        /**
-         * Initialize video player functionality
-         */
-        initPlayer: function() {
-            videoPlayer.init();
-        },
-
         // Expose modules
         utils: utils,
         upload: videoUpload,
-        player: videoPlayer,
         config: config
     };
 })();
-

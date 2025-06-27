@@ -24,9 +24,15 @@ module.exports = {
       "./apps/mediafiles/static/mediafiles/js/image-processing.js",
       "./apps/mediafiles/static/mediafiles/css/photoseries.css"
     ],
-    videoclip: [
-      "./apps/mediafiles/static/mediafiles/js/videoclip.js",
+    videoclipUpload: [
+      "./apps/mediafiles/static/mediafiles/js/videoclip-upload.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/phase3-integration.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/ui/compression-controls.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/ui/medical-context.js",
       "./apps/mediafiles/static/mediafiles/css/videoclip.css"
+    ],
+    videoclipPlayer: [
+      "./apps/mediafiles/static/mediafiles/js/videoclip-player.js"
     ]
   },
   output: {
@@ -119,6 +125,21 @@ module.exports = {
           name: 'vendors',
           chunks: 'all',
           priority: 10,
+        },
+        // FFmpeg.wasm - separate bundle for lazy loading
+        ffmpeg: {
+          test: /[\\/]node_modules[\\/]@ffmpeg[\\/]/,
+          name: 'ffmpeg-wasm',
+          chunks: 'async', // Only loaded when imported dynamically
+          priority: 35,
+          enforce: true
+        },
+        // Compression-specific modules (excluding ffmpeg)
+        compression: {
+          test: /[\\/]compression[\\/].*\.js$/,
+          name: 'compression-core',
+          chunks: 'all',
+          priority: 25,
         },
         // Shared mediafiles utilities
         mediafiles: {

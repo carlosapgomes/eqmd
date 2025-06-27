@@ -989,15 +989,15 @@
 {% block page_specific_scripts %}
 <!-- Load mediafiles bundles for timeline functionality -->
 <script src="{% static 'mediafiles-bundle.js' %}"></script>
-<script src="{% static 'videoclip-bundle.js' %}"></script>
+<script src="{% static 'videoclipPlayer-bundle.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize mediafiles functionality for timeline
     if (typeof MediaFiles !== 'undefined') {
         MediaFiles.init();
     }
-    if (typeof VideoClip !== 'undefined') {
-        VideoClip.init();
+    if (typeof VideoClipPlayer !== 'undefined') {
+        VideoClipPlayer.init();
     }
     
     // PhotoSeries timeline functionality
