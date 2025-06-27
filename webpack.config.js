@@ -24,24 +24,8 @@ module.exports = {
       "./apps/mediafiles/static/mediafiles/js/image-processing.js",
       "./apps/mediafiles/static/mediafiles/css/photoseries.css"
     ],
-    videoclipUpload: [
-      "./apps/mediafiles/static/mediafiles/js/videoclip-upload.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/phase3-integration.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/utils/feature-flags.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/utils/monitoring.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/utils/error-handling.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/utils/performance-monitor.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/utils/lazy-loader.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/ui/compression-controls.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/ui/medical-context.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/ui/medical-workflows.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/core/compression-manager.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/core/compression-detector.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/core/medical-presets.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/utils/metadata-manager.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/video-compression.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/ffmpeg-dynamic-loader.js",
-      "./apps/mediafiles/static/mediafiles/js/compression/workers/compression-worker.js",
+    videoclipCompression: [
+      "./apps/mediafiles/static/mediafiles/js/videoclip-compression.js",
       "./apps/mediafiles/static/mediafiles/css/videoclip.css"
     ],
     videoclipPlayer: [
@@ -123,7 +107,7 @@ module.exports = {
     minimize: true,
     splitChunks: {
       chunks: 'all',
-      maxSize: 244000, // 244KB limit per chunk
+      maxSize: 500000, // 500KB limit per chunk
       cacheGroups: {
         // Heavy image processing libraries - separate chunk
         imageProcessing: {
@@ -138,29 +122,6 @@ module.exports = {
           name: 'vendors',
           chunks: 'all',
           priority: 10,
-        },
-        // FFmpeg.wasm - separate bundle for lazy loading
-        ffmpeg: {
-          test: /[\\/]node_modules[\\/]@ffmpeg[\\/]/,
-          name: 'ffmpeg-wasm',
-          chunks: 'async', // Only loaded when imported dynamically
-          priority: 35,
-          enforce: true
-        },
-        // Compression-specific modules (excluding ffmpeg)
-        compression: {
-          test: /[\\/]compression[\\/].*\.js$/,
-          name: 'compression-core',
-          chunks: 'all',
-          priority: 25,
-        },
-        // Shared mediafiles utilities
-        mediafiles: {
-          test: /[\\/]apps[\\/]mediafiles[\\/].*\.js$/,
-          name: 'mediafiles-common',
-          chunks: 'all',
-          minChunks: 2,
-          priority: 20,
         }
       }
     }

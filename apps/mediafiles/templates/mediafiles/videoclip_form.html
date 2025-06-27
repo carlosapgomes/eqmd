@@ -296,10 +296,10 @@ window.addEventListener('unhandledrejection', function(e) {
 
 console.log('About to load videoclip bundle...');
 </script>
-<!-- Load videoclip-specific bundle (mediafiles-bundle.js loaded by base template) -->
-<script src="{% static 'videoclipUpload-bundle.js' %}"></script>
+<!-- Load videoclip compression bundle -->
+<script src="{% static 'videoclipCompression-bundle.js' %}"></script>
 <script>
-console.log('videoclipUpload-bundle.js script tag processed, checking VideoClip availability...');
+console.log('videoclipCompression-bundle.js script tag processed, checking VideoClip availability...');
 console.log('VideoClip after script load:', typeof window.VideoClip);
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded fired at:', new Date().toISOString());
