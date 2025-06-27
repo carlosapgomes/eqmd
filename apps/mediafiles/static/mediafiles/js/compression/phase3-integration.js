@@ -61,28 +61,56 @@ class VideoCompressionPhase3 {
      */
     async initializeComponents() {
         // Initialize feature flags
-        if (this.options.enableFeatureFlags) {
-            this.components.featureFlags = new CompressionFeatureFlags();
-            await this.components.featureFlags.updateFlags();
+        if (this.options.enableFeatureFlags && typeof CompressionFeatureFlags !== 'undefined') {
+            try {
+                this.components.featureFlags = new CompressionFeatureFlags();
+                await this.components.featureFlags.updateFlags();
+            } catch (error) {
+                console.warn('Failed to initialize CompressionFeatureFlags:', error);
+                this.options.enableFeatureFlags = false;
+            }
         }
 
         // Initialize monitoring
-        if (this.options.enableMonitoring) {
-            this.components.monitoring = new CompressionMonitoring();
+        if (this.options.enableMonitoring && typeof CompressionMonitoring !== 'undefined') {
+            try {
+                this.components.monitoring = new CompressionMonitoring();
+            } catch (error) {
+                console.warn('Failed to initialize CompressionMonitoring:', error);
+                this.options.enableMonitoring = false;
+            }
         }
 
         // Initialize error handler
-        this.components.errorHandler = new CompressionErrorHandler();
-
-        // Initialize performance monitor
-        this.components.performanceMonitor = new CompressionPerformanceMonitor();
-
-        // Initialize lazy loader
-        if (this.options.enableLazyLoading) {
-            this.components.lazyLoader = new CompressionLazyLoader();
+        if (typeof CompressionErrorHandler !== 'undefined') {
+            try {
+                this.components.errorHandler = new CompressionErrorHandler();
+            } catch (error) {
+                console.warn('Failed to initialize CompressionErrorHandler:', error);
+            }
         }
 
-        console.log('All components initialized');
+        // Initialize performance monitor
+        if (typeof CompressionPerformanceMonitor !== 'undefined') {
+            try {
+                this.components.performanceMonitor = new CompressionPerformanceMonitor();
+            } catch (error) {
+                console.warn('Failed to initialize CompressionPerformanceMonitor:', error);
+            }
+        }
+
+        // Initialize lazy loader
+        if (this.options.enableLazyLoading && typeof CompressionLazyLoader !== 'undefined') {
+            try {
+                this.components.lazyLoader = new CompressionLazyLoader();
+            } catch (error) {
+                console.warn('Failed to initialize CompressionLazyLoader:', error);
+                this.options.enableLazyLoading = false;
+            }
+        }
+
+        const initializedComponents = Object.keys(this.components).length;
+        console.log(`${initializedComponents} compression components initialized successfully`);
     }
 
     /**

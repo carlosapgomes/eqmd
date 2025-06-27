@@ -27,8 +27,21 @@ module.exports = {
     videoclipUpload: [
       "./apps/mediafiles/static/mediafiles/js/videoclip-upload.js",
       "./apps/mediafiles/static/mediafiles/js/compression/phase3-integration.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/utils/feature-flags.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/utils/monitoring.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/utils/error-handling.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/utils/performance-monitor.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/utils/lazy-loader.js",
       "./apps/mediafiles/static/mediafiles/js/compression/ui/compression-controls.js",
       "./apps/mediafiles/static/mediafiles/js/compression/ui/medical-context.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/ui/medical-workflows.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/core/compression-manager.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/core/compression-detector.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/core/medical-presets.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/utils/metadata-manager.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/video-compression.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/ffmpeg-dynamic-loader.js",
+      "./apps/mediafiles/static/mediafiles/js/compression/workers/compression-worker.js",
       "./apps/mediafiles/static/mediafiles/css/videoclip.css"
     ],
     videoclipPlayer: [

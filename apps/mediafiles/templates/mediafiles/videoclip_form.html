@@ -289,27 +289,43 @@ document.addEventListener('DOMContentLoaded', function() {
             VideoClip.init();
         } else {
             console.warn('VideoClip module not loaded - falling back to basic functionality');
-            // Basic fallback for video input
-            const fileInput = document.querySelector('input[type="file"][name="video"]');
-            if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        console.log('Video file selected:', file.name);
-                        // Basic validation
-                        const maxSize = 50 * 1024 * 1024; // 50MB
-                        if (file.size > maxSize) {
-                            alert('Arquivo muito grande. Máximo 50MB permitido.');
-                            this.value = '';
-                        }
-                    }
-                });
-            }
+            
+            // Try again after a short delay in case of timing issues
+            setTimeout(function() {
+                if (typeof VideoClip !== 'undefined') {
+                    VideoClip.init();
+                } else {
+                    // Setup basic fallback
+                    setupBasicFallback();
+                }
+            }, 100);
+            
+            // Setup basic fallback
+            setupBasicFallback();
         }
     } catch (error) {
         console.error('VideoClip initialization failed:', error);
         if (window.errorReporting) {
             window.errorReporting.captureException(error);
+        }
+    }
+
+    function setupBasicFallback() {
+        // Basic fallback for video input
+        const fileInput = document.querySelector('input[type="file"][name="video"]');
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    console.log('Video file selected:', file.name);
+                    // Basic validation
+                    const maxSize = 50 * 1024 * 1024; // 50MB
+                    if (file.size > maxSize) {
+                        alert('Arquivo muito grande. Máximo 50MB permitido.');
+                        this.value = '';
+                    }
+                }
+            });
         }
     }
 

@@ -383,21 +383,33 @@ window.VideoClip = (function() {
             const uploadArea = document.getElementById('uploadArea');
             if (!uploadArea) return;
 
-            // Create controls container
-            const controlsContainer = document.createElement('div');
-            controlsContainer.className = 'compression-controls-container';
-            controlsContainer.id = 'compressionControlsContainer';
-            
-            // Insert before upload area
-            uploadArea.parentNode.insertBefore(controlsContainer, uploadArea);
+            // Check if CompressionControls is available
+            if (typeof CompressionControls === 'undefined') {
+                console.warn('CompressionControls not available, using fallback upload');
+                this.setupFallbackUpload();
+                return;
+            }
 
-            // Initialize compression controls
-            this.compressionControls = new CompressionControls(controlsContainer, {
-                medicalContext: this.getMedicalContext()
-            });
+            try {
+                // Create controls container
+                const controlsContainer = document.createElement('div');
+                controlsContainer.className = 'compression-controls-container';
+                controlsContainer.id = 'compressionControlsContainer';
+                
+                // Insert before upload area
+                uploadArea.parentNode.insertBefore(controlsContainer, uploadArea);
 
-            // Setup event handlers
-            this.setupCompressionEventHandlers();
+                // Initialize compression controls
+                this.compressionControls = new CompressionControls(controlsContainer, {
+                    medicalContext: this.getMedicalContext()
+                });
+
+                // Setup event handlers
+                this.setupCompressionEventHandlers();
+            } catch (error) {
+                console.warn('Failed to setup compression controls:', error);
+                this.setupFallbackUpload();
+            }
         },
 
         /**

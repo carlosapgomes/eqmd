@@ -33,3 +33,15 @@
 - [x] update adding hospital records from edit patient form
 - [x] cleanup patients app templates
 - [x] remove crispy forms from patients app
+
+## Try this
+
+Create the PRD in Gemini, with questions raised by Gemini, and answered by me. I review the PRD, point out changes required, more questions, repeat until we're both happy.
+
+Use task-master to generate tasks, and expand them.
+
+Tell claude to do tasks, in the recommended sequence.Create the PRD in Gemini, with questions raised by Gemini, and answered by me. I review the PRD, point out changes required, more questions, repeat until we're both happy.
+
+Use task-master to generate tasks, and expand them.
+
+Tell claude to do tasks, in the recommended sequence.

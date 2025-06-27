@@ -1,11 +1,12 @@
 /**
- * VideoClip-specific JavaScript for EquipeMed MediaFiles
+ * VideoClip Upload - JavaScript for EquipeMed MediaFiles
  * 
- * Handles video upload, preview, validation, and compression
+ * Handles video upload, preview, validation, and compression functionality
+ * Implements video upload functionality following photo.js patterns
  */
 
-// VideoClip namespace
-window.VideoClipUpload = (function() {
+// VideoClip namespace for upload functionality
+(function() {
     'use strict';
 
     // Video-specific configuration (extends MediaFiles config)
@@ -56,12 +57,6 @@ window.VideoClipUpload = (function() {
          * Initialize video upload functionality
          */
         init: function() {
-            // Check if the video upload form exists before initializing
-            const uploadForm = document.querySelector('.video-upload-form');
-            if (!uploadForm) {
-                return; // Don't initialize if the form isn't on the page
-            }
-
             this.setupDragAndDrop();
             this.setupFileInputs();
             this.setupPreviewControls();
@@ -363,20 +358,26 @@ window.VideoClipUpload = (function() {
         initCompression: function() {
             // Check if compression is available
             if (window.VideoCompressionPhase3) {
-                this.compressionManager = new VideoCompressionPhase3({
-                    enableFeatureFlags: true,
-                    enableMonitoring: true,
-                    enableLazyLoading: true
-                });
-                
-                // Initialize compression manager
-                this.compressionManager.init().then(() => {
-                    this.setupCompressionControls();
-                }).catch(error => {
-                    console.warn('Compression not available:', error);
+                try {
+                    this.compressionManager = new VideoCompressionPhase3({
+                        enableFeatureFlags: true,
+                        enableMonitoring: true,
+                        enableLazyLoading: true
+                    });
+                    
+                    // Initialize compression manager
+                    this.compressionManager.init().then(() => {
+                        this.setupCompressionControls();
+                    }).catch(error => {
+                        console.warn('Compression not available:', error);
+                        this.setupFallbackUpload();
+                    });
+                } catch (error) {
+                    console.warn('Failed to initialize compression manager:', error);
                     this.setupFallbackUpload();
-                });
+                }
             } else {
+                console.info('VideoCompressionPhase3 not available, using standard upload');
                 this.setupFallbackUpload();
             }
         },
@@ -388,21 +389,35 @@ window.VideoClipUpload = (function() {
             const uploadArea = document.getElementById('uploadArea');
             if (!uploadArea) return;
 
-            // Create controls container
-            const controlsContainer = document.createElement('div');
-            controlsContainer.className = 'compression-controls-container';
-            controlsContainer.id = 'compressionControlsContainer';
-            
-            // Insert before upload area
-            uploadArea.parentNode.insertBefore(controlsContainer, uploadArea);
+            // Check if CompressionControls is available
+            if (typeof CompressionControls === 'undefined') {
+                console.warn('CompressionControls not available, using fallback upload');
+                this.setupFallbackUpload();
+                return;
+            }
 
-            // Initialize compression controls
-            this.compressionControls = new CompressionControls(controlsContainer, {
-                medicalContext: this.getMedicalContext()
-            });
+            try {
+                // Create controls container
+                const controlsContainer = document.createElement('div');
+                controlsContainer.className = 'compression-controls-container';
+                controlsContainer.id = 'compressionControlsContainer';
+                
+                // Insert before upload area
+                uploadArea.parentNode.insertBefore(controlsContainer, uploadArea);
 
-            // Setup event handlers
-            this.setupCompressionEventHandlers();
+                // Initialize compression controls
+                this.compressionControls = new CompressionControls(controlsContainer, {
+                    medicalContext: this.getMedicalContext()
+                });
+
+                // Setup event handlers
+                this.setupCompressionEventHandlers();
+                
+                console.log('Compression controls initialized successfully');
+            } catch (error) {
+                console.warn('Failed to setup compression controls:', error);
+                this.setupFallbackUpload();
+            }
         },
 
         /**
@@ -410,6 +425,7 @@ window.VideoClipUpload = (function() {
          */
         setupCompressionEventHandlers: function() {
             const container = document.getElementById('compressionControlsContainer');
+            if (!container) return;
             
             container.addEventListener('compression:compressionEnabled', (e) => {
                 this.compressionEnabled = true;
@@ -467,7 +483,9 @@ window.VideoClipUpload = (function() {
                 }
             } catch (error) {
                 console.error('Compression failed:', error);
-                this.compressionControls.handleCompressionError(error);
+                if (this.compressionControls) {
+                    this.compressionControls.handleCompressionError(error);
+                }
                 this.processVideo(file, input);
             }
         },
@@ -479,11 +497,13 @@ window.VideoClipUpload = (function() {
             return await this.compressionManager.compressVideo(file, {
                 preset: this.compressionPreset,
                 onProgress: (data) => {
-                    this.compressionControls.updateProgress(
-                        data.stage, 
-                        data.progress, 
-                        data.eta
-                    );
+                    if (this.compressionControls) {
+                        this.compressionControls.updateProgress(
+                            data.stage, 
+                            data.progress, 
+                            data.eta
+                        );
+                    }
                 }
             });
         },
@@ -524,8 +544,8 @@ window.VideoClipUpload = (function() {
         }
     };
 
-    // Public API
-    return {
+    // Public API - assign to window
+    window.VideoClip = {
         /**
          * Initialize all video upload functionality
          */
