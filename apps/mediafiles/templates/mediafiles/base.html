@@ -50,8 +50,8 @@
 {% endblock app_content %}
 
 {% block mediafiles_scripts %}
-<!-- MediaFiles core JavaScript (must load first) -->
-<script src="{% static 'mediafiles/js/mediafiles.js' %}"></script>
+<!-- MediaFiles core JavaScript (use webpack bundle instead) -->
+<script src="{% static 'mediafiles-bundle.js' %}"></script>
 {% endblock mediafiles_scripts %}
 
 {% block page_specific_scripts %}

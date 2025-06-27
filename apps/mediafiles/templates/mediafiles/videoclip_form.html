@@ -280,23 +280,71 @@
 {% endblock media_content %}
 
 {% block page_specific_scripts %}
+<script>
+// Add global error handler to catch any bundle execution errors
+window.addEventListener('error', function(e) {
+    console.error('Global JavaScript error detected:', e.error);
+    console.error('Error file:', e.filename);
+    console.error('Error line:', e.lineno);
+    console.error('Error column:', e.colno);
+});
+
+// Add unhandled promise rejection handler
+window.addEventListener('unhandledrejection', function(e) {
+    console.error('Unhandled promise rejection:', e.reason);
+});
+
+console.log('About to load videoclip bundle...');
+</script>
+<!-- Load videoclip-specific bundle (mediafiles-bundle.js loaded by base template) -->
 <script src="{% static 'videoclipUpload-bundle.js' %}"></script>
 <script>
+console.log('videoclipUpload-bundle.js script tag processed, checking VideoClip availability...');
+console.log('VideoClip after script load:', typeof window.VideoClip);
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded fired at:', new Date().toISOString());
+    console.log('Document readyState:', document.readyState);
+    console.log('VideoClip availability:', typeof window.VideoClip);
+    console.log('Checking for bundle execution markers...');
+    console.log('Window keys containing "Video":', Object.keys(window).filter(k => k.toLowerCase().includes('video')));
+    console.log('All bundle scripts loaded:', document.querySelectorAll('script[src*="bundle"]').length);
+    
     // Initialize video upload functionality with error handling
     try {
         if (typeof VideoClip !== 'undefined') {
+            console.log('VideoClip.init() called at:', new Date().toISOString());
             VideoClip.init();
         } else {
             console.warn('VideoClip module not loaded - falling back to basic functionality');
             
             // Try again after a short delay in case of timing issues
             setTimeout(function() {
+                console.log('Delayed check (100ms) - VideoClip availability:', typeof window.VideoClip);
                 if (typeof VideoClip !== 'undefined') {
+                    console.log('VideoClip.init() called at (delayed):', new Date().toISOString());
                     VideoClip.init();
                 } else {
-                    // Setup basic fallback
-                    setupBasicFallback();
+                    // Try longer delay
+                    setTimeout(function() {
+                        console.log('Delayed check (500ms) - VideoClip availability:', typeof window.VideoClip);
+                        if (typeof VideoClip !== 'undefined') {
+                            console.log('VideoClip.init() called at (500ms delay):', new Date().toISOString());
+                            VideoClip.init();
+                        } else {
+                            // Try even longer delay
+                            setTimeout(function() {
+                                console.log('Delayed check (1000ms) - VideoClip availability:', typeof window.VideoClip);
+                                if (typeof VideoClip !== 'undefined') {
+                                    console.log('VideoClip.init() called at (1000ms delay):', new Date().toISOString());
+                                    VideoClip.init();
+                                } else {
+                                    console.error('VideoClip still not available after 1000ms - bundle may have failed to execute');
+                                    // Setup basic fallback
+                                    setupBasicFallback();
+                                }
+                            }, 900);
+                        }
+                    }, 400);
                 }
             }, 100);
             

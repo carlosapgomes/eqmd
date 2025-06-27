@@ -5,9 +5,13 @@
  * Implements video upload functionality following photo.js patterns
  */
 
+console.log('VideoClip module loading...');
+
 // VideoClip namespace for upload functionality
 (function() {
     'use strict';
+    
+    console.log('VideoClip IIFE executing...');
 
     // Video-specific configuration (extends MediaFiles config)
     const config = {
@@ -545,6 +549,7 @@
     };
 
     // Public API - assign to window
+    console.log('VideoClip type before assignment:', typeof window.VideoClip);
     window.VideoClip = {
         /**
          * Initialize all video upload functionality
@@ -558,4 +563,8 @@
         upload: videoUpload,
         config: config
     };
+    console.log('VideoClip IIFE completed, window.VideoClip =', window.VideoClip);
+    console.log('VideoClip type after assignment:', typeof window.VideoClip);
 })();
+
+console.log('VideoClip module fully loaded');
