@@ -275,88 +275,164 @@ def form_valid(self, form):
 - JavaScript in `photoseries.js` handles the upload preview and progress tracking
 - The `multi_upload.html` partial provides advanced upload UI components
 
-#### VideoClip FilePond Implementation (Phase 1 Migration)
+#### VideoClip Current Architecture (Post-FilePond Migration)
 **Modern video upload system using django-drf-filepond with server-side H.264 conversion**
 
-##### Key Changes from Legacy System
-- **Removed Complex Client-Side Compression**: Eliminated heavy JavaScript compression libraries
-- **Server-Side Processing**: All video conversion now handled by VideoProcessor with ffmpeg
-- **FilePond Integration**: Modern drag-and-drop interface with progress tracking
-- **Mobile Optimization**: Automatic H.264/MP4 conversion for universal compatibility
-- **Simplified Architecture**: Reduced JavaScript bundle sizes and complexity
+##### ✅ Current Status: Fully Operational
+- **Video uploads**: Working correctly with FilePond interface
+- **File storage**: UUID-based files in structured directories (`media/videos/YYYY/MM/originals/`)
+- **Video streaming**: Custom streaming views serving files with proper headers
+- **Server-side conversion**: H.264/MP4 conversion with mobile optimization
+- **Performance**: 99% JavaScript bundle size reduction (6.6KB → 376 bytes)
 
-##### VideoClip Model Structure
+##### VideoClip Model Architecture
 ```python
 class VideoClip(Event):
-    # FilePond file identifier instead of MediaFile relationship
-    file_id = models.CharField(max_length=100, null=True, blank=True)
-    original_filename = models.CharField(max_length=255, null=True, blank=True)
-    file_size = models.PositiveIntegerField(null=True, blank=True)
-    duration = models.PositiveIntegerField(null=True, blank=True)
-    width = models.PositiveIntegerField(null=True, blank=True)
-    height = models.PositiveIntegerField(null=True, blank=True)
-    video_codec = models.CharField(max_length=50, null=True, blank=True)
-    caption = models.TextField(blank=True)
+    # Direct metadata storage (no MediaFile relationship)
+    file_id = models.CharField(max_length=100)  # UUID string for file identification
+    original_filename = models.CharField(max_length=255)  # Original upload filename
+    file_size = models.PositiveIntegerField()  # File size in bytes
+    duration = models.PositiveIntegerField()  # Duration in seconds
+    width = models.PositiveIntegerField()  # Video width in pixels
+    height = models.PositiveIntegerField()  # Video height in pixels
+    video_codec = models.CharField(max_length=50)  # Codec info (typically 'h264')
+    caption = models.TextField(blank=True)  # Optional video caption
+    
+    # Inherits from Event: patient, created_by, event_datetime, description, etc.
 ```
 
-##### VideoProcessor Server-Side Conversion
-Located in `apps/mediafiles/video_processor.py`:
+##### File Storage Structure
+```
+media/
+└── videos/
+    └── 2025/
+        └── 06/
+            └── originals/
+                ├── a1b2c3d4-e5f6-7890-abcd-ef1234567890.mp4
+                ├── d08e1857-43b3-4ba8-8368-917601555305.mp4
+                └── 19c8f8ea-2701-43fd-b76d-bd739b220714.mp4
+```
+
+##### Video Processing Pipeline
 ```python
 class VideoProcessor:
     @staticmethod
     def convert_to_h264(input_path: str, output_path: str) -> dict:
         """Convert video to H.264/MP4 for universal mobile compatibility."""
-        # Mobile-optimized ffmpeg settings:
-        # - libx264 codec with medium preset
-        # - AAC audio codec
-        # - yuv420p pixel format for compatibility
-        # - faststart flag for web optimization
-        # - Even dimensions for encoding compatibility
+        
+        # Check if conversion needed (skip if already H.264/AAC/MP4)
+        needs_conversion = (
+            current_codec != 'h264' or
+            current_format != '.mp4' or
+            current_audio_codec != 'aac'
+        )
+        
+        if needs_conversion:
+            # Mobile-optimized ffmpeg conversion:
+            # - libx264 codec with medium preset
+            # - AAC audio codec  
+            # - yuv420p pixel format for universal compatibility
+            # - faststart flag for web optimization
+            # - Even dimensions for encoding compatibility
+        
+        return conversion_metadata
 ```
 
-##### FilePond Form Integration
+##### VideoClipCreateForm Implementation
 ```python
 class VideoClipCreateForm(BaseMediaForm, forms.ModelForm):
     upload_id = forms.CharField(widget=forms.HiddenInput())
     
     def save(self, commit=True):
-        # Process FilePond upload
-        temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
-        stored_upload = store_upload(upload_id)
+        # Generate UUID-based file path
+        file_uuid = uuid.uuid4()
+        date_path = timezone.now().strftime('%Y/%m')
+        destination_path = MEDIA_ROOT / f"videos/{date_path}/originals/{file_uuid}.mp4"
         
-        # Server-side conversion
+        # Copy from FilePond temporary storage to final location
+        temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
+        stored_upload = store_upload(upload_id, secure_filename)
+        shutil.copy2(stored_upload.file.path, destination_path)
+        
+        # Process video conversion (if needed)
         processor = VideoProcessor()
         conversion_result = processor.convert_to_h264(
-            stored_upload.file.path,
-            stored_upload.file.path
+            str(destination_path),
+            str(destination_path)  # Convert in place
         )
         
-        # Set video metadata from conversion
-        videoclip.file_id = stored_upload.upload_id
+        # Set video metadata directly on VideoClip model
+        videoclip.file_id = str(file_uuid)
+        videoclip.original_filename = temp_upload.upload_name
+        videoclip.file_size = conversion_result['converted_size']
         videoclip.duration = int(conversion_result['duration'])
         videoclip.width = conversion_result['width']
         videoclip.height = conversion_result['height']
         videoclip.video_codec = conversion_result['codec']
+        
+        return videoclip
 ```
 
-##### Configuration Requirements
+##### Configuration Requirements (Fixed)
 ```python
-# settings.py additions
+# settings.py - CORRECTED configuration
 INSTALLED_APPS = [
     'django_drf_filepond',
     'storages',
     'rest_framework',
 ]
 
-# FilePond Configuration
-DJANGO_DRF_FILEPOND_UPLOAD_TMP = '/tmp/filepond_uploads'
-DJANGO_DRF_FILEPOND_FILE_STORE_PATH = '/tmp/filepond_stored'
-DJANGO_DRF_FILEPOND_STORAGES_BACKEND = 'apps.mediafiles.storage.SecureVideoStorage'
+# FilePond Configuration - use project-relative directories
+DJANGO_DRF_FILEPOND_UPLOAD_TMP = str(BASE_DIR / 'filepond_tmp')
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = str(BASE_DIR / 'filepond_stored')
+
+# Ensure directories exist with proper permissions
+os.makedirs(DJANGO_DRF_FILEPOND_UPLOAD_TMP, mode=0o755, exist_ok=True)
+os.makedirs(DJANGO_DRF_FILEPOND_FILE_STORE_PATH, mode=0o755, exist_ok=True)
 
 # Video processing settings
 MEDIA_VIDEO_CONVERSION_ENABLED = True
+MEDIA_VIDEO_OUTPUT_FORMAT = 'mp4'
+MEDIA_VIDEO_CODEC = 'libx264'
+MEDIA_VIDEO_PRESET = 'medium'
 MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes
 MEDIA_VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB input limit
+
+# Django REST Framework settings for FilePond
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+```
+
+##### Video Streaming Implementation
+```python
+class VideoClipStreamView(LoginRequiredMixin, DetailView):
+    """Custom streaming view for VideoClip files."""
+    
+    def get(self, request, *args, **kwargs):
+        videoclip = self.get_object()
+        
+        # Build file path from UUID and creation date
+        file_uuid = videoclip.file_id
+        creation_date = videoclip.created_at
+        expected_path = videos_dir / creation_date.strftime('%Y/%m/originals') / f"{file_uuid}.mp4"
+        
+        # Fallback search if primary path not found
+        if not expected_path.exists():
+            for file_path in videos_dir.rglob(f"{file_uuid}.*"):
+                expected_path = file_path
+                break
+        
+        # Serve file with streaming headers
+        response = FileResponse(open(expected_path, 'rb'), content_type='video/mp4')
+        response['Accept-Ranges'] = 'bytes'
+        response['Content-Length'] = expected_path.stat().st_size
+        return response
 ```
 
 ##### Migration Impact

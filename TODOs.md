@@ -45,3 +45,7 @@ Tell claude to do tasks, in the recommended sequence.Create the PRD in Gemini, w
 Use task-master to generate tasks, and expand them.
 
 Tell claude to do tasks, in the recommended sequence.
+
+### code investigations
+
+please explain to me how we are storing the video information, what is the relationship between events, mediafiles and videoclips.

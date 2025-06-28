@@ -19,7 +19,7 @@ Parameters expected:
        data-bs-toggle="tooltip" 
        data-bs-placement="top" 
        title="Baixar vídeo"
-       download="{{ event.media_file.original_filename }}">
+       download="{{ event.original_filename }}">
         <i class="bi bi-download" aria-hidden="true"></i>
         <span class="visually-hidden">Baixar</span>
     </a>
@@ -52,82 +52,87 @@ Parameters expected:
 
 {% block event_content %}
 <div class="videoclip-event-content">
-    <!-- Video Thumbnail Display -->
-    <div class="video-thumbnail-container mb-3">
-        {% if event.media_file.get_thumbnail_url %}
-            <div class="video-thumbnail-wrapper position-relative">
-                <img src="{{ event.media_file.get_thumbnail_url }}" 
-                     alt="Thumbnail: {{ event.media_file.original_filename }}"
-                     class="video-thumbnail img-fluid rounded cursor-pointer"
-                     style="max-width: 300px; max-height: 200px; object-fit: cover;"
-                     data-video-id="{{ event.pk }}"
-                     data-bs-toggle="modal"
-                     data-bs-target="#videoModal{{ event.pk }}"
-                     loading="lazy">
-                
-                <!-- Duration Badge Overlay -->
-                <div class="video-duration-overlay position-absolute">
-                    <div class="video-duration-badge">
-                        <i class="bi bi-clock me-1"></i>
-                        {{ event.media_file.get_duration_display|default:"--:--" }}
-                    </div>
-                </div>
-                
-                <!-- Play Icon Overlay -->
-                <div class="video-play-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center opacity-0 transition-opacity">
-                    <div class="bg-dark bg-opacity-75 rounded-circle p-3">
-                        <i class="bi bi-play-fill text-white fs-2" aria-hidden="true"></i>
-                    </div>
+    <!-- Video Preview with Icon -->
+    <div class="video-preview-container mb-3">
+        <div class="video-preview-card d-flex align-items-center p-3 bg-light rounded border cursor-pointer"
+             data-video-id="{{ event.pk }}"
+             data-bs-toggle="modal"
+             data-bs-target="#videoModal{{ event.pk }}"
+             role="button"
+             tabindex="0"
+             aria-label="Clique para reproduzir vídeo">
+            
+            <!-- Video Icon -->
+            <div class="video-icon-container me-3 flex-shrink-0">
+                <div class="video-icon-wrapper d-flex align-items-center justify-content-center bg-primary rounded-circle" 
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-play-circle-fill text-white" style="font-size: 2rem;" aria-hidden="true"></i>
                 </div>
             </div>
-        {% else %}
-            <!-- Fallback for missing thumbnail -->
-            <div class="video-placeholder d-flex align-items-center justify-content-center bg-light rounded" 
-                 style="width: 300px; height: 200px;">
-                <div class="text-center text-muted">
-                    <i class="bi bi-camera-video fs-1" aria-hidden="true"></i>
-                    <p class="mb-0 small">Miniatura não disponível</p>
+            
+            <!-- Video Info -->
+            <div class="video-info flex-grow-1">
+                <div class="video-filename fw-semibold text-dark mb-1" style="font-size: 0.95rem;">
+                    <i class="bi bi-camera-video me-2 text-primary" aria-hidden="true"></i>
+                    {{ event.original_filename|default:"video.mp4" }}
+                </div>
+                
+                <div class="video-details d-flex flex-wrap gap-3 small text-muted">
+                    {% if event.duration %}
+                    <span>
+                        <i class="bi bi-clock me-1" aria-hidden="true"></i>
+                        {{ event.duration|mediafiles_duration }}
+                    </span>
+                    {% endif %}
+                    
+                    {% if event.file_size %}
+                    <span>
+                        <i class="bi bi-hdd me-1" aria-hidden="true"></i>
+                        {{ event.file_size|mediafiles_file_size }}
+                    </span>
+                    {% endif %}
+                    
+                    {% if event.width and event.height %}
+                    <span>
+                        <i class="bi bi-aspect-ratio me-1" aria-hidden="true"></i>
+                        {{ event.width }}×{{ event.height }}
+                    </span>
+                    {% endif %}
                 </div>
             </div>
-        {% endif %}
+            
+            <!-- Play Arrow -->
+            <div class="play-arrow-container flex-shrink-0 ms-2">
+                <i class="bi bi-chevron-right text-primary" style="font-size: 1.25rem;" aria-hidden="true"></i>
+            </div>
+        </div>
     </div>
     
     <!-- Video Description -->
     {% if event.description %}
-        <div class="video-description mb-2">
-            <p class="mb-0">{{ event.description }}</p>
+        <div class="video-description mb-3">
+            <div class="description-content p-3 bg-white rounded border-start border-primary border-4">
+                <h6 class="mb-2 text-primary">
+                    <i class="bi bi-file-text me-2" aria-hidden="true"></i>
+                    Descrição
+                </h6>
+                <p class="mb-0 text-dark lh-base">{{ event.description }}</p>
+            </div>
         </div>
     {% endif %}
     
-    <!-- Video Caption (if different from description) -->
-    {% if event.caption and event.caption != event.description %}
-        <div class="video-caption mb-2">
-            <small class="text-muted">
-                <i class="bi bi-chat-quote me-1" aria-hidden="true"></i>
-                {{ event.caption }}
-            </small>
+    <!-- Video Caption -->
+    {% if event.caption %}
+        <div class="video-caption mb-3">
+            <div class="caption-content p-3 bg-info bg-opacity-10 rounded border-start border-info border-4">
+                <h6 class="mb-2 text-info">
+                    <i class="bi bi-chat-quote me-2" aria-hidden="true"></i>
+                    Legenda
+                </h6>
+                <p class="mb-0 text-dark lh-base">{{ event.caption }}</p>
+            </div>
         </div>
     {% endif %}
-    
-    <!-- Video Metadata -->
-    <div class="video-metadata">
-        <div class="row g-2 small text-muted">
-            <div class="col-sm-6">
-                <i class="bi bi-file-earmark-play me-1" aria-hidden="true"></i>
-                <span>{{ event.media_file.original_filename }}</span>
-            </div>
-            {% if event.media_file.duration %}
-            <div class="col-sm-3">
-                <i class="bi bi-clock me-1" aria-hidden="true"></i>
-                <span>{{ event.media_file.get_duration_display }}</span>
-            </div>
-            {% endif %}
-            <div class="col-sm-3">
-                <i class="bi bi-hdd me-1" aria-hidden="true"></i>
-                <span>{{ event.media_file.get_display_size }}</span>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock event_content %}
 
@@ -141,15 +146,11 @@ Parameters expected:
                     <i class="bi bi-camera-video me-2"></i>
                     {{ event.description|default:"Vídeo" }}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-modal-id="videoModal{{ event.pk }}"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
                 <video class="w-100" controls preload="metadata" id="modalVideo{{ event.pk }}">
-                    <source src="{% url 'mediafiles:videoclip_stream' event.pk %}" type="{{ event.media_file.mime_type }}">
-                    {% comment %}Add fallback for MOV files{% endcomment %}
-                    {% if event.media_file.mime_type == 'video/quicktime' %}
-                        <source src="{% url 'mediafiles:videoclip_stream' event.pk %}" type="video/mp4">
-                    {% endif %}
+                    <source src="{% url 'mediafiles:videoclip_stream' event.pk %}" type="video/mp4">
                     <p class="text-center p-4">
                         Seu navegador não suporta o elemento de vídeo. 
                         <a href="{% url 'mediafiles:videoclip_download' event.pk %}" class="btn btn-primary btn-sm ms-2">
@@ -162,12 +163,14 @@ Parameters expected:
             <div class="modal-footer">
                 <div class="me-auto">
                     <small class="text-muted">
-                        {% if event.media_file.duration %}
+                        {% if event.duration %}
                         <i class="bi bi-clock me-1"></i>
-                        {{ event.media_file.get_duration_display }}
+                        {{ event.duration|mediafiles_duration }}
                         {% endif %}
+                        {% if event.file_size %}
                         <i class="bi bi-hdd ms-3 me-1"></i>
-                        {{ event.media_file.get_display_size }}
+                        {{ event.file_size|mediafiles_file_size }}
+                        {% endif %}
                     </small>
                 </div>
                 <a href="{% url 'mediafiles:videoclip_download' event.pk %}" class="btn btn-outline-secondary btn-sm">
@@ -191,118 +194,113 @@ Parameters expected:
     position: relative;
 }
 
-/* Video Thumbnail Display */
-.video-thumbnail-container {
-    display: flex;
-    justify-content: center;
+/* Video Preview Card */
+.video-preview-container {
     margin: 1rem 0;
 }
 
-.video-thumbnail-wrapper {
-    position: relative;
-    display: inline-block;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+.video-preview-card {
+    transition: all 0.2s ease-in-out;
+    border: 1px solid #dee2e6 !important;
     cursor: pointer;
-    max-width: 300px;
-    width: 100%;
 }
 
-.video-thumbnail-wrapper:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+.video-preview-card:hover {
+    background-color: #f8f9fa !important;
+    border-color: #007bff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.15);
 }
 
-.video-thumbnail {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.3s ease;
+.video-preview-card:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
 }
 
-.video-thumbnail-wrapper:hover .video-thumbnail {
-    transform: scale(1.05);
+.video-icon-wrapper {
+    transition: transform 0.2s ease;
 }
 
-/* Duration Badge Overlay */
-.video-duration-overlay {
-    bottom: 12px;
-    right: 12px;
-    z-index: 2;
+.video-preview-card:hover .video-icon-wrapper {
+    transform: scale(1.1);
 }
 
-.video-duration-badge {
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 0.375rem 0.625rem;
-    border-radius: 16px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    backdrop-filter: blur(4px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+.video-filename {
+    word-break: break-word;
+    line-height: 1.3;
 }
 
-/* Play Icon Overlay */
-.video-play-overlay {
-    transition: opacity 0.3s ease;
+.video-details {
+    line-height: 1.4;
 }
 
-.video-thumbnail-wrapper:hover .video-play-overlay {
-    opacity: 1 !important;
+.play-arrow-container {
+    transition: transform 0.2s ease;
 }
 
-/* Video Placeholder */
-.video-placeholder {
-    border: 2px dashed #dee2e6;
+.video-preview-card:hover .play-arrow-container {
+    transform: translateX(3px);
 }
 
-/* Video Metadata */
-.video-metadata {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 0.75rem;
+/* Description and Caption Styling */
+.description-content, .caption-content {
+    transition: all 0.2s ease;
 }
 
-.video-metadata .row {
+.description-content:hover, .caption-content:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.description-content h6, .caption-content h6 {
     font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
-.video-metadata i {
-    opacity: 0.7;
+.description-content p, .caption-content p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 0;
 }
+
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .video-thumbnail {
-        height: 150px;
+    .video-icon-wrapper {
+        width: 50px !important;
+        height: 50px !important;
     }
     
-    .video-thumbnail-wrapper {
-        max-width: 250px;
+    .video-icon-wrapper i {
+        font-size: 1.75rem !important;
     }
     
-    .video-duration-badge {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.7rem;
+    .video-filename {
+        font-size: 0.9rem;
+    }
+    
+    .video-details {
+        font-size: 0.8rem;
     }
 }
 
 @media (max-width: 576px) {
-    .video-thumbnail {
-        height: 120px;
+    .video-preview-card {
+        flex-direction: column;
+        text-align: center;
     }
     
-    .video-thumbnail-wrapper {
-        max-width: 200px;
+    .video-icon-container {
+        margin-right: 0 !important;
+        margin-bottom: 1rem;
     }
     
-    .video-metadata .col-sm-6 {
-        margin-bottom: 0.25rem;
+    .play-arrow-container {
+        display: none;
+    }
+    
+    .description-content, .caption-content {
+        padding: 1rem;
     }
 }
 </style>
@@ -318,41 +316,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         window.videoClipModalInitialized = true;
         
-        // Handle video thumbnail click to open modal
-        const videoThumbnails = document.querySelectorAll('.video-thumbnail-wrapper');
+        // Handle video preview card click to open modal
+        const videoPreviewCards = document.querySelectorAll('.video-preview-card');
 
-    videoThumbnails.forEach(thumbnail => {
-        thumbnail.addEventListener('click', function(e) {
-            // Prevent click if it's on an action button
-            if (e.target.closest('.btn') || e.target.closest('.dropdown')) {
-                return;
-            }
+        videoPreviewCards.forEach(previewCard => {
+            previewCard.addEventListener('click', function(e) {
+                // Prevent click if it's on an action button
+                if (e.target.closest('.btn') || e.target.closest('.dropdown')) {
+                    return;
+                }
 
-            // Get the video ID from the data attribute
-            const videoId = this.querySelector('.video-thumbnail').dataset.videoId;
-            if (!videoId) {
-                console.error('Video ID not found!');
-                return;
-            }
+                // Get the video ID from the data attribute
+                const videoId = this.dataset.videoId;
+                if (!videoId) {
+                    console.error('Video ID not found!');
+                    return;
+                }
 
-            // Check if modal exists
-            const modalElement = document.getElementById('videoModal' + videoId);
-            if (!modalElement) {
-                console.error('Video modal not found for ID:', videoId);
-                return;
-            }
+                // Check if modal exists
+                const modalElement = document.getElementById('videoModal' + videoId);
+                if (!modalElement) {
+                    console.error('Video modal not found for ID:', videoId);
+                    return;
+                }
 
-            // Check if Bootstrap is available
-            if (typeof bootstrap === 'undefined') {
-                console.error('Bootstrap is not loaded!');
-                return;
-            }
+                // Check if Bootstrap is available
+                if (typeof bootstrap === 'undefined') {
+                    console.error('Bootstrap is not loaded!');
+                    return;
+                }
 
-            // Open video modal
-            const videoModal = new bootstrap.Modal(modalElement);
-            videoModal.show();
+                // Open video modal
+                const videoModal = new bootstrap.Modal(modalElement);
+                videoModal.show();
+            });
         });
-    });
 
     // Handle video modal events for all video modals
     const videoModals = document.querySelectorAll('[id^="videoModal"]');
@@ -366,52 +364,59 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.focus();
             });
 
+            videoModal.addEventListener('hide.bs.modal', function () {
+                // Remove focus from any focused element within the modal before closing
+                const focusedElement = this.querySelector(':focus');
+                if (focusedElement) {
+                    focusedElement.blur();
+                }
+            });
+            
             videoModal.addEventListener('hidden.bs.modal', function () {
                 // Pause video when modal closes and reset to beginning
                 modalVideo.pause();
                 modalVideo.currentTime = 0;
+                
+                // Ensure modal backdrop is properly removed
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+                
+                // Restore body scroll and remove modal-related classes
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
             });
 
+            // Handle close button clicks specifically
+            const closeButton = videoModal.querySelector('.btn-close');
+            if (closeButton) {
+                closeButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    this.blur(); // Remove focus immediately
+                    
+                    const modalInstance = bootstrap.Modal.getInstance(videoModal);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                });
+            }
+            
             // Close modal with Escape key
             videoModal.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
                     e.preventDefault();
+                    const focusedElement = this.querySelector(':focus');
+                    if (focusedElement) {
+                        focusedElement.blur();
+                    }
+                    
                     const modalInstance = bootstrap.Modal.getInstance(this);
                     if (modalInstance) {
                         modalInstance.hide();
                     }
                 }
-            });
-        }
-    });
-
-    // Handle all close buttons with data-bs-dismiss="modal" specifically for video modals
-    const videoModalCloseButtons = document.querySelectorAll('[id^="videoModal"] [data-bs-dismiss="modal"]');
-    console.log('Found video modal close buttons:', videoModalCloseButtons.length);
-    
-    videoModalCloseButtons.forEach(function(closeButton) {
-        const targetModal = closeButton.closest('.modal');
-        if (targetModal && targetModal.id.startsWith('videoModal')) {
-            console.log('Setting up video close button for modal:', targetModal.id);
-            
-            closeButton.addEventListener('click', function(e) {
-                console.log('Video close button clicked, modal ID:', targetModal.id);
-                
-                // Remove focus from button before hiding modal to avoid accessibility issues
-                this.blur();
-                
-                // Small delay to ensure focus is removed
-                setTimeout(() => {
-                    const modalInstance = bootstrap.Modal.getInstance(targetModal);
-                    if (modalInstance) {
-                        console.log('Hiding video modal via existing instance');
-                        modalInstance.hide();
-                    } else {
-                        console.log('Creating new modal instance and hiding');
-                        const newInstance = new bootstrap.Modal(targetModal);
-                        newInstance.hide();
-                    }
-                }, 10);
             });
         }
     });
@@ -423,19 +428,15 @@ document.addEventListener('DOMContentLoaded', function() {
         new bootstrap.Tooltip(tooltip);
     });
 
-    // Handle keyboard navigation for video cards
-    videoThumbnails.forEach(thumbnail => {
-        thumbnail.setAttribute('tabindex', '0');
-        thumbnail.setAttribute('role', 'button');
-        thumbnail.setAttribute('aria-label', 'Reproduzir vídeo');
-
-        thumbnail.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                this.click();
-            }
+        // Handle keyboard navigation for video preview cards
+        videoPreviewCards.forEach(previewCard => {
+            previewCard.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
+            });
         });
-    });
 
     // Video player controls enhancement
     const videos = document.querySelectorAll('video');

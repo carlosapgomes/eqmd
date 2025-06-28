@@ -145,11 +145,14 @@ class SecureFileServeView(View):
             except Photo.DoesNotExist:
                 pass
 
-            # For VideoClip: Use reverse OneToOneField relationship
+            # For VideoClip: Legacy support for old MediaFile-based videos
+            # Note: New FilePond-based videos don't use MediaFile relationship
             try:
+                # This will only work for old VideoClip instances created before FilePond migration
                 videoclip = VideoClip.objects.get(media_file=media_file)
                 return videoclip
-            except VideoClip.DoesNotExist:
+            except (VideoClip.DoesNotExist, AttributeError):
+                # AttributeError can occur if VideoClip model no longer has media_file field
                 pass
 
             # For PhotoSeries: Use through model relationship
@@ -1599,7 +1602,7 @@ class VideoClipCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -1642,7 +1645,7 @@ class VideoClipDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailVie
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -1708,7 +1711,7 @@ class VideoClipUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -1768,7 +1771,7 @@ class VideoClipDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -1798,31 +1801,47 @@ class VideoClipDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
     def get(self, request, *args, **kwargs):
         """Serve video file as download."""
         videoclip = self.get_object()
-        media_file = videoclip.media_file
-
-        # Get file path
-        file_path = Path(settings.MEDIA_ROOT) / media_file.file.name
-
-        if not file_path.exists():
-            raise Http404("Video file not found")
+        
+        # Build file path from UUID and date structure
+        from django.conf import settings
+        from pathlib import Path
+        
+        # The file_id contains the UUID
+        file_uuid = videoclip.file_id
+        
+        # Find the actual file by searching in the videos directory
+        videos_dir = Path(settings.MEDIA_ROOT) / "videos"
+        
+        # Search for the file (it should be in the same year/month as creation date)
+        creation_date = videoclip.created_at
+        expected_path = videos_dir / creation_date.strftime('%Y/%m/originals') / f"{file_uuid}.mp4"
+        
+        if not expected_path.exists():
+            # Fallback: search all possible locations
+            for file_path in videos_dir.rglob(f"{file_uuid}.*"):
+                expected_path = file_path
+                break
+            else:
+                from django.http import Http404
+                raise Http404("Video file not found")
 
         # Create download response
         response = FileResponse(
-            open(file_path, 'rb'),
+            open(expected_path, 'rb'),
             as_attachment=True,
-            filename=media_file.original_filename
+            filename=videoclip.original_filename or f"video_{file_uuid}.mp4"
         )
 
         # Set download headers
         response['Content-Type'] = 'application/octet-stream'
-        response['Content-Length'] = file_path.stat().st_size
+        response['Content-Length'] = expected_path.stat().st_size
 
         return response
 
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -1852,16 +1871,57 @@ class VideoClipStreamView(LoginRequiredMixin, PermissionRequiredMixin, DetailVie
     def get(self, request, *args, **kwargs):
         """Serve video file for streaming."""
         videoclip = self.get_object()
-        media_file = videoclip.media_file
-
+        
+        # Build file path from UUID and date structure
+        from django.conf import settings
+        from pathlib import Path
+        
+        # The file_id contains the UUID
+        file_uuid = videoclip.file_id
+        
+        # Find the actual file by searching in the videos directory
+        # Since we know the structure: videos/YYYY/MM/originals/UUID.mp4
+        videos_dir = Path(settings.MEDIA_ROOT) / "videos"
+        
+        # Search for the file (it should be in the same year/month as creation date)
+        creation_date = videoclip.created_at
+        expected_path = videos_dir / creation_date.strftime('%Y/%m/originals') / f"{file_uuid}.mp4"
+        
+        if not expected_path.exists():
+            # Fallback: search all possible locations
+            for file_path in videos_dir.rglob(f"{file_uuid}.*"):
+                expected_path = file_path
+                break
+            else:
+                from django.http import Http404
+                raise Http404("Video file not found")
+        
         # Use the existing SecureVideoStreamView for streaming
-        stream_view = SecureVideoStreamView()
-        return stream_view.get(request, str(media_file.id))
+        from django.http import FileResponse
+        import mimetypes
+        
+        # Get content type
+        content_type, _ = mimetypes.guess_type(str(expected_path))
+        if not content_type:
+            content_type = 'video/mp4'
+        
+        # Serve the file
+        response = FileResponse(
+            open(expected_path, 'rb'),
+            content_type=content_type,
+            as_attachment=False
+        )
+        
+        # Add headers for video streaming
+        response['Accept-Ranges'] = 'bytes'
+        response['Content-Length'] = expected_path.stat().st_size
+        
+        return response
 
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 

@@ -24,6 +24,10 @@ class VideoProcessor:
             dict: Conversion results with metadata
         """
         try:
+            # Validate input file exists
+            if not os.path.exists(input_path):
+                raise ValidationError(f"Input video file not found: {input_path}")
+            
             # Probe input file
             probe = ffmpeg.probe(input_path)
             video_stream = next((stream for stream in probe['streams']
@@ -38,23 +42,59 @@ class VideoProcessor:
             if duration > max_duration:
                 raise ValidationError(f"Video too long: {duration}s > {max_duration}s")
 
-            # Convert to H.264/MP4 with mobile-optimized settings
-            (
-                ffmpeg
-                .input(input_path)
-                .output(
-                    output_path,
-                    vcodec='libx264',
-                    acodec='aac',
-                    preset='medium',
-                    crf=23,  # Good quality for medical content
-                    movflags='+faststart',  # Web optimization
-                    pix_fmt='yuv420p',  # Universal compatibility
-                    vf='scale=trunc(iw/2)*2:trunc(ih/2)*2'  # Ensure even dimensions
-                )
-                .overwrite_output()
-                .run(capture_stdout=True, capture_stderr=True)
+            # Check if video is already in correct format
+            current_codec = video_stream.get('codec_name', '').lower()
+            current_format = Path(input_path).suffix.lower()
+            
+            # Get audio stream info
+            audio_stream = next((stream for stream in probe['streams']
+                               if stream['codec_type'] == 'audio'), None)
+            current_audio_codec = audio_stream.get('codec_name', '').lower() if audio_stream else None
+            
+            # Check if conversion is needed
+            needs_conversion = (
+                current_codec != 'h264' or
+                current_format != '.mp4' or
+                current_audio_codec != 'aac'
             )
+            
+            # If file is already in correct format and paths are the same, skip conversion
+            if not needs_conversion and input_path == output_path:
+                # No conversion needed, file is already in correct format
+                pass  # Skip the conversion block
+            
+            if needs_conversion:
+                # Use temporary file if input and output are the same
+                if input_path == output_path:
+                    temp_output = output_path.replace('.mp4', '_temp.mp4')
+                else:
+                    temp_output = output_path
+                
+                # Convert to H.264/MP4 with mobile-optimized settings
+                (
+                    ffmpeg
+                    .input(input_path)
+                    .output(
+                        temp_output,
+                        vcodec='libx264',
+                        acodec='aac',
+                        preset='medium',
+                        crf=23,  # Good quality for medical content
+                        movflags='+faststart',  # Web optimization
+                        pix_fmt='yuv420p',  # Universal compatibility
+                        vf='scale=trunc(iw/2)*2:trunc(ih/2)*2'  # Ensure even dimensions
+                    )
+                    .overwrite_output()
+                    .run(capture_stdout=True, capture_stderr=True)
+                )
+                
+                # If we used a temporary file, replace the original
+                if temp_output != output_path:
+                    import shutil
+                    shutil.move(temp_output, output_path)
+            else:
+                # Video is already in correct format, no conversion needed
+                pass
 
             # Get output file info
             output_probe = ffmpeg.probe(output_path)
@@ -71,6 +111,9 @@ class VideoProcessor:
                 'codec': output_video.get('codec_name', 'h264')
             }
 
+        except ffmpeg.Error as e:
+            stderr_output = e.stderr.decode('utf-8') if e.stderr else 'No error details'
+            raise ValidationError(f"FFmpeg error: {stderr_output}")
         except Exception as e:
             raise ValidationError(f"Video conversion failed: {str(e)}")
 

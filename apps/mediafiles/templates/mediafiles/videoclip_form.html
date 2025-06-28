@@ -1,115 +1,494 @@
-{% extends "base.html" %} {% load static %} {% block title %} {% if is_update
-%}Editar Vídeo{% else %}Adicionar Vídeo{% endif %} - {{ patient.name }} {%
-endblock %} {% block extra_css %}
-<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet" />
-<link
-  href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css"
-  rel="stylesheet"
-/>
-{% endblock %} {% block content %}
-<div class="container mt-4">
-  <div class="row justify-content-center">
-    <div class="col-md-8">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">
-            {% if is_update %}Editar Vídeo{% else %}Adicionar Vídeo{% endif %} -
-            {{ patient.name }}
-          </h5>
-        </div>
-        <div class="card-body">
-          <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
+{% extends "mediafiles/base.html" %}
+{% load static %}
 
-            <!-- FilePond Upload Area -->
-            {% if not is_update %}
-            <div class="mb-3">
-              <label class="form-label">Arquivo de Vídeo</label>
-              <input
-                type="file"
-                class="filepond"
-                name="video"
-                accept="video/*"
-                data-max-file-size="100MB"
-                data-max-files="1"
-              />
-              <div class="form-text">
-                Formatos aceitos: MP4, MOV, WebM. Máximo 2 minutos, 100MB. O
-                vídeo será convertido automaticamente para compatibilidade
-                mobile.
-              </div>
+{% block extra_head %}
+{{ block.super }}
+<!-- Video-specific CSS -->
+<link rel="stylesheet" href="{% static 'mediafiles/css/videoclip.css' %}">
+<!-- FilePond CSS -->
+<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet" />
+<link href="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.css" rel="stylesheet" />
+<link href="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.css" rel="stylesheet" />
+{% endblock extra_head %}
+
+{% block title %}
+{% if form.instance.pk %}
+    Editar Vídeo - {{ patient.name }} - EquipeMed
+{% else %}
+    Novo Vídeo - {{ patient.name }} - EquipeMed
+{% endif %}
+{% endblock title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_detail' patient.id %}" class="text-decoration-none">
+        <i class="bi bi-person me-1"></i>
+        {{ patient.name }}
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_events_timeline' patient.id %}" class="text-decoration-none">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline
+    </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">
+    {% if form.instance.pk %}
+        <i class="bi bi-pencil me-1"></i>
+        Editar Vídeo
+    {% else %}
+        <i class="bi bi-plus-circle me-1"></i>
+        Novo Vídeo
+    {% endif %}
+</li>
+{% endblock breadcrumb_items %}
+
+{% block media_content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 text-medical-primary mb-1">
+                    {% if form.instance.pk %}
+                        <i class="bi bi-pencil me-2"></i>
+                        Editar Vídeo
+                    {% else %}
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Novo Vídeo
+                    {% endif %}
+                </h1>
+                <p class="text-medical-gray mb-0">
+                    Paciente: <strong>{{ patient.name }}</strong>
+                </p>
+            </div>
+            {% if form.instance.pk %}
+            <div class="text-end">
+                <small class="text-muted">
+                    Criado em: {{ form.instance.created_at|date:"d/m/Y H:i" }}
+                </small>
             </div>
             {% endif %}
-
-            <!-- Form fields -->
-            {{ form.as_p }}
-
-            <div class="d-flex justify-content-between">
-              <a
-                href="{{ patient.get_timeline_url }}"
-                class="btn btn-secondary"
-              >
-                <i class="bi bi-arrow-left"></i> Voltar
-              </a>
-              <button type="submit" class="btn btn-primary">
-                <i class="bi bi-save"></i>
-                {% if is_update %}Atualizar{% else %}Adicionar{% endif %} Vídeo
-              </button>
-            </div>
-          </form>
         </div>
-      </div>
+
+        <!-- Form Card -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-medical-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-camera-video me-2"></i>
+                    Informações do Vídeo
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="videoForm" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Video Upload Section (only for new videos) -->
+                    {% if not form.instance.pk %}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-camera-video me-1"></i>
+                            Arquivo de Vídeo
+                            <span class="text-danger">*</span>
+                        </label>
+                        
+                        <!-- Upload Area -->
+                        <div class="media-upload-area video-upload-form" id="uploadArea">
+                            <div class="upload-content text-center">
+                                <i class="bi bi-cloud-upload video-upload-icon"></i>
+                                <h5 class="text-medical-primary video-upload-text">Arraste o vídeo aqui ou clique para selecionar</h5>
+                                <p class="text-muted mb-3 video-upload-hint">
+                                    Formatos aceitos: MP4, MOV, WebM. Máximo 2 minutos, 100MB.<br>
+                                    O vídeo será convertido automaticamente para compatibilidade mobile.
+                                </p>
+                                <input
+                                    type="file"
+                                    class="filepond"
+                                    name="filepond"
+                                    accept="video/mp4,video/mov,video/webm,video/quicktime"
+                                    data-max-file-size="100MB"
+                                    data-max-files="1"
+                                />
+                            </div>
+                        </div>
+                        
+                        <!-- Video Preview -->
+                        <div id="videoPreview" class="mt-3" style="display: none;">
+                            <div class="text-center video-preview-container">
+                                <video id="previewVideo" class="video-preview-player" controls preload="metadata">
+                                    Seu navegador não suporta o elemento video.
+                                </video>
+                                <div class="video-preview-overlay" id="videoMetadata">
+                                    <span id="videoInfo">Processando...</span>
+                                </div>
+                                <div class="video-preview-actions">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="removeVideo">
+                                        <i class="bi bi-x-circle me-1"></i>
+                                        Remover Vídeo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Upload Progress -->
+                        <div id="uploadProgress" class="video-upload-progress" style="display: none;">
+                            <div class="video-progress-bar">
+                                <div class="video-progress-fill" id="progressFill" style="width: 0%;"></div>
+                            </div>
+                            <div class="video-progress-text" id="progressText">Enviando vídeo...</div>
+                        </div>
+                        
+                        <!-- Validation Feedback -->
+                        <div id="validationFeedback" class="video-validation-feedback" style="display: none;"></div>
+                    </div>
+                    {% else %}
+                    <!-- Current Video Display (for editing) -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-camera-video me-1"></i>
+                            Vídeo Atual
+                        </label>
+                        <div class="text-center">
+                            <div class="video-metadata">
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Nome original:</span>
+                                    <span class="metadata-value">{{ form.instance.original_filename }}</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Tamanho:</span>
+                                    <span class="metadata-value">{{ form.instance.file_size|filesizeformat }}</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Duração:</span>
+                                    <span class="metadata-value">{{ form.instance.duration }}s</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Dimensões:</span>
+                                    <span class="metadata-value">{{ form.instance.width }}x{{ form.instance.height }}px</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Codec:</span>
+                                    <span class="metadata-value">{{ form.instance.video_codec }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Form Fields -->
+                    <div class="row">
+                        <!-- Description Field -->
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-card-text me-1"></i>
+                                {{ form.description.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Descreva brevemente o conteúdo do vídeo (ex: "Exercício de fisioterapia", "Procedimento cirúrgico")
+                            </div>
+                        </div>
+
+                        <!-- Event DateTime Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.event_datetime.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                {{ form.event_datetime.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.event_datetime }}
+                            {% if form.event_datetime.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.event_datetime.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Data e hora em que o vídeo foi gravado
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Caption Field -->
+                    <div class="mb-4">
+                        <label for="{{ form.caption.id_for_label }}" class="form-label fw-bold">
+                            <i class="bi bi-chat-quote me-1"></i>
+                            {{ form.caption.label }}
+                        </label>
+                        {{ form.caption }}
+                        {% if form.caption.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.caption.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Legenda opcional para fornecer contexto adicional sobre o vídeo
+                        </div>
+                    </div>
+
+                    <!-- Hidden Fields -->
+                    {{ form.upload_id }}
+
+                    <!-- Form Actions -->
+                    <div class="media-actions justify-content-end">
+                        <a href="{% if patient %}{% url 'apps.patients:patient_events_timeline' patient.id %}{% else %}{% url 'apps.core:dashboard' %}{% endif %}"
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-medical-primary" id="submitBtn">
+                            <i class="bi bi-{% if form.instance.pk %}check-circle{% else %}plus-circle{% endif %} me-1"></i>
+                            {% if form.instance.pk %}
+                                Salvar Alterações
+                            {% else %}
+                                Criar Vídeo
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
-{% endblock %} {% block extra_js %}
+{% endblock media_content %}
+
+{% block page_specific_scripts %}
+<!-- FilePond scripts -->
 <script src="https://unpkg.com/filepond/dist/filepond.js"></script>
 <script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
 <script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
-
+<!-- Video-specific functionality -->
+<script src="{% static 'videoclip-bundle.js' %}"></script>
 <script>
-  // Register FilePond plugins
-  FilePond.registerPlugin(
-    FilePondPluginFileValidateType,
-    FilePondPluginFileValidateSize,
-  );
+document.addEventListener('DOMContentLoaded', function() {
+    // Register FilePond plugins
+    FilePond.registerPlugin(
+        FilePondPluginFileValidateType,
+        FilePondPluginFileValidateSize
+    );
 
-  // Initialize FilePond
-  const inputElement = document.querySelector(".filepond");
-  if (inputElement) {
-    const pond = FilePond.create(inputElement, {
-      server: {
-        process: "/fp/process/",
-        revert: "/fp/revert/",
-        restore: "/fp/restore/",
-        load: "/fp/load/",
-        fetch: "/fp/fetch/",
-      },
-      acceptedFileTypes: [
-        "video/mp4",
-        "video/mov",
-        "video/webm",
-        "video/quicktime",
-      ],
-      maxFileSize: "100MB",
-      maxFiles: 1,
-      allowMultiple: false,
-      labelIdle:
-        'Arraste o vídeo aqui ou <span class="filepond--label-action">procure</span>',
-      labelFileProcessing: "Processando...",
-      labelFileProcessingComplete: "Processamento concluído",
-      labelFileProcessingAborted: "Processamento cancelado",
-      labelFileProcessingError: "Erro no processamento",
-      labelFileWaitingForSize: "Aguardando tamanho",
-      labelFileSizeNotAvailable: "Tamanho não disponível",
-      onprocessfile: (error, file) => {
-        if (!error) {
-          // Set the upload ID in the hidden form field
-          document.querySelector('input[name="upload_id"]').value =
-            file.serverId;
+    // Function to get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
         }
-      },
+        return cookieValue;
+    }
+    
+    // Get CSRF token
+    const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Initialize FilePond with error handling
+    try {
+        const inputElement = document.querySelector(".filepond");
+        if (inputElement) {
+            const pond = FilePond.create(inputElement, {
+                server: {
+                    process: {
+                        url: "/mediafiles/fp/process/",
+                        method: 'POST',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    },
+                    revert: {
+                        url: "/mediafiles/fp/revert/",
+                        method: 'DELETE',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    },
+                    restore: {
+                        url: "/mediafiles/fp/restore/",
+                        method: 'GET',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    },
+                    load: {
+                        url: "/mediafiles/fp/load/",
+                        method: 'GET',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    },
+                    fetch: {
+                        url: "/mediafiles/fp/fetch/",
+                        method: 'GET',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    }
+                },
+                acceptedFileTypes: [
+                    "video/mp4",
+                    "video/mov", 
+                    "video/webm",
+                    "video/quicktime",
+                ],
+                maxFileSize: "100MB",
+                maxFiles: 1,
+                allowMultiple: false,
+                chunkUploads: false,
+                name: 'filepond',
+                labelIdle: 'Arraste o vídeo aqui ou <span class="filepond--label-action">procure</span>',
+                labelFileProcessing: "Processando...",
+                labelFileProcessingComplete: "Processamento concluído",
+                labelFileProcessingAborted: "Processamento cancelado",
+                labelFileProcessingError: "Erro no processamento",
+                labelFileWaitingForSize: "Aguardando tamanho",
+                labelFileSizeNotAvailable: "Tamanho não disponível",
+                onprocessfile: (error, file) => {
+                    if (!error) {
+                        // Set the upload ID in the hidden form field
+                        const uploadField = document.querySelector('input[name="upload_id"]');
+                        if (uploadField) {
+                            uploadField.value = file.serverId;
+                        }
+                        
+                        // Show video preview if available
+                        const previewContainer = document.getElementById('videoPreview');
+                        if (previewContainer) {
+                            previewContainer.style.display = 'block';
+                        }
+                        
+                        // Update validation feedback
+                        const feedback = document.getElementById('validationFeedback');
+                        if (feedback) {
+                            feedback.className = 'video-validation-feedback valid';
+                            feedback.innerHTML = '<i class="bi bi-check-circle me-2"></i>Vídeo enviado com sucesso!';
+                            feedback.style.display = 'block';
+                        }
+                    } else {
+                        // Show error feedback
+                        const feedback = document.getElementById('validationFeedback');
+                        if (feedback) {
+                            feedback.className = 'video-validation-feedback invalid';
+                            feedback.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Erro no upload: ' + error;
+                            feedback.style.display = 'block';
+                        }
+                    }
+                },
+                onprocessfiles: () => {
+                    // Hide progress when done
+                    const progress = document.getElementById('uploadProgress');
+                    if (progress) {
+                        progress.style.display = 'none';
+                    }
+                },
+                onprocessfileprogress: (file, progress) => {
+                    // Update progress bar
+                    const progressElement = document.getElementById('uploadProgress');
+                    const progressFill = document.getElementById('progressFill');
+                    const progressText = document.getElementById('progressText');
+                    
+                    if (progressElement && progressFill && progressText) {
+                        progressElement.style.display = 'block';
+                        progressFill.style.width = Math.round(progress * 100) + '%';
+                        progressText.textContent = 'Enviando vídeo... ' + Math.round(progress * 100) + '%';
+                    }
+                }
+            });
+            
+            // Remove video functionality
+            const removeBtn = document.getElementById('removeVideo');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    pond.removeFiles();
+                    document.getElementById('videoPreview').style.display = 'none';
+                    document.querySelector('input[name="upload_id"]').value = '';
+                    const feedback = document.getElementById('validationFeedback');
+                    if (feedback) {
+                        feedback.style.display = 'none';
+                    }
+                });
+            }
+        } else {
+            console.warn('FilePond input element not found - video upload disabled');
+        }
+    } catch (error) {
+        console.error('FilePond initialization failed:', error);
+        // Show fallback message
+        const feedback = document.getElementById('validationFeedback');
+        if (feedback) {
+            feedback.className = 'video-validation-feedback invalid';
+            feedback.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Erro na inicialização do upload. Recarregue a página.';
+            feedback.style.display = 'block';
+        }
+    }
+
+    // Form submission handler with loading state
+    const form = document.getElementById('videoForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Check if upload_id is present for new videos
+            const isNewVideo = !document.querySelector('input[name="upload_id"]').value && !{{ form.instance.pk|yesno:"true,false" }};
+            if (isNewVideo) {
+                e.preventDefault();
+                const feedback = document.getElementById('validationFeedback');
+                if (feedback) {
+                    feedback.className = 'video-validation-feedback invalid';
+                    feedback.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Por favor, selecione um vídeo antes de continuar.';
+                    feedback.style.display = 'block';
+                }
+                return false;
+            }
+            
+            // Disable submit button to prevent double submission
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processando...';
+
+            // Re-enable button after 10 seconds as fallback
+            setTimeout(function() {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '{% if form.instance.pk %}<i class="bi bi-check-circle me-1"></i>Salvar Alterações{% else %}<i class="bi bi-plus-circle me-1"></i>Criar Vídeo{% endif %}';
+            }, 10000);
+        });
+    }
+
+    // Basic form validation
+    const inputs = document.querySelectorAll('#videoForm input[required], #videoForm textarea[required]');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (!this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+            }
+        });
     });
-  }
+});
 </script>
-{% endblock %}
+{% endblock page_specific_scripts %}

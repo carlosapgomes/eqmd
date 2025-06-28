@@ -276,12 +276,17 @@ ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory"
 LOGIN_REDIRECT_URL = "core:dashboard"
 # LOGOUT_REDIRECT_URL = 'core:landing_page' # Optional: can be added later
 
-# FilePond Configuration
-DJANGO_DRF_FILEPOND_UPLOAD_TMP = '/tmp/filepond_uploads'
-DJANGO_DRF_FILEPOND_FILE_STORE_PATH = '/tmp/filepond_stored'
+# FilePond Configuration - use project-relative directories
+DJANGO_DRF_FILEPOND_UPLOAD_TMP = str(BASE_DIR / 'filepond_tmp')
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = str(BASE_DIR / 'filepond_stored')
 
-# Custom storage for mediafiles with UUID naming
-DJANGO_DRF_FILEPOND_STORAGES_BACKEND = 'apps.mediafiles.storage.SecureVideoStorage'
+# Ensure directories exist with proper permissions
+os.makedirs(DJANGO_DRF_FILEPOND_UPLOAD_TMP, mode=0o755, exist_ok=True)
+os.makedirs(DJANGO_DRF_FILEPOND_FILE_STORE_PATH, mode=0o755, exist_ok=True)
+
+# Additional FilePond settings
+DJANGO_DRF_FILEPOND_UPLOAD_TMP = DJANGO_DRF_FILEPOND_UPLOAD_TMP  # String path required
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = DJANGO_DRF_FILEPOND_FILE_STORE_PATH  # String path required
 
 # Video processing settings
 MEDIA_VIDEO_CONVERSION_ENABLED = True

@@ -11,6 +11,7 @@ Forms:
 """
 
 import os
+import uuid
 from pathlib import Path
 from django import forms
 from django.core.exceptions import ValidationError
@@ -649,18 +650,48 @@ class VideoClipCreateForm(BaseMediaForm, forms.ModelForm):
         upload_id = self.cleaned_data['upload_id']
         temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
 
-        # Store the upload permanently and get file info
-        stored_upload = store_upload(upload_id, destination_file_name=None)
+        # Generate UUID-based file path for video storage
+        file_uuid = uuid.uuid4()
+        original_ext = Path(temp_upload.upload_name).suffix.lower()
+        
+        # Create date-based directory structure: videos/YYYY/MM/originals/
+        date_path = timezone.now().strftime('%Y/%m')
+        video_dir = settings.MEDIA_ROOT / f"videos/{date_path}/originals"
+        video_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate secure filename with UUID
+        secure_filename = f"{file_uuid}{original_ext}"
+        destination_path = video_dir / secure_filename
 
-        # Process video conversion
+        # Store the upload permanently with relative filename only
+        # FilePond will store it in its own storage directory
+        stored_upload = store_upload(upload_id, secure_filename)
+        
+        # Get the actual stored file path from FilePond storage
+        stored_file_path = Path(stored_upload.file.path)
+        
+        # Copy file from FilePond storage to our final destination
+        import shutil
+        try:
+            shutil.copy2(stored_file_path, destination_path)
+        except Exception as e:
+            raise forms.ValidationError(f"Failed to copy video file: {str(e)}")
+
+        # Process video conversion using our final destination file
         processor = VideoProcessor()
-        conversion_result = processor.convert_to_h264(
-            stored_upload.file.path,
-            stored_upload.file.path  # Convert in place
-        )
+        try:
+            conversion_result = processor.convert_to_h264(
+                str(destination_path),
+                str(destination_path)  # Convert in place
+            )
+        except Exception as e:
+            # Clean up the copied file if conversion fails
+            if destination_path.exists():
+                destination_path.unlink()
+            raise forms.ValidationError(f"Video processing failed: {str(e)}")
 
-        # Set videoclip fields
-        videoclip.file_id = stored_upload.upload_id
+        # Set videoclip fields using UUID as file_id
+        videoclip.file_id = str(file_uuid)
         videoclip.original_filename = temp_upload.upload_name
         videoclip.file_size = conversion_result['converted_size']
         videoclip.duration = int(conversion_result['duration'])
@@ -850,6 +881,8 @@ class VideoClipUpdateForm(BaseMediaForm, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         """Initialize form with current video clip data."""
+        # Extract user parameter if passed (required for consistency with other forms)
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
         # Format datetime for HTML5 datetime-local input
