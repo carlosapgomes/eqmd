@@ -26,3 +26,6 @@ staticfiles/
 logs/
 media/
 !prompts/media
+filepond_tmp/
+filepond_stored/
+errors/
