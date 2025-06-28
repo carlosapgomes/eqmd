@@ -62,7 +62,7 @@ Parameters expected:
                      style="max-width: 300px; max-height: 200px; object-fit: cover;"
                      data-video-id="{{ event.pk }}"
                      data-bs-toggle="modal"
-                     data-bs-target="#videoModal"
+                     data-bs-target="#videoModal{{ event.pk }}"
                      loading="lazy">
                 
                 <!-- Duration Badge Overlay -->
@@ -133,20 +133,30 @@ Parameters expected:
 
 {% block extra_html %}
 <!-- Video Modal for inline playback -->
-<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+<div class="modal fade" id="videoModal{{ event.pk }}" tabindex="-1" aria-labelledby="videoModalLabel{{ event.pk }}" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="videoModalLabel">
+                <h5 class="modal-title" id="videoModalLabel{{ event.pk }}">
                     <i class="bi bi-camera-video me-2"></i>
                     {{ event.description|default:"Vídeo" }}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-modal-id="videoModal{{ event.pk }}"></button>
             </div>
             <div class="modal-body p-0">
-                <video class="w-100" controls preload="metadata" id="modalVideo">
+                <video class="w-100" controls preload="metadata" id="modalVideo{{ event.pk }}">
                     <source src="{% url 'mediafiles:videoclip_stream' event.pk %}" type="{{ event.media_file.mime_type }}">
-                    Seu navegador não suporta o elemento de vídeo.
+                    {% comment %}Add fallback for MOV files{% endcomment %}
+                    {% if event.media_file.mime_type == 'video/quicktime' %}
+                        <source src="{% url 'mediafiles:videoclip_stream' event.pk %}" type="video/mp4">
+                    {% endif %}
+                    <p class="text-center p-4">
+                        Seu navegador não suporta o elemento de vídeo. 
+                        <a href="{% url 'mediafiles:videoclip_download' event.pk %}" class="btn btn-primary btn-sm ms-2">
+                            <i class="bi bi-download me-1"></i>
+                            Baixar Vídeo
+                        </a>
+                    </p>
                 </video>
             </div>
             <div class="modal-footer">
@@ -302,6 +312,12 @@ Parameters expected:
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     try {
+        // Prevent multiple initialization
+        if (window.videoClipModalInitialized) {
+            return;
+        }
+        window.videoClipModalInitialized = true;
+        
         // Handle video thumbnail click to open modal
         const videoThumbnails = document.querySelectorAll('.video-thumbnail-wrapper');
 
@@ -312,10 +328,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // Get the video ID from the data attribute
+            const videoId = this.querySelector('.video-thumbnail').dataset.videoId;
+            if (!videoId) {
+                console.error('Video ID not found!');
+                return;
+            }
+
             // Check if modal exists
-            const modalElement = document.getElementById('videoModal');
+            const modalElement = document.getElementById('videoModal' + videoId);
             if (!modalElement) {
-                console.error('Video modal not found!');
+                console.error('Video modal not found for ID:', videoId);
                 return;
             }
 
@@ -331,28 +354,67 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle video modal events
-    const videoModal = document.getElementById('videoModal');
-    const modalVideo = document.getElementById('modalVideo');
+    // Handle video modal events for all video modals
+    const videoModals = document.querySelectorAll('[id^="videoModal"]');
+    
+    videoModals.forEach(function(videoModal) {
+        const modalVideo = videoModal.querySelector('[id^="modalVideo"]');
+        
+        if (modalVideo) {
+            videoModal.addEventListener('shown.bs.modal', function () {
+                // Focus on the modal for keyboard navigation
+                this.focus();
+            });
 
-    if (videoModal && modalVideo) {
-        videoModal.addEventListener('shown.bs.modal', function () {
-            // Focus on the modal for keyboard navigation
-            this.focus();
-        });
+            videoModal.addEventListener('hidden.bs.modal', function () {
+                // Pause video when modal closes and reset to beginning
+                modalVideo.pause();
+                modalVideo.currentTime = 0;
+            });
 
-        videoModal.addEventListener('hidden.bs.modal', function () {
-            // Pause video when modal closes
-            modalVideo.pause();
-        });
+            // Close modal with Escape key
+            videoModal.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    const modalInstance = bootstrap.Modal.getInstance(this);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }
+            });
+        }
+    });
 
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && videoModal.classList.contains('show')) {
-                bootstrap.Modal.getInstance(videoModal).hide();
-            }
-        });
-    }
+    // Handle all close buttons with data-bs-dismiss="modal" specifically for video modals
+    const videoModalCloseButtons = document.querySelectorAll('[id^="videoModal"] [data-bs-dismiss="modal"]');
+    console.log('Found video modal close buttons:', videoModalCloseButtons.length);
+    
+    videoModalCloseButtons.forEach(function(closeButton) {
+        const targetModal = closeButton.closest('.modal');
+        if (targetModal && targetModal.id.startsWith('videoModal')) {
+            console.log('Setting up video close button for modal:', targetModal.id);
+            
+            closeButton.addEventListener('click', function(e) {
+                console.log('Video close button clicked, modal ID:', targetModal.id);
+                
+                // Remove focus from button before hiding modal to avoid accessibility issues
+                this.blur();
+                
+                // Small delay to ensure focus is removed
+                setTimeout(() => {
+                    const modalInstance = bootstrap.Modal.getInstance(targetModal);
+                    if (modalInstance) {
+                        console.log('Hiding video modal via existing instance');
+                        modalInstance.hide();
+                    } else {
+                        console.log('Creating new modal instance and hiding');
+                        const newInstance = new bootstrap.Modal(targetModal);
+                        newInstance.hide();
+                    }
+                }, 10);
+            });
+        }
+    });
 
 
     // Initialize tooltips for video action buttons
@@ -390,9 +452,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // Error handling
         video.addEventListener('error', function() {
             console.error('Video loading error:', this.error);
+            console.log('Video source:', this.src);
+            console.log('Video mime type:', this.querySelector('source')?.type);
+            
             const errorMsg = document.createElement('div');
-            errorMsg.className = 'alert alert-danger text-center m-3';
-            errorMsg.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Erro ao carregar o vídeo. Tente novamente ou baixe o arquivo.';
+            errorMsg.className = 'alert alert-warning text-center m-3';
+            
+            // Provide specific help for MOV files
+            const sourceElement = this.querySelector('source');
+            const mimeType = sourceElement?.type;
+            let helpText = 'Erro ao carregar o vídeo.';
+            
+            if (mimeType === 'video/quicktime') {
+                helpText = 'Este arquivo MOV pode não ser compatível com seu navegador.';
+            }
+            
+            errorMsg.innerHTML = `
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                ${helpText}
+                <br>
+                <div class="mt-2">
+                    <a href="${this.querySelector('source')?.src}" class="btn btn-primary btn-sm me-2" download>
+                        <i class="bi bi-download me-1"></i>
+                        Baixar Vídeo
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="this.closest('.modal-body').querySelector('video').load()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Tentar Novamente
+                    </button>
+                </div>
+            `;
             this.parentNode.replaceChild(errorMsg, this);
         });
     });

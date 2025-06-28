@@ -216,7 +216,7 @@ MEDIA_VIDEO_MAX_SIZE = 50 * 1024 * 1024  # 50MB
 MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes in seconds
 MEDIA_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 MEDIA_ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
-MEDIA_ALLOWED_VIDEO_CODECS = ['h264', 'vp8', 'vp9', 'av1']
+MEDIA_ALLOWED_VIDEO_CODECS = ['h264', 'hevc', 'vp8', 'vp9', 'av1']
 
 # Security settings for media files
 MEDIA_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']

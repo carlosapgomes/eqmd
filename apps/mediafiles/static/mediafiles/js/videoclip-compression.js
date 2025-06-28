@@ -629,7 +629,7 @@ class VideoCompressionPhase3 {
     }
 
     isValidCompressionFile(file) {
-        const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/webm'];
+        const validTypes = ['video/mp4', 'video/avi', 'video/quicktime', 'video/webm'];
         const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
         const minSize = 1 * 1024 * 1024; // 1MB
 
@@ -903,11 +903,25 @@ class VideoCompressionPhase3 {
          */
         showCompressedVideoPreview: function(compressedFile) {
             console.log('[UPLOAD DEBUG] Loading compressed video metadata...');
+            console.log('[FRONTEND SIZE] Compressed file size:', {
+                size: compressedFile.size,
+                sizeFormatted: utils.formatFileSize(compressedFile.size),
+                fileName: compressedFile.name,
+                type: compressedFile.type
+            });
+            
             const video = document.createElement('video');
             video.preload = 'metadata';
             
             video.onloadedmetadata = () => {
                 console.log('[UPLOAD DEBUG] Compressed video metadata loaded, duration:', video.duration);
+                console.log('[FRONTEND SIZE] Final compressed video ready for upload:', {
+                    fileName: compressedFile.name,
+                    fileSize: compressedFile.size,
+                    sizeFormatted: utils.formatFileSize(compressedFile.size),
+                    duration: video.duration,
+                    type: compressedFile.type
+                });
                 this.showVideoPreview(URL.createObjectURL(compressedFile), compressedFile, video.duration);
                 this.hideUploadProgress();
                 utils.showToast('Vídeo comprimido e carregado com sucesso!', 'success');
@@ -1137,6 +1151,15 @@ class VideoCompressionPhase3 {
                 
                 if (result.success) {
                     console.log('[UPLOAD DEBUG] Compression successful, showing preview');
+                    console.log('[FRONTEND SIZE] Compression results:', {
+                        originalSize: result.originalSize,
+                        originalSizeFormatted: utils.formatFileSize(result.originalSize),
+                        compressedSize: result.compressedSize,
+                        compressedSizeFormatted: utils.formatFileSize(result.compressedSize),
+                        compressionRatio: result.compressionRatio,
+                        sizeSavings: utils.formatFileSize(result.originalSize - result.compressedSize),
+                        sizeSavingsPercent: Math.round(result.compressionRatio * 100) + '%'
+                    });
                     this.compressionControls.completeCompression(result);
                     // Load video metadata to get correct duration before showing preview
                     this.showCompressedVideoPreview(result.compressedFile);

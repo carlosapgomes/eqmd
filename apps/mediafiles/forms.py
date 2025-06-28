@@ -679,11 +679,31 @@ class VideoClipCreateForm(BaseMediaForm, forms.ModelForm):
         if commit:
             # Create MediaFile from uploaded video
             video_file = self.cleaned_data['video']
+            
+            # Log incoming file size
+            print(f"[BACKEND SIZE] Received video file for upload:")
+            print(f"  - File name: {video_file.name}")
+            print(f"  - File size: {video_file.size:,} bytes ({video_file.size / (1024*1024):.2f} MB)")
+            print(f"  - Content type: {video_file.content_type}")
+            
             media_file = MediaFile.objects.create_from_upload(video_file)
+
+            # Log processed file size
+            print(f"[BACKEND SIZE] MediaFile created successfully:")
+            print(f"  - ID: {media_file.id}")
+            print(f"  - Original filename: {media_file.original_filename}")
+            print(f"  - File size: {media_file.file_size:,} bytes ({media_file.file_size / (1024*1024):.2f} MB)")
+            print(f"  - MIME type: {media_file.mime_type}")
+            if hasattr(media_file, 'video_codec') and media_file.video_codec:
+                print(f"  - Video codec: {media_file.video_codec}")
+            if hasattr(media_file, 'duration') and media_file.duration:
+                print(f"  - Duration: {media_file.duration} seconds")
 
             # Associate MediaFile with VideoClip
             video_clip.media_file = media_file
             video_clip.save()
+            
+            print(f"[BACKEND SIZE] VideoClip saved with ID: {video_clip.id}")
 
         return video_clip
 

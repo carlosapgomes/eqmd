@@ -86,6 +86,12 @@ class MediaFileManager(models.Manager):
                 return existing_file
 
         # Create new MediaFile instance
+        print(f"[BACKEND SIZE] Creating MediaFile from upload:")
+        print(f"  - Original filename: {uploaded_file.name}")
+        print(f"  - Upload size: {uploaded_file.size:,} bytes ({uploaded_file.size / (1024*1024):.2f} MB)")
+        print(f"  - Content type: {uploaded_file.content_type}")
+        print(f"  - File hash: {file_hash[:12]}...")
+        
         media_file = self.model(
             original_filename=normalize_filename(uploaded_file.name),
             file_size=uploaded_file.size,
@@ -98,22 +104,35 @@ class MediaFileManager(models.Manager):
         # This ensures the instance has an ID before file upload, so original file and
         # thumbnail use the same UUID (instance.id)
         media_file.save()
+        print(f"[BACKEND SIZE] MediaFile instance created with ID: {media_file.id}")
 
         # Now save file to storage using the MediaFile.id for consistent naming
         media_file.file.save(uploaded_file.name, uploaded_file, save=True)
+        print(f"[BACKEND SIZE] File saved to storage: {media_file.file.name}")
 
         # Extract metadata and generate thumbnails (both will use same MediaFile.id)
+        print(f"[BACKEND SIZE] Extracting metadata...")
         media_file._extract_metadata()
+        print(f"[BACKEND SIZE] Generating thumbnails...")
         media_file._generate_thumbnail()
 
         # Determine which fields to update based on file type
         if media_file.is_video():
             update_fields = ['width', 'height', 'duration', 'video_codec', 'video_bitrate', 'fps', 'metadata', 'thumbnail']
+            print(f"[BACKEND SIZE] Video metadata extracted:")
+            print(f"  - Dimensions: {media_file.width}x{media_file.height}")
+            print(f"  - Duration: {media_file.duration} seconds")
+            print(f"  - Codec: {media_file.video_codec}")
+            print(f"  - Bitrate: {media_file.video_bitrate}")
+            print(f"  - FPS: {media_file.fps}")
         else:
             update_fields = ['width', 'height', 'metadata', 'thumbnail']
+            print(f"[BACKEND SIZE] Image metadata extracted:")
+            print(f"  - Dimensions: {media_file.width}x{media_file.height}")
 
         # Save to database again to update metadata and thumbnail fields
         media_file.save(update_fields=update_fields)
+        print(f"[BACKEND SIZE] MediaFile processing complete - Final size: {media_file.file_size:,} bytes")
 
         return media_file
 
