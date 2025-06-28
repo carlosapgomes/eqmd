@@ -222,6 +222,13 @@ MEDIA_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 MEDIA_ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
 MEDIA_ALLOWED_VIDEO_CODECS = ['h264', 'hevc', 'vp8', 'vp9', 'av1']
 
+# Image storage configurations for FilePond
+DJANGO_DRF_FILEPOND_STORAGES_BACKEND_PHOTO = 'apps.mediafiles.storage.SecureImageStorage'
+DJANGO_DRF_FILEPOND_STORAGES_BACKEND_PHOTOSERIES = 'apps.mediafiles.storage.SecurePhotoSeriesStorage'
+
+# Image processing settings
+MEDIA_THUMBNAIL_SIZE = (300, 300)
+
 # Security settings for media files
 MEDIA_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 MEDIA_ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov']
@@ -305,4 +312,11 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+# FilePond upload field name configuration
+DJANGO_DRF_FILEPOND_UPLOAD_FIELD_NAME = 'file'
+DJANGO_DRF_FILEPOND_FILE_FIELD_NAME = 'file'
+
+# Default field name (try both possible setting names)
+DJANGO_DRF_FILEPOND_FIELD_NAME = 'file'
 

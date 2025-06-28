@@ -1,0 +1,421 @@
+{% extends "mediafiles/base.html" %}
+{% load static %}
+
+{% block extra_head %}
+{{ block.super }}
+<!-- PhotoSeries creation-specific CSS -->
+<link rel="stylesheet" href="{% static 'mediafiles/css/photoseries.css' %}">
+<!-- FilePond CSS -->
+<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
+<link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet">
+{% endblock extra_head %}
+
+{% block title %}
+Nova Série de Fotos - {{ patient.name }} - EquipeMed
+{% endblock title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_detail' patient.id %}" class="text-decoration-none">
+        <i class="bi bi-person me-1"></i>
+        {{ patient.name }}
+    </a>
+</li>
+<li class="breadcrumb-item">
+    <a href="{% url 'apps.patients:patient_events_timeline' patient.id %}" class="text-decoration-none">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline
+    </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">
+    <i class="bi bi-plus-circle me-1"></i>
+    Nova Série de Fotos
+</li>
+{% endblock breadcrumb_items %}
+
+{% block media_content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 text-medical-primary mb-1">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Nova Série de Fotos
+                </h1>
+                <p class="text-medical-gray mb-0">
+                    Paciente: <strong>{{ patient.name }}</strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- Form Card -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-medical-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-images me-2"></i>
+                    Upload de Múltiplas Imagens com FilePond
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="photoSeriesCreateForm" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- FilePond Multi-Upload Interface -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-images me-1"></i>
+                            Imagens da Série
+                            <span class="text-danger">*</span>
+                        </label>
+                        
+                        <!-- FilePond Upload Area -->
+                        <div class="media-upload-area">
+                            <input type="file" 
+                                   class="filepond" 
+                                   name="filepond"
+                                   accept="image/*"
+                                   multiple
+                                   data-max-file-size="5MB"
+                                   data-max-files="20">
+                        </div>
+                        
+                        <div class="form-text mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Selecione múltiplas imagens para criar uma série. 
+                            Formatos aceitos: JPEG, PNG, WebP. Máximo 5MB por imagem, até 20 imagens.
+                        </div>
+                        
+                        <!-- Hidden field for upload IDs -->
+                        {{ form.upload_ids }}
+                        
+                        <!-- Error Display -->
+                        {% if form.upload_ids.errors %}
+                        <div class="media-error mt-3">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            {% for error in form.upload_ids.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Form Fields -->
+                    <div class="row">
+                        <!-- Description Field -->
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-card-text me-1"></i>
+                                {{ form.description.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Descreva brevemente o que esta série de fotos documenta (ex: "Evolução da ferida pós-operatória")
+                            </div>
+                        </div>
+
+                        <!-- Event DateTime Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.event_datetime.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                {{ form.event_datetime.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.event_datetime }}
+                            {% if form.event_datetime.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.event_datetime.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Data e hora quando as fotos foram tiradas
+                            </div>
+                        </div>
+
+                        <!-- Caption Field -->
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.caption.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-chat-quote me-1"></i>
+                                {{ form.caption.label }}
+                            </label>
+                            {{ form.caption }}
+                            {% if form.caption.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.caption.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Legenda opcional para contextualizar as imagens da série
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Progress -->
+                    <div id="uploadProgress" class="mb-3" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Processando...</span>
+                            </div>
+                            <span>Processando imagens...</span>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="media-actions justify-content-end">
+                        <a href="{% url 'apps.patients:patient_events_timeline' patient.id %}"
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-medical-primary" id="submitBtn" disabled>
+                            <i class="bi bi-plus-circle me-1"></i>
+                            Criar Série de Fotos
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="card mt-4 border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Dicas para Upload de Séries de Fotos
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-info">Melhores Práticas:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Use fotos de alta qualidade (JPEG recomendado)</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Mantenha iluminação consistente entre as fotos</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Organize as fotos em ordem cronológica</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Inclua régua ou referência de tamanho quando relevante</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-info">Limitações Técnicas:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-file-earmark-image text-primary me-2"></i>Máximo 5MB por arquivo</li>
+                            <li><i class="bi bi-images text-primary me-2"></i>Até 20 imagens por série</li>
+                            <li><i class="bi bi-filetype-jpg text-primary me-2"></i>Formatos: JPEG, PNG, WebP</li>
+                            <li><i class="bi bi-shield-check text-primary me-2"></i>Arquivos processados automaticamente</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock media_content %}
+
+{% block page_specific_scripts %}
+<!-- FilePond JavaScript -->
+<script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
+<script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Register FilePond plugins
+    FilePond.registerPlugin(
+        FilePondPluginFileValidateType,
+        FilePondPluginFileValidateSize,
+        FilePondPluginImagePreview
+    );
+
+    // Function to get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Get CSRF token
+    const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Initialize FilePond for multiple files
+    const inputElement = document.querySelector('.filepond');
+    const submitBtn = document.getElementById('submitBtn');
+    const uploadProgress = document.getElementById('uploadProgress');
+    
+    if (inputElement) {
+        const pond = FilePond.create(inputElement, {
+            server: {
+                process: {
+                    url: '/mediafiles/fp/process/',
+                    method: 'POST',
+                    withCredentials: true,
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                },
+                revert: {
+                    url: '/mediafiles/fp/revert/',
+                    method: 'DELETE',
+                    withCredentials: true,
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                },
+                restore: {
+                    url: '/mediafiles/fp/restore/',
+                    method: 'GET',
+                    withCredentials: true,
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                },
+                load: {
+                    url: '/mediafiles/fp/load/',
+                    method: 'GET',
+                    withCredentials: true,
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                },
+                fetch: {
+                    url: '/mediafiles/fp/fetch/',
+                    method: 'GET',
+                    withCredentials: true,
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                }
+            },
+            acceptedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
+            maxFileSize: '5MB',
+            maxFiles: 20,
+            allowMultiple: true,
+            allowReorder: true,
+            imagePreviewHeight: 170,
+            name: 'file',
+            labelIdle: `
+                <div class="text-center p-4">
+                    <i class="bi bi-cloud-upload display-1 text-muted mb-3"></i>
+                    <p class="h5 text-medical-primary mb-2">Arraste as imagens aqui</p>
+                    <p class="text-muted mb-3">ou <span class="filepond--label-action text-primary">procure nos seus arquivos</span></p>
+                    <small class="text-muted">Formatos aceitos: JPEG, PNG, WebP | Máximo 5MB por arquivo</small>
+                </div>
+            `,
+            labelFileProcessing: 'Processando...',
+            labelFileProcessingComplete: 'Processamento concluído',
+            labelFileProcessingAborted: 'Processamento cancelado',
+            labelFileProcessingError: 'Erro no processamento',
+            onaddfile: (error, file) => {
+                if (!error) {
+                    updateSubmitButton();
+                }
+            },
+            onremovefile: (error, file) => {
+                updateSubmitButton();
+            },
+            onprocessfiles: () => {
+                // Collect all processed file IDs in their current visual order
+                const uploadIds = pond.getFiles()
+                    .filter(file => file.status === FilePond.FileStatus.PROCESSING_COMPLETE)
+                    .map(file => file.serverId)
+                    .join(',');
+                
+                document.querySelector('input[name="upload_ids"]').value = uploadIds;
+                updateSubmitButton();
+            },
+            onreorderfiles: (files) => {
+                // Update upload_ids when files are reordered
+                const uploadIds = files
+                    .filter(file => file.status === FilePond.FileStatus.PROCESSING_COMPLETE)
+                    .map(file => file.serverId)
+                    .join(',');
+                
+                document.querySelector('input[name="upload_ids"]').value = uploadIds;
+            },
+            onprocessfilestart: () => {
+                uploadProgress.style.display = 'block';
+            },
+            onprocessfile: (error, file) => {
+                if (pond.getFiles().every(f => f.status === FilePond.FileStatus.PROCESSING_COMPLETE)) {
+                    uploadProgress.style.display = 'none';
+                }
+            }
+        });
+
+        // Function to update submit button state
+        function updateSubmitButton() {
+            const files = pond.getFiles();
+            const processedFiles = files.filter(file => 
+                file.status === FilePond.FileStatus.PROCESSING_COMPLETE
+            );
+            
+            if (processedFiles.length > 0) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-outline-primary');
+                submitBtn.classList.add('btn-medical-primary');
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.remove('btn-medical-primary');
+                submitBtn.classList.add('btn-outline-primary');
+            }
+        }
+
+        // Form submission handling
+        document.getElementById('photoSeriesCreateForm').addEventListener('submit', function(e) {
+            const uploadIds = document.querySelector('input[name="upload_ids"]').value;
+            
+            if (!uploadIds) {
+                e.preventDefault();
+                alert('Por favor, aguarde o processamento das imagens antes de enviar o formulário.');
+                return false;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Criando série...';
+        });
+
+        // Form validation feedback
+        const requiredFields = document.querySelectorAll('#photoSeriesCreateForm input[required], #photoSeriesCreateForm textarea[required]');
+        requiredFields.forEach(field => {
+            field.addEventListener('blur', function() {
+                if (this.value.trim() === '') {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                }
+            });
+
+            field.addEventListener('input', function() {
+                if (this.classList.contains('is-invalid') && this.value.trim() !== '') {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock page_specific_scripts %}

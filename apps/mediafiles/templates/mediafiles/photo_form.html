@@ -5,6 +5,9 @@
 {{ block.super }}
 <!-- Photo-specific CSS -->
 <link rel="stylesheet" href="{% static 'mediafiles/css/photo.css' %}">
+<!-- FilePond CSS -->
+<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
+<link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet">
 {% endblock extra_head %}
 
 {% block title %}
@@ -82,61 +85,58 @@
                     <!-- Image Upload Section (only for new photos) -->
                     {% if not form.instance.pk %}
                     <div class="mb-4">
-                        <label for="{{ form.image.id_for_label }}" class="form-label fw-bold">
+                        <label class="form-label fw-bold">
                             <i class="bi bi-image me-1"></i>
-                            {{ form.image.label }}
+                            Arquivo de Imagem
                             <span class="text-danger">*</span>
                         </label>
                         
                         <!-- Upload Area -->
-                        <div class="media-upload-area" id="uploadArea">
-                            <div class="upload-content">
-                                <i class="bi bi-cloud-upload display-4 text-medical-gray mb-3"></i>
-                                <h5 class="text-medical-primary">Clique para selecionar ou arraste a imagem aqui</h5>
-                                <p class="text-muted mb-3">{{ form.image.help_text }}</p>
-                                {{ form.image }}
+                        <div class="media-upload-area photo-upload-form" id="uploadArea">
+                            <div class="upload-content text-center">
+                                <i class="bi bi-cloud-upload photo-upload-icon"></i>
+                                <h5 class="text-medical-primary photo-upload-text">Arraste a imagem aqui ou clique para selecionar</h5>
+                                <p class="text-muted mb-3 photo-upload-hint">
+                                    Formatos aceitos: JPEG, PNG, WebP. Máximo 5MB.<br>
+                                    A imagem será processada automaticamente para gerar miniaturas.
+                                </p>
+                                <input
+                                    type="file"
+                                    class="filepond"
+                                    name="filepond"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    data-max-file-size="5MB"
+                                    data-max-files="1"
+                                />
                             </div>
                         </div>
                         
                         <!-- Image Preview -->
                         <div id="imagePreview" class="mt-3" style="display: none;">
-                            <div class="text-center">
-                                <img id="previewImage" class="media-preview" alt="Preview">
-                                <div class="media-metadata" id="imageMetadata">
-                                    <div class="metadata-item">
-                                        <span class="metadata-label">Nome do arquivo:</span>
-                                        <span class="metadata-value" id="fileName"></span>
-                                    </div>
-                                    <div class="metadata-item">
-                                        <span class="metadata-label">Tamanho:</span>
-                                        <span class="metadata-value" id="fileSize"></span>
-                                    </div>
-                                    <div class="metadata-item">
-                                        <span class="metadata-label">Tipo:</span>
-                                        <span class="metadata-value" id="fileType"></span>
-                                    </div>
+                            <div class="text-center photo-preview-container">
+                                <img id="previewImage" class="photo-preview-image" alt="Preview" />
+                                <div class="photo-preview-overlay" id="imageMetadata">
+                                    <span id="imageInfo">Processando...</span>
                                 </div>
-                                <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="removeImage">
-                                    <i class="bi bi-x-circle me-1"></i>
-                                    Remover Imagem
-                                </button>
+                                <div class="photo-preview-actions">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="removeImage">
+                                        <i class="bi bi-x-circle me-1"></i>
+                                        Remover Imagem
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         
                         <!-- Upload Progress -->
-                        <div id="uploadProgress" class="media-progress" style="display: none;">
-                            <div class="media-progress-bar" id="progressBar" style="width: 0%;"></div>
+                        <div id="uploadProgress" class="photo-upload-progress" style="display: none;">
+                            <div class="photo-progress-bar">
+                                <div class="photo-progress-fill" id="progressFill" style="width: 0%;"></div>
+                            </div>
+                            <div class="photo-progress-text" id="progressText">Enviando imagem...</div>
                         </div>
                         
-                        <!-- Error Display -->
-                        {% if form.image.errors %}
-                        <div class="media-error">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            {% for error in form.image.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
+                        <!-- Validation Feedback -->
+                        <div id="validationFeedback" class="photo-validation-feedback" style="display: none;"></div>
                     </div>
                     {% else %}
                     <!-- Current Image Display (for editing) -->
@@ -146,25 +146,23 @@
                             Imagem Atual
                         </label>
                         <div class="text-center">
-                            <img src="{% url 'mediafiles:serve_file' form.instance.media_file.id %}" 
+                            {% if form.instance.get_secure_url %}
+                            <img src="{{ form.instance.get_secure_url }}" 
                                  class="media-preview" 
-                                 alt="{{ form.instance.media_file.original_filename }}">
+                                 alt="{{ form.instance.original_filename }}">
+                            {% endif %}
                             <div class="media-metadata">
                                 <div class="metadata-item">
                                     <span class="metadata-label">Nome original:</span>
-                                    <span class="metadata-value">{{ form.instance.media_file.original_filename }}</span>
+                                    <span class="metadata-value">{{ form.instance.original_filename|default:"N/A" }}</span>
                                 </div>
                                 <div class="metadata-item">
                                     <span class="metadata-label">Tamanho:</span>
-                                    <span class="metadata-value">{{ form.instance.media_file.file_size|filesizeformat }}</span>
+                                    <span class="metadata-value">{{ form.instance.file_size|filesizeformat|default:"N/A" }}</span>
                                 </div>
                                 <div class="metadata-item">
                                     <span class="metadata-label">Dimensões:</span>
-                                    <span class="metadata-value">{{ form.instance.media_file.width }}x{{ form.instance.media_file.height }}px</span>
-                                </div>
-                                <div class="metadata-item">
-                                    <span class="metadata-label">Tipo:</span>
-                                    <span class="metadata-value">{{ form.instance.media_file.mime_type }}</span>
+                                    <span class="metadata-value">{{ form.instance.get_dimensions_display }}</span>
                                 </div>
                             </div>
                         </div>
@@ -233,6 +231,9 @@
                         </div>
                     </div>
 
+                    <!-- Hidden Fields -->
+                    {{ form.upload_id }}
+
                     <!-- Form Actions -->
                     <div class="media-actions justify-content-end">
                         <a href="{% if patient %}{% url 'apps.patients:patient_events_timeline' patient.id %}{% else %}{% url 'apps.core:dashboard' %}{% endif %}"
@@ -257,41 +258,182 @@
 {% endblock media_content %}
 
 {% block page_specific_scripts %}
-<!-- Image processing libraries (heavy dependencies loaded only when needed) -->
-<script src="{% static 'image-processing-859f9a89-bundle.js' %}"></script>
-<script src="{% static 'image-processing-c2965a6b-bundle.js' %}"></script>
+<!-- FilePond scripts -->
+<script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
+<script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
 <!-- Photo-specific functionality -->
 <script src="{% static 'photo-bundle.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize photo upload functionality with error handling
+    // Register FilePond plugins
+    FilePond.registerPlugin(
+        FilePondPluginFileValidateType,
+        FilePondPluginFileValidateSize,
+        FilePondPluginImagePreview
+    );
+
+    // Function to get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Get CSRF token
+    const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Initialize FilePond with error handling
     try {
-        if (typeof Photo !== 'undefined') {
-            Photo.init();
-        } else {
-            console.warn('Photo module not loaded - falling back to basic functionality');
-            // Basic fallback: ensure file input still works
-            const fileInput = document.querySelector('input[type="file"][name="image"]');
-            if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        console.log('File selected:', file.name);
-                        // Basic validation
-                        const maxSize = 5 * 1024 * 1024; // 5MB
-                        if (file.size > maxSize) {
-                            alert('Arquivo muito grande. Máximo 5MB permitido.');
-                            this.value = '';
+        const inputElement = document.querySelector(".filepond");
+        if (inputElement) {
+            const pond = FilePond.create(inputElement, {
+                server: {
+                    process: {
+                        url: "/mediafiles/fp/process/",
+                        method: 'POST',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
                         }
+                    },
+                    revert: {
+                        url: "/mediafiles/fp/revert/",
+                        method: 'DELETE',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    },
+                    restore: {
+                        url: "/mediafiles/fp/restore/",
+                        method: 'GET',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    },
+                    load: {
+                        url: "/mediafiles/fp/load/",
+                        method: 'GET',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    },
+                    fetch: {
+                        url: "/mediafiles/fp/fetch/",
+                        method: 'GET',
+                        withCredentials: true,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        }
+                    }
+                },
+                acceptedFileTypes: [
+                    "image/jpeg",
+                    "image/png", 
+                    "image/webp"
+                ],
+                maxFileSize: "5MB",
+                maxFiles: 1,
+                allowMultiple: false,
+                chunkUploads: false,
+                name: 'file',
+                imagePreviewHeight: 170,
+                labelIdle: 'Arraste a imagem aqui ou <span class="filepond--label-action">procure</span>',
+                labelFileProcessing: "Processando...",
+                labelFileProcessingComplete: "Processamento concluído",
+                labelFileProcessingAborted: "Processamento cancelado",
+                labelFileProcessingError: "Erro no processamento",
+                labelFileWaitingForSize: "Aguardando tamanho",
+                labelFileSizeNotAvailable: "Tamanho não disponível",
+                onprocessfile: (error, file) => {
+                    if (!error) {
+                        // Set the upload ID in the hidden form field
+                        const uploadField = document.querySelector('input[name="upload_id"]');
+                        if (uploadField) {
+                            uploadField.value = file.serverId;
+                        }
+                        
+                        // Show image preview if available
+                        const previewContainer = document.getElementById('imagePreview');
+                        if (previewContainer) {
+                            previewContainer.style.display = 'block';
+                        }
+                        
+                        // Update validation feedback
+                        const feedback = document.getElementById('validationFeedback');
+                        if (feedback) {
+                            feedback.className = 'photo-validation-feedback valid';
+                            feedback.innerHTML = '<i class="bi bi-check-circle me-2"></i>Imagem enviada com sucesso!';
+                            feedback.style.display = 'block';
+                        }
+                    } else {
+                        // Show error feedback
+                        const feedback = document.getElementById('validationFeedback');
+                        if (feedback) {
+                            feedback.className = 'photo-validation-feedback invalid';
+                            feedback.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Erro no upload: ' + error;
+                            feedback.style.display = 'block';
+                        }
+                    }
+                },
+                onprocessfiles: () => {
+                    // Hide progress when done
+                    const progress = document.getElementById('uploadProgress');
+                    if (progress) {
+                        progress.style.display = 'none';
+                    }
+                },
+                onprocessfileprogress: (file, progress) => {
+                    // Update progress bar
+                    const progressElement = document.getElementById('uploadProgress');
+                    const progressFill = document.getElementById('progressFill');
+                    const progressText = document.getElementById('progressText');
+                    
+                    if (progressElement && progressFill && progressText) {
+                        progressElement.style.display = 'block';
+                        progressFill.style.width = Math.round(progress * 100) + '%';
+                        progressText.textContent = 'Enviando imagem... ' + Math.round(progress * 100) + '%';
+                    }
+                }
+            });
+            
+            // Remove image functionality
+            const removeBtn = document.getElementById('removeImage');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    pond.removeFiles();
+                    document.getElementById('imagePreview').style.display = 'none';
+                    document.querySelector('input[name="upload_id"]').value = '';
+                    const feedback = document.getElementById('validationFeedback');
+                    if (feedback) {
+                        feedback.style.display = 'none';
                     }
                 });
             }
+        } else {
+            console.warn('FilePond input element not found - image upload disabled');
         }
     } catch (error) {
-        console.error('Photo initialization failed:', error);
-        // Report error to monitoring system if available
-        if (window.errorReporting) {
-            window.errorReporting.captureException(error);
+        console.error('FilePond initialization failed:', error);
+        // Show fallback message
+        const feedback = document.getElementById('validationFeedback');
+        if (feedback) {
+            feedback.className = 'photo-validation-feedback invalid';
+            feedback.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Erro na inicialização do upload. Recarregue a página.';
+            feedback.style.display = 'block';
         }
     }
 
@@ -301,15 +443,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (form && submitBtn) {
         form.addEventListener('submit', function(e) {
+            // Check if upload_id is present for new photos
+            const isNewPhoto = !document.querySelector('input[name="upload_id"]').value && !{{ form.instance.pk|yesno:"true,false" }};
+            if (isNewPhoto) {
+                e.preventDefault();
+                const feedback = document.getElementById('validationFeedback');
+                if (feedback) {
+                    feedback.className = 'photo-validation-feedback invalid';
+                    feedback.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Por favor, selecione uma imagem antes de continuar.';
+                    feedback.style.display = 'block';
+                }
+                return false;
+            }
+            
             // Disable submit button to prevent double submission
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processando...';
 
-            // Re-enable button after 5 seconds as fallback
+            // Re-enable button after 10 seconds as fallback
             setTimeout(function() {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '{% if form.instance.pk %}<i class="bi bi-check-circle me-1"></i>Salvar Alterações{% else %}<i class="bi bi-plus-circle me-1"></i>Criar Foto{% endif %}';
-            }, 5000);
+            }, 10000);
         });
     }
 

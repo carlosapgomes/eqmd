@@ -18,10 +18,11 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.conf import settings
 
-from .models import Photo, MediaFile, PhotoSeries, VideoClip
+from .models import Photo, MediaFile, PhotoSeries, VideoClip, PhotoSeriesFile
 from django_drf_filepond.models import TemporaryUpload
 from django_drf_filepond.api import store_upload
 from .video_processor import VideoProcessor
+from .image_processor import ImageProcessor
 from apps.events.models import Event
 
 
@@ -59,6 +60,294 @@ class BaseMediaForm(forms.Form):
         if event_datetime and event_datetime > timezone.now():
             raise ValidationError("A data e hora do evento não pode ser no futuro.")
         return event_datetime
+
+
+class BaseEventForm(forms.ModelForm):
+    """Base form for Event-based models with common validation"""
+
+    def clean_event_datetime(self):
+        """Ensure event datetime is not in the future"""
+        event_datetime = self.cleaned_data.get('event_datetime')
+        if event_datetime and event_datetime > timezone.now():
+            raise ValidationError("A data e hora do evento não pode ser no futuro.")
+        return event_datetime
+
+    class Meta:
+        fields = ['description', 'event_datetime']
+        widgets = {
+            'description': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Descrição do evento',
+                'maxlength': 255
+            }),
+            'event_datetime': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control'
+                },
+                format='%Y-%m-%dT%H:%M'
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.patient = kwargs.pop('patient', None)
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # Set input formats for datetime field
+        self.fields['event_datetime'].input_formats = [
+            '%Y-%m-%dT%H:%M',  # HTML5 datetime-local format
+            '%Y-%m-%dT%H:%M:%S',
+            '%d/%m/%Y %H:%M:%S',  # Format in error message
+            '%d/%m/%Y %H:%M',
+        ]
+
+        # Set default event datetime to now
+        if not self.instance.pk:
+            utc_now = timezone.now().astimezone(timezone.get_default_timezone())
+            self.fields['event_datetime'].initial = utc_now.strftime('%Y-%m-%dT%H:%M')
+        else:
+            dt = self.instance.event_datetime.astimezone(timezone.get_default_timezone())
+            self.fields['event_datetime'].initial = dt.strftime('%Y-%m-%dT%H:%M')
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.patient = self.patient
+        instance.created_by = self.user
+        instance.updated_by = self.user
+        if commit:
+            instance.save()
+        return instance
+
+
+# New FilePond-based forms
+class PhotoCreateFormNew(BaseEventForm):
+    """Simplified Photo form using FilePond."""
+    
+    upload_id = forms.CharField(
+        widget=forms.HiddenInput(),
+        help_text="FilePond upload identifier"
+    )
+    
+    caption = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3}),
+        required=False,
+        label="Legenda"
+    )
+
+    class Meta:
+        model = Photo
+        fields = ['description', 'event_datetime', 'caption']
+        widgets = {
+            'description': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Descrição da foto (ex: Raio-X do tórax)',
+                'maxlength': 255
+            }),
+            'event_datetime': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control'
+                },
+                format='%Y-%m-%dT%H:%M'
+            ),
+            'caption': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Legenda opcional para a foto'
+            })
+        }
+    
+    def clean_upload_id(self):
+        upload_id = self.cleaned_data['upload_id']
+        
+        try:
+            temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
+        except TemporaryUpload.DoesNotExist:
+            raise forms.ValidationError("Upload not found or expired")
+        
+        # Validate it's an image file
+        if not temp_upload.upload_name.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+            raise forms.ValidationError("File must be an image")
+        
+        return upload_id
+    
+    def save(self, commit=True):
+        photo = super().save(commit=False)
+        
+        # Process FilePond upload
+        upload_id = self.cleaned_data['upload_id']
+        temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
+        
+        # Generate UUID-based filename
+        file_uuid = uuid.uuid4()
+        original_ext = Path(temp_upload.upload_name).suffix.lower()
+        secure_filename = f"{file_uuid}{original_ext}"
+        
+        # Create date-based directory structure: photos/YYYY/MM/originals/
+        date_path = timezone.now().strftime('%Y/%m')
+        photo_dir = settings.MEDIA_ROOT / f"photos/{date_path}/originals"
+        photo_dir.mkdir(parents=True, exist_ok=True)
+        destination_path = photo_dir / secure_filename
+        
+        # Store the upload permanently with relative filename only
+        # FilePond will store it in its own storage directory
+        stored_upload = store_upload(upload_id, secure_filename)
+        
+        # Get the actual stored file path from FilePond storage
+        stored_file_path = Path(stored_upload.file.path)
+        
+        # Copy file from FilePond storage to our final destination
+        import shutil
+        try:
+            shutil.copy2(stored_file_path, destination_path)
+        except Exception as e:
+            raise forms.ValidationError(f"Failed to copy image file: {str(e)}")
+        
+        # Process image from final destination
+        processor = ImageProcessor()
+        metadata = processor.get_image_metadata(str(destination_path))
+        
+        # Generate thumbnail
+        thumbnail_dir = photo_dir.parent / 'thumbnails'
+        thumbnail_dir.mkdir(exist_ok=True)
+        thumbnail_path = thumbnail_dir / f"{file_uuid}_thumb.jpg"
+        
+        processor.generate_thumbnail(str(destination_path), str(thumbnail_path))
+        
+        # Set photo fields
+        photo.file_id = str(file_uuid)
+        photo.original_filename = temp_upload.upload_name
+        photo.file_size = metadata.get('size', 0)
+        photo.width = metadata.get('width')
+        photo.height = metadata.get('height')
+        photo.thumbnail_path = str(thumbnail_path.relative_to(settings.MEDIA_ROOT))
+        photo.caption = self.cleaned_data.get('caption', '')
+        
+        if commit:
+            photo.save()
+        
+        return photo
+
+
+class PhotoSeriesCreateFormNew(BaseEventForm):
+    """PhotoSeries form with multiple file upload support."""
+    
+    upload_ids = forms.CharField(
+        widget=forms.HiddenInput(),
+        help_text="Comma-separated FilePond upload identifiers"
+    )
+    
+    caption = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3}),
+        required=False,
+        label="Legenda da Série"
+    )
+
+    class Meta:
+        model = PhotoSeries
+        fields = ['description', 'event_datetime', 'caption']
+        widgets = {
+            'description': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Descrição da série de fotos (ex: Evolução da ferida)',
+                'maxlength': 255
+            }),
+            'event_datetime': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control'
+                },
+                format='%Y-%m-%dT%H:%M'
+            ),
+            'caption': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Legenda opcional para a série de fotos'
+            })
+        }
+    
+    def clean_upload_ids(self):
+        upload_ids_str = self.cleaned_data['upload_ids']
+        
+        if not upload_ids_str:
+            raise forms.ValidationError("At least one image must be uploaded")
+        
+        upload_ids = [uid.strip() for uid in upload_ids_str.split(',') if uid.strip()]
+        
+        if len(upload_ids) < 1:
+            raise forms.ValidationError("At least one image must be uploaded")
+        
+        # Validate each upload exists
+        for upload_id in upload_ids:
+            try:
+                TemporaryUpload.objects.get(upload_id=upload_id)
+            except TemporaryUpload.DoesNotExist:
+                raise forms.ValidationError(f"Upload {upload_id} not found or expired")
+        
+        return upload_ids
+    
+    def save(self, commit=True):
+        photoseries = super().save(commit=False)
+        photoseries.caption = self.cleaned_data.get('caption', '')
+        
+        if commit:
+            photoseries.save()
+            
+            # Process each uploaded image
+            upload_ids = self.cleaned_data['upload_ids']
+            processor = ImageProcessor()
+            
+            for order, upload_id in enumerate(upload_ids, start=1):
+                temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
+                
+                # Generate UUID-based filename
+                file_uuid = uuid.uuid4()
+                original_ext = Path(temp_upload.upload_name).suffix.lower()
+                secure_filename = f"{file_uuid}{original_ext}"
+                
+                # Create date-based directory structure: photo_series/YYYY/MM/originals/
+                date_path = timezone.now().strftime('%Y/%m')
+                photo_dir = settings.MEDIA_ROOT / f"photo_series/{date_path}/originals"
+                photo_dir.mkdir(parents=True, exist_ok=True)
+                destination_path = photo_dir / secure_filename
+                
+                # Store the upload permanently with relative filename only
+                # FilePond will store it in its own storage directory
+                stored_upload = store_upload(upload_id, secure_filename)
+                
+                # Get the actual stored file path from FilePond storage
+                stored_file_path = Path(stored_upload.file.path)
+                
+                # Copy file from FilePond storage to our final destination
+                import shutil
+                try:
+                    shutil.copy2(stored_file_path, destination_path)
+                except Exception as e:
+                    raise forms.ValidationError(f"Failed to copy image file: {str(e)}")
+                
+                # Process image from final destination
+                metadata = processor.get_image_metadata(str(destination_path))
+                
+                # Generate thumbnail
+                thumbnail_dir = photo_dir.parent / 'thumbnails'
+                thumbnail_dir.mkdir(exist_ok=True)
+                thumbnail_path = thumbnail_dir / f"{file_uuid}_thumb.jpg"
+                processor.generate_thumbnail(str(destination_path), str(thumbnail_path))
+                
+                # Create PhotoSeriesFile
+                PhotoSeriesFile.objects.create(
+                    photo_series=photoseries,
+                    file_id=str(file_uuid),
+                    original_filename=temp_upload.upload_name,
+                    file_size=metadata.get('size', 0),
+                    width=metadata.get('width'),
+                    height=metadata.get('height'),
+                    thumbnail_path=str(thumbnail_path.relative_to(settings.MEDIA_ROOT)),
+                    order=order
+                )
+        
+        return photoseries
 
 
 class PhotoCreateForm(BaseMediaForm, forms.ModelForm):

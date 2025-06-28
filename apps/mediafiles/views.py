@@ -37,7 +37,7 @@ import json
 import re
 
 from .models import Photo, MediaFile, PhotoSeries, VideoClip
-from .forms import PhotoCreateForm, PhotoUpdateForm, PhotoSeriesCreateForm, PhotoSeriesUpdateForm, PhotoSeriesPhotoForm, VideoClipCreateForm, VideoClipUpdateForm
+from .forms import PhotoCreateForm, PhotoCreateFormNew, PhotoUpdateForm, PhotoSeriesCreateForm, PhotoSeriesCreateFormNew, PhotoSeriesUpdateForm, PhotoSeriesPhotoForm, VideoClipCreateForm, VideoClipUpdateForm
 from apps.patients.models import Patient
 from apps.core.permissions import (
     hospital_context_required,
@@ -377,34 +377,248 @@ class SecureThumbnailServeView(SecureFileServeView):
 @login_required
 def serve_media_file(request: HttpRequest, file_id: str) -> HttpResponse:
     """
-    Function-based view for serving media files.
+    Function-based view for serving media files from FilePond-based uploads.
 
     Args:
         request: Django HttpRequest object
-        file_id: UUID of the media file
+        file_id: FilePond file_id
 
     Returns:
         FileResponse with the requested file
     """
-    view = SecureFileServeView()
-    return view.get(request, file_id)
+    from django.http import Http404
+    from pathlib import Path
+    import time
+    
+    try:
+        # Try Photo first
+        try:
+            photo = Photo.objects.get(file_id=file_id)
+            # Check permissions
+            if not can_access_patient(request.user, photo.patient):
+                raise PermissionDenied("Access denied")
+            
+            return _serve_filepond_file(photo, 'photo')
+        except Photo.DoesNotExist:
+            pass
+        
+        # Try PhotoSeriesFile
+        try:
+            from .models import PhotoSeriesFile
+            photo_series_file = PhotoSeriesFile.objects.get(file_id=file_id)
+            # Check permissions
+            if not can_access_patient(request.user, photo_series_file.photo_series.patient):
+                raise PermissionDenied("Access denied")
+            
+            return _serve_filepond_file(photo_series_file, 'photo_series')
+        except PhotoSeriesFile.DoesNotExist:
+            pass
+        
+        # Try VideoClip
+        try:
+            from .models import VideoClip
+            video_clip = VideoClip.objects.get(file_id=file_id)
+            # Check permissions
+            if not can_access_patient(request.user, video_clip.patient):
+                raise PermissionDenied("Access denied")
+            
+            return _serve_filepond_file(video_clip, 'video')
+        except VideoClip.DoesNotExist:
+            pass
+        
+        # No file found
+        raise Http404("File not found")
+        
+    except Exception as e:
+        # Log error and return 404
+        import logging
+        logger = logging.getLogger('mediafiles.serving')
+        logger.error(f"File serving error for file_id {file_id}: {str(e)}")
+        raise Http404("File not found")
+
+
+def _serve_filepond_file(file_obj, file_type: str) -> FileResponse:
+    """
+    Helper function to serve FilePond-based files.
+    
+    Args:
+        file_obj: Photo, PhotoSeriesFile, or VideoClip object
+        file_type: 'photo', 'photo_series', or 'video'
+        
+    Returns:
+        FileResponse with the file
+        
+    Raises:
+        Http404: If file not found
+    """
+    if not file_obj.file_id:
+        raise Http404("No file ID available")
+    
+    # Build file path based on type and creation date
+    if file_type == 'video':
+        # For videos: videos/YYYY/MM/originals/uuid.ext
+        creation_date = file_obj.created_at
+        file_dir = f"videos/{creation_date.strftime('%Y/%m')}/originals"
+        # VideoClip stores file_id as UUID, find file with that UUID
+        file_pattern = f"{file_obj.file_id}.*"
+    else:
+        # For photos: photos/YYYY/MM/originals/uuid.ext or photo_series/YYYY/MM/originals/uuid.ext
+        creation_date = getattr(file_obj, 'created_at', None)
+        if hasattr(file_obj, 'photo_series'):
+            # PhotoSeriesFile
+            creation_date = file_obj.photo_series.created_at
+            file_dir = f"photo_series/{creation_date.strftime('%Y/%m')}/originals"
+        else:
+            # Photo
+            creation_date = file_obj.created_at
+            file_dir = f"photos/{creation_date.strftime('%Y/%m')}/originals"
+        file_pattern = f"{file_obj.file_id}.*"
+    
+    # Find the actual file
+    media_dir = Path(settings.MEDIA_ROOT) / file_dir
+    if not media_dir.exists():
+        raise Http404("File directory not found")
+    
+    # Search for file with the UUID
+    matching_files = list(media_dir.glob(file_pattern))
+    if not matching_files:
+        raise Http404("File not found on disk")
+    
+    if len(matching_files) > 1:
+        # Log warning but use first match
+        import logging
+        logger = logging.getLogger('mediafiles.serving')
+        logger.warning(f"Multiple files found for {file_obj.file_id}: {[f.name for f in matching_files]}")
+    
+    file_path = matching_files[0]
+    
+    # Determine content type
+    content_type, _ = mimetypes.guess_type(str(file_path))
+    if not content_type:
+        if file_type == 'video':
+            content_type = 'video/mp4'  # Default for videos
+        else:
+            content_type = 'image/jpeg'  # Default for images
+    
+    # Create secure response
+    response = FileResponse(
+        open(file_path, 'rb'),
+        content_type=content_type,
+        as_attachment=False  # Display inline
+    )
+    
+    # Set security headers
+    response['Content-Disposition'] = f'inline; filename="{file_obj.original_filename}"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['X-Frame-Options'] = 'DENY'
+    response['X-XSS-Protection'] = '1; mode=block'
+    response['Cache-Control'] = 'private, max-age=3600, must-revalidate'
+    response['Expires'] = http_date(time.time() + 3600)
+    
+    # Set content length
+    response['Content-Length'] = file_path.stat().st_size
+    
+    # Add video-specific headers for streaming
+    if file_type == 'video':
+        response['Accept-Ranges'] = 'bytes'
+    
+    return response
 
 
 @require_http_methods(["GET"])
 @login_required
 def serve_thumbnail(request: HttpRequest, file_id: str) -> HttpResponse:
     """
-    Function-based view for serving thumbnails.
+    Function-based view for serving thumbnails from FilePond-based uploads.
 
     Args:
         request: Django HttpRequest object
-        file_id: UUID of the media file
+        file_id: FilePond file_id 
 
     Returns:
         FileResponse with the requested thumbnail
     """
-    view = SecureThumbnailServeView()
-    return view.get(request, file_id)
+    from django.http import Http404
+    from pathlib import Path
+    import time
+    
+    try:
+        # Try Photo first
+        try:
+            photo = Photo.objects.get(file_id=file_id)
+            # Check permissions
+            if not can_access_patient(request.user, photo.patient):
+                raise PermissionDenied("Access denied")
+            
+            return _serve_filepond_thumbnail(photo.thumbnail_path, photo.original_filename)
+        except Photo.DoesNotExist:
+            pass
+        
+        # Try PhotoSeriesFile
+        try:
+            from .models import PhotoSeriesFile
+            photo_series_file = PhotoSeriesFile.objects.get(file_id=file_id)
+            # Check permissions
+            if not can_access_patient(request.user, photo_series_file.photo_series.patient):
+                raise PermissionDenied("Access denied")
+            
+            return _serve_filepond_thumbnail(photo_series_file.thumbnail_path, photo_series_file.original_filename)
+        except PhotoSeriesFile.DoesNotExist:
+            pass
+        
+        # No thumbnail found
+        raise Http404("Thumbnail not found")
+        
+    except Exception as e:
+        # Log error and return 404
+        import logging
+        logger = logging.getLogger('mediafiles.thumbnail')
+        logger.error(f"Thumbnail serving error for file_id {file_id}: {str(e)}")
+        raise Http404("Thumbnail not found")
+
+
+def _serve_filepond_thumbnail(thumbnail_path: str, original_filename: str) -> FileResponse:
+    """
+    Helper function to serve FilePond-based thumbnails.
+    
+    Args:
+        thumbnail_path: Relative path to thumbnail file
+        original_filename: Original filename for Content-Disposition header
+        
+    Returns:
+        FileResponse with the thumbnail
+        
+    Raises:
+        Http404: If thumbnail not found
+    """
+    if not thumbnail_path:
+        raise Http404("No thumbnail path available")
+    
+    # Build full path to thumbnail
+    full_thumbnail_path = Path(settings.MEDIA_ROOT) / thumbnail_path
+    
+    # Validate thumbnail exists
+    if not full_thumbnail_path.exists() or not full_thumbnail_path.is_file():
+        raise Http404("Thumbnail file not found on disk")
+    
+    # Create secure response
+    response = FileResponse(
+        open(full_thumbnail_path, 'rb'),
+        content_type='image/jpeg',  # Thumbnails are always JPEG
+        as_attachment=False
+    )
+    
+    # Set security headers (optimized for thumbnails)
+    response['Content-Disposition'] = f'inline; filename="thumb_{original_filename or "image"}"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['X-Frame-Options'] = 'SAMEORIGIN'  # Allow framing for thumbnails
+    response['Cache-Control'] = 'private, max-age=7200, must-revalidate'
+    response['Expires'] = http_date(time.time() + 7200)
+    
+    # Set content length
+    response['Content-Length'] = full_thumbnail_path.stat().st_size
+    
+    return response
 
 
 class SecureVideoStreamView(SecureFileServeView):
@@ -749,7 +963,7 @@ class PhotoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
 
     model = Photo
-    form_class = PhotoCreateForm
+    form_class = PhotoCreateFormNew
     template_name = "mediafiles/photo_form.html"
     permission_required = "events.add_event"
 
@@ -831,7 +1045,7 @@ class PhotoDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return Photo.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -896,7 +1110,7 @@ class PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return Photo.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -956,7 +1170,7 @@ class PhotoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return Photo.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -986,38 +1200,45 @@ class PhotoDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
     def get(self, request, *args, **kwargs):
         """Serve photo file as download."""
         photo = self.get_object()
-        media_file = photo.media_file
 
         # Log download access
-        self._log_file_access(request.user, media_file, 'download')
+        self._log_file_access(request.user, photo, 'download')
 
-        # Serve file as download
-        file_path = Path(settings.MEDIA_ROOT) / media_file.file.name
-
-        if not file_path.exists():
+        # Build file path from FilePond-based photo
+        file_uuid = photo.file_id
+        creation_date = photo.created_at
+        file_dir = f"photos/{creation_date.strftime('%Y/%m')}/originals"
+        
+        # Find file using glob pattern (since we don't know the exact extension)
+        file_pattern = Path(settings.MEDIA_ROOT) / file_dir / f"{file_uuid}.*"
+        matching_files = list(Path(settings.MEDIA_ROOT / file_dir).glob(f"{file_uuid}.*"))
+        
+        if not matching_files:
             raise Http404("File not found on disk")
+        
+        file_path = matching_files[0]
 
         # Create download response
         response = FileResponse(
             open(file_path, 'rb'),
-            content_type=media_file.mime_type,
+            content_type='application/octet-stream',
             as_attachment=True
         )
 
         # Set download filename
-        response['Content-Disposition'] = f'attachment; filename="{media_file.original_filename}"'
+        response['Content-Disposition'] = f'attachment; filename="{photo.original_filename}"'
 
         return response
 
-    def _log_file_access(self, user, media_file, action: str, extra_data: dict = None) -> None:
+    def _log_file_access(self, user, photo, action: str, extra_data: dict = None) -> None:
         """Log file access for audit trail."""
         import logging
         security_logger = logging.getLogger('security.mediafiles')
 
         log_message = (
             f"File access: user={user.username} "
-            f"file={media_file.id} "
-            f"filename={media_file.original_filename} "
+            f"file={photo.id} "
+            f"filename={photo.original_filename} "
             f"action={action} "
             f"timestamp={time.time()}"
         )
@@ -1031,7 +1252,7 @@ class PhotoDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return Photo.objects.select_related(
-            "patient", "created_by", "updated_by", "media_file"
+            "patient", "created_by", "updated_by"
         )
 
 
@@ -1048,8 +1269,8 @@ class PhotoSeriesCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateV
     """
 
     model = PhotoSeries
-    form_class = PhotoSeriesCreateForm
-    template_name = "mediafiles/photoseries_create.html"
+    form_class = PhotoSeriesCreateFormNew
+    template_name = "mediafiles/photoseries_create_filepond.html"
     permission_required = "events.add_event"
 
     def dispatch(self, request, *args, **kwargs):
@@ -1146,7 +1367,7 @@ class PhotoSeriesDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
         return PhotoSeries.objects.select_related(
             "patient", "created_by", "updated_by"
         ).prefetch_related(
-            "photoseriesfile_set__media_file"
+            "photoseriesfile_set"
         )
 
 
@@ -1217,7 +1438,7 @@ class PhotoSeriesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateV
         return PhotoSeries.objects.select_related(
             "patient", "created_by", "updated_by"
         ).prefetch_related(
-            "photoseriesfile_set__media_file"
+            "photoseriesfile_set"
         )
 
 
@@ -1287,7 +1508,7 @@ class PhotoSeriesDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteV
         return PhotoSeries.objects.select_related(
             "patient", "created_by", "updated_by"
         ).prefetch_related(
-            "photoseriesfile_set__media_file"
+            "photoseriesfile_set"
         )
 
 

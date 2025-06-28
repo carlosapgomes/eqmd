@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+  {% if is_update %}Editar Foto{% else %}Adicionar Foto{% endif %} - {{ patient.name }}
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
+<link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        {% if is_update %}Editar Foto{% else %}Adicionar Foto{% endif %}
+                        - {{ patient.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if not is_update %}
+                        <div class="mb-3">
+                            <label class="form-label">Arquivo de Imagem</label>
+                            <input type="file" 
+                                   class="filepond" 
+                                   name="image"
+                                   accept="image/*"
+                                   data-max-file-size="5MB"
+                                   data-max-files="1">
+                            <div class="form-text">
+                                Formatos aceitos: JPEG, PNG, WebP. Máximo 5MB.
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {{ form.as_p }}
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ patient.get_timeline_url }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i>
+                                {% if is_update %}Atualizar{% else %}Adicionar{% endif %} Foto
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
+<script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
+
+<script>
+// Register FilePond plugins
+FilePond.registerPlugin(
+    FilePondPluginFileValidateType,
+    FilePondPluginFileValidateSize,
+    FilePondPluginImagePreview
+);
+
+// Initialize FilePond
+const inputElement = document.querySelector('.filepond');
+if (inputElement) {
+    const pond = FilePond.create(inputElement, {
+        server: {
+            process: '/fp/process/',
+            revert: '/fp/revert/',
+            restore: '/fp/restore/',
+            load: '/fp/load/',
+            fetch: '/fp/fetch/'
+        },
+        acceptedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        maxFileSize: '5MB',
+        maxFiles: 1,
+        allowMultiple: false,
+        imagePreviewHeight: 170,
+        labelIdle: 'Arraste a imagem aqui ou <span class="filepond--label-action">procure</span>',
+        onprocessfile: (error, file) => {
+            if (!error) {
+                document.querySelector('input[name="upload_id"]').value = file.serverId;
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

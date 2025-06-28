@@ -1,15 +1,18 @@
 # Phase 3: Cleanup and Optimization
 
 ## Overview
+
 This final phase removes all legacy media upload code, optimizes the new FilePond-based system, updates documentation and tests, and prepares the system for deployment with comprehensive mobile testing.
 
 ## Prerequisites
+
 - Phase 1 (Video migration) completed successfully
 - Phase 2 (Photo migration) completed successfully
 - All FilePond uploads working correctly
 - Timeline integration functional
 
 ## Key Objectives
+
 - ✅ Remove all legacy upload code and files
 - ✅ Optimize FilePond configuration and performance
 - ✅ Update tests for new upload system
@@ -22,7 +25,8 @@ This final phase removes all legacy media upload code, optimizes the new FilePon
 
 ### Remove Legacy Models and Code
 
-#### Update `apps/mediafiles/models.py`:
+#### Update `apps/mediafiles/models.py`
+
 ```python
 # REMOVE COMPLETELY:
 class MediaFile(models.Model):  # DELETE entire class
@@ -33,12 +37,13 @@ class PhotoSeriesFile(models.Model):  # Will be recreated with new structure
 
 # Keep only the new simplified models:
 # - Photo (with FilePond fields)
-# - PhotoSeries (with FilePond fields) 
+# - PhotoSeries (with FilePond fields)
 # - PhotoSeriesFile (simplified)
 # - VideoClip (with FilePond fields)
 ```
 
-#### Remove legacy files completely:
+#### Remove legacy files completely
+
 ```bash
 # Delete these files and directories
 apps/mediafiles/utils.py  # Old utility functions
@@ -55,17 +60,18 @@ static/videoclip*-bundle.js
 static/image-processing-*-bundle.js
 ```
 
-#### Clean up webpack.config.js:
+#### Clean up webpack.config.js
+
 ```javascript
 // FINAL simplified configuration
 module.exports = {
   entry: {
     main: [
-      "./assets/index.js", 
+      "./assets/index.js",
       "./assets/scss/main.scss",
       "./apps/events/static/events/js/timeline.js",
-      "./apps/events/static/events/js/accessibility.js"
-    ]
+      "./apps/events/static/events/js/accessibility.js",
+    ],
     // All mediafiles entries removed - using CDN FilePond
   },
   output: {
@@ -77,7 +83,12 @@ module.exports = {
     rules: [
       {
         test: /\.scss$/,
-        use: [MiniCssExtractPlugin.loader, "css-loader", "postcss-loader", "sass-loader"],
+        use: [
+          MiniCssExtractPlugin.loader,
+          "css-loader",
+          "postcss-loader",
+          "sass-loader",
+        ],
       },
       {
         test: /\.css$/,
@@ -89,12 +100,30 @@ module.exports = {
     new MiniCssExtractPlugin({ filename: "[name].css" }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: "node_modules/easymde/dist/easymde.min.js", to: "js/easymde.min.js" },
-        { from: "node_modules/easymde/dist/easymde.min.css", to: "css/easymde.min.css" },
-        { from: "node_modules/bootstrap/dist/js/bootstrap.min.js", to: "js/bootstrap.min.js" },
-        { from: "node_modules/bootstrap-icons/font/bootstrap-icons.min.css", to: "css/bootstrap-icons.min.css" },
-        { from: "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2", to: "css/fonts/bootstrap-icons.woff2" },
-        { from: "node_modules/@popperjs/core/dist/umd/popper.min.js", to: "js/popper.min.js" },
+        {
+          from: "node_modules/easymde/dist/easymde.min.js",
+          to: "js/easymde.min.js",
+        },
+        {
+          from: "node_modules/easymde/dist/easymde.min.css",
+          to: "css/easymde.min.css",
+        },
+        {
+          from: "node_modules/bootstrap/dist/js/bootstrap.min.js",
+          to: "js/bootstrap.min.js",
+        },
+        {
+          from: "node_modules/bootstrap-icons/font/bootstrap-icons.min.css",
+          to: "css/bootstrap-icons.min.css",
+        },
+        {
+          from: "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2",
+          to: "css/fonts/bootstrap-icons.woff2",
+        },
+        {
+          from: "node_modules/@popperjs/core/dist/umd/popper.min.js",
+          to: "js/popper.min.js",
+        },
         { from: "assets/images", to: "images" },
         { from: "assets/*.ico", to: "[name][ext]" },
         { from: "assets/*.png", to: "[name][ext]", noErrorOnMissing: true },
@@ -116,7 +145,8 @@ module.exports = {
 
 ### Create centralized FilePond configuration
 
-#### Create `apps/mediafiles/static/mediafiles/js/filepond-config.js`:
+#### Create `apps/mediafiles/static/mediafiles/js/filepond-config.js`
+
 ```javascript
 /**
  * Centralized FilePond configuration for EquipeMed
@@ -125,131 +155,140 @@ module.exports = {
 
 // Register all required plugins
 FilePond.registerPlugin(
-    FilePondPluginFileValidateType,
-    FilePondPluginFileValidateSize,
-    FilePondPluginImagePreview
+  FilePondPluginFileValidateType,
+  FilePondPluginFileValidateSize,
+  FilePondPluginImagePreview,
 );
 
 // Common FilePond configuration
 const FILEPOND_COMMON_CONFIG = {
-    server: {
-        process: '/fp/process/',
-        revert: '/fp/revert/',
-        restore: '/fp/restore/',
-        load: '/fp/load/',
-        fetch: '/fp/fetch/'
-    },
-    labelIdle: 'Arraste arquivos aqui ou <span class="filepond--label-action">procure</span>',
-    labelFileProcessing: 'Processando...',
-    labelFileProcessingComplete: 'Processamento concluído',
-    labelFileProcessingAborted: 'Processamento cancelado',
-    labelFileProcessingError: 'Erro no processamento',
-    labelFileWaitingForSize: 'Aguardando tamanho',
-    labelFileSizeNotAvailable: 'Tamanho não disponível',
-    labelInvalidField: 'Campo contém arquivos inválidos',
-    labelFileCountSingular: 'arquivo selecionado',
-    labelFileCountPlural: 'arquivos selecionados',
-    labelFileLoading: 'Carregando...',
-    labelFileLoadError: 'Erro ao carregar',
-    labelFileRemoveError: 'Erro ao remover',
-    labelFileRemove: 'Remover',
-    labelFileProcess: 'Enviar',
-    labelFileProcessError: 'Erro no envio',
-    labelTapToCancel: 'toque para cancelar',
-    labelTapToRetry: 'toque para tentar novamente',
-    labelTapToUndo: 'toque para desfazer'
+  server: {
+    process: "/fp/process/",
+    revert: "/fp/revert/",
+    restore: "/fp/restore/",
+    load: "/fp/load/",
+    fetch: "/fp/fetch/",
+  },
+  labelIdle:
+    'Arraste arquivos aqui ou <span class="filepond--label-action">procure</span>',
+  labelFileProcessing: "Processando...",
+  labelFileProcessingComplete: "Processamento concluído",
+  labelFileProcessingAborted: "Processamento cancelado",
+  labelFileProcessingError: "Erro no processamento",
+  labelFileWaitingForSize: "Aguardando tamanho",
+  labelFileSizeNotAvailable: "Tamanho não disponível",
+  labelInvalidField: "Campo contém arquivos inválidos",
+  labelFileCountSingular: "arquivo selecionado",
+  labelFileCountPlural: "arquivos selecionados",
+  labelFileLoading: "Carregando...",
+  labelFileLoadError: "Erro ao carregar",
+  labelFileRemoveError: "Erro ao remover",
+  labelFileRemove: "Remover",
+  labelFileProcess: "Enviar",
+  labelFileProcessError: "Erro no envio",
+  labelTapToCancel: "toque para cancelar",
+  labelTapToRetry: "toque para tentar novamente",
+  labelTapToUndo: "toque para desfazer",
 };
 
 // Video-specific configuration
 const FILEPOND_VIDEO_CONFIG = {
-    ...FILEPOND_COMMON_CONFIG,
-    acceptedFileTypes: ['video/mp4', 'video/mov', 'video/webm', 'video/quicktime'],
-    maxFileSize: '100MB',
-    maxFiles: 1,
-    allowMultiple: false,
-    onprocessfile: (error, file) => {
-        if (!error) {
-            document.querySelector('input[name="upload_id"]').value = file.serverId;
-        }
+  ...FILEPOND_COMMON_CONFIG,
+  acceptedFileTypes: [
+    "video/mp4",
+    "video/mov",
+    "video/webm",
+    "video/quicktime",
+  ],
+  maxFileSize: "100MB",
+  maxFiles: 1,
+  allowMultiple: false,
+  onprocessfile: (error, file) => {
+    if (!error) {
+      document.querySelector('input[name="upload_id"]').value = file.serverId;
     }
+  },
 };
 
 // Image-specific configuration
 const FILEPOND_IMAGE_CONFIG = {
-    ...FILEPOND_COMMON_CONFIG,
-    acceptedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
-    maxFileSize: '5MB',
-    maxFiles: 1,
-    allowMultiple: false,
-    imagePreviewHeight: 170,
-    onprocessfile: (error, file) => {
-        if (!error) {
-            document.querySelector('input[name="upload_id"]').value = file.serverId;
-        }
+  ...FILEPOND_COMMON_CONFIG,
+  acceptedFileTypes: ["image/jpeg", "image/png", "image/webp"],
+  maxFileSize: "5MB",
+  maxFiles: 1,
+  allowMultiple: false,
+  imagePreviewHeight: 170,
+  onprocessfile: (error, file) => {
+    if (!error) {
+      document.querySelector('input[name="upload_id"]').value = file.serverId;
     }
+  },
 };
 
 // Photo series configuration
 const FILEPOND_PHOTOSERIES_CONFIG = {
-    ...FILEPOND_COMMON_CONFIG,
-    acceptedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
-    maxFileSize: '5MB',
-    maxFiles: 20,
-    allowMultiple: true,
-    allowReorder: true,
-    imagePreviewHeight: 170,
-    onprocessfiles: () => {
-        const pond = FilePond.find(document.querySelector('.filepond'));
-        const uploadIds = pond.getFiles()
-            .filter(file => file.status === FilePond.FileStatus.PROCESSING_COMPLETE)
-            .map(file => file.serverId)
-            .join(',');
-        
-        document.querySelector('input[name="upload_ids"]').value = uploadIds;
-    }
+  ...FILEPOND_COMMON_CONFIG,
+  acceptedFileTypes: ["image/jpeg", "image/png", "image/webp"],
+  maxFileSize: "5MB",
+  maxFiles: 20,
+  allowMultiple: true,
+  allowReorder: true,
+  imagePreviewHeight: 170,
+  onprocessfiles: () => {
+    const pond = FilePond.find(document.querySelector(".filepond"));
+    const uploadIds = pond
+      .getFiles()
+      .filter((file) => file.status === FilePond.FileStatus.PROCESSING_COMPLETE)
+      .map((file) => file.serverId)
+      .join(",");
+
+    document.querySelector('input[name="upload_ids"]').value = uploadIds;
+  },
 };
 
 // Initialize functions
-function initVideoUpload(selector = '.filepond') {
-    const element = document.querySelector(selector);
-    if (element) {
-        return FilePond.create(element, FILEPOND_VIDEO_CONFIG);
-    }
+function initVideoUpload(selector = ".filepond") {
+  const element = document.querySelector(selector);
+  if (element) {
+    return FilePond.create(element, FILEPOND_VIDEO_CONFIG);
+  }
 }
 
-function initImageUpload(selector = '.filepond') {
-    const element = document.querySelector(selector);
-    if (element) {
-        return FilePond.create(element, FILEPOND_IMAGE_CONFIG);
-    }
+function initImageUpload(selector = ".filepond") {
+  const element = document.querySelector(selector);
+  if (element) {
+    return FilePond.create(element, FILEPOND_IMAGE_CONFIG);
+  }
 }
 
-function initPhotoSeriesUpload(selector = '.filepond') {
-    const element = document.querySelector(selector);
-    if (element) {
-        return FilePond.create(element, FILEPOND_PHOTOSERIES_CONFIG);
-    }
+function initPhotoSeriesUpload(selector = ".filepond") {
+  const element = document.querySelector(selector);
+  if (element) {
+    return FilePond.create(element, FILEPOND_PHOTOSERIES_CONFIG);
+  }
 }
 
 // Make functions available globally
 window.EquipeMedFilePond = {
-    initVideoUpload,
-    initImageUpload,
-    initPhotoSeriesUpload
+  initVideoUpload,
+  initImageUpload,
+  initPhotoSeriesUpload,
 };
 ```
 
 ### Update all templates to use centralized config
 
-#### Update base template to include FilePond:
+#### Update base template to include FilePond
+
 ```html
 <!-- base.html - Add to head section -->
 {% block extra_css %}
-<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
-<link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet">
-{% endblock %}
-
-{% block extra_js %}
+<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet" />
+<link
+  href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css"
+  rel="stylesheet"
+/>
+{% endblock %} {% block extra_js %}
 <script src="https://unpkg.com/filepond/dist/filepond.js"></script>
 <script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
 <script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
@@ -258,33 +297,35 @@ window.EquipeMedFilePond = {
 {% endblock %}
 ```
 
-#### Simplify all upload templates:
+#### Simplify all upload templates
+
 ```html
 <!-- videoclip_form.html -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener("DOMContentLoaded", function () {
     window.EquipeMedFilePond.initVideoUpload();
-});
+  });
 </script>
 
 <!-- photo_form.html -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener("DOMContentLoaded", function () {
     window.EquipeMedFilePond.initImageUpload();
-});
+  });
 </script>
 
 <!-- photoseries_create.html -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener("DOMContentLoaded", function () {
     window.EquipeMedFilePond.initPhotoSeriesUpload();
-});
+  });
 </script>
 ```
 
 ## Step 3: Optimize Server-Side Processing
 
-### Enhance video processor for better performance:
+### Enhance video processor for better performance
+
 ```python
 # apps/mediafiles/video_processor.py - Add performance optimizations
 
@@ -297,18 +338,18 @@ class VideoProcessor:
             probe = ffmpeg.probe(input_path)
             video_stream = next((stream for stream in probe['streams']
                                if stream['codec_type'] == 'video'), None)
-            
+
             if not video_stream:
                 raise ValidationError("No video stream found")
-            
+
             # Get input dimensions
             width = int(video_stream.get('width', 0))
             height = int(video_stream.get('height', 0))
-            
+
             # Optimize for mobile - limit resolution if too high
             max_width = 1920
             max_height = 1080
-            
+
             if width > max_width or height > max_height:
                 # Calculate scaling while maintaining aspect ratio
                 scale_factor = min(max_width / width, max_height / height)
@@ -320,7 +361,7 @@ class VideoProcessor:
                 scale_filter = f'scale={new_width}:{new_height}'
             else:
                 scale_filter = 'scale=trunc(iw/2)*2:trunc(ih/2)*2'
-            
+
             # Convert with optimized settings
             (
                 ffmpeg
@@ -340,16 +381,16 @@ class VideoProcessor:
                 .overwrite_output()
                 .run(capture_stdout=True, capture_stderr=True, quiet=True)
             )
-            
+
             # Verify output file
             if not os.path.exists(output_path):
                 raise ValidationError("Conversion failed - output file not created")
-            
+
             # Get final file info
             output_probe = ffmpeg.probe(output_path)
             output_video = next((stream for stream in output_probe['streams']
                                if stream['codec_type'] == 'video'), None)
-            
+
             return {
                 'success': True,
                 'original_size': os.path.getsize(input_path),
@@ -360,12 +401,13 @@ class VideoProcessor:
                 'codec': output_video.get('codec_name', 'h264'),
                 'compression_ratio': os.path.getsize(input_path) / os.path.getsize(output_path)
             }
-            
+
         except Exception as e:
             raise ValidationError(f"Video conversion failed: {str(e)}")
 ```
 
-### Add image optimization:
+### Add image optimization
+
 ```python
 # apps/mediafiles/image_processor.py - Add optimization
 
@@ -378,20 +420,20 @@ class ImageProcessor:
         try:
             with Image.open(image_path) as img:
                 original_size = os.path.getsize(image_path)
-                
+
                 # Convert to RGB if necessary
                 if img.mode in ('RGBA', 'LA', 'P'):
                     img = img.convert('RGB')
-                
+
                 # Resize if too large
                 if img.width > max_width or img.height > max_height:
                     img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-                
+
                 # Save optimized version
                 img.save(image_path, 'JPEG', quality=quality, optimize=True)
-                
+
                 optimized_size = os.path.getsize(image_path)
-                
+
                 return {
                     'optimized': True,
                     'original_size': original_size,
@@ -399,14 +441,15 @@ class ImageProcessor:
                     'compression_ratio': original_size / optimized_size if optimized_size > 0 else 1,
                     'final_dimensions': (img.width, img.height)
                 }
-                
+
         except Exception as e:
             return {'optimized': False, 'error': str(e)}
 ```
 
 ## Step 4: Update Tests
 
-### Create comprehensive test suite:
+### Create comprehensive test suite
+
 ```python
 # apps/mediafiles/tests/test_filepond_integration.py
 
@@ -435,7 +478,7 @@ class FilePondIntegrationTests(TestCase):
             name='Test Patient',
             current_hospital=self.hospital
         )
-    
+
     def test_video_upload_and_conversion(self):
         """Test video upload through FilePond and H.264 conversion."""
         # Create a test video file (you'd use a real test video file)
@@ -443,56 +486,56 @@ class FilePondIntegrationTests(TestCase):
             # In real tests, use a small test video file
             tmp_file.write(b'fake video content')
             test_video_path = tmp_file.name
-        
+
         try:
             # Test video conversion
             output_path = test_video_path.replace('.mp4', '_converted.mp4')
-            
+
             # This would fail with fake content, but shows the test structure
             # In real tests, use actual video files
             with self.assertRaises(Exception):  # Expected with fake content
                 VideoProcessor.convert_to_h264(test_video_path, output_path)
-        
+
         finally:
             # Cleanup
             for path in [test_video_path, output_path]:
                 if os.path.exists(path):
                     os.unlink(path)
-    
+
     def test_image_optimization(self):
         """Test image optimization and thumbnail generation."""
         # Create a test image
         from PIL import Image
-        
+
         with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
             # Create a test image
             img = Image.new('RGB', (2000, 1500), color='red')
             img.save(tmp_file.name, 'JPEG')
             test_image_path = tmp_file.name
-        
+
         try:
             # Test image optimization
             result = ImageProcessor.optimize_image(test_image_path, max_width=1920, max_height=1080)
             self.assertTrue(result['optimized'])
             self.assertIn('compression_ratio', result)
-            
+
             # Test thumbnail generation
             thumbnail_path = test_image_path.replace('.jpg', '_thumb.jpg')
             success = ImageProcessor.generate_thumbnail(test_image_path, thumbnail_path)
             self.assertTrue(success)
             self.assertTrue(os.path.exists(thumbnail_path))
-            
+
         finally:
             # Cleanup
             for path in [test_image_path, thumbnail_path]:
                 if os.path.exists(path):
                     os.unlink(path)
-    
+
     def test_photo_series_creation(self):
         """Test PhotoSeries creation with multiple files."""
         # This would test the form logic and model creation
         pass  # Implement based on your specific form structure
-    
+
     def test_mobile_compatibility(self):
         """Test mobile-specific configurations."""
         # Test video conversion settings for mobile
@@ -502,13 +545,14 @@ class FilePondIntegrationTests(TestCase):
 
 ## Step 5: Security Review and Optimization
 
-### Update file serving security:
+### Update file serving security
+
 ```python
 # apps/mediafiles/views.py - Enhanced security
 
 class SecureFileServeView(View):
     """Enhanced secure file serving for FilePond files."""
-    
+
     @method_decorator(login_required)
     @method_decorator(cache_control(private=True, max_age=3600))
     def get(self, request: HttpRequest, file_id: str) -> HttpResponse:
@@ -520,35 +564,35 @@ class SecureFileServeView(View):
                 uuid.UUID(file_id)
             except ValueError:
                 raise Http404("Invalid file identifier")
-            
+
             # Get file and check permissions
             file_obj = self._get_file_with_permissions(request.user, file_id)
-            
+
             # Rate limiting check
             if not self._check_rate_limit(request.user, file_id):
                 raise PermissionDenied("Rate limit exceeded")
-            
+
             # Log access
             self._log_file_access(request.user, file_obj, 'view')
-            
+
             # Serve file securely
             return self._serve_file_securely(file_obj)
-            
+
         except Exception as e:
             self._log_security_event(request.user, 'file_access_error', str(e))
             raise Http404("File not found")
-    
+
     def _check_rate_limit(self, user, file_id: str) -> bool:
         """Check rate limiting for file access."""
         # Implement rate limiting logic
         # For example, max 100 file accesses per minute per user
         return True  # Simplified for this example
-    
+
     def _get_file_with_permissions(self, user, file_id: str):
         """Get file object with permission checking."""
         # Find the file in VideoClip, Photo, or PhotoSeriesFile
         from .models import VideoClip, Photo, PhotoSeriesFile
-        
+
         # Try VideoClip
         try:
             videoclip = VideoClip.objects.get(file_id=file_id)
@@ -556,7 +600,7 @@ class SecureFileServeView(View):
                 return videoclip
         except VideoClip.DoesNotExist:
             pass
-        
+
         # Try Photo
         try:
             photo = Photo.objects.get(file_id=file_id)
@@ -564,7 +608,7 @@ class SecureFileServeView(View):
                 return photo
         except Photo.DoesNotExist:
             pass
-        
+
         # Try PhotoSeriesFile
         try:
             series_file = PhotoSeriesFile.objects.get(file_id=file_id)
@@ -572,13 +616,14 @@ class SecureFileServeView(View):
                 return series_file
         except PhotoSeriesFile.DoesNotExist:
             pass
-        
+
         raise PermissionDenied("File not found or access denied")
 ```
 
 ## Step 6: Performance Testing and Optimization
 
-### Create performance test script:
+### Create performance test script
+
 ```python
 # scripts/performance_test.py
 
@@ -589,56 +634,56 @@ from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     help = 'Test upload performance and mobile compatibility'
-    
+
     def add_arguments(self, parser):
         parser.add_argument('--test-type', choices=['upload', 'mobile', 'load'], default='upload')
-    
+
     def handle(self, *args, **options):
         test_type = options['test_type']
-        
+
         if test_type == 'upload':
             self.test_upload_performance()
         elif test_type == 'mobile':
             self.test_mobile_compatibility()
         elif test_type == 'load':
             self.test_load_performance()
-    
+
     def test_upload_performance(self):
         """Test upload performance with various file sizes."""
         self.stdout.write("Testing upload performance...")
-        
+
         # Test different file sizes
         test_sizes = [1, 5, 10, 25, 50]  # MB
-        
+
         for size_mb in test_sizes:
             start_time = time.time()
             # Simulate upload test
             # (implement actual upload testing)
             end_time = time.time()
-            
+
             upload_time = end_time - start_time
             speed_mbps = size_mb / upload_time if upload_time > 0 else 0
-            
+
             self.stdout.write(f"  {size_mb}MB file: {upload_time:.2f}s ({speed_mbps:.2f} MB/s)")
-    
+
     def test_mobile_compatibility(self):
         """Test mobile user agent compatibility."""
         self.stdout.write("Testing mobile compatibility...")
-        
+
         mobile_user_agents = [
             'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15',
             'Mozilla/5.0 (Linux; Android 11; SM-G991B) AppleWebKit/537.36',
         ]
-        
+
         for ua in mobile_user_agents:
             # Test with mobile user agent
             # (implement mobile-specific testing)
             self.stdout.write(f"  {ua[:50]}... OK")
-    
+
     def test_load_performance(self):
         """Test load performance with multiple concurrent uploads."""
         self.stdout.write("Testing load performance...")
-        
+
         # Test concurrent uploads
         # (implement load testing)
         pass
@@ -646,13 +691,15 @@ class Command(BaseCommand):
 
 ## Step 7: Documentation Update
 
-### Update README.md section:
+### Update README.md section
+
 ```markdown
 # MediaFiles App - FilePond Integration
 
 The MediaFiles app now uses django-drf-filepond for all file uploads, providing:
 
 ## Features
+
 - ✅ Server-side H.264 video conversion for universal mobile compatibility
 - ✅ Automatic image optimization and thumbnail generation
 - ✅ Chunked uploads with progress tracking
@@ -661,12 +708,15 @@ The MediaFiles app now uses django-drf-filepond for all file uploads, providing:
 - ✅ Simplified JavaScript architecture (no complex bundles)
 
 ## Upload Types
+
 - **Photos**: Single image uploads (JPEG, PNG, WebP)
 - **Photo Series**: Multiple image uploads with reordering
 - **Video Clips**: Video uploads with automatic H.264 conversion
 
 ## Mobile Compatibility
+
 All videos are automatically converted to H.264/MP4 format with mobile-optimized settings:
+
 - Maximum resolution: 1920x1080
 - Bitrate limit: 2Mbps
 - Fast start enabled for streaming
@@ -674,12 +724,14 @@ All videos are automatically converted to H.264/MP4 format with mobile-optimized
 
 ## File Structure
 ```
+
 media/
 ├── photos/YYYY/MM/originals/[uuid].ext
 ├── photo_series/YYYY/MM/originals/[uuid].ext
 ├── videos/YYYY/MM/originals/[uuid].ext
-└── thumbnails/YYYY/MM/[uuid]_thumb.jpg
-```
+└── thumbnails/YYYY/MM/[uuid]\_thumb.jpg
+
+````
 
 ## Development
 - No complex webpack configuration needed
@@ -692,8 +744,9 @@ Run the performance test suite:
 ```bash
 python manage.py performance_test --test-type=upload
 python manage.py performance_test --test-type=mobile
-```
-```
+````
+
+````
 
 ## Step 8: Final Deployment Preparation
 
@@ -744,9 +797,10 @@ python manage.py performance_test --test-type=mobile
 - [ ] Video conversion failure alerts
 - [ ] Storage usage monitoring
 - [ ] Performance metrics tracking
-```
+````
 
 ## Success Criteria
+
 - ✅ All legacy upload code removed
 - ✅ FilePond working for all upload types
 - ✅ Mobile compatibility confirmed across devices
@@ -757,7 +811,9 @@ python manage.py performance_test --test-type=mobile
 - ✅ Deployment ready
 
 ## Final Result
+
 A clean, maintainable media upload system with:
+
 - Universal mobile compatibility
 - Simplified architecture
 - No JavaScript bundle complexity
@@ -765,3 +821,4 @@ A clean, maintainable media upload system with:
 - Server-side processing
 - Secure file handling
 - Excellent user experience
+

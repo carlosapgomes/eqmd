@@ -50,7 +50,7 @@ Extends the base event card and adds PhotoSeries-specific content and actions
 <div class="photoseries-content">
     <!-- Primary Photo Thumbnail -->
     <div class="photoseries-thumbnail-container mb-3 d-flex justify-content-center">
-        {% with primary_thumbnail=event.get_primary_thumbnail photos=event.get_ordered_photos %}
+        {% with primary_thumbnail=event.get_primary_thumbnail photos=event.get_photos %}
         {% if primary_thumbnail and photos %}
         <div class="photoseries-thumbnail-wrapper" 
              data-gallery-id="timeline-photoseries-{{ event.pk }}"
@@ -64,11 +64,10 @@ Extends the base event card and adds PhotoSeries-specific content and actions
                  class="photoseries-thumbnail" 
                  alt="Primeira foto da série"
                  loading="lazy"
-                 data-full-url="{% url 'mediafiles:serve_file' photos.0.id %}"
+                 data-full-url="{{ photos.0.get_secure_url }}"
                  data-filename="{{ photos.0.original_filename }}"
-                 data-size="{{ photos.0.get_display_size }}"
-                 data-dimensions="{{ photos.0.get_dimensions_display }}"
-                 data-mime-type="{{ photos.0.mime_type }}">
+                 data-size="{{ photos.0.file_size|filesizeformat }}"
+                 data-dimensions="{{ photos.0.width }}x{{ photos.0.height }}px">
             
             <!-- Photo Count Overlay -->
             <div class="photoseries-overlay">
@@ -87,12 +86,12 @@ Extends the base event card and adds PhotoSeries-specific content and actions
                 {% for photo in photos %}
                 {
                     "id": "{{ photo.id }}",
-                    "url": "{% url 'mediafiles:serve_file' photo.id %}",
-                    "downloadUrl": "{% url 'mediafiles:photo_download' photo.id %}",
+                    "url": "{{ photo.get_secure_url }}",
+                    "downloadUrl": "{{ photo.get_secure_url }}?download=1",
                     "filename": "{{ photo.original_filename|escapejs }}",
-                    "size": "{{ photo.get_display_size }}",
-                    "dimensions": "{{ photo.get_dimensions_display }}",
-                    "mimeType": "{{ photo.mime_type }}",
+                    "size": "{{ photo.file_size|filesizeformat }}",
+                    "dimensions": "{{ photo.width }}x{{ photo.height }}px",
+                    "mimeType": "image/jpeg",
                     "index": {{ forloop.counter }}
                 }{% if not forloop.last %},{% endif %}
                 {% endfor %}
@@ -108,15 +107,14 @@ Extends the base event card and adds PhotoSeries-specific content and actions
             <div class="gallery-item" 
                  data-photo-index="{{ forloop.counter0 }}"
                  data-photo-id="{{ photo.id }}">
-                <img src="{% url 'mediafiles:serve_file' photo.id %}" 
+                <img src="{{ photo.get_secure_url }}" 
                      class="gallery-thumbnail"
                      alt="{{ photo.original_filename }}"
-                     data-full-url="{% url 'mediafiles:serve_file' photo.id %}"
-                     data-download-url="{% url 'mediafiles:photo_download' photo.id %}"
+                     data-full-url="{{ photo.get_secure_url }}"
+                     data-download-url="{{ photo.get_secure_url }}?download=1"
                      data-filename="{{ photo.original_filename }}"
-                     data-size="{{ photo.get_display_size }}"
-                     data-dimensions="{{ photo.get_dimensions_display }}"
-                     data-mime-type="{{ photo.mime_type }}">
+                     data-size="{{ photo.file_size|filesizeformat }}"
+                     data-dimensions="{{ photo.width }}x{{ photo.height }}px">
             </div>
             {% empty %}
             <!-- Debug: No photos found -->
@@ -153,7 +151,7 @@ Extends the base event card and adds PhotoSeries-specific content and actions
     <!-- Series Metadata -->
     <div class="photoseries-metadata">
         <div class="row g-2 small text-muted">
-            {% with primary_photo=event.get_ordered_photos.first %}
+            {% with primary_photo=event.get_photos.first %}
             {% if primary_photo %}
             <div class="col-sm-6">
                 <i class="bi bi-file-earmark-image me-1" aria-hidden="true"></i>

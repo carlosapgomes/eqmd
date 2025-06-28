@@ -1,10 +1,13 @@
+<context>
 # Outpatient Prescription System Implementation Requirements
 
 ## Overview
 Implement two interconnected features for the EquipeMed platform:
 1. A **Drug Templates** system to manage medication information
 2. An **Outpatient Prescription** feature that uses these drug templates to create printable prescriptions
+</context>
 
+<PRD>
 ## Drug Templates Feature
 
 ### Core Functionality
@@ -149,3 +152,4 @@ Implement two interconnected features for the EquipeMed platform:
    - [ ] Changes to drug templates do not affect existing prescriptions
    - [ ] All prescription data is properly copied rather than linked
 
+</PRD>

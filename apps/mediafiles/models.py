@@ -820,28 +820,56 @@ class PhotoManager(models.Manager):
 
     def get_queryset(self):
         """Return queryset with optimized queries."""
-        return super().get_queryset().select_related('media_file', 'patient', 'created_by')
+        return super().get_queryset().select_related('patient', 'created_by')
 
 
 class Photo(Event):
     """
-    Photo model for single image uploads.
-
+    Simplified Photo model using FilePond.
+    
     Extends the base Event model and uses PHOTO_EVENT type.
-    Each photo has a single associated MediaFile.
+    Uses FilePond for file upload with direct file metadata storage.
     """
 
-    media_file = models.OneToOneField(
-        MediaFile,
-        on_delete=models.CASCADE,
-        verbose_name="Arquivo de Mídia",
-        help_text="The media file containing the photo"
+    # Replace media_file with FilePond fields
+    file_id = models.CharField(
+        max_length=100,
+        null=True, blank=True,
+        verbose_name="File ID",
+        help_text="FilePond file identifier"
     )
-
+    
+    original_filename = models.CharField(
+        max_length=255,
+        null=True, blank=True,
+        verbose_name="Nome Original"
+    )
+    
+    file_size = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Tamanho do Arquivo"
+    )
+    
+    width = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Largura"
+    )
+    
+    height = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Altura"
+    )
+    
+    thumbnail_path = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="Caminho da Miniatura"
+    )
+    
+    # Keep existing fields
     caption = models.TextField(
         blank=True,
-        verbose_name="Legenda",
-        help_text="Optional caption for the photo"
+        verbose_name="Legenda"
     )
 
     objects = PhotoManager()
@@ -859,16 +887,6 @@ class Photo(Event):
         """Validate the photo."""
         super().clean()
 
-        # Only validate media_file if it's actually assigned and accessible
-        # During form creation, media_file might not be assigned yet
-        try:
-            if self.media_file and not self.media_file.mime_type.startswith('image/'):
-                raise ValidationError("Media file must be an image")
-        except MediaFile.DoesNotExist:
-            # media_file relationship doesn't exist yet (during form validation)
-            # This is normal during creation process, skip validation
-            pass
-
     def get_absolute_url(self):
         """Return the absolute URL for this photo."""
         return reverse('mediafiles:photo_detail', kwargs={'pk': self.pk})
@@ -877,103 +895,122 @@ class Photo(Event):
         """Return the edit URL for this photo."""
         return reverse('mediafiles:photo_update', kwargs={'pk': self.pk})
 
-    def get_thumbnail(self):
-        """Delegate to media_file.get_thumbnail_url()."""
-        if self.media_file:
-            return self.media_file.get_thumbnail_url()
+    def get_secure_url(self):
+        """Return secure file URL."""
+        if not self.file_id:
+            # Return placeholder or None for missing file_id
+            return None
+        return reverse('mediafiles:serve_file', kwargs={'file_id': self.file_id})
+    
+    def get_thumbnail_url(self):
+        """Return thumbnail URL."""
+        if self.thumbnail_path and self.file_id:
+            return reverse('mediafiles:serve_thumbnail', kwargs={'file_id': self.file_id})
         return None
+
+    def get_thumbnail(self):
+        """Return thumbnail URL for compatibility."""
+        return self.get_thumbnail_url()
 
     def get_file_info(self):
         """Return formatted file information."""
-        if self.media_file:
-            return {
-                'size': self.media_file.get_display_size(),
-                'dimensions': self.media_file.get_dimensions_display(),
-                'filename': self.media_file.original_filename,
-            }
-        return {}
+        return {
+            'size': self.get_display_size(),
+            'dimensions': self.get_dimensions_display(),
+            'filename': self.original_filename,
+        }
+
+    def get_display_size(self):
+        """Return human-readable file size."""
+        if not self.file_size:
+            return "Unknown"
+        
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"
+
+    def get_dimensions_display(self):
+        """Return formatted dimensions string."""
+        if self.width and self.height:
+            return f"{self.width} × {self.height}"
+        return "Unknown"
 
 
 class PhotoSeriesFile(models.Model):
     """
-    Through model for PhotoSeries-MediaFile relationship.
+    Individual photo within a series using FilePond.
     
-    Handles the many-to-many relationship between PhotoSeries and MediaFile
-    with additional fields for ordering and individual photo descriptions.
+    Stores direct file metadata instead of MediaFile relationship.
     """
     
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        help_text="Unique identifier for the photo series file"
-    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     photo_series = models.ForeignKey(
         'PhotoSeries',
         on_delete=models.CASCADE,
-        verbose_name="Série de Fotos",
-        help_text="The photo series this file belongs to"
+        verbose_name="Série de Fotos"
     )
     
-    media_file = models.ForeignKey(
-        MediaFile,
-        on_delete=models.CASCADE,
-        verbose_name="Arquivo de Mídia",
-        help_text="The media file in this series"
-    )
+    file_id = models.CharField(max_length=100, null=True, blank=True, verbose_name="File ID")
+    original_filename = models.CharField(max_length=255, null=True, blank=True)
+    file_size = models.PositiveIntegerField(null=True, blank=True)
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    thumbnail_path = models.CharField(max_length=500, blank=True)
     
-    order = models.PositiveIntegerField(
-        verbose_name="Ordem",
-        help_text="Order of the photo in the series"
-    )
+    order = models.PositiveIntegerField(null=True, blank=True)
+    description = models.TextField(blank=True)
     
-    description = models.TextField(
-        blank=True,
-        verbose_name="Descrição",
-        help_text="Optional description for this specific photo"
-    )
-    
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Criado em"
-    )
-    
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name="Atualizado em"
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        verbose_name = "Arquivo da Série de Fotos"
-        verbose_name_plural = "Arquivos da Série de Fotos"
         ordering = ['order']
-        unique_together = [
-            ['photo_series', 'order'],
-            ['photo_series', 'media_file']  # Prevent same file in same series multiple times
-        ]
-        indexes = [
-            models.Index(fields=['photo_series', 'order'], name='photoseries_file_order_idx'),
-            models.Index(fields=['photo_series', 'media_file'], name='photoseries_file_media_idx'),
-        ]
+        unique_together = [['photo_series', 'order']]
     
-    def __str__(self):
-        """Return series and order information."""
-        return f"{self.photo_series} - Foto {self.order}"
+    def get_secure_url(self):
+        return reverse('mediafiles:serve_file', kwargs={'file_id': self.file_id})
     
-    def save(self, *args, **kwargs):
-        """Auto-assign order if not provided."""
-        if not self.order:
-            # Get the highest order number for this series
-            max_order = PhotoSeriesFile.objects.filter(
-                photo_series=self.photo_series
-            ).aggregate(
-                max_order=models.Max('order')
-            )['max_order']
-            
-            self.order = (max_order or 0) + 1
+    def get_thumbnail_url(self):
+        if self.thumbnail_path:
+            return reverse('mediafiles:serve_thumbnail', kwargs={'file_id': self.file_id})
+        return None
+    
+    def get_display_size(self):
+        """Return human-readable file size."""
+        if not self.file_size:
+            return "N/A"
         
-        super().save(*args, **kwargs)
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"
+    
+    def get_dimensions_display(self):
+        """Return dimensions as 'WIDTHxHEIGHT' string."""
+        if self.width and self.height:
+            return f"{self.width}x{self.height}"
+        return "N/A"
+    
+    @property
+    def mime_type(self):
+        """Return MIME type based on file extension."""
+        if not self.original_filename:
+            return "application/octet-stream"
+        
+        ext = Path(self.original_filename).suffix.lower()
+        mime_types = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg', 
+            '.png': 'image/png',
+            '.webp': 'image/webp',
+            '.gif': 'image/gif'
+        }
+        return mime_types.get(ext, 'application/octet-stream')
 
 
 class PhotoSeriesManager(models.Manager):
@@ -984,29 +1021,21 @@ class PhotoSeriesManager(models.Manager):
         return super().get_queryset().select_related(
             'patient', 'created_by'
         ).prefetch_related(
-            'photoseriesfile_set__media_file'
+            'photoseriesfile_set'
         )
 
 
 class PhotoSeries(Event):
     """
-    PhotoSeries model for multiple image uploads.
+    PhotoSeries model using FilePond for multiple uploads.
     
     Extends the base Event model and uses PHOTO_SERIES_EVENT type.
-    Each series contains multiple MediaFile instances with ordering capabilities.
+    Uses FilePond with direct file metadata storage in PhotoSeriesFile.
     """
-    
-    photos = models.ManyToManyField(
-        MediaFile,
-        through=PhotoSeriesFile,
-        verbose_name="Fotos",
-        help_text="Photos in this series"
-    )
     
     caption = models.TextField(
         blank=True,
-        verbose_name="Legenda",
-        help_text="Optional caption for the photo series"
+        verbose_name="Legenda da Série"
     )
     
     objects = PhotoSeriesManager()
@@ -1025,13 +1054,11 @@ class PhotoSeries(Event):
         super().clean()
         
         # Check if series has at least one photo (only for existing instances)
-        # Skip validation during creation as photos might be added after the series is created
         if self.pk:
             try:
                 if self.get_photo_count() == 0:
                     raise ValidationError("Photo series must contain at least one photo")
             except:
-                # If there's any error during validation, skip it (likely during tests or creation)
                 pass
     
     def get_absolute_url(self):
@@ -1045,128 +1072,25 @@ class PhotoSeries(Event):
     def get_timeline_return_url(self):
         """Return patient timeline URL for navigation."""
         return reverse('patients:patient_timeline', kwargs={'pk': self.patient.pk})
+
+    def get_photos(self):
+        """Return related PhotoSeriesFile objects."""
+        return self.photoseriesfile_set.all().order_by('order')
+    
+    def get_ordered_photos(self):
+        """Return photos ordered by the user-defined order field."""
+        return self.photoseriesfile_set.all().order_by('order')
+    
+    def get_photo_count(self):
+        """Return number of photos in series."""
+        return self.photoseriesfile_set.count()
     
     def get_primary_thumbnail(self):
-        """Return first image thumbnail for timeline card."""
-        first_photo = self.get_ordered_photos().first()
+        """Return first photo thumbnail."""
+        first_photo = self.get_photos().first()
         if first_photo:
             return first_photo.get_thumbnail_url()
         return None
-    
-    def get_photo_count(self):
-        """Return number of images in series for timeline card."""
-        return self.photoseriesfile_set.count()
-    
-    def get_ordered_photos(self):
-        """Return MediaFiles in order."""
-        return MediaFile.objects.filter(
-            photoseriesfile__photo_series=self
-        ).order_by('photoseriesfile__order')
-    
-    def add_photo(self, media_file, order=None, description=''):
-        """Add photo to series."""
-        # Validate the media file for series inclusion
-        media_file.validate_series_file()
-        
-        # Check if this media file is already in the series
-        existing = PhotoSeriesFile.objects.filter(
-            photo_series=self,
-            media_file=media_file
-        ).first()
-        
-        if existing:
-            # Update existing entry
-            if order is not None:
-                existing.order = order
-            if description:
-                existing.description = description
-            existing.save()
-        else:
-            # Create new entry
-            PhotoSeriesFile.objects.create(
-                photo_series=self,
-                media_file=media_file,
-                order=order,
-                description=description
-            )
-    
-    def add_photos_batch(self, uploaded_files):
-        """
-        Add multiple photos to series with batch validation.
-        
-        Args:
-            uploaded_files: List of uploaded file objects
-            
-        Returns:
-            List of created MediaFile instances
-            
-        Raises:
-            ValidationError: If batch validation fails
-        """
-        from django.db import transaction
-        from .utils import validate_series_files
-        
-        # Validate all files as a batch first
-        validate_series_files(uploaded_files)
-        
-        created_media_files = []
-        
-        with transaction.atomic():
-            for i, uploaded_file in enumerate(uploaded_files, start=1):
-                # Create MediaFile
-                media_file = MediaFile.objects.create_from_upload(uploaded_file)
-                
-                # Add to series
-                self.add_photo(media_file, order=i)
-                created_media_files.append(media_file)
-        
-        return created_media_files
-    
-    def remove_photo(self, media_file):
-        """Remove photo from series."""
-        from django.db import transaction
-        
-        with transaction.atomic():
-            # Remove the specific photo
-            PhotoSeriesFile.objects.filter(
-                photo_series=self,
-                media_file=media_file
-            ).delete()
-            
-            # Reorder remaining photos to eliminate gaps
-            series_files = PhotoSeriesFile.objects.filter(
-                photo_series=self
-            ).order_by('order')
-            
-            for index, series_file in enumerate(series_files, start=1):
-                if series_file.order != index:
-                    series_file.order = index
-                    series_file.save(update_fields=['order'])
-    
-    def reorder_photos(self, photo_order_list):
-        """
-        Reorder photos in series.
-        
-        Args:
-            photo_order_list: List of media_file IDs in desired order
-        """
-        from django.db import transaction
-        
-        with transaction.atomic():
-            # Use a large offset to avoid unique constraint violations
-            # PositiveIntegerField doesn't allow negative values, so use large offset
-            offset = 10000
-            series_files = PhotoSeriesFile.objects.filter(photo_series=self)
-            for i, series_file in enumerate(series_files):
-                series_file.order = offset + i
-                series_file.save(update_fields=['order'])
-            
-            # Then set the new order values
-            for index, media_file_id in enumerate(photo_order_list, start=1):
-                PhotoSeriesFile.objects.filter(
-                    photo_series=self,
-                    media_file_id=media_file_id
-                ).update(order=index)
 
 
 class VideoClipManager(models.Manager):

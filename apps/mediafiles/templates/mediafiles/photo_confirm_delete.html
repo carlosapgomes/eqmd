@@ -59,9 +59,9 @@ Excluir Foto - {{ photo.patient.name }} - EquipeMed
                 <div class="row">
                     <div class="col-md-4">
                         <div class="text-center">
-                            <img src="{% url 'mediafiles:serve_thumbnail' photo.media_file.id %}" 
+                            <img src="{% url 'mediafiles:serve_thumbnail' photo.file_id %}" 
                                  class="img-thumbnail" 
-                                 alt="{{ photo.media_file.original_filename }}"
+                                 alt="{{ photo.original_filename }}"
                                  style="max-height: 200px;">
                         </div>
                     </div>
@@ -81,7 +81,7 @@ Excluir Foto - {{ photo.patient.name }} - EquipeMed
                                     <i class="bi bi-file-earmark-text me-1"></i>
                                     Arquivo:
                                 </span>
-                                <span class="metadata-value">{{ photo.media_file.original_filename }}</span>
+                                <span class="metadata-value">{{ photo.original_filename }}</span>
                             </div>
                             
                             {% if photo.description %}

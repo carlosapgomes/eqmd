@@ -224,8 +224,8 @@ Série de Fotos - {{ photoseries.patient.name }} - EquipeMed
         {% for photo in photoseries.get_ordered_photos %}
         {
             "id": "{{ photo.id }}",
-            "url": "{% url 'mediafiles:serve_file' photo.id %}",
-            "downloadUrl": "{% url 'mediafiles:photo_download' photo.id %}",
+            "url": "{% url 'mediafiles:serve_file' photo.file_id %}",
+            "downloadUrl": "{% url 'mediafiles:serve_file' photo.file_id %}?download=1",
             "filename": "{{ photo.original_filename }}",
             "size": "{{ photo.get_display_size }}",
             "dimensions": "{{ photo.get_dimensions_display }}",

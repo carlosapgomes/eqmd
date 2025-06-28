@@ -23,11 +23,11 @@
              data-photo-id="{{ photo.id }}">
             <div class="gallery-thumbnail-wrapper">
                 <!-- Photo Thumbnail -->
-                <img src="{% if photo.get_thumbnail_url %}{{ photo.get_thumbnail_url }}{% else %}{% url 'mediafiles:serve_file' photo.id %}{% endif %}" 
+                <img src="{% if photo.get_thumbnail_url %}{{ photo.get_thumbnail_url }}{% else %}{% url 'mediafiles:serve_file' photo.file_id %}{% endif %}" 
                      class="gallery-thumbnail" 
                      alt="{{ photo.original_filename }}"
                      loading="lazy"
-                     data-full-url="{% url 'mediafiles:serve_file' photo.id %}"
+                     data-full-url="{% url 'mediafiles:serve_file' photo.file_id %}"
                      data-filename="{{ photo.original_filename }}"
                      data-size="{{ photo.get_display_size }}"
                      data-dimensions="{{ photo.get_dimensions_display }}"
@@ -46,7 +46,7 @@
                             <i class="bi bi-eye"></i>
                         </button>
                         {% if show_download %}
-                        <a href="{% url 'mediafiles:photo_download' photo.id %}" 
+                        <a href="{% url 'mediafiles:serve_file' photo.file_id %}?download=1" 
                            class="btn btn-light btn-sm"
                            data-bs-toggle="tooltip" title="Download">
                             <i class="bi bi-download"></i>
