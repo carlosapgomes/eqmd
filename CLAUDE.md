@@ -161,20 +161,21 @@ python manage.py create_sample_content  # Create initial sample content template
 
 ### MediaFiles App
 **Secure media file management for medical images and videos**
-- Models: MediaFile (core storage), Photo, PhotoSeries, VideoClip extending Event model
+- Models: MediaFile (for photos), Photo, PhotoSeries, VideoClip (FilePond-based) extending Event model
 - Security: UUID-based file naming, SHA-256 hash deduplication, comprehensive validation
 - File types: Single images, image series, short video clips (up to 2 minutes)
 - Processing: Automatic thumbnail generation, metadata extraction, secure file serving
 - Integration: Seamless Event system integration with timeline display
-- URL structure: `/mediafiles/file/<uuid>/`, `/mediafiles/thumbnail/<uuid>/`
+- URL structure: `/mediafiles/file/<uuid>/`, `/mediafiles/thumbnail/<uuid>/`, `/mediafiles/fp/` (FilePond)
 
 #### Key Features
 - **Secure File Storage**: UUID-based filenames prevent enumeration attacks
-- **File Deduplication**: SHA-256 hash-based duplicate detection and storage optimization
+- **File Deduplication**: SHA-256 hash-based duplicate detection and storage optimization (photos only)
 - **Permission-Based Access**: Hospital context and role-based access control
 - **Multiple Media Types**: Photos (PHOTO_EVENT = 3), Photo Series (PHOTO_SERIES_EVENT = 9), Videos (VIDEO_CLIP_EVENT = 10)
 - **Thumbnail Generation**: Automatic thumbnails for images and video previews
 - **Audit Trail**: Complete access logging and file operation tracking
+- **FilePond Integration**: Modern video upload with server-side H.264 conversion
 
 #### Security Implementation
 - **File Validation**: MIME type, extension, size, and content validation
@@ -274,6 +275,96 @@ def form_valid(self, form):
 - JavaScript in `photoseries.js` handles the upload preview and progress tracking
 - The `multi_upload.html` partial provides advanced upload UI components
 
+#### VideoClip FilePond Implementation (Phase 1 Migration)
+**Modern video upload system using django-drf-filepond with server-side H.264 conversion**
+
+##### Key Changes from Legacy System
+- **Removed Complex Client-Side Compression**: Eliminated heavy JavaScript compression libraries
+- **Server-Side Processing**: All video conversion now handled by VideoProcessor with ffmpeg
+- **FilePond Integration**: Modern drag-and-drop interface with progress tracking
+- **Mobile Optimization**: Automatic H.264/MP4 conversion for universal compatibility
+- **Simplified Architecture**: Reduced JavaScript bundle sizes and complexity
+
+##### VideoClip Model Structure
+```python
+class VideoClip(Event):
+    # FilePond file identifier instead of MediaFile relationship
+    file_id = models.CharField(max_length=100, null=True, blank=True)
+    original_filename = models.CharField(max_length=255, null=True, blank=True)
+    file_size = models.PositiveIntegerField(null=True, blank=True)
+    duration = models.PositiveIntegerField(null=True, blank=True)
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    video_codec = models.CharField(max_length=50, null=True, blank=True)
+    caption = models.TextField(blank=True)
+```
+
+##### VideoProcessor Server-Side Conversion
+Located in `apps/mediafiles/video_processor.py`:
+```python
+class VideoProcessor:
+    @staticmethod
+    def convert_to_h264(input_path: str, output_path: str) -> dict:
+        """Convert video to H.264/MP4 for universal mobile compatibility."""
+        # Mobile-optimized ffmpeg settings:
+        # - libx264 codec with medium preset
+        # - AAC audio codec
+        # - yuv420p pixel format for compatibility
+        # - faststart flag for web optimization
+        # - Even dimensions for encoding compatibility
+```
+
+##### FilePond Form Integration
+```python
+class VideoClipCreateForm(BaseMediaForm, forms.ModelForm):
+    upload_id = forms.CharField(widget=forms.HiddenInput())
+    
+    def save(self, commit=True):
+        # Process FilePond upload
+        temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
+        stored_upload = store_upload(upload_id)
+        
+        # Server-side conversion
+        processor = VideoProcessor()
+        conversion_result = processor.convert_to_h264(
+            stored_upload.file.path,
+            stored_upload.file.path
+        )
+        
+        # Set video metadata from conversion
+        videoclip.file_id = stored_upload.upload_id
+        videoclip.duration = int(conversion_result['duration'])
+        videoclip.width = conversion_result['width']
+        videoclip.height = conversion_result['height']
+        videoclip.video_codec = conversion_result['codec']
+```
+
+##### Configuration Requirements
+```python
+# settings.py additions
+INSTALLED_APPS = [
+    'django_drf_filepond',
+    'storages',
+    'rest_framework',
+]
+
+# FilePond Configuration
+DJANGO_DRF_FILEPOND_UPLOAD_TMP = '/tmp/filepond_uploads'
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = '/tmp/filepond_stored'
+DJANGO_DRF_FILEPOND_STORAGES_BACKEND = 'apps.mediafiles.storage.SecureVideoStorage'
+
+# Video processing settings
+MEDIA_VIDEO_CONVERSION_ENABLED = True
+MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes
+MEDIA_VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB input limit
+```
+
+##### Migration Impact
+- **Database Changes**: VideoClip model migrated from MediaFile relationship to direct file metadata storage
+- **Bundle Optimization**: Removed videoclipCompression and videoclipPlayer bundles
+- **Template Simplification**: FilePond-based template with CDN resources for upload interface
+- **URL Structure**: Added `/mediafiles/fp/` endpoints for FilePond file processing
+
 #### Template Tags
 ```django
 {% load mediafiles_tags %}
@@ -284,19 +375,20 @@ def form_valid(self, form):
 
 #### Frontend JavaScript Architecture (Optimized)
 
-**Bundle Structure - Phase 4 Optimization**
+**Bundle Structure - Post-FilePond Migration**
 - **main-bundle.js**: Core application JavaScript (8.7KB)
 - **mediafiles-bundle.js**: Shared mediafiles utilities (12KB)
 - **photo-bundle.js**: Photo-specific functionality (5.4KB)
 - **photoseries-bundle.js**: Photo series functionality (9.2KB)
-- **videoclip-bundle.js**: Video clip functionality (6.6KB)
+- **videoclip-bundle.js**: Simplified video functionality (376 bytes) - FilePond CDN-based
 - **image-processing bundles**: Heavy image libraries (52KB + 1.3MB, loaded only on photo pages)
 
 **Performance Improvements:**
-- Bundle sizes reduced by 70% per page through optimal code splitting
+- Bundle sizes reduced by 99% for video pages through FilePond migration (6.6KB → 376 bytes)
 - Heavy image processing libraries isolated and lazy-loaded
 - Main application bundle kept minimal at 8.7KB
 - Cross-browser compatibility with graceful fallbacks
+- FilePond resources loaded from CDN (not bundled)
 
 **Loading Patterns:**
 Each page loads only required bundles:

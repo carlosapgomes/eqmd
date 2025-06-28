@@ -75,6 +75,10 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    # FilePond and related
+    "django_drf_filepond",
+    "storages",
+    "rest_framework",
 ]
 
 # Add custom user model setting
@@ -271,4 +275,29 @@ ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory"
 # Login and Logout Configuration
 LOGIN_REDIRECT_URL = "core:dashboard"
 # LOGOUT_REDIRECT_URL = 'core:landing_page' # Optional: can be added later
+
+# FilePond Configuration
+DJANGO_DRF_FILEPOND_UPLOAD_TMP = '/tmp/filepond_uploads'
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = '/tmp/filepond_stored'
+
+# Custom storage for mediafiles with UUID naming
+DJANGO_DRF_FILEPOND_STORAGES_BACKEND = 'apps.mediafiles.storage.SecureVideoStorage'
+
+# Video processing settings
+MEDIA_VIDEO_CONVERSION_ENABLED = True
+MEDIA_VIDEO_OUTPUT_FORMAT = 'mp4'
+MEDIA_VIDEO_CODEC = 'libx264'
+MEDIA_VIDEO_PRESET = 'medium'  # Single quality preset
+MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes
+MEDIA_VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB input limit
+
+# Django REST Framework settings for FilePond
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
 

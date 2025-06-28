@@ -24,12 +24,9 @@ module.exports = {
       "./apps/mediafiles/static/mediafiles/js/image-processing.js",
       "./apps/mediafiles/static/mediafiles/css/photoseries.css"
     ],
-    videoclipCompression: [
-      "./apps/mediafiles/static/mediafiles/js/videoclip-compression.js",
+    videoclip: [
+      "./apps/mediafiles/static/mediafiles/js/videoclip.js",
       "./apps/mediafiles/static/mediafiles/css/videoclip.css"
-    ],
-    videoclipPlayer: [
-      "./apps/mediafiles/static/mediafiles/js/videoclip-player.js"
     ]
   },
   output: {

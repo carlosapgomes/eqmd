@@ -11,6 +11,9 @@ from . import views
 app_name = 'mediafiles'
 
 urlpatterns = [
+    # FilePond URLs
+    path('fp/', include('django_drf_filepond.urls')),
+
     # Secure file serving endpoints
     path('serve/<uuid:file_id>/', views.serve_media_file, name='serve_file'),
     path('thumbnail/<uuid:file_id>/', views.serve_thumbnail, name='serve_thumbnail'),

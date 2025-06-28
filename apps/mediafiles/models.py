@@ -1174,22 +1174,61 @@ class VideoClipManager(models.Manager):
 
     def get_queryset(self):
         """Return queryset with optimized queries."""
-        return super().get_queryset().select_related('media_file', 'patient', 'created_by')
+        return super().get_queryset().select_related('patient', 'created_by')
 
 
 class VideoClip(Event):
     """
-    VideoClip model for short video uploads.
+    VideoClip model for short video uploads using FilePond.
 
     Extends the base Event model and uses VIDEO_CLIP_EVENT type.
-    Each video clip has a single associated MediaFile with video content.
+    Uses FilePond for file upload and server-side H.264 conversion.
     """
 
-    media_file = models.OneToOneField(
-        MediaFile,
-        on_delete=models.CASCADE,
-        verbose_name="Arquivo de Mídia",
-        help_text="The media file containing the video"
+    # FilePond file identifier instead of media_file
+    file_id = models.CharField(
+        max_length=100,
+        null=True, blank=True,
+        verbose_name="File ID",
+        help_text="FilePond file identifier"
+    )
+
+    original_filename = models.CharField(
+        max_length=255,
+        null=True, blank=True,
+        verbose_name="Nome Original"
+    )
+
+    file_size = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Tamanho do Arquivo"
+    )
+
+    duration = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Duração em segundos"
+    )
+
+    width = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Largura",
+        help_text="Video width in pixels"
+    )
+
+    height = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Altura", 
+        help_text="Video height in pixels"
+    )
+
+    video_codec = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name="Codec do Vídeo",
+        help_text="Video codec information (e.g., h264, vp9)"
     )
 
     caption = models.TextField(
@@ -1209,9 +1248,10 @@ class VideoClip(Event):
         self.event_type = Event.VIDEO_CLIP_EVENT
         
         # Validate duration before saving
-        if self.media_file:
-            self.media_file.validate_video_duration()
-            self.media_file.validate_video_security()
+        if self.duration:
+            max_duration = getattr(settings, 'MEDIA_VIDEO_MAX_DURATION', 120)
+            if self.duration > max_duration:
+                raise ValidationError(f"Video duration exceeds {max_duration // 60}:{max_duration % 60:02d} limit")
         
         super().save(*args, **kwargs)
 
@@ -1223,22 +1263,11 @@ class VideoClip(Event):
         if not self.event_type:
             self.event_type = Event.VIDEO_CLIP_EVENT
 
-        # Only validate media_file if it's actually assigned and accessible
-        # During form creation, media_file might not be assigned yet
-        try:
-            if self.media_file:
-                if not self.media_file.is_video():
-                    raise ValidationError("Media file must be a video")
-
-                # Validate duration ≤ 2 minutes
-                max_duration = getattr(settings, 'MEDIA_VIDEO_MAX_DURATION', 120)
-                if self.media_file.duration and self.media_file.duration > max_duration:
-                    raise ValidationError(f"Video duration exceeds {max_duration // 60}:{max_duration % 60:02d} limit")
-
-        except MediaFile.DoesNotExist:
-            # media_file relationship doesn't exist yet (during form validation)
-            # This is normal during creation process, skip validation
-            pass
+        # Validate duration ≤ 2 minutes
+        if self.duration:
+            max_duration = getattr(settings, 'MEDIA_VIDEO_MAX_DURATION', 120)
+            if self.duration > max_duration:
+                raise ValidationError(f"Video duration exceeds {max_duration // 60}:{max_duration % 60:02d} limit")
 
     def get_absolute_url(self):
         """Return the absolute URL for this video clip."""
@@ -1253,32 +1282,55 @@ class VideoClip(Event):
         return reverse('patients:patient_timeline', kwargs={'pk': self.patient.pk})
 
     def get_thumbnail(self):
-        """Delegate to media_file.get_thumbnail_url()."""
-        if self.media_file:
-            return self.media_file.get_thumbnail_url()
+        """Return thumbnail URL (to be implemented with FilePond)."""
+        # TODO: Implement thumbnail generation for FilePond videos
         return None
 
     def get_duration(self):
         """Return formatted duration."""
-        if self.media_file:
-            return self.media_file.get_duration_display()
-        return "0:00"
+        if not self.duration:
+            return "0:00"
+        
+        minutes = self.duration // 60
+        seconds = self.duration % 60
+        
+        if minutes >= 60:
+            hours = minutes // 60
+            minutes = minutes % 60
+            return f"{hours}:{minutes:02d}:{seconds:02d}"
+        else:
+            return f"{minutes}:{seconds:02d}"
 
     def get_video_url(self):
-        """Return video file URL."""
-        if self.media_file:
-            return self.media_file.get_secure_url()
+        """Return secure video file URL."""
+        if self.file_id:
+            return reverse('mediafiles:serve_file', kwargs={'file_id': self.file_id})
         return None
+
+    def get_display_size(self):
+        """Return human-readable file size."""
+        if not self.file_size:
+            return "Unknown"
+        
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"
+
+    def get_dimensions_display(self):
+        """Return formatted dimensions string."""
+        if self.width and self.height:
+            return f"{self.width} × {self.height}"
+        return "Unknown"
 
     def get_file_info(self):
         """Return formatted file information."""
-        if self.media_file:
-            return {
-                'size': self.media_file.get_display_size(),
-                'dimensions': self.media_file.get_dimensions_display(),
-                'duration': self.media_file.get_duration_display(),
-                'filename': self.media_file.original_filename,
-                'codec': self.media_file.video_codec or 'Unknown',
-                'fps': f"{self.media_file.fps:.1f}" if self.media_file.fps else 'Unknown',
-            }
-        return {}
+        return {
+            'size': self.get_display_size(),
+            'dimensions': self.get_dimensions_display(),
+            'duration': self.get_duration(),
+            'filename': self.original_filename,
+            'codec': self.video_codec or 'Unknown',
+        }

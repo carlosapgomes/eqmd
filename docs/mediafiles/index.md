@@ -35,9 +35,11 @@ Event (base model)
 ├── PhotoSeries (1:M with MediaFile through PhotoSeriesFile)
 │   └── PhotoSeriesFile
 │       └── MediaFile
-└── VideoClip (1:1 with MediaFile)
-    └── MediaFile
+└── VideoClip (FilePond-based, stores metadata directly)
+    └── file_id, original_filename, file_size, duration, etc.
 ```
+
+**Note**: Post-Phase 1 migration, VideoClip no longer uses MediaFile relationship. It stores file metadata directly using FilePond integration.
 
 ### MediaFile Model (Core File Storage)
 
@@ -84,12 +86,18 @@ class PhotoSeries(Event):
         verbose_name_plural = "Séries de Fotos"
 ```
 
-#### VideoClip Model
+#### VideoClip Model (Post-Phase 1 Migration)
 ```python
 class VideoClip(Event):
-    media_file = models.OneToOneField(MediaFile, on_delete=models.CASCADE)
-    title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    # FilePond-based implementation - no MediaFile relationship
+    file_id = models.CharField(max_length=100, null=True, blank=True)
+    original_filename = models.CharField(max_length=255, null=True, blank=True)
+    file_size = models.PositiveIntegerField(null=True, blank=True)
+    duration = models.PositiveIntegerField(null=True, blank=True)  # seconds
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    video_codec = models.CharField(max_length=50, null=True, blank=True)
+    caption = models.TextField(blank=True)
     
     class Meta:
         verbose_name = "Vídeo Curto"
@@ -108,6 +116,74 @@ class PhotoSeriesFile(models.Model):
         ordering = ['order']
         unique_together = [['photo_series', 'order']]
 ```
+
+## FilePond Integration (Phase 1 Migration)
+
+### Overview
+
+The VideoClip model has been migrated from the MediaFile-based system to a modern FilePond implementation with server-side H.264 conversion. This change provides:
+
+- **Simplified Architecture**: Direct file metadata storage without MediaFile relationship
+- **Server-Side Processing**: All video conversion handled by `VideoProcessor` with ffmpeg
+- **Mobile Optimization**: Automatic H.264/MP4 conversion for universal device compatibility
+- **Reduced Complexity**: Eliminated client-side compression JavaScript (99% bundle size reduction)
+
+### Key Components
+
+#### VideoProcessor
+```python
+# Located in apps/mediafiles/video_processor.py
+class VideoProcessor:
+    @staticmethod
+    def convert_to_h264(input_path: str, output_path: str) -> dict:
+        """Convert video to H.264/MP4 with mobile-optimized settings."""
+        # ffmpeg settings:
+        # - libx264 codec with medium preset
+        # - AAC audio codec  
+        # - yuv420p pixel format for compatibility
+        # - faststart flag for web optimization
+        # - Even dimensions for encoding compatibility
+```
+
+#### SecureVideoStorage
+```python
+# Located in apps/mediafiles/storage.py
+class SecureVideoStorage(FileSystemStorage):
+    """Custom storage backend for FilePond maintaining UUID naming."""
+    
+    def _save(self, name, content):
+        # Generates UUID-based filename
+        # Creates date-based directory: videos/YYYY/MM/originals/
+        # Ensures secure file storage structure
+```
+
+#### Configuration
+```python
+# settings.py additions
+INSTALLED_APPS = [
+    'django_drf_filepond',
+    'storages', 
+    'rest_framework',
+]
+
+# FilePond settings
+DJANGO_DRF_FILEPOND_UPLOAD_TMP = '/tmp/filepond_uploads'
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = '/tmp/filepond_stored'
+DJANGO_DRF_FILEPOND_STORAGES_BACKEND = 'apps.mediafiles.storage.SecureVideoStorage'
+
+# Video processing
+MEDIA_VIDEO_CONVERSION_ENABLED = True
+MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes
+MEDIA_VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB input limit
+```
+
+### Migration Impact
+
+1. **Database Schema**: VideoClip model fields changed from MediaFile relationship to direct metadata storage
+2. **File Processing**: Server-side H.264 conversion replaces client-side compression
+3. **Bundle Size**: Video page JavaScript reduced from 6.6KB to 376 bytes
+4. **Template**: FilePond CDN-based interface replaces complex compression UI
+5. **URL Structure**: Added `/mediafiles/fp/` endpoints for FilePond processing
 
 ## File Handling Strategy
 

@@ -1,0 +1,1 @@
+document.addEventListener("DOMContentLoaded",(function(){console.log("VideoClip module initialized");const e=document.querySelector('form[method="post"]');e&&e.addEventListener("submit",(function(e){const o=document.querySelector('input[name="upload_id"]');if(o&&!o.value)return e.preventDefault(),alert("Por favor, faça o upload de um arquivo de vídeo primeiro."),!1}))}));

@@ -437,15 +437,15 @@ class VideoClipAdmin(admin.ModelAdmin):
         'event_datetime',
         'created_by',
         'patient__current_hospital',
-        'media_file__duration',
-        'media_file__video_codec',
+        'duration',
+        'video_codec',
         'event_type',
     ]
 
     search_fields = [
         'description',
         'patient__name',
-        'media_file__original_filename',
+        'original_filename',
         'caption',
     ]
 
@@ -455,10 +455,8 @@ class VideoClipAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at',
         'duration_display',
-        'video_codec',
-        'video_bitrate',
-        'fps',
-        'thumbnail_preview_large',
+        'file_size_display',
+        'dimensions_display',
         'video_info_display',
     ]
 
@@ -474,19 +472,19 @@ class VideoClipAdmin(admin.ModelAdmin):
                 'updated_by',
             )
         }),
-        ('Video File', {
+        ('Video File (FilePond)', {
             'fields': (
-                'media_file',
+                'file_id',
+                'original_filename',
                 'caption',
-                'thumbnail_preview_large',
             )
         }),
         ('Video Metadata', {
             'fields': (
                 'duration_display',
+                'file_size_display',
+                'dimensions_display',
                 'video_codec',
-                'video_bitrate',
-                'fps',
                 'video_info_display',
             ),
             'classes': ('collapse',),
@@ -502,97 +500,55 @@ class VideoClipAdmin(admin.ModelAdmin):
 
     def thumbnail_preview(self, obj):
         """Display video thumbnail in list view."""
-        if obj.media_file and obj.media_file.thumbnail:
-            return format_html(
-                '<div style="position: relative;">'
-                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />'
-                '<div style="position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 1px 3px; border-radius: 2px;">▶</div>'
-                '</div>',
-                obj.media_file.thumbnail.url
-            )
-        return "No thumbnail"
+        # TODO: Implement thumbnail support for FilePond videos
+        return format_html(
+            '<div style="position: relative; width: 50px; height: 50px; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: center;">'
+            '<div style="background: rgba(0,0,0,0.7); color: white; font-size: 12px; padding: 2px 4px; border-radius: 2px;">▶</div>'
+            '</div>'
+        )
     thumbnail_preview.short_description = "Preview"
-
-    def thumbnail_preview_large(self, obj):
-        """Display large video thumbnail in detail view."""
-        if obj.media_file and obj.media_file.thumbnail:
-            video_url = obj.get_video_url()
-            return format_html(
-                '''
-                <div style="position: relative; display: inline-block;">
-                    <img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px;" />
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                                background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 50%;">
-                        <span style="font-size: 24px;">▶</span>
-                    </div>
-                    <div style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.8); 
-                                color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
-                        {}
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <a href="{}" target="_blank" style="color: #007cba; text-decoration: none;">
-                            🎥 Watch Video
-                        </a>
-                    </div>
-                </div>
-                ''',
-                obj.media_file.thumbnail.url,
-                obj.get_duration(),
-                video_url if video_url else '#'
-            )
-        return "No thumbnail available"
-    thumbnail_preview_large.short_description = "Video Preview"
 
     def duration_display(self, obj):
         """Format duration in MM:SS format for admin display."""
-        if obj.media_file and obj.media_file.duration:
-            return obj.media_file.get_duration_display()
-        return "0:00"
+        return obj.get_duration()
     duration_display.short_description = "Duration"
 
     def file_size_display(self, obj):
         """Format file size for admin display."""
-        if obj.media_file:
-            return obj.media_file.get_display_size()
-        return "Unknown"
+        return obj.get_display_size()
     file_size_display.short_description = "File Size"
+
+    def dimensions_display(self, obj):
+        """Format dimensions for admin display."""
+        return obj.get_dimensions_display()
+    dimensions_display.short_description = "Dimensions"
 
     def video_info_display(self, obj):
         """Display comprehensive video information."""
-        if obj.media_file:
-            codec = obj.media_file.video_codec or 'Unknown'
-            bitrate = f"{obj.media_file.video_bitrate:,} bps" if obj.media_file.video_bitrate else 'Unknown'
-            fps = f"{obj.media_file.fps:.1f} fps" if obj.media_file.fps else 'Unknown'
-            dimensions = obj.media_file.get_dimensions_display()
-            
-            return format_html(
-                '''
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                    <h4 style="margin-top: 0;">Video Technical Details</h4>
-                    <p><strong>Original Filename:</strong> {}</p>
-                    <p><strong>File Size:</strong> {}</p>
-                    <p><strong>Duration:</strong> {}</p>
-                    <p><strong>Resolution:</strong> {}</p>
-                    <p><strong>Codec:</strong> {}</p>
-                    <p><strong>Bitrate:</strong> {}</p>
-                    <p><strong>Frame Rate:</strong> {}</p>
-                    <p><strong>MIME Type:</strong> {}</p>
-                    <p><strong>File Hash:</strong> <code>{}</code></p>
-                    <p><strong>Secure URL:</strong> <a href="{}" target="_blank">View Video</a></p>
-                </div>
-                ''',
-                obj.media_file.original_filename,
-                obj.media_file.get_display_size(),
-                obj.get_duration(),
-                dimensions,
-                codec,
-                bitrate,
-                fps,
-                obj.media_file.mime_type,
-                obj.media_file.file_hash[:16] + '...',
-                obj.get_video_url() or '#',
-            )
-        return "No video information available"
+        codec = obj.video_codec or 'Unknown'
+        dimensions = obj.get_dimensions_display()
+        
+        return format_html(
+            '''
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                <h4 style="margin-top: 0;">Video Technical Details (FilePond)</h4>
+                <p><strong>File ID:</strong> {}</p>
+                <p><strong>Original Filename:</strong> {}</p>
+                <p><strong>File Size:</strong> {}</p>
+                <p><strong>Duration:</strong> {}</p>
+                <p><strong>Resolution:</strong> {}</p>
+                <p><strong>Codec:</strong> {}</p>
+                <p><strong>Secure URL:</strong> <a href="{}" target="_blank">View Video</a></p>
+            </div>
+            ''',
+            obj.file_id,
+            obj.original_filename,
+            obj.get_display_size(),
+            obj.get_duration(),
+            dimensions,
+            codec,
+            obj.get_video_url() or '#',
+        )
     video_info_display.short_description = "Video Information"
 
     def patient_link(self, obj):
@@ -603,29 +559,9 @@ class VideoClipAdmin(admin.ModelAdmin):
         return "No patient"
     patient_link.short_description = "Patient"
 
-    def video_codec(self, obj):
-        """Display video codec."""
-        return obj.media_file.video_codec if obj.media_file else 'Unknown'
-    video_codec.short_description = "Codec"
-
-    def video_bitrate(self, obj):
-        """Display video bitrate."""
-        if obj.media_file and obj.media_file.video_bitrate:
-            return f"{obj.media_file.video_bitrate:,} bps"
-        return 'Unknown'
-    video_bitrate.short_description = "Bitrate"
-
-    def fps(self, obj):
-        """Display frame rate."""
-        if obj.media_file and obj.media_file.fps:
-            return f"{obj.media_file.fps:.1f} fps"
-        return 'Unknown'
-    fps.short_description = "FPS"
-
     def get_queryset(self, request):
         """Optimize queryset for admin list view with select_related."""
         return super().get_queryset(request).select_related(
-            'media_file',
             'patient',
             'created_by',
             'updated_by'
@@ -647,22 +583,7 @@ class VideoClipAdmin(admin.ModelAdmin):
 
     def regenerate_thumbnails(self, request, queryset):
         """Regenerate thumbnails for selected videos."""
-        count = 0
-        for video_clip in queryset:
-            if video_clip.media_file:
-                try:
-                    # Clear existing thumbnail
-                    if video_clip.media_file.thumbnail:
-                        video_clip.media_file.thumbnail.delete(save=False)
-                    
-                    # Generate new thumbnail
-                    video_clip.media_file.generate_video_thumbnail()
-                    video_clip.media_file.save(update_fields=['thumbnail'])
-                    count += 1
-                except Exception as e:
-                    self.message_user(request, f"Error regenerating thumbnail for {video_clip}: {e}", level='ERROR')
-        
-        self.message_user(request, f"Successfully regenerated {count} video thumbnails.")
+        self.message_user(request, "Thumbnail regeneration not yet implemented for FilePond videos.")
     regenerate_thumbnails.short_description = "Regenerate thumbnails for selected videos"
 
     def validate_video_files(self, request, queryset):
@@ -671,14 +592,16 @@ class VideoClipAdmin(admin.ModelAdmin):
         invalid_count = 0
         
         for video_clip in queryset:
-            if video_clip.media_file:
-                try:
-                    video_clip.media_file.validate_video_security()
-                    video_clip.media_file.validate_video_duration()
-                    valid_count += 1
-                except Exception as e:
+            try:
+                # Basic validation for FilePond videos
+                if video_clip.duration and video_clip.duration > 120:
                     invalid_count += 1
-                    self.message_user(request, f"Validation failed for {video_clip}: {e}", level='WARNING')
+                    self.message_user(request, f"Duration validation failed for {video_clip}: exceeds 2 minutes", level='WARNING')
+                else:
+                    valid_count += 1
+            except Exception as e:
+                invalid_count += 1
+                self.message_user(request, f"Validation failed for {video_clip}: {e}", level='WARNING')
         
         self.message_user(request, f"Validation complete: {valid_count} valid, {invalid_count} invalid videos.")
     validate_video_files.short_description = "Validate selected video files"

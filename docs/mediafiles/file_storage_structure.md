@@ -66,22 +66,31 @@ media/photo_series/
 │   └── ...
 ```
 
-### Video Storage Structure
+### Video Storage Structure (Post-Phase 1 Migration)
 
 ```
 media/videos/
 ├── 2024/
 │   ├── 01/
-│   │   ├── originals/
-│   │   │   ├── video-uuid1.mp4
-│   │   │   ├── video-uuid2.webm
-│   │   │   └── video-uuid3.mov
-│   │   └── thumbnails/
-│   │       ├── video-uuid1.jpg      # Extracted frame
+│   │   ├── originals/              # FilePond-managed files
+│   │   │   ├── video-uuid1.mp4     # All converted to H.264/MP4
+│   │   │   ├── video-uuid2.mp4     # Server-side conversion
+│   │   │   └── video-uuid3.mp4     # Universal mobile compatibility
+│   │   └── thumbnails/             # TODO: FilePond thumbnail generation
+│   │       ├── video-uuid1.jpg     # Future implementation
 │   │       ├── video-uuid2.jpg
 │   │       └── video-uuid3.jpg
 │   └── ...
+└── tmp/                           # FilePond temporary storage
+    ├── filepond_uploads/          # Temporary uploads
+    └── filepond_stored/           # Permanently stored files
 ```
+
+**Phase 1 Changes:**
+- All videos automatically converted to H.264/MP4 format
+- FilePond manages temporary storage and conversion process
+- Thumbnail generation pending future implementation
+- Server-side VideoProcessor handles all format conversion
 
 ## File Naming Strategy
 
@@ -217,7 +226,7 @@ def extract_video_thumbnail(video_path, time_offset=1.0):
 
 ## File Deduplication
 
-### Hash-Based Deduplication
+### Hash-Based Deduplication (Photos Only)
 
 ```python
 import hashlib
@@ -241,11 +250,18 @@ def calculate_file_hash(file_obj):
 
 ### Deduplication Strategy
 
+**For Photos and PhotoSeries (MediaFile-based):**
 1. Calculate hash on upload
 2. Check if hash exists in database
 3. If exists, link to existing file instead of storing duplicate
 4. Maintain reference count for cleanup
 5. Delete file only when no references remain
+
+**For Videos (FilePond-based):**
+- File deduplication handled by FilePond system
+- VideoClip model stores metadata directly (no MediaFile relationship)
+- Each video conversion creates unique H.264/MP4 output
+- Deduplication occurs at FilePond storage level
 
 ## Backup and Maintenance
 

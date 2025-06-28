@@ -18,6 +18,10 @@ from django.utils import timezone
 from django.conf import settings
 
 from .models import Photo, MediaFile, PhotoSeries, VideoClip
+from django_drf_filepond.models import TemporaryUpload
+from django_drf_filepond.api import store_upload
+from .video_processor import VideoProcessor
+from apps.events.models import Event
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -566,6 +570,111 @@ class PhotoSeriesPhotoForm(forms.Form):
 
 
 class VideoClipCreateForm(BaseMediaForm, forms.ModelForm):
+    """Simplified VideoClip form using FilePond."""
+
+    upload_id = forms.CharField(
+        widget=forms.HiddenInput(),
+        help_text="FilePond upload identifier"
+    )
+
+    class Meta:
+        model = VideoClip
+        fields = ['description', 'event_datetime', 'caption']
+        widgets = {
+            'description': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Descrição do vídeo (ex: Exercício de fisioterapia)',
+                'maxlength': 255
+            }),
+            'event_datetime': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control'
+                },
+                format='%Y-%m-%dT%H:%M'
+            ),
+            'caption': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Legenda opcional para o vídeo'
+            })
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.patient = kwargs.pop('patient', None)
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # Set input formats for datetime field
+        self.fields['event_datetime'].input_formats = [
+            '%Y-%m-%dT%H:%M',  # HTML5 datetime-local format
+            '%Y-%m-%dT%H:%M:%S',
+            '%d/%m/%Y %H:%M:%S',  # Format in error message
+            '%d/%m/%Y %H:%M',
+        ]
+
+        # Set default event datetime to now
+        if not self.instance.pk:
+            utc_now = timezone.now().astimezone(timezone.get_default_timezone())
+            self.fields['event_datetime'].initial = utc_now.strftime('%Y-%m-%dT%H:%M')
+        else:
+            dt = self.instance.event_datetime.astimezone(timezone.get_default_timezone())
+            self.fields['event_datetime'].initial = dt.strftime('%Y-%m-%dT%H:%M')
+
+    def clean_upload_id(self):
+        upload_id = self.cleaned_data['upload_id']
+
+        # Validate FilePond upload exists
+        try:
+            temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
+        except TemporaryUpload.DoesNotExist:
+            raise forms.ValidationError("Upload not found or expired")
+
+        # Validate it's a video file
+        if not temp_upload.upload_name.lower().endswith(('.mp4', '.mov', '.webm')):
+            raise forms.ValidationError("File must be a video")
+
+        return upload_id
+
+    def save(self, commit=True):
+        videoclip = super().save(commit=False)
+
+        # Set required fields
+        videoclip.patient = self.patient
+        videoclip.created_by = self.user
+        videoclip.updated_by = self.user
+        videoclip.event_type = Event.VIDEO_CLIP_EVENT
+
+        # Process FilePond upload
+        upload_id = self.cleaned_data['upload_id']
+        temp_upload = TemporaryUpload.objects.get(upload_id=upload_id)
+
+        # Store the upload permanently and get file info
+        stored_upload = store_upload(upload_id, destination_file_name=None)
+
+        # Process video conversion
+        processor = VideoProcessor()
+        conversion_result = processor.convert_to_h264(
+            stored_upload.file.path,
+            stored_upload.file.path  # Convert in place
+        )
+
+        # Set videoclip fields
+        videoclip.file_id = stored_upload.upload_id
+        videoclip.original_filename = temp_upload.upload_name
+        videoclip.file_size = conversion_result['converted_size']
+        videoclip.duration = int(conversion_result['duration'])
+        videoclip.width = conversion_result['width']
+        videoclip.height = conversion_result['height']
+        videoclip.video_codec = conversion_result['codec']
+
+        if commit:
+            videoclip.save()
+
+        return videoclip
+
+
+class VideoClipCreateFormOld(BaseMediaForm, forms.ModelForm):
     """
     Form for creating new video clip events.
 

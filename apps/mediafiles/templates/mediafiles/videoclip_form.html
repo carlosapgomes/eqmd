@@ -1,528 +1,115 @@
-{% extends "mediafiles/base.html" %}
-{% load static %}
+{% extends "base.html" %} {% load static %} {% block title %} {% if is_update
+%}Editar Vídeo{% else %}Adicionar Vídeo{% endif %} - {{ patient.name }} {%
+endblock %} {% block extra_css %}
+<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet" />
+<link
+  href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css"
+  rel="stylesheet"
+/>
+{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            {% if is_update %}Editar Vídeo{% else %}Adicionar Vídeo{% endif %} -
+            {{ patient.name }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
 
-{% block extra_head %}
-{{ block.super }}
-{% endblock extra_head %}
-
-{% block title %}
-{% if form.instance.pk %}
-    Editar Vídeo - {{ patient.name }} - EquipeMed
-{% else %}
-    Novo Vídeo - {{ patient.name }} - EquipeMed
-{% endif %}
-{% endblock title %}
-
-{% block breadcrumb_items %}
-<li class="breadcrumb-item">
-    <a href="{% url 'apps.patients:patient_detail' patient.id %}" class="text-decoration-none">
-        <i class="bi bi-person me-1"></i>
-        {{ patient.name }}
-    </a>
-</li>
-<li class="breadcrumb-item">
-    <a href="{% url 'apps.patients:patient_events_timeline' patient.id %}" class="text-decoration-none">
-        <i class="bi bi-clock-history me-1"></i>
-        Timeline
-    </a>
-</li>
-<li class="breadcrumb-item active" aria-current="page">
-    {% if form.instance.pk %}
-        <i class="bi bi-pencil me-1"></i>
-        Editar Vídeo
-    {% else %}
-        <i class="bi bi-plus-circle me-1"></i>
-        Novo Vídeo
-    {% endif %}
-</li>
-{% endblock breadcrumb_items %}
-
-{% block media_content %}
-<div class="row">
-    <div class="col-lg-8 mx-auto">
-        <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h3 text-medical-primary mb-1">
-                    {% if form.instance.pk %}
-                        <i class="bi bi-pencil me-2"></i>
-                        Editar Vídeo
-                    {% else %}
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Novo Vídeo
-                    {% endif %}
-                </h1>
-                <p class="text-medical-gray mb-0">
-                    Paciente: <strong>{{ patient.name }}</strong>
-                </p>
-            </div>
-            {% if form.instance.pk %}
-            <div class="text-end">
-                <small class="text-muted">
-                    Criado em: {{ form.instance.created_at|date:"d/m/Y H:i" }}
-                </small>
+            <!-- FilePond Upload Area -->
+            {% if not is_update %}
+            <div class="mb-3">
+              <label class="form-label">Arquivo de Vídeo</label>
+              <input
+                type="file"
+                class="filepond"
+                name="video"
+                accept="video/*"
+                data-max-file-size="100MB"
+                data-max-files="1"
+              />
+              <div class="form-text">
+                Formatos aceitos: MP4, MOV, WebM. Máximo 2 minutos, 100MB. O
+                vídeo será convertido automaticamente para compatibilidade
+                mobile.
+              </div>
             </div>
             {% endif %}
-        </div>
 
-        <!-- Form Card -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-medical-primary text-white">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-camera-video me-2"></i>
-                    Informações do Vídeo
-                </h5>
+            <!-- Form fields -->
+            {{ form.as_p }}
+
+            <div class="d-flex justify-content-between">
+              <a
+                href="{{ patient.get_timeline_url }}"
+                class="btn btn-secondary"
+              >
+                <i class="bi bi-arrow-left"></i> Voltar
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i>
+                {% if is_update %}Atualizar{% else %}Adicionar{% endif %} Vídeo
+              </button>
             </div>
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data" id="videoForm" novalidate>
-                    {% csrf_token %}
-                    
-                    <!-- Video Upload Section (only for new videos) -->
-                    {% if not form.instance.pk %}
-                    <div class="mb-4">
-                        <label for="{{ form.video.id_for_label }}" class="form-label fw-bold">
-                            <i class="bi bi-camera-video me-1"></i>
-                            {{ form.video.label }}
-                            <span class="text-danger">*</span>
-                        </label>
-                        
-                        <!-- Medical Context Data -->
-                        <div style="display: none;">
-                            <span data-patient-id="{{ patient.id }}" 
-                                  data-medical-priority="routine" 
-                                  data-specialty="general"></span>
-                        </div>
-
-                        <!-- Compression Controls Container (will be populated by JavaScript) -->
-                        <div id="compressionControlsPlaceholder"></div>
-                        
-                        <!-- Upload Area -->
-                        <div class="media-upload-area" id="uploadArea">
-                            <div class="upload-content">
-                                <i class="bi bi-cloud-upload display-4 text-medical-gray mb-3"></i>
-                                <h5 class="text-medical-primary">Clique para selecionar ou arraste o vídeo aqui</h5>
-                                <p class="text-muted mb-3">{{ form.video.help_text }}</p>
-                                {{ form.video }}
-                            </div>
-                        </div>
-                        
-                        <!-- Video Preview -->
-                        <div id="videoPreview" class="mt-3" style="display: none;">
-                            <div class="text-center">
-                                <video id="previewVideo" class="media-preview" controls style="max-height: 300px; max-width: 100%;">
-                                    Seu navegador não suporta o elemento de vídeo.
-                                </video>
-                                <div class="media-metadata" id="videoMetadata">
-                                    <div class="metadata-item">
-                                        <span class="metadata-label">Nome do arquivo:</span>
-                                        <span class="metadata-value" id="fileName"></span>
-                                    </div>
-                                    <div class="metadata-item">
-                                        <span class="metadata-label">Tamanho:</span>
-                                        <span class="metadata-value" id="fileSize"></span>
-                                    </div>
-                                    <div class="metadata-item">
-                                        <span class="metadata-label">Duração:</span>
-                                        <span class="metadata-value" id="videoDuration"></span>
-                                    </div>
-                                    <div class="metadata-item">
-                                        <span class="metadata-label">Tipo:</span>
-                                        <span class="metadata-value" id="fileType"></span>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="removeVideo">
-                                    <i class="bi bi-x-circle me-1"></i>
-                                    Remover Vídeo
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Upload Progress -->
-                        <div id="uploadProgress" class="media-progress" style="display: none;">
-                            <div class="media-progress-bar" id="progressBar" style="width: 0%;"></div>
-                        </div>
-                        
-                        <!-- Duration Validation Warning -->
-                        <div id="durationWarning" class="alert alert-warning mt-2" style="display: none;">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            <strong>Atenção:</strong> O vídeo deve ter no máximo 2 minutos de duração.
-                        </div>
-                        
-                        <!-- Error Display -->
-                        {% if form.video.errors %}
-                        <div class="media-error">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            {% for error in form.video.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% else %}
-                    <!-- Current Video Display (for editing) -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-camera-video me-1"></i>
-                            Vídeo Atual
-                        </label>
-                        <div class="text-center">
-                            <video class="media-preview" controls style="max-height: 300px; max-width: 100%;">
-                                <source src="{% url 'mediafiles:videoclip_stream' form.instance.pk %}" type="{{ form.instance.media_file.mime_type }}">
-                                Seu navegador não suporta o elemento de vídeo.
-                            </video>
-                            <div class="media-metadata">
-                                <div class="metadata-item">
-                                    <span class="metadata-label">Nome original:</span>
-                                    <span class="metadata-value">{{ form.instance.media_file.original_filename }}</span>
-                                </div>
-                                <div class="metadata-item">
-                                    <span class="metadata-label">Tamanho:</span>
-                                    <span class="metadata-value">{{ form.instance.media_file.file_size|filesizeformat }}</span>
-                                </div>
-                                {% if form.instance.media_file.duration %}
-                                <div class="metadata-item">
-                                    <span class="metadata-label">Duração:</span>
-                                    <span class="metadata-value">{{ form.instance.media_file.get_duration_display }}</span>
-                                </div>
-                                {% endif %}
-                                <div class="metadata-item">
-                                    <span class="metadata-label">Tipo:</span>
-                                    <span class="metadata-value">{{ form.instance.media_file.mime_type }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Form Fields -->
-                    <div class="row">
-                        <!-- Description Field -->
-                        <div class="col-md-12 mb-3">
-                            <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">
-                                <i class="bi bi-card-text me-1"></i>
-                                {{ form.description.label }}
-                                <span class="text-danger">*</span>
-                            </label>
-                            {{ form.description }}
-                            {% if form.description.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.description.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <div class="form-text">
-                                Descreva brevemente o conteúdo do vídeo (ex: "Exercício de fisioterapia", "Procedimento médico")
-                            </div>
-                        </div>
-
-                        <!-- Event DateTime Field -->
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.event_datetime.id_for_label }}" class="form-label fw-bold">
-                                <i class="bi bi-calendar-event me-1"></i>
-                                {{ form.event_datetime.label }}
-                                <span class="text-danger">*</span>
-                            </label>
-                            {{ form.event_datetime }}
-                            {% if form.event_datetime.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.event_datetime.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <div class="form-text">
-                                Data e hora em que o vídeo foi gravado
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Caption Field -->
-                    <div class="mb-4">
-                        <label for="{{ form.caption.id_for_label }}" class="form-label fw-bold">
-                            <i class="bi bi-chat-quote me-1"></i>
-                            {{ form.caption.label }}
-                        </label>
-                        {{ form.caption }}
-                        {% if form.caption.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.caption.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        <div class="form-text">
-                            Legenda opcional para fornecer contexto adicional sobre o vídeo
-                        </div>
-                    </div>
-
-                    <!-- Form Actions -->
-                    <div class="media-actions justify-content-end">
-                        <a href="{% if patient %}{% url 'apps.patients:patient_events_timeline' patient.id %}{% else %}{% url 'apps.core:dashboard' %}{% endif %}"
-                           class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-1"></i>
-                            Cancelar
-                        </a>
-                        <button type="submit" class="btn btn-medical-primary" id="submitBtn">
-                            <i class="bi bi-{% if form.instance.pk %}check-circle{% else %}plus-circle{% endif %} me-1"></i>
-                            {% if form.instance.pk %}
-                                Salvar Alterações
-                            {% else %}
-                                Criar Vídeo
-                            {% endif %}
-                        </button>
-                    </div>
-                </form>
-            </div>
+          </form>
         </div>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock media_content %}
+{% endblock %} {% block extra_js %}
+<script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
 
-{% block page_specific_scripts %}
 <script>
-// Add global error handler to catch any bundle execution errors
-window.addEventListener('error', function(e) {
-    console.error('Global JavaScript error detected:', e.error);
-    console.error('Error file:', e.filename);
-    console.error('Error line:', e.lineno);
-    console.error('Error column:', e.colno);
-});
+  // Register FilePond plugins
+  FilePond.registerPlugin(
+    FilePondPluginFileValidateType,
+    FilePondPluginFileValidateSize,
+  );
 
-// Add unhandled promise rejection handler
-window.addEventListener('unhandledrejection', function(e) {
-    console.error('Unhandled promise rejection:', e.reason);
-});
-
-console.log('About to load videoclip bundle...');
-</script>
-<!-- Load videoclip compression bundle -->
-<script src="{% static 'videoclipCompression-bundle.js' %}"></script>
-<script>
-console.log('videoclipCompression-bundle.js script tag processed, checking VideoClip availability...');
-console.log('VideoClip after script load:', typeof window.VideoClip);
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded fired at:', new Date().toISOString());
-    console.log('Document readyState:', document.readyState);
-    console.log('VideoClip availability:', typeof window.VideoClip);
-    console.log('Checking for bundle execution markers...');
-    console.log('Window keys containing "Video":', Object.keys(window).filter(k => k.toLowerCase().includes('video')));
-    console.log('All bundle scripts loaded:', document.querySelectorAll('script[src*="bundle"]').length);
-    
-    // Initialize video upload functionality with error handling
-    try {
-        if (typeof VideoClip !== 'undefined') {
-            console.log('VideoClip.init() called at:', new Date().toISOString());
-            VideoClip.init();
-        } else {
-            console.warn('VideoClip module not loaded - falling back to basic functionality');
-            
-            // Try again after a short delay in case of timing issues
-            setTimeout(function() {
-                console.log('Delayed check (100ms) - VideoClip availability:', typeof window.VideoClip);
-                if (typeof VideoClip !== 'undefined') {
-                    console.log('VideoClip.init() called at (delayed):', new Date().toISOString());
-                    VideoClip.init();
-                } else {
-                    // Try longer delay
-                    setTimeout(function() {
-                        console.log('Delayed check (500ms) - VideoClip availability:', typeof window.VideoClip);
-                        if (typeof VideoClip !== 'undefined') {
-                            console.log('VideoClip.init() called at (500ms delay):', new Date().toISOString());
-                            VideoClip.init();
-                        } else {
-                            // Try even longer delay
-                            setTimeout(function() {
-                                console.log('Delayed check (1000ms) - VideoClip availability:', typeof window.VideoClip);
-                                if (typeof VideoClip !== 'undefined') {
-                                    console.log('VideoClip.init() called at (1000ms delay):', new Date().toISOString());
-                                    VideoClip.init();
-                                } else {
-                                    console.error('VideoClip still not available after 1000ms - bundle may have failed to execute');
-                                    // Setup basic fallback
-                                    setupBasicFallback();
-                                }
-                            }, 900);
-                        }
-                    }, 400);
-                }
-            }, 100);
-            
-            // Setup basic fallback
-            setupBasicFallback();
+  // Initialize FilePond
+  const inputElement = document.querySelector(".filepond");
+  if (inputElement) {
+    const pond = FilePond.create(inputElement, {
+      server: {
+        process: "/fp/process/",
+        revert: "/fp/revert/",
+        restore: "/fp/restore/",
+        load: "/fp/load/",
+        fetch: "/fp/fetch/",
+      },
+      acceptedFileTypes: [
+        "video/mp4",
+        "video/mov",
+        "video/webm",
+        "video/quicktime",
+      ],
+      maxFileSize: "100MB",
+      maxFiles: 1,
+      allowMultiple: false,
+      labelIdle:
+        'Arraste o vídeo aqui ou <span class="filepond--label-action">procure</span>',
+      labelFileProcessing: "Processando...",
+      labelFileProcessingComplete: "Processamento concluído",
+      labelFileProcessingAborted: "Processamento cancelado",
+      labelFileProcessingError: "Erro no processamento",
+      labelFileWaitingForSize: "Aguardando tamanho",
+      labelFileSizeNotAvailable: "Tamanho não disponível",
+      onprocessfile: (error, file) => {
+        if (!error) {
+          // Set the upload ID in the hidden form field
+          document.querySelector('input[name="upload_id"]').value =
+            file.serverId;
         }
-    } catch (error) {
-        console.error('VideoClip initialization failed:', error);
-        if (window.errorReporting) {
-            window.errorReporting.captureException(error);
-        }
-    }
-
-    function setupBasicFallback() {
-        // Basic fallback for video input
-        const fileInput = document.querySelector('input[type="file"][name="video"]');
-        if (fileInput) {
-            fileInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    console.log('Video file selected:', file.name);
-                    // Basic validation
-                    const maxSize = 50 * 1024 * 1024; // 50MB
-                    if (file.size > maxSize) {
-                        alert('Arquivo muito grande. Máximo 50MB permitido.');
-                        this.value = '';
-                    }
-                }
-            });
-        }
-    }
-
-    // Form submission handler with loading state
-    const form = document.getElementById('videoForm');
-    const submitBtn = document.getElementById('submitBtn');
-
-    if (form && submitBtn) {
-        form.addEventListener('submit', function(e) {
-            // Disable submit button to prevent double submission
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processando...';
-
-            // Re-enable button after 10 seconds as fallback (videos take longer)
-            setTimeout(function() {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '{% if form.instance.pk %}<i class="bi bi-check-circle me-1"></i>Salvar Alterações{% else %}<i class="bi bi-plus-circle me-1"></i>Criar Vídeo{% endif %}';
-            }, 10000);
-        });
-    }
-
-    // Basic form validation
-    const inputs = document.querySelectorAll('#videoForm input[required], #videoForm textarea[required]');
-    inputs.forEach(input => {
-        input.addEventListener('blur', function() {
-            if (!this.value.trim()) {
-                this.classList.add('is-invalid');
-            } else {
-                this.classList.remove('is-invalid');
-            }
-        });
-
-        input.addEventListener('input', function() {
-            if (this.classList.contains('is-invalid') && this.value.trim()) {
-                this.classList.remove('is-invalid');
-            }
-        });
+      },
     });
-
-    // Video duration validation
-    const videoInput = document.getElementById('{{ form.video.id_for_label }}');
-    const durationWarning = document.getElementById('durationWarning');
-
-    if (videoInput && durationWarning) {
-        videoInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (file && file.type.startsWith('video/')) {
-                const video = document.createElement('video');
-                video.preload = 'metadata';
-
-                video.onloadedmetadata = function() {
-                    const duration = video.duration;
-                    if (duration > 120) { // 2 minutes
-                        durationWarning.style.display = 'block';
-                        submitBtn.disabled = true;
-                    } else {
-                        durationWarning.style.display = 'none';
-                        submitBtn.disabled = false;
-                    }
-                };
-
-                video.src = URL.createObjectURL(file);
-            }
-        });
-    }
-});
+  }
 </script>
-
-<!-- Compression Controls Styles -->
-<style>
-.compression-controls-container {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-}
-
-.compression-preset-card {
-    background: white;
-    border: 2px solid #e9ecef;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    height: 100%;
-}
-
-.compression-preset-card:hover {
-    border-color: #007bff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.compression-preset-card.active {
-    border-color: #007bff;
-    background-color: #f0f8ff;
-}
-
-.preset-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.preset-name {
-    font-weight: 600;
-    color: #495057;
-}
-
-.preset-description {
-    font-size: 0.875rem;
-    color: #6c757d;
-    margin-bottom: 0.75rem;
-}
-
-.preset-specs {
-    font-size: 0.75rem;
-    line-height: 1.4;
-}
-
-.compression-progress-container {
-    background: white;
-    padding: 1rem;
-    border-radius: 0.375rem;
-    border: 1px solid #dee2e6;
-}
-
-.progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.progress-label {
-    font-weight: 600;
-    color: #495057;
-}
-
-.progress-percentage {
-    font-weight: 600;
-    color: #007bff;
-}
-
-.emergency-bypass-container {
-    padding-top: 1rem;
-    border-top: 1px solid #dee2e6;
-    text-align: center;
-}
-</style>
-{% endblock page_specific_scripts %}
+{% endblock %}
