@@ -1,0 +1,37 @@
+# Task ID: 31
+# Title: Create Prescription Form Templates
+# Status: pending
+# Dependencies: 30
+# Priority: high
+# Description: Implement complex form templates for prescription creation/editing
+# Details:
+Create form.html template with prescription form and item formset. Add JavaScript for dynamic item addition/removal. Create drug template selection modal. Add prescription template selection interface. Implement form validation error display with proper styling.
+
+# Test Strategy:
+Test form template rendering, verify JavaScript functionality for dynamic forms, test template selection interfaces
+
+# Subtasks:
+## 1. Create form.html with form and formset [pending]
+### Dependencies: None
+### Description: Develop the HTML template 'form.html' that includes the main form and integrates a Django formset to allow multiple form instances on the page.
+### Details:
+Implement the formset management form and render each form in the formset within the template. Ensure the formset is properly included to handle multiple entries as per Django's formset conventions.
+
+## 2. Add JavaScript for dynamic formset item management [pending]
+### Dependencies: 31.1
+### Description: Implement JavaScript functionality to dynamically add and remove formset forms on the client side.
+### Details:
+Use JavaScript to clone existing formset forms, increment form indices, update the management form's total form count, and insert new forms into the DOM dynamically, enabling users to add multiple items without page reloads.
+
+## 3. Implement drug and prescription template selection modals [pending]
+### Dependencies: 31.1
+### Description: Create modal dialogs within the template to allow users to select drugs and prescriptions from predefined templates.
+### Details:
+Design and integrate modal components that can be triggered from the form, enabling selection of drug and prescription templates. Ensure selections update the form fields accordingly.
+
+## 4. Implement validation error display in the form and formset [pending]
+### Dependencies: 31.1
+### Description: Add mechanisms to display validation errors clearly for both the main form and the formset items.
+### Details:
+Ensure that validation errors from Django forms and formsets are rendered in the template near the relevant fields, providing clear feedback to users on submission errors.
+

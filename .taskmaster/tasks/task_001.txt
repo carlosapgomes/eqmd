@@ -1,0 +1,37 @@
+# Task ID: 1
+# Title: Create Drug Templates App Structure
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Initialize the drugtemplates app with proper Django structure and configuration
+# Details:
+Create drugtemplates app using 'python manage.py startapp drugtemplates apps/drugtemplates'. Add 'apps.drugtemplates' to INSTALLED_APPS in config/settings.py. Create directory structure with models, views, forms, templates, urls, and tests modules. Verify app is properly recognized by Django.
+
+# Test Strategy:
+Test app import in Django shell, verify app appears in INSTALLED_APPS, check directory structure is complete
+
+# Subtasks:
+## 1. Create the Django app using the startapp command [pending]
+### Dependencies: None
+### Description: Run the Django management command to create a new app directory with the default structure inside the project folder where manage.py resides.
+### Details:
+Use the command `python manage.py startapp <appname>` to generate the app folder containing files like views.py, models.py, apps.py, admin.py, tests.py, and migrations/ directory.
+
+## 2. Update settings.py to register the new app [pending]
+### Dependencies: 1.1
+### Description: Add the new app's configuration to the INSTALLED_APPS list in the project's settings.py file to enable Django to recognize and include the app.
+### Details:
+Open settings.py and append the app name or app config class (e.g., 'appname.apps.AppnameConfig') to the INSTALLED_APPS list.
+
+## 3. Set up the app directory structure [pending]
+### Dependencies: 1.1
+### Description: Organize and create necessary files and folders within the app directory for models, views, forms, templates, urls, and tests to support app functionality and maintainability.
+### Details:
+Ensure the app folder contains or create subfolders and files such as models.py for data models, views.py for request handlers, forms.py for form classes, templates/ for HTML templates, urls.py for URL routing, and tests.py for unit tests.
+
+## 4. Verify app registration and basic functionality [pending]
+### Dependencies: 1.2, 1.3
+### Description: Confirm that the app is properly registered and integrated by running the development server and checking that the app responds correctly to requests.
+### Details:
+Run `python manage.py runserver` and navigate to a URL routed to the app to verify it loads without errors, indicating successful registration and setup.
+

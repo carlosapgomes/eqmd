@@ -1,0 +1,31 @@
+# Task ID: 11
+# Title: Create DrugTemplate URL Patterns
+# Status: pending
+# Dependencies: 10
+# Priority: high
+# Description: Configure URL routing for all drug template views
+# Details:
+Create urls.py in drugtemplates app. Define URL patterns: '' (list), 'create/' (create), '<int:pk>/' (detail), '<int:pk>/edit/' (update), '<int:pk>/delete/' (delete). Use name parameter for reverse lookups. Set app_name='drugtemplates' for namespacing. Include in main urls.py with 'drugtemplates/' prefix.
+
+# Test Strategy:
+Test all URL patterns resolve correctly, verify reverse URL lookups work, test namespacing functionality
+
+# Subtasks:
+## 1. Define URL Patterns in App's urls.py [pending]
+### Dependencies: None
+### Description: Create and organize URL patterns specific to each Django app in its own urls.py file, using path converters for dynamic routing.
+### Details:
+Use Django's path() function to define URL patterns that map URLs to views within the app. Include dynamic segments with converters like <int:id> or <slug:slug> for flexible routing. Keep patterns simple and readable to enhance maintainability.
+
+## 2. Set app_name for URL Namespacing [pending]
+### Dependencies: 11.1
+### Description: Assign an app_name variable in the app's urls.py to enable URL namespacing for reverse lookups and avoid naming conflicts.
+### Details:
+Add the app_name string at the top of the app's urls.py file to define a namespace. This allows referencing URLs with the namespace prefix in templates and views, improving clarity and preventing clashes between apps with similar URL names.
+
+## 3. Include App URLs in Main Project Routing [pending]
+### Dependencies: 11.1, 11.2
+### Description: Integrate each app's URL patterns into the main project's urls.py using the include() function and the app's namespace.
+### Details:
+In the project's main urls.py, use path() with include() to incorporate the app's urls.py patterns under a specific URL prefix. This modular approach keeps the project routing organized and leverages the app_name for namespaced URL reversing.
+

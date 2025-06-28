@@ -1,0 +1,37 @@
+# Task ID: 9
+# Title: Implement DrugTemplate Edit View
+# Status: pending
+# Dependencies: 7, 8
+# Priority: high
+# Description: Create view for editing existing drug templates with permission checks
+# Details:
+Create DrugTemplateUpdateView using UpdateView. Add permission check to ensure only creator can edit. Set form_class=DrugTemplateForm. Add success message and redirect to detail view. Apply @login_required decorator and custom permission check.
+
+# Test Strategy:
+Test permission restrictions (only creator can edit), verify form pre-population, test form submission and validation, test success redirect
+
+# Subtasks:
+## 1. Create the UpdateView subclass [pending]
+### Dependencies: None
+### Description: Define a Django UpdateView subclass for the model to be edited, specifying the model and fields to be updated.
+### Details:
+Use Django's generic UpdateView to create a class-based view that handles editing an existing model instance. Specify the model and the fields to be included in the form. This sets up the basic editing interface and form handling.
+
+## 2. Implement permission checks for creator only [pending]
+### Dependencies: 9.1
+### Description: Add logic to ensure that only the creator of the object can access and update it.
+### Details:
+Override the get_object method or use a mixin to check if the current user is the creator of the object. If not, deny access or raise a permission error. This enforces that only authorized users can update the object.
+
+## 3. Handle form pre-population and validation [pending]
+### Dependencies: 9.1
+### Description: Ensure the form is pre-populated with the existing object data and validate the form input on submission.
+### Details:
+The UpdateView automatically pre-populates the form with the current instance data. Customize form validation if needed by overriding form_valid or form_invalid methods to maintain data integrity during updates.
+
+## 4. Manage success feedback after update [pending]
+### Dependencies: 9.1, 9.3
+### Description: Provide user feedback upon successful update and redirect appropriately.
+### Details:
+Define success_url or override form_valid to redirect the user after a successful update. Optionally, add messages or notifications to inform the user that the update was successful.
+

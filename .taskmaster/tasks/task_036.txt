@@ -1,0 +1,31 @@
+# Task ID: 36
+# Title: Add Event Timeline Integration
+# Status: pending
+# Dependencies: 34
+# Priority: medium
+# Description: Integrate prescriptions into patient event timeline
+# Details:
+Create prescription event card template in events/partials/. Add prescription-specific timeline display. Implement event_type=11 handling in timeline views. Add prescription summary display in timeline cards.
+
+# Test Strategy:
+Test prescription events appear in patient timeline, verify event card rendering, test timeline integration
+
+# Subtasks:
+## 1. Create Prescription Event Card Template [pending]
+### Dependencies: None
+### Description: Design and develop a reusable UI template for displaying prescription event cards within the timeline. This template should visually represent prescription details clearly and be consistent with the overall UI style.
+### Details:
+Focus on layout, styling, and placeholders for prescription data such as medication name, dosage, prescribing doctor, and date. Ensure the template is adaptable for different prescription event data.
+
+## 2. Implement Event_Type Handling in Timeline Views [pending]
+### Dependencies: 36.1
+### Description: Add logic to the timeline views to recognize and correctly render different event types, including the newly created prescription event cards.
+### Details:
+Modify the timeline rendering engine to detect event_type for prescriptions and use the prescription event card template for display. Ensure seamless integration with existing event types and smooth UI updates.
+
+## 3. Add Prescription Summary Display [pending]
+### Dependencies: 36.1, 36.2
+### Description: Develop a summary display feature for prescriptions that aggregates key prescription information and presents it in a concise format within the timeline or a dedicated summary section.
+### Details:
+Implement summary logic to extract and show essential prescription details such as total medications prescribed, active prescriptions, and recent changes. Integrate this summary with the timeline views for enhanced user insight.
+

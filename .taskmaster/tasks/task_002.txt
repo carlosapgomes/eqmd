@@ -1,0 +1,43 @@
+# Task ID: 2
+# Title: Implement DrugTemplate Model
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Create the core DrugTemplate model with all required fields and validation
+# Details:
+Create DrugTemplate model with fields: name (CharField, max_length=200, required), presentation (CharField, max_length=300), usage_instructions (TextField with markdown support), creator (ForeignKey to User), is_public (BooleanField, default=False), created_at (DateTimeField, auto_now_add=True), updated_at (DateTimeField, auto_now=True). Add __str__ method returning drug name, get_absolute_url method, and clean method for validation.
+
+# Test Strategy:
+Unit tests for model creation, field validation, __str__ representation, and model methods. Test constraints and required field validation.
+
+# Subtasks:
+## 1. Define Model Fields [pending]
+### Dependencies: None
+### Description: Design and implement the necessary fields for the Django model, selecting appropriate field types and options such as max_length, verbose_name, and help_text.
+### Details:
+Use Django's built-in field types (CharField, IntegerField, ForeignKey, etc.) to define each attribute of the model. Follow best practices for naming fields using lowercase with underscores and ensure descriptive names. Consider validation constraints and database storage requirements while defining fields.
+
+## 2. Implement __str__ Method [pending]
+### Dependencies: 2.1
+### Description: Create the __str__ method for the model to provide a human-readable string representation of model instances.
+### Details:
+Override the __str__ method to return a meaningful string that identifies the model instance, typically using one or more key fields. This aids in debugging and admin interface display.
+
+## 3. Implement get_absolute_url Method [pending]
+### Dependencies: 2.1
+### Description: Define the get_absolute_url method to return the canonical URL for a model instance.
+### Details:
+Implement get_absolute_url to return a URL string that uniquely identifies the model instance, often using Django's reverse function with the instance's primary key or slug. This supports linking to detail views in templates and redirects.
+
+## 4. Implement clean Method for Validation [pending]
+### Dependencies: 2.1
+### Description: Add a clean method to the model to enforce custom validation logic beyond field-level validation.
+### Details:
+Override the clean method to perform model-wide validation checks, raising ValidationError for any invalid data combinations or constraints. This ensures data integrity before saving instances.
+
+## 5. Write Unit Tests for Model Behavior [pending]
+### Dependencies: 2.1, 2.2, 2.3, 2.4
+### Description: Develop unit tests to verify the correctness of field definitions, __str__, get_absolute_url, and clean methods.
+### Details:
+Create test cases that instantiate the model with valid and invalid data, check string representations, URL generation, and validation logic. Use Django's testing framework to automate these tests and ensure model reliability.
+

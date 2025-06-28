@@ -1,0 +1,37 @@
+# Task ID: 18
+# Title: Implement PrescriptionTemplate Models
+# Status: pending
+# Dependencies: 17
+# Priority: medium
+# Description: Create models for reusable prescription templates
+# Details:
+Create PrescriptionTemplate model with fields: name (CharField), creator (ForeignKey to User), is_public (BooleanField), created_at/updated_at (DateTimeFields). Create PrescriptionTemplateItem model with fields: template (ForeignKey), drug_name, presentation, usage_instructions, quantity, order. Add __str__ methods and Meta ordering.
+
+# Test Strategy:
+Test template model creation, verify relationships between template and items, test ordering and validation
+
+# Subtasks:
+## 1. Design PrescriptionTemplate and PrescriptionTemplateItem Models [pending]
+### Dependencies: None
+### Description: Define the data models for PrescriptionTemplate and PrescriptionTemplateItem including fields, data types, and constraints based on pharmacy database design principles.
+### Details:
+Create PrescriptionTemplate model to represent a reusable prescription format. Create PrescriptionTemplateItem model to represent individual items (medicines or instructions) within a template. Include fields such as template name, description, item name, dosage, frequency, and any other relevant attributes.
+
+## 2. Define Relationships and Ordering Between Models [pending]
+### Dependencies: 18.1
+### Description: Establish the relationships between PrescriptionTemplate and PrescriptionTemplateItem models, including one-to-many association and ordering of items.
+### Details:
+Implement a one-to-many relationship where a PrescriptionTemplate has many PrescriptionTemplateItems. Add ordering functionality to PrescriptionTemplateItems to maintain a specific sequence within each template, ensuring correct prescription item order.
+
+## 3. Implement Validation and Business Logic [pending]
+### Dependencies: 18.2
+### Description: Add validation rules and business logic to ensure data integrity and correct behavior of the PrescriptionTemplate and PrescriptionTemplateItem models.
+### Details:
+Validate required fields, enforce unique constraints where necessary, and ensure that ordering indices are consistent and non-conflicting. Include logic to handle updates and deletions that maintain relational integrity.
+
+## 4. Write Unit and Integration Tests for Models and Relationships [pending]
+### Dependencies: 18.3
+### Description: Develop comprehensive tests to verify the correctness of the PrescriptionTemplate and PrescriptionTemplateItem models, their relationships, ordering, and validations.
+### Details:
+Create tests to check model creation, relationship integrity, ordering correctness, and validation enforcement. Include edge cases such as empty templates, duplicate items, and invalid ordering values.
+

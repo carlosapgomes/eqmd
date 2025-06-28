@@ -1,0 +1,37 @@
+# Task ID: 4
+# Title: Setup DrugTemplate Admin Interface
+# Status: pending
+# Dependencies: 3
+# Priority: medium
+# Description: Configure Django admin interface for DrugTemplate management
+# Details:
+Create admin.py with DrugTemplateAdmin class. Configure list_display=['name', 'presentation', 'creator', 'is_public', 'created_at'], list_filter=['is_public', 'creator', 'created_at'], search_fields=['name', 'presentation']. Add readonly_fields for created_at/updated_at. Implement custom admin actions for bulk visibility changes.
+
+# Test Strategy:
+Test admin interface accessibility, verify list display and filtering work correctly, test search functionality and bulk actions
+
+# Subtasks:
+## 1. Create Admin Class [pending]
+### Dependencies: None
+### Description: Define a custom admin class for the model to customize the Django admin interface behavior.
+### Details:
+Create a class inheriting from admin.ModelAdmin in admin.py and register the model with this class to enable further customizations.
+
+## 2. Configure list_display and Filters [pending]
+### Dependencies: 4.1
+### Description: Set up the list_display attribute to control which model fields appear in the admin list view and configure filters for easy data filtering.
+### Details:
+Add list_display tuple to show relevant fields in the admin list page and define list_filter to enable sidebar filters for quick filtering of records.
+
+## 3. Implement search_fields [pending]
+### Dependencies: 4.1
+### Description: Enable search functionality in the admin list view by specifying fields to be searched.
+### Details:
+Add search_fields attribute in the admin class with a list of model fields to allow keyword searching in the admin interface.
+
+## 4. Add Custom Admin Actions [pending]
+### Dependencies: 4.1
+### Description: Define custom actions that can be performed on selected records in the admin list view to enhance management efficiency.
+### Details:
+Implement methods in the admin class decorated with @admin.action and add them to the actions list to provide batch operations.
+

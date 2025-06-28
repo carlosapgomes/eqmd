@@ -1,0 +1,37 @@
+# Task ID: 22
+# Title: Create Prescription Template Forms
+# Status: pending
+# Dependencies: 18
+# Priority: medium
+# Description: Implement forms for managing prescription templates
+# Details:
+Create PrescriptionTemplateForm for template management. Create PrescriptionTemplateItemForm for template items. Create PrescriptionTemplateItemFormSet for handling multiple template items. Add validation for template names and item requirements.
+
+# Test Strategy:
+Test template form creation and validation, verify template item formset functionality, test form validation rules
+
+# Subtasks:
+## 1. Create Template Form [pending]
+### Dependencies: None
+### Description: Develop a Django form for the template model to capture the main template data.
+### Details:
+Define a Django ModelForm or Form class for the template entity, specifying the necessary fields and widgets as per the project requirements.
+
+## 2. Create Template Item Form [pending]
+### Dependencies: 22.1
+### Description: Develop a Django form for the template item model to capture individual items related to the template.
+### Details:
+Define a Django ModelForm or Form class for the template item entity, including fields that represent the item details. This form will be used within the formset.
+
+## 3. Create Formset for Template Items [pending]
+### Dependencies: 22.2
+### Description: Implement a Django formset to manage multiple template item forms dynamically.
+### Details:
+Use Django's formset_factory or inlineformset_factory to create a formset class based on the template item form. Configure parameters such as 'extra', 'min_num', and 'can_delete' as needed to control the number of forms and behavior.
+
+## 4. Add Validation Rules [pending]
+### Dependencies: 22.1, 22.2, 22.3
+### Description: Add custom validation logic to the template form, template item form, and the formset to ensure data integrity and business rules compliance.
+### Details:
+Implement clean methods in forms and formsets to validate individual fields and inter-form relationships. For example, enforce minimum number of items in the formset or validate unique constraints.
+

@@ -1,0 +1,43 @@
+# Task ID: 15
+# Title: Implement OutpatientPrescription Model
+# Status: pending
+# Dependencies: 14
+# Priority: high
+# Description: Create OutpatientPrescription model extending Event with event_type=11
+# Details:
+Create OutpatientPrescription model inheriting from Event. Set event_type=11 in save method. Add additional fields: instructions (TextField for general prescription notes), status (CharField with choices: draft, finalized), prescription_date (DateField, auto-filled). Override __str__ method. Add get_absolute_url method.
+
+# Test Strategy:
+Test model creation and Event inheritance, verify event_type is set correctly, test model methods and field validation
+
+# Subtasks:
+## 1. Define Model Fields [pending]
+### Dependencies: None
+### Description: Define the necessary fields for the Django model, including appropriate field types, choices, defaults, and indexes as needed.
+### Details:
+Use Django's model field classes such as CharField, IntegerField, ForeignKey, etc., to define each field. Include constants for choice fields inside the model class. Ensure fields have proper max_length, default values, and db_index if required. Avoid naming conflicts with model methods.
+
+## 2. Override the save() Method for event_type [pending]
+### Dependencies: 15.1
+### Description: Customize the model's save() method to implement specific behavior related to the event_type field before saving the instance.
+### Details:
+Override the save() method to set or modify the event_type field based on custom logic before calling the superclass save method. Ensure to handle any validation or side effects related to event_type.
+
+## 3. Implement __str__ Method [pending]
+### Dependencies: 15.1
+### Description: Define the __str__ method to provide a human-readable string representation of the model instances.
+### Details:
+Implement the __str__ method to return a meaningful string that represents the model instance, typically using one or more of the model's fields.
+
+## 4. Implement get_absolute_url Method [pending]
+### Dependencies: 15.1
+### Description: Define the get_absolute_url method to return the canonical URL for a model instance.
+### Details:
+Implement get_absolute_url to return the URL string for the detail view of the model instance, typically using Django's reverse function with the instance's primary key or slug.
+
+## 5. Write Unit Tests for Model [pending]
+### Dependencies: 15.1, 15.2, 15.3, 15.4
+### Description: Create unit tests to verify the correct behavior of the model fields, save method override, __str__, and get_absolute_url methods.
+### Details:
+Write tests to check field validations, default values, event_type logic in save(), string representation from __str__, and URL correctness from get_absolute_url. Use Django's TestCase framework.
+

@@ -1,0 +1,43 @@
+# Task ID: 26
+# Title: Implement Prescription Edit View
+# Status: pending
+# Dependencies: 25
+# Priority: high
+# Description: Create view for editing existing prescriptions with 24-hour window check
+# Details:
+Create OutpatientPrescriptionUpdateView using UpdateView. Handle both prescription form and item formset updates. Apply @can_edit_event_required decorator for 24-hour window check. Preserve existing items and allow adding/removing items. Update audit trail information.
+
+# Test Strategy:
+Test edit permissions and 24-hour window restriction, verify formset updates work correctly, test audit trail updates
+
+# Subtasks:
+## 1. Create UpdateView for the model [pending]
+### Dependencies: None
+### Description: Implement a Django UpdateView subclass to handle editing of the main model instance, ensuring it loads the object correctly and displays the form with the appropriate fields.
+### Details:
+Use Django's generic UpdateView to create a view that fetches the object by primary key and renders a form for editing. Define the model and fields to be updated. This forms the base for handling updates.
+
+## 2. Handle form and formset updates in the UpdateView [pending]
+### Dependencies: 26.1
+### Description: Extend the UpdateView to process both the main form and associated formsets during POST requests, ensuring validation and saving of all related data.
+### Details:
+Override methods like get_context_data to include formsets, and post to handle saving both the main form and formsets. Manage formset management forms and ensure the primary key is correctly used to update existing instances.
+
+## 3. Enforce 24-hour edit window restriction [pending]
+### Dependencies: 26.1
+### Description: Implement logic in the UpdateView to restrict editing of the object to within 24 hours of its creation or last update, preventing edits beyond this time frame.
+### Details:
+Add a permission check or override dispatch or get_object methods to verify the object's timestamp against the current time. If the edit window has expired, deny access or redirect with an appropriate message.
+
+## 4. Preserve existing items during update [pending]
+### Dependencies: 26.2
+### Description: Ensure that during the update process, existing related items or formset entries are preserved unless explicitly modified or deleted by the user.
+### Details:
+Handle formset instances carefully to avoid unintentional deletion of related objects. Use formset management forms and instance binding to maintain existing data integrity during updates.
+
+## 5. Update audit trail on changes [pending]
+### Dependencies: 26.1, 26.2, 26.3, 26.4
+### Description: Implement audit trail updates to log changes made during the update process, capturing who made the change and when.
+### Details:
+Integrate audit logging either by overriding form_valid or post methods to record changes to the object and related formsets. Store audit data in a dedicated model or logging system.
+

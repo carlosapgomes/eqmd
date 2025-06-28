@@ -1,0 +1,37 @@
+# Task ID: 12
+# Title: Create DrugTemplate Base Templates
+# Status: pending
+# Dependencies: 11
+# Priority: medium
+# Description: Implement base HTML templates for drug template views
+# Details:
+Create templates/drugtemplates/ directory. Create base.html extending main base template. Implement list.html with Bootstrap table, pagination, and filter controls. Create detail.html showing all template information with action buttons. Follow Bootstrap 5.3.6 and medical theme styling.
+
+# Test Strategy:
+Test template rendering, verify Bootstrap styling applies correctly, test responsive design, verify template inheritance works
+
+# Subtasks:
+## 1. Create base.html template [pending]
+### Dependencies: None
+### Description: Develop the base HTML template with Bootstrap integration to serve as the foundation for other templates.
+### Details:
+Include Bootstrap CSS and JS links, define a consistent header, footer, and navigation bar. Set up blocks for content injection by child templates to ensure consistent styling and layout across pages.
+
+## 2. Develop list.html with Bootstrap table and pagination [pending]
+### Dependencies: 12.1
+### Description: Create the list view template displaying data in a Bootstrap-styled table with pagination controls.
+### Details:
+Use Bootstrap table components to display data rows. Implement pagination using Bootstrap's pagination component to allow navigation through multiple pages of data. Ensure responsiveness and usability of the table and pagination controls.
+
+## 3. Create detail.html with action buttons [pending]
+### Dependencies: 12.1
+### Description: Design the detail view template showing individual item details with action buttons for user interactions.
+### Details:
+Use Bootstrap styling to present detailed information clearly. Add action buttons such as Edit, Delete, or Back, styled consistently with Bootstrap button classes for user actions.
+
+## 4. Apply consistent styling across all templates [pending]
+### Dependencies: 12.1, 12.2, 12.3
+### Description: Ensure all templates share a unified look and feel by applying consistent Bootstrap-based styling and theming.
+### Details:
+Review and refine CSS classes, color schemes, spacing, and typography across base.html, list.html, and detail.html. Confirm responsive design and accessibility standards are met.
+

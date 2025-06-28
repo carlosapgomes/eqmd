@@ -1,0 +1,43 @@
+# Task ID: 23
+# Title: Implement Prescription List View
+# Status: pending
+# Dependencies: 21
+# Priority: high
+# Description: Create view to display patient prescriptions with filtering
+# Details:
+Create OutpatientPrescriptionListView using ListView. Filter by patient parameter if provided. Add filtering by date range, status, creator. Implement pagination. Apply @login_required and @patient_access_required decorators. Add links to create new prescriptions.
+
+# Test Strategy:
+Test view permissions and patient filtering, verify pagination and filtering work correctly, test prescription list display
+
+# Subtasks:
+## 1. Create ListView for Displaying Items [pending]
+### Dependencies: None
+### Description: Define a Django ListView class to display a list of objects from the relevant model, specifying model and context object name.
+### Details:
+Implement a class-based view inheriting from Django's ListView, set the model attribute to the target model (e.g., Patient), and define context_object_name for template use. Optionally specify template_name if deviating from default.
+
+## 2. Implement Patient and Other Filters [pending]
+### Dependencies: 23.1
+### Description: Add filtering functionality to the ListView to allow filtering by patient attributes and other criteria.
+### Details:
+Override the get_queryset method in the ListView to apply filters based on request parameters, enabling dynamic filtering of the displayed list according to patient data and other filters.
+
+## 3. Add Pagination to ListView [pending]
+### Dependencies: 23.1
+### Description: Incorporate pagination into the ListView to limit the number of items displayed per page and enable navigation between pages.
+### Details:
+Set the paginate_by attribute in the ListView to define the number of items per page. Ensure the template supports pagination controls to navigate through pages.
+
+## 4. Apply Permission and Other Decorators [pending]
+### Dependencies: 23.1
+### Description: Add decorators to the ListView to enforce permissions and other access controls.
+### Details:
+Use Django's method_decorator to apply decorators such as login_required or custom permission checks to the dispatch method of the ListView, ensuring only authorized users can access the view.
+
+## 5. Add Create Links for New Entries [pending]
+### Dependencies: 23.1
+### Description: Add links in the ListView template to allow users to navigate to a create view for adding new patient or related records.
+### Details:
+Modify the ListView template to include hyperlinks or buttons that direct users to the CreateView for the relevant model, facilitating easy creation of new entries from the list page.
+

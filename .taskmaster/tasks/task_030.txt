@@ -1,0 +1,37 @@
+# Task ID: 30
+# Title: Create Prescription Base Templates
+# Status: pending
+# Dependencies: 29
+# Priority: medium
+# Description: Implement base HTML templates for prescription views
+# Details:
+Create templates/outpatientprescriptions/ directory. Create base.html extending main template. Implement list.html with prescription table and filtering. Create detail.html with complete prescription display. Follow Bootstrap 5.3.6 and medical theme styling.
+
+# Test Strategy:
+Test template rendering and styling, verify responsive design, test template inheritance
+
+# Subtasks:
+## 1. Create base.html template [pending]
+### Dependencies: None
+### Description: Develop the base HTML template that includes the common layout structure, Bootstrap medical theme styling, navigation, and footer to be extended by other templates.
+### Details:
+Use a clean, responsive Bootstrap medical template such as Medilab or Medicio as the foundation. Integrate the Bootstrap CSS and JS files, set up the header with navigation links, and footer with contact info or copyright. Ensure the base.html supports blocks for content injection by child templates.
+
+## 2. Create list.html template with filtering [pending]
+### Dependencies: 30.1
+### Description: Build the list view template that extends base.html and displays a filtered list of medical-related items (e.g., doctors, clinics). Include filtering controls and responsive Bootstrap styling.
+### Details:
+Implement filtering UI elements such as dropdowns or search inputs styled with Bootstrap components. Display the filtered results in a responsive grid or table format consistent with the medical theme. Ensure the template uses Bootstrap classes for layout and styling.
+
+## 3. Create detail.html template with full display [pending]
+### Dependencies: 30.1
+### Description: Develop the detail view template that extends base.html and shows full details of a selected medical item with comprehensive information and Bootstrap styling.
+### Details:
+Design the detail page to present all relevant information clearly, using Bootstrap cards, typography, and layout utilities. Include images, descriptions, contact info, and any other pertinent details. Maintain consistent styling with the medical theme.
+
+## 4. Apply consistent Bootstrap medical theme styling [pending]
+### Dependencies: 30.1, 30.2, 30.3
+### Description: Ensure all templates (base.html, list.html, detail.html) have consistent styling using a chosen Bootstrap medical theme and responsive design principles.
+### Details:
+Review and unify the color schemes, fonts, spacing, and component styles across all templates. Use a free Bootstrap medical template like Medilab or Medicio as a style guide. Test responsiveness and accessibility on various devices.
+

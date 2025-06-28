@@ -1,0 +1,43 @@
+# Task ID: 8
+# Title: Implement DrugTemplate Create View
+# Status: pending
+# Dependencies: 5
+# Priority: high
+# Description: Create view for adding new drug templates with proper form handling
+# Details:
+Create DrugTemplateCreateView using CreateView. Set form_class=DrugTemplateForm, automatically set creator to request.user. Add success message and redirect to detail view. Apply @login_required and @doctor_required decorators. Implement CSRF protection and form validation error handling.
+
+# Test Strategy:
+Test view access permissions, verify form submission and validation, test success redirect, verify creator is automatically set
+
+# Subtasks:
+## 1. Set up CreateView with form_class [pending]
+### Dependencies: None
+### Description: Define a Django CreateView subclass specifying the form_class attribute to use a custom form for object creation.
+### Details:
+Create a class inheriting from Django's CreateView and assign the form_class attribute to the desired ModelForm to handle form rendering and validation.
+
+## 2. Automatically set the creator in form_valid [pending]
+### Dependencies: 8.1
+### Description: Override the form_valid method to set the creator (e.g., the current user) on the object before saving it.
+### Details:
+In form_valid, call form.save(commit=False), assign the creator field from request.user, then save the object and redirect to success_url.
+
+## 3. Handle success messages and redirects [pending]
+### Dependencies: 8.2
+### Description: Implement success message display and define the redirect URL after successful form submission.
+### Details:
+Use Django's messages framework to add a success message in form_valid and define success_url or override get_success_url for redirection.
+
+## 4. Apply decorators to the CreateView [pending]
+### Dependencies: 8.1
+### Description: Apply decorators such as login_required or permission_required to the CreateView to control access.
+### Details:
+Use method_decorator to decorate dispatch or other HTTP method handlers to enforce authentication or permissions on the view.
+
+## 5. Manage CSRF protection and validation errors [pending]
+### Dependencies: 8.1
+### Description: Ensure CSRF protection is enabled and handle form validation errors gracefully in the CreateView.
+### Details:
+By default, Django's CreateView includes CSRF protection; customize form_invalid to handle validation errors and redisplay the form with error messages.
+

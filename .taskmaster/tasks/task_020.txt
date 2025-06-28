@@ -1,0 +1,37 @@
+# Task ID: 20
+# Title: Setup Prescription Admin Interface
+# Status: pending
+# Dependencies: 19
+# Priority: low
+# Description: Configure Django admin for prescription models
+# Details:
+Create admin configurations for OutpatientPrescription, PrescriptionItem, PrescriptionTemplate, and PrescriptionTemplateItem. Add inline editing for items within prescriptions. Configure list displays, filters, and search fields. Add readonly fields for audit information.
+
+# Test Strategy:
+Test admin interface functionality, verify inline editing works, test search and filtering capabilities
+
+# Subtasks:
+## 1. Configure Admin for Each Model [pending]
+### Dependencies: None
+### Description: Set up the Django admin interface for each model by registering them with the admin site and customizing the basic display and form layout.
+### Details:
+Register each model with the Django admin site using ModelAdmin classes. Customize the admin interface by specifying which fields to display and how forms are laid out, including field order and grouping.
+
+## 2. Add Inline Editing for Related Models [pending]
+### Dependencies: 20.1
+### Description: Enable inline editing of related models within the admin detail views to allow editing related objects directly on the parent model's page.
+### Details:
+Use Django admin inlines (TabularInline or StackedInline) to add related models to the parent model's admin form. This allows adding and editing related records inline, improving usability.
+
+## 3. Set List Displays and Filters [pending]
+### Dependencies: 20.1
+### Description: Customize the list views of each model in the admin by specifying which fields to display and adding filters to refine the displayed records.
+### Details:
+Use the `list_display` attribute in ModelAdmin to control which fields appear in the list view. Add `list_filter` to enable filtering by specific fields such as dates or status values.
+
+## 4. Test Search Functionality [pending]
+### Dependencies: 20.1, 20.3
+### Description: Implement and verify search capabilities in the admin list views to allow searching records by specified fields.
+### Details:
+Add `search_fields` to the ModelAdmin classes to enable search on relevant model fields. Test the search functionality to ensure it returns accurate results and integrates well with filters and list displays.
+

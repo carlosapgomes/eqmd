@@ -1,0 +1,37 @@
+# Task ID: 27
+# Title: Implement Prescription Print View
+# Status: pending
+# Dependencies: 25
+# Priority: high
+# Description: Create print-ready view following HTML+browser print strategy
+# Details:
+Create OutpatientPrescriptionPrintView using DetailView with print template. Include hospital information, doctor details, patient information, prescription items with instructions. Apply print-specific CSS with @media print rules. Follow medical document standards for layout.
+
+# Test Strategy:
+Test print view rendering, verify print CSS applies correctly across browsers, test medical document format compliance
+
+# Subtasks:
+## 1. Create Print-Specific DetailView [pending]
+### Dependencies: None
+### Description: Develop a Django DetailView subclass dedicated to rendering the print view of hospital and patient information, specifying the model and template for print.
+### Details:
+Use Django's generic DetailView to create a new view class that fetches the hospital and patient data. Configure it to use a print-specific template to separate print logic from regular views.
+
+## 2. Implement Print Template with Hospital and Patient Info [pending]
+### Dependencies: 27.1
+### Description: Design and implement an HTML template tailored for printing, including hospital and patient details formatted for print layout.
+### Details:
+Create a dedicated print template extending the base layout but optimized for print, including all necessary hospital and patient information fields. Ensure the template is clean and suitable for paper or PDF output.
+
+## 3. Add Print-Specific CSS Styling [pending]
+### Dependencies: 27.2
+### Description: Develop and integrate CSS rules specifically for print media to ensure the print template displays correctly and cleanly across browsers.
+### Details:
+Write CSS using @media print queries to style the print template, hiding unnecessary elements and formatting content for optimal print readability and layout.
+
+## 4. Test Cross-Browser Compatibility of Print View [pending]
+### Dependencies: 27.3
+### Description: Perform testing of the print-specific DetailView and template across multiple browsers to ensure consistent appearance and functionality.
+### Details:
+Test the print view on major browsers (Chrome, Firefox, Edge, Safari) to verify that the print layout, styles, and data rendering are consistent and correct. Fix any browser-specific issues found.
+

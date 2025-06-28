@@ -1,0 +1,43 @@
+# Task ID: 34
+# Title: Integrate Permission System
+# Status: pending
+# Dependencies: 32
+# Priority: high
+# Description: Apply EquipeMed permission system to all prescription views
+# Details:
+Apply @patient_access_required decorator to patient-specific views. Add @can_edit_event_required and @can_delete_event_required decorators. Implement @doctor_required for template creation. Add hospital context integration. Test all permission scenarios.
+
+# Test Strategy:
+Test all permission decorators work correctly, verify 24-hour edit window enforcement, test hospital context integration
+
+# Subtasks:
+## 1. Implement patient_access_required decorator [pending]
+### Dependencies: None
+### Description: Develop the patient_access_required decorator to restrict view access based on patient-related permissions, ensuring only authorized users can access patient data.
+### Details:
+Create a decorator that checks if the requesting user has the necessary permissions to access patient information. This may involve checking user roles, group permissions, or specific user-patient relationships.
+
+## 2. Implement can_edit_event_required and can_delete_event_required decorators [pending]
+### Dependencies: 34.1
+### Description: Create decorators to enforce permissions for editing and deleting events, ensuring only users with the appropriate rights can perform these actions.
+### Details:
+Develop two separate decorators: one to check if the user can edit an event and another to check if the user can delete an event. These should verify user permissions or roles related to event management.
+
+## 3. Implement doctor_required decorator [pending]
+### Dependencies: 34.1
+### Description: Develop a decorator to restrict access to views only to users with a doctor role or equivalent permissions.
+### Details:
+This decorator should verify that the user has a doctor role, potentially using role-based access control mechanisms or group membership checks.
+
+## 4. Integrate hospital context into views [pending]
+### Dependencies: 34.1, 34.2, 34.3
+### Description: Incorporate hospital context into the views to ensure that permissions and data access are scoped appropriately to the hospital environment.
+### Details:
+Modify views and decorators to include hospital context, which may involve passing hospital identifiers or objects and validating user permissions within that context.
+
+## 5. Test all permission scenarios comprehensively [pending]
+### Dependencies: 34.1, 34.2, 34.3, 34.4
+### Description: Develop and execute tests covering all permission scenarios for the implemented decorators and hospital context integration to ensure correct access control.
+### Details:
+Write unit and integration tests that simulate various user roles, permissions, and hospital contexts to verify that access is correctly granted or denied according to the decorators and context logic.
+

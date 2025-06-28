@@ -1,0 +1,31 @@
+# Task ID: 29
+# Title: Create Prescription URL Patterns
+# Status: pending
+# Dependencies: 28
+# Priority: high
+# Description: Configure URL routing for all prescription views
+# Details:
+Create urls.py in outpatientprescriptions app. Define URL patterns for all prescription views including patient-specific routes. Add template management routes. Include print view routes. Set app_name='outpatientprescriptions'. Include in main urls.py.
+
+# Test Strategy:
+Test all URL patterns resolve correctly, verify patient-specific routing, test reverse URL lookups
+
+# Subtasks:
+## 1. Define URL Patterns for All Views [pending]
+### Dependencies: None
+### Description: Create URL patterns in the app's urls.py file that map specific URL paths to their corresponding views, using the path() function and optionally including dynamic parameters.
+### Details:
+Import the path function and views module in the app's urls.py. Define urlpatterns as a list of path() calls, each linking a URL pattern to a view function or class-based view. Use angle brackets to capture parameters (e.g., <int:id>). Keep URL patterns simple and readable for maintainability.
+
+## 2. Set app_name for URL Namespacing [pending]
+### Dependencies: 29.1
+### Description: Assign an app_name variable in the app's urls.py to enable URL namespacing, which helps organize URL names and avoid conflicts across multiple apps.
+### Details:
+Add a line app_name = 'your_app_name' at the top of the app's urls.py file. This allows the use of namespaced URL references in templates and reverse() calls, improving clarity and maintainability.
+
+## 3. Include App URLs in Main Project Routing [pending]
+### Dependencies: 29.1, 29.2
+### Description: Integrate the app's URL patterns into the main project's urls.py by using the include() function, enabling modular and hierarchical URL routing.
+### Details:
+In the project's main urls.py, import include and add a path() entry that includes the app's urls.py patterns under a desired prefix (e.g., path('app/', include('app.urls'))). This keeps project-level routing organized and delegates app-specific routing to the app itself.
+
