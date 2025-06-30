@@ -1,0 +1,124 @@
+{% extends "events/partials/event_card_base.html" %}
+{% load permission_tags %}
+
+{% comment %}
+Prescription-specific event card template
+Extends the base event card and shows prescription summary with medications
+{% endcomment %}
+
+{% block event_content %}
+<div class="prescription-summary">
+    <!-- Prescription Status Badge -->
+    <div class="d-flex align-items-center mb-2">
+        <span class="badge {{ event.status|yesno:'bg-success,bg-warning' }} me-2">
+            <i class="bi bi-{{ event.status|yesno:'check-circle,clock' }} me-1" aria-hidden="true"></i>
+            {{ event.get_status_display }}
+        </span>
+        <time datetime="{{ event.prescription_date|date:'c' }}" class="text-muted small">
+            <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>
+            {{ event.prescription_date|date:"d/m/Y" }}
+        </time>
+    </div>
+
+    <!-- Prescription Instructions -->
+    {% if event.instructions %}
+        <div class="prescription-instructions mb-3">
+            <p class="mb-0 text-muted" style="font-size: 0.9rem;">
+                {{ event.instructions|truncatewords:15 }}
+                {% if event.instructions|length > 100 %}...{% endif %}
+            </p>
+        </div>
+    {% endif %}
+
+    <!-- Medication Items Summary -->
+    {% if event.items.exists %}
+        <div class="medication-items">
+            <h6 class="text-medical-primary mb-2 small">
+                <i class="bi bi-capsule me-1" aria-hidden="true"></i>
+                Medicamentos ({{ event.items.count }})
+            </h6>
+            <ul class="list-unstyled mb-0">
+                {% for item in event.items.all|slice:":3" %}
+                    <li class="d-flex align-items-start mb-1 small">
+                        <i class="bi bi-dot text-medical-primary me-1" aria-hidden="true" style="font-size: 1.2rem;"></i>
+                        <div class="flex-grow-1">
+                            <strong>{{ item.drug_name }}</strong>
+                            {% if item.presentation %}
+                                <span class="text-muted">- {{ item.presentation }}</span>
+                            {% endif %}
+                            {% if item.quantity %}
+                                <div class="text-muted" style="font-size: 0.8rem;">
+                                    Qtd: {{ item.quantity }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+                {% if event.items.count > 3 %}
+                    <li class="small text-muted">
+                        <i class="bi bi-three-dots me-1" aria-hidden="true"></i>
+                        e mais {{ event.items.count|add:"-3" }} medicamento{{ event.items.count|add:"-3"|pluralize }}
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    {% else %}
+        <div class="text-muted small">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            Nenhum medicamento adicionado
+        </div>
+    {% endif %}
+</div>
+{% endblock event_content %}
+
+{% block event_actions %}
+<div class="btn-group btn-group-sm">
+    <!-- View Button -->
+    <a href="{{ event.get_absolute_url }}" 
+       class="btn btn-outline-primary btn-sm"
+       aria-label="Visualizar receita completa"
+       data-bs-toggle="tooltip" 
+       data-bs-placement="top" 
+       title="Ver receita completa">
+        <i class="bi bi-eye" aria-hidden="true"></i>
+        <span class="visually-hidden">Visualizar</span>
+    </a>
+    
+    <!-- Copy Button -->
+    <button type="button" 
+            class="btn btn-outline-secondary btn-sm copy-content-btn" 
+            aria-label="Copiar conteúdo da receita"
+            data-content="{{ event.instructions|default:'Receita'|escape }}"
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Copiar conteúdo">
+        <i class="bi bi-clipboard" aria-hidden="true"></i>
+        <span class="visually-hidden">Copiar</span>
+    </button>
+    
+    <!-- Print Button -->
+    <a href="{{ event.get_absolute_url }}?print=1" 
+       class="btn btn-outline-info btn-sm"
+       target="_blank"
+       aria-label="Imprimir receita"
+       data-bs-toggle="tooltip" 
+       data-bs-placement="top" 
+       title="Imprimir receita">
+        <i class="bi bi-printer" aria-hidden="true"></i>
+        <span class="visually-hidden">Imprimir</span>
+    </a>
+    
+    <!-- Edit Button -->
+    {% if event_data.can_edit %}
+        <a href="{{ event.get_edit_url }}" 
+           class="btn btn-outline-warning btn-sm"
+           aria-label="Editar receita"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Editar receita">
+            <i class="bi bi-pencil" aria-hidden="true"></i>
+            <span class="visually-hidden">Editar</span>
+        </a>
+    {% endif %}
+</div>
+{% endblock event_actions %}

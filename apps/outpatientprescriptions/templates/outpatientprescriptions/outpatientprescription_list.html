@@ -1,0 +1,352 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Receitas Ambulatoriais{% endblock %}
+
+{% block app_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-receipt text-medical-primary me-2"></i>
+    Receitas Ambulatoriais
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    {% if perms.events.add_event %}
+    <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-medical-primary">
+      <i class="bi bi-plus-circle me-1"></i>
+      Nova Receita
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Search and Filter Section -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-search me-2"></i>
+      Buscar e Filtrar
+    </h5>
+  </div>
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-3">
+        <label for="search" class="form-label">Buscar</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="search" 
+          name="search" 
+          value="{{ search_query }}"
+          placeholder="Buscar por instruções, paciente ou medicamento..."
+        >
+      </div>
+      <div class="col-md-3">
+        <label for="patient" class="form-label">Paciente</label>
+        <select class="form-select" id="patient" name="patient">
+          <option value="">Todos os pacientes</option>
+          {% for patient in available_patients %}
+          <option value="{{ patient.pk }}" {% if selected_patient == patient.pk|stringformat:"s" %}selected{% endif %}>
+            {{ patient.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="status" class="form-label">Status</label>
+        <select class="form-select" id="status" name="status">
+          <option value="">Todos os status</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="date_from" class="form-label">Data inicial</label>
+        <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+      </div>
+      <div class="col-md-2">
+        <label for="date_to" class="form-label">Data final</label>
+        <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+      </div>
+    </form>
+    
+    <!-- Advanced Filters Toggle -->
+    <div class="mt-3">
+      <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+        <i class="bi bi-funnel"></i> Filtros Avançados
+      </button>
+      <button type="submit" class="btn btn-medical-teal btn-sm ms-1" form="filterForm">
+        <i class="bi bi-search"></i> Buscar
+      </button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.location.href='{% url 'outpatientprescriptions:outpatientprescription_list' %}'">
+        <i class="bi bi-x-circle"></i> Limpar
+      </button>
+    </div>
+    
+    <!-- Advanced Filters Collapse -->
+    <div class="collapse mt-3" id="advancedFilters">
+      <form method="get" class="row g-3 border-top pt-3" id="advancedFilterForm">
+        <input type="hidden" name="search" value="{{ search_query }}">
+        <input type="hidden" name="patient" value="{{ selected_patient }}">
+        <input type="hidden" name="status" value="{{ selected_status }}">
+        <input type="hidden" name="date_from" value="{{ date_from }}">
+        <input type="hidden" name="date_to" value="{{ date_to }}">
+        
+        <div class="col-md-4">
+          <label for="creator" class="form-label">Criado por</label>
+          <select class="form-select" id="creator" name="creator">
+            <option value="">Todos os profissionais</option>
+            {% for creator in available_creators %}
+            <option value="{{ creator.pk }}" {% if selected_creator == creator.pk|stringformat:"s" %}selected{% endif %}>
+              {{ creator.get_full_name|default:creator.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-medical-teal">
+            <i class="bi bi-funnel"></i> Aplicar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Results Section -->
+<div class="card shadow-sm">
+  <div class="card-header bg-light d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-list-ul me-2"></i>
+      Lista de Receitas
+    </h5>
+    <small class="text-muted">
+      {% if prescriptions %}
+        {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ page_obj.paginator.count }} registros
+      {% endif %}
+    </small>
+  </div>
+  <div class="card-body p-0">
+    {% if prescription_list %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">
+              <i class="bi bi-person me-1"></i>
+              Paciente
+            </th>
+            <th scope="col">
+              <i class="bi bi-calendar-event me-1"></i>
+              Data da Receita
+            </th>
+            <th scope="col">
+              <i class="bi bi-capsule me-1"></i>
+              Medicamentos
+            </th>
+            <th scope="col">
+              <i class="bi bi-card-text me-1"></i>
+              Status
+            </th>
+            <th scope="col">
+              <i class="bi bi-person-badge me-1"></i>
+              Criado por
+            </th>
+            <th scope="col" class="text-center">
+              <i class="bi bi-gear me-1"></i>
+              Ações
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for prescription in prescriptions %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm bg-medical-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                  {{ prescription.patient.name|first|upper }}
+                </div>
+                <div>
+                  <div class="fw-medium">{{ prescription.patient.name }}</div>
+                  <small class="text-muted">ID: {{ prescription.patient.id|slice:":8" }}...</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div>
+                <div class="fw-medium">{{ prescription.prescription_date|date:"d/m/Y" }}</div>
+                <small class="text-muted">{{ prescription.event_datetime|date:"H:i" }}</small>
+              </div>
+            </td>
+            <td>
+              <div>
+                {% if prescription.items.count > 0 %}
+                  <div class="fw-medium">{{ prescription.items.count }} medicamento{{ prescription.items.count|pluralize }}</div>
+                  <small class="text-muted">
+                    {% for item in prescription.items.all|slice:":2" %}
+                      {{ item.drug_name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    {% if prescription.items.count > 2 %}...{% endif %}
+                  </small>
+                {% else %}
+                  <small class="text-muted">Nenhum medicamento</small>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% if prescription.status == 'draft' %}
+                <span class="badge bg-warning text-dark">
+                  <i class="bi bi-pencil-square me-1"></i>
+                  Rascunho
+                </span>
+              {% elif prescription.status == 'finalized' %}
+                <span class="badge bg-success">
+                  <i class="bi bi-check-circle me-1"></i>
+                  Finalizada
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              <div>
+                <div class="fw-medium">
+                  {{ prescription.created_by.get_full_name|default:prescription.created_by.username }}
+                </div>
+                <small class="text-muted">{{ prescription.created_at|date:"d/m/Y H:i" }}</small>
+              </div>
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm" role="group">
+                <a
+                  href="{{ prescription.get_absolute_url }}"
+                  class="btn btn-outline-primary"
+                  title="Ver detalhes"
+                >
+                  <i class="bi bi-eye"></i>
+                </a>
+                {% if perms.events.change_event and prescription.can_edit %}
+                <a
+                  href="{{ prescription.get_edit_url }}"
+                  class="btn btn-outline-secondary"
+                  title="Editar"
+                >
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+                {% if perms.events.delete_event and prescription.can_delete %}
+                <a
+                  href="#"
+                  class="btn btn-outline-danger"
+                  title="Excluir"
+                >
+                  <i class="bi bi-trash"></i>
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <div class="mb-3">
+        <i class="bi bi-receipt-cutoff text-muted" style="font-size: 3rem;"></i>
+      </div>
+      <h5 class="text-muted">Nenhuma receita encontrada</h5>
+      <p class="text-muted mb-3">
+        {% if request.GET.search %}
+          Não foram encontradas receitas com os critérios de busca informados.
+        {% else %}
+          Ainda não há receitas cadastradas no sistema.
+        {% endif %}
+      </p>
+      {% if perms.events.add_event %}
+      <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-medical-primary">
+        <i class="bi bi-people me-1"></i>
+        Ver Pacientes
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Navegação das receitas" class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
+        <i class="bi bi-chevron-double-left"></i>
+      </a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <li class="page-item active">
+      <span class="page-link">{{ num }}</span>
+    </li>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <li class="page-item">
+      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+    </li>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
+        <i class="bi bi-chevron-double-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  
+  .table td {
+    vertical-align: middle;
+  }
+  
+  .text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+
+<script>
+// Add form attribute to the main filter form
+document.addEventListener('DOMContentLoaded', function() {
+  const mainForm = document.querySelector('form[method="get"]');
+  if (mainForm) {
+    mainForm.setAttribute('id', 'filterForm');
+  }
+});
+</script>
+{% endblock %}

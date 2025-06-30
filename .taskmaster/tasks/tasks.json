@@ -9,7 +9,7 @@
         "testStrategy": "Test app import in Django shell, verify app appears in INSTALLED_APPS, check directory structure is complete",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -17,7 +17,7 @@
             "description": "Run the Django management command to create a new app directory with the default structure inside the project folder where manage.py resides.",
             "dependencies": [],
             "details": "Use the command `python manage.py startapp <appname>` to generate the app folder containing files like views.py, models.py, apps.py, admin.py, tests.py, and migrations/ directory.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -28,7 +28,7 @@
               1
             ],
             "details": "Open settings.py and append the app name or app config class (e.g., 'appname.apps.AppnameConfig') to the INSTALLED_APPS list.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -39,7 +39,7 @@
               1
             ],
             "details": "Ensure the app folder contains or create subfolders and files such as models.py for data models, views.py for request handlers, forms.py for form classes, templates/ for HTML templates, urls.py for URL routing, and tests.py for unit tests.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -51,7 +51,7 @@
               3
             ],
             "details": "Run `python manage.py runserver` and navigate to a URL routed to the app to verify it loads without errors, indicating successful registration and setup.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -66,7 +66,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -74,7 +74,7 @@
             "description": "Design and implement the necessary fields for the Django model, selecting appropriate field types and options such as max_length, verbose_name, and help_text.",
             "dependencies": [],
             "details": "Use Django's built-in field types (CharField, IntegerField, ForeignKey, etc.) to define each attribute of the model. Follow best practices for naming fields using lowercase with underscores and ensure descriptive names. Consider validation constraints and database storage requirements while defining fields.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -85,7 +85,7 @@
               1
             ],
             "details": "Override the __str__ method to return a meaningful string that identifies the model instance, typically using one or more key fields. This aids in debugging and admin interface display.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -96,7 +96,7 @@
               1
             ],
             "details": "Implement get_absolute_url to return a URL string that uniquely identifies the model instance, often using Django's reverse function with the instance's primary key or slug. This supports linking to detail views in templates and redirects.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -107,7 +107,7 @@
               1
             ],
             "details": "Override the clean method to perform model-wide validation checks, raising ValidationError for any invalid data combinations or constraints. This ensures data integrity before saving instances.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -121,7 +121,7 @@
               4
             ],
             "details": "Create test cases that instantiate the model with valid and invalid data, check string representations, URL generation, and validation logic. Use Django's testing framework to automate these tests and ensure model reliability.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -136,7 +136,7 @@
         "dependencies": [
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -144,7 +144,7 @@
             "description": "Create the migration file that defines the changes needed to update the database schema to match the current model definitions.",
             "dependencies": [],
             "details": "This involves using the appropriate migration generation tools or commands to produce a migration script/file that captures schema changes such as table creation, modification, or deletion.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -155,7 +155,7 @@
               1
             ],
             "details": "Review the migration script for correctness, completeness, and potential issues such as data loss or incompatible changes. This step helps prevent runtime errors during migration application.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -166,7 +166,7 @@
               2
             ],
             "details": "Run the migration against the target database, then verify the schema changes by inspecting the database structure or running tests to confirm the migration's success and integrity.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -181,7 +181,7 @@
         "dependencies": [
           3
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -189,7 +189,7 @@
             "description": "Define a custom admin class for the model to customize the Django admin interface behavior.",
             "dependencies": [],
             "details": "Create a class inheriting from admin.ModelAdmin in admin.py and register the model with this class to enable further customizations.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -200,7 +200,7 @@
               1
             ],
             "details": "Add list_display tuple to show relevant fields in the admin list page and define list_filter to enable sidebar filters for quick filtering of records.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -211,7 +211,7 @@
               1
             ],
             "details": "Add search_fields attribute in the admin class with a list of model fields to allow keyword searching in the admin interface.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -222,7 +222,7 @@
               1
             ],
             "details": "Implement methods in the admin class decorated with @admin.action and add them to the actions list to provide batch operations.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -237,7 +237,7 @@
         "dependencies": [
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -245,7 +245,7 @@
             "description": "Define a ModelForm class based on the existing Django model to handle form data input and validation automatically.",
             "dependencies": [],
             "details": "Use Django's forms.ModelForm to create a form class linked to the model. This will simplify form creation by automatically generating fields corresponding to the model's fields.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -256,7 +256,7 @@
               1
             ],
             "details": "Install and configure django-crispy-forms. In the ModelForm, add a FormHelper instance and define a Layout to control the rendering of form fields and buttons, improving UI consistency and responsiveness.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -267,7 +267,7 @@
               1
             ],
             "details": "Override the clean() or clean_fieldname() methods in the ModelForm to perform checks like duplicate name detection. Raise ValidationError with appropriate messages if validation fails.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -279,7 +279,7 @@
               2
             ],
             "details": "Replace the default textarea widget for relevant text fields with a Markdown widget (e.g., django-markdownx or similar). Ensure the widget is properly configured and styled within the crispy form layout.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -294,7 +294,7 @@
         "dependencies": [
           5
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -302,7 +302,7 @@
             "description": "Define and implement the ListView class to display a list of items or objects, setting up the data source and template for rendering the list.",
             "dependencies": [],
             "details": "Use a framework-specific ListView class (e.g., Django ListView or Kivy ListView) to create a list display. Define the model or data source, context object name, and template or UI layout for the list items.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -313,7 +313,7 @@
               1
             ],
             "details": "Extend the ListView to accept filter parameters and apply them to the data query or data source before rendering. This may involve overriding query methods or adding filter controls in the UI.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -324,7 +324,7 @@
               1
             ],
             "details": "Configure the ListView to limit the number of items per page and provide navigation controls to move between pages. This typically involves setting pagination attributes and handling page requests.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -335,7 +335,7 @@
               1
             ],
             "details": "Add sorting parameters to the ListView, allowing users to select sort fields and order. Modify the data query or source to apply sorting before rendering the list.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -346,7 +346,7 @@
               1
             ],
             "details": "Use framework-specific decorators or middleware to enforce authentication and authorization on the ListView, ensuring only authorized users can access or modify the list data.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -361,7 +361,7 @@
         "dependencies": [
           6
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -369,7 +369,7 @@
             "description": "Implement a Django DetailView class-based view to display detailed information of a single object, specifying the model, template, and context object name.",
             "dependencies": [],
             "details": "Define a class inheriting from django.views.generic.detail.DetailView, set the model attribute to the relevant model, specify context_object_name for template clarity, and optionally set template_name if default naming is not used.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -380,7 +380,7 @@
               1
             ],
             "details": "Override the get_context_data method in the DetailView subclass to add usage statistics data to the context dictionary, enabling display in the detail template.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -391,7 +391,7 @@
               1
             ],
             "details": "Incorporate permission checks by overriding the dispatch or get method in the DetailView to verify user permissions before rendering the view, redirecting or raising errors if unauthorized.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -402,7 +402,7 @@
               3
             ],
             "details": "Pass permission flags or user role information to the template context and use conditional template logic to show or hide edit/delete links accordingly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -417,7 +417,7 @@
         "dependencies": [
           5
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -425,7 +425,7 @@
             "description": "Define a Django CreateView subclass specifying the form_class attribute to use a custom form for object creation.",
             "dependencies": [],
             "details": "Create a class inheriting from Django's CreateView and assign the form_class attribute to the desired ModelForm to handle form rendering and validation.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -436,7 +436,7 @@
               1
             ],
             "details": "In form_valid, call form.save(commit=False), assign the creator field from request.user, then save the object and redirect to success_url.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -447,7 +447,7 @@
               2
             ],
             "details": "Use Django's messages framework to add a success message in form_valid and define success_url or override get_success_url for redirection.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -458,7 +458,7 @@
               1
             ],
             "details": "Use method_decorator to decorate dispatch or other HTTP method handlers to enforce authentication or permissions on the view.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -469,7 +469,7 @@
               1
             ],
             "details": "By default, Django's CreateView includes CSRF protection; customize form_invalid to handle validation errors and redisplay the form with error messages.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -485,7 +485,7 @@
           7,
           8
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -493,7 +493,7 @@
             "description": "Define a Django UpdateView subclass for the model to be edited, specifying the model and fields to be updated.",
             "dependencies": [],
             "details": "Use Django's generic UpdateView to create a class-based view that handles editing an existing model instance. Specify the model and the fields to be included in the form. This sets up the basic editing interface and form handling.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -504,7 +504,7 @@
               1
             ],
             "details": "Override the get_object method or use a mixin to check if the current user is the creator of the object. If not, deny access or raise a permission error. This enforces that only authorized users can update the object.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -515,7 +515,7 @@
               1
             ],
             "details": "The UpdateView automatically pre-populates the form with the current instance data. Customize form validation if needed by overriding form_valid or form_invalid methods to maintain data integrity during updates.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -527,7 +527,7 @@
               3
             ],
             "details": "Define success_url or override form_valid to redirect the user after a successful update. Optionally, add messages or notifications to inform the user that the update was successful.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -542,7 +542,7 @@
         "dependencies": [
           9
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -550,7 +550,7 @@
             "description": "Implement a Django class-based DeleteView to handle the deletion of a specific model instance, including URL routing and template setup for the confirmation page.",
             "dependencies": [],
             "details": "Define a DeleteView subclass for the target model, configure the URL pattern to point to this view, and create a basic confirmation template that asks the user to confirm deletion.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -561,7 +561,7 @@
               1
             ],
             "details": "Override the DeleteView methods to check user permissions before allowing deletion, such as using Django's built-in permission system or custom logic to restrict access.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -572,7 +572,7 @@
               1
             ],
             "details": "Before deleting, check for related objects or constraints that would cause data integrity issues if deleted. If dependencies exist, prevent deletion and provide appropriate feedback.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -584,7 +584,7 @@
               3
             ],
             "details": "Enhance the DeleteView confirmation template to display warnings about dependencies or other important information, ensuring users are fully informed before confirming deletion.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -599,7 +599,7 @@
         "dependencies": [
           10
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -607,7 +607,7 @@
             "description": "Create and organize URL patterns specific to each Django app in its own urls.py file, using path converters for dynamic routing.",
             "dependencies": [],
             "details": "Use Django's path() function to define URL patterns that map URLs to views within the app. Include dynamic segments with converters like <int:id> or <slug:slug> for flexible routing. Keep patterns simple and readable to enhance maintainability.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -618,7 +618,7 @@
               1
             ],
             "details": "Add the app_name string at the top of the app's urls.py file to define a namespace. This allows referencing URLs with the namespace prefix in templates and views, improving clarity and preventing clashes between apps with similar URL names.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -630,7 +630,7 @@
               2
             ],
             "details": "In the project's main urls.py, use path() with include() to incorporate the app's urls.py patterns under a specific URL prefix. This modular approach keeps the project routing organized and leverages the app_name for namespaced URL reversing.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -645,7 +645,7 @@
         "dependencies": [
           11
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -653,7 +653,7 @@
             "description": "Develop the base HTML template with Bootstrap integration to serve as the foundation for other templates.",
             "dependencies": [],
             "details": "Include Bootstrap CSS and JS links, define a consistent header, footer, and navigation bar. Set up blocks for content injection by child templates to ensure consistent styling and layout across pages.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -664,7 +664,7 @@
               1
             ],
             "details": "Use Bootstrap table components to display data rows. Implement pagination using Bootstrap's pagination component to allow navigation through multiple pages of data. Ensure responsiveness and usability of the table and pagination controls.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -675,7 +675,7 @@
               1
             ],
             "details": "Use Bootstrap styling to present detailed information clearly. Add action buttons such as Edit, Delete, or Back, styled consistently with Bootstrap button classes for user actions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -688,7 +688,7 @@
               3
             ],
             "details": "Review and refine CSS classes, color schemes, spacing, and typography across base.html, list.html, and detail.html. Confirm responsive design and accessibility standards are met.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -703,7 +703,7 @@
         "dependencies": [
           12
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -711,7 +711,7 @@
             "description": "Develop the form.html template that integrates Django crispy forms for styling and layout, and includes a markdown editor widget for relevant form fields.",
             "dependencies": [],
             "details": "Use crispy forms tags to render the form dynamically with proper styling. Integrate a markdown editor widget (such as SimpleMDE or similar) for text fields that require markdown input, ensuring the editor loads correctly within the template.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -722,7 +722,7 @@
               1
             ],
             "details": "Utilize Django's form.errors and crispy forms error rendering to show validation feedback. Display errors at the top of the form and next to the respective fields. Customize error list formatting if needed to improve user experience.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -731,7 +731,7 @@
             "description": "Design a separate template to confirm deletion actions, providing users with a clear prompt before deleting an item.",
             "dependencies": [],
             "details": "The template should include a message confirming the delete action, buttons to confirm or cancel, and be styled consistently with the rest of the application. It should be simple and user-friendly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -744,7 +744,7 @@
         "testStrategy": "Test app import in Django shell, verify app in INSTALLED_APPS, check directory structure, test drugtemplates import",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -752,7 +752,7 @@
             "description": "Use the Django management command to create a new app within the project directory.",
             "dependencies": [],
             "details": "Navigate to the project directory where manage.py is located and run `python manage.py startapp <app_name>`. This will generate the app folder with default files such as views.py, models.py, admin.py, apps.py, migrations folder, and others.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -763,7 +763,7 @@
               1
             ],
             "details": "Open settings.py and append the app name string to the INSTALLED_APPS list to ensure Django recognizes and loads the app during runtime.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -774,7 +774,7 @@
               1
             ],
             "details": "Confirm the presence of the app folder with its default files (views.py, models.py, urls.py if needed, migrations folder, etc.). Create or modify files such as urls.py for routing and templates or static folders if required for the app's functionality.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -786,7 +786,7 @@
               3
             ],
             "details": "Test that the app is properly imported by running the server or executing test commands. Integrate the app's views or models with drugtemplates by importing necessary modules and linking URLs or templates as needed.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -801,7 +801,7 @@
         "dependencies": [
           14
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -809,7 +809,7 @@
             "description": "Define the necessary fields for the Django model, including appropriate field types, choices, defaults, and indexes as needed.",
             "dependencies": [],
             "details": "Use Django's model field classes such as CharField, IntegerField, ForeignKey, etc., to define each field. Include constants for choice fields inside the model class. Ensure fields have proper max_length, default values, and db_index if required. Avoid naming conflicts with model methods.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -820,7 +820,7 @@
               1
             ],
             "details": "Override the save() method to set or modify the event_type field based on custom logic before calling the superclass save method. Ensure to handle any validation or side effects related to event_type.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -831,7 +831,7 @@
               1
             ],
             "details": "Implement the __str__ method to return a meaningful string that represents the model instance, typically using one or more of the model's fields.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -842,7 +842,7 @@
               1
             ],
             "details": "Implement get_absolute_url to return the URL string for the detail view of the model instance, typically using Django's reverse function with the instance's primary key or slug.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -856,7 +856,7 @@
               4
             ],
             "details": "Write tests to check field validations, default values, event_type logic in save(), string representation from __str__, and URL correctness from get_absolute_url. Use Django's TestCase framework.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -871,7 +871,7 @@
         "dependencies": [
           15
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -879,7 +879,7 @@
             "description": "Create Django model classes that include fields and establish foreign key relationships to represent many-to-one associations.",
             "dependencies": [],
             "details": "Use Django's ForeignKey field to define relationships between models, ensuring data integrity and proper relational mapping. For example, define a parent model and a child model where the child has a ForeignKey to the parent model as per Django documentation[2].",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -890,7 +890,7 @@
               1
             ],
             "details": "Use Django ORM's native ordering features such as the 'order_with_respect_to' attribute or the 'order_by' method with double underscore syntax to order objects by fields on related models. Consider using django-ordered-model package for advanced ordering with respect to foreign keys[1][3][5].",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -901,7 +901,7 @@
               1
             ],
             "details": "Override the __str__ method in each Django model class to return meaningful string representations, such as the name or title field, to improve readability in admin interfaces and debugging.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -914,7 +914,7 @@
               3
             ],
             "details": "Write Django test cases to ensure that foreign key constraints are enforced, ordering works as expected (including ordering relative to foreign keys), and __str__ methods return correct strings. Tests should cover edge cases and data integrity scenarios.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -929,7 +929,7 @@
         "dependencies": [
           16
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -937,7 +937,7 @@
             "description": "Create migration scripts or files that define the changes to the database schema, including creating, altering, or dropping tables and other database objects.",
             "dependencies": [],
             "details": "This involves converting the desired schema changes into migration files using the appropriate tools or frameworks. It is essential to ensure that the migration files accurately represent the intended schema modifications before proceeding.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -948,7 +948,7 @@
               1
             ],
             "details": "Review includes checking for syntax errors, ensuring that the migration logic will not cause data loss or corruption, and confirming that the migration aligns with the overall database design and project goals. This step helps prevent issues during migration execution.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -959,7 +959,7 @@
               2
             ],
             "details": "Applying migrations involves running the migration scripts in the correct order, monitoring for errors, and performing verification steps such as schema inspection, data integrity checks, and running tests to confirm successful migration.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -974,7 +974,7 @@
         "dependencies": [
           17
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -982,7 +982,7 @@
             "description": "Define the data models for PrescriptionTemplate and PrescriptionTemplateItem including fields, data types, and constraints based on pharmacy database design principles.",
             "dependencies": [],
             "details": "Create PrescriptionTemplate model to represent a reusable prescription format. Create PrescriptionTemplateItem model to represent individual items (medicines or instructions) within a template. Include fields such as template name, description, item name, dosage, frequency, and any other relevant attributes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -993,7 +993,7 @@
               1
             ],
             "details": "Implement a one-to-many relationship where a PrescriptionTemplate has many PrescriptionTemplateItems. Add ordering functionality to PrescriptionTemplateItems to maintain a specific sequence within each template, ensuring correct prescription item order.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1004,7 +1004,7 @@
               2
             ],
             "details": "Validate required fields, enforce unique constraints where necessary, and ensure that ordering indices are consistent and non-conflicting. Include logic to handle updates and deletions that maintain relational integrity.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1015,7 +1015,7 @@
               3
             ],
             "details": "Create tests to check model creation, relationship integrity, ordering correctness, and validation enforcement. Include edge cases such as empty templates, duplicate items, and invalid ordering values.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1030,7 +1030,7 @@
         "dependencies": [
           18
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1038,7 +1038,7 @@
             "description": "Create migration scripts that define the database schema changes required for the new models, including tables, columns, indexes, and constraints.",
             "dependencies": [],
             "details": "Use the appropriate framework or tool commands to generate migration files reflecting the new models' structure. Ensure the migrations capture all necessary schema changes before proceeding to review.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1049,7 +1049,7 @@
               1
             ],
             "details": "Check that the migration files accurately represent the intended schema changes, avoid redundant or conflicting operations, and conform to best practices for database migrations. Identify any potential issues or improvements before applying.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1060,7 +1060,7 @@
               2
             ],
             "details": "Run the migration commands to update the database schema. After applying, perform verification steps such as checking table structures, constraints, and data integrity to confirm the migration was successful and the database is in the expected state.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1132,7 +1132,7 @@
         "dependencies": [
           16
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1140,7 +1140,7 @@
             "description": "Design and implement the main prescription form in Django, including fields for patient details, prescription date, and other relevant metadata.",
             "dependencies": [],
             "details": "Use Django's forms framework to build a form class representing the prescription model. Ensure proper validation and rendering in templates.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1151,7 +1151,7 @@
               1
             ],
             "details": "Implement a Django form class for prescription items that can be used within formsets to handle multiple items dynamically.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1162,7 +1162,7 @@
               2
             ],
             "details": "Use Django's formset_factory or inline formsets to link item forms to the main prescription form, enabling multiple entries per prescription.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1173,7 +1173,7 @@
               3
             ],
             "details": "Write JavaScript code to clone form templates, update form indices, and handle client-side validation and UI updates for dynamic forms.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1184,7 +1184,7 @@
               4
             ],
             "details": "Develop or integrate a custom widget or autocomplete field in Django forms that fetches drug templates and populates form fields accordingly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1199,7 +1199,7 @@
         "dependencies": [
           18
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1207,7 +1207,7 @@
             "description": "Develop a Django form for the template model to capture the main template data.",
             "dependencies": [],
             "details": "Define a Django ModelForm or Form class for the template entity, specifying the necessary fields and widgets as per the project requirements.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1218,7 +1218,7 @@
               1
             ],
             "details": "Define a Django ModelForm or Form class for the template item entity, including fields that represent the item details. This form will be used within the formset.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1229,7 +1229,7 @@
               2
             ],
             "details": "Use Django's formset_factory or inlineformset_factory to create a formset class based on the template item form. Configure parameters such as 'extra', 'min_num', and 'can_delete' as needed to control the number of forms and behavior.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1242,7 +1242,7 @@
               3
             ],
             "details": "Implement clean methods in forms and formsets to validate individual fields and inter-form relationships. For example, enforce minimum number of items in the formset or validate unique constraints.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1257,7 +1257,7 @@
         "dependencies": [
           21
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1265,7 +1265,7 @@
             "description": "Define a Django ListView class to display a list of objects from the relevant model, specifying model and context object name.",
             "dependencies": [],
             "details": "Implement a class-based view inheriting from Django's ListView, set the model attribute to the target model (e.g., Patient), and define context_object_name for template use. Optionally specify template_name if deviating from default.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1276,7 +1276,7 @@
               1
             ],
             "details": "Override the get_queryset method in the ListView to apply filters based on request parameters, enabling dynamic filtering of the displayed list according to patient data and other filters.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1287,7 +1287,7 @@
               1
             ],
             "details": "Set the paginate_by attribute in the ListView to define the number of items per page. Ensure the template supports pagination controls to navigate through pages.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1298,7 +1298,7 @@
               1
             ],
             "details": "Use Django's method_decorator to apply decorators such as login_required or custom permission checks to the dispatch method of the ListView, ensuring only authorized users can access the view.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1309,7 +1309,7 @@
               1
             ],
             "details": "Modify the ListView template to include hyperlinks or buttons that direct users to the CreateView for the relevant model, facilitating easy creation of new entries from the list page.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1324,7 +1324,7 @@
         "dependencies": [
           23
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1332,7 +1332,7 @@
             "description": "Create and configure the main prescription form and an associated item formset to handle multiple prescription items within a single view.",
             "dependencies": [],
             "details": "Use Django's forms and formsets (or modelformsets if tied to models) to build the prescription form and item formset. Ensure the formset can handle multiple items dynamically and supports validation and data binding on POST requests.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1343,7 +1343,7 @@
               1
             ],
             "details": "Create AJAX endpoints and JavaScript handlers to fetch drug template data asynchronously when a user selects a drug template. Update the item formset fields accordingly based on the selected template.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1355,7 +1355,7 @@
               2
             ],
             "details": "Develop logic to copy data from selected prescription templates into the main prescription form and item formset. This includes handling nested data and ensuring the formset updates correctly with the copied data.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1366,7 +1366,7 @@
               1
             ],
             "details": "Use Django decorators such as @login_required and custom permission decorators to restrict access to the prescription handling view, ensuring only authorized users can create or edit prescriptions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1378,7 +1378,7 @@
               3
             ],
             "details": "On POST requests, bind submitted data to forms and formsets, validate all inputs, handle errors by redisplaying forms with messages, and save valid data to the database. Ensure atomicity if needed.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1393,7 +1393,7 @@
               5
             ],
             "details": "Create a class-based or function-based view that orchestrates rendering the forms, handling AJAX requests, applying decorators, processing submissions, and managing validation and data copying logic seamlessly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1408,7 +1408,7 @@
         "dependencies": [
           24
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1416,7 +1416,7 @@
             "description": "Define a Django DetailView class to display the details of a prescription object, specifying the model, template, and context object name.",
             "dependencies": [],
             "details": "Implement a class-based view inheriting from django.views.generic.detail.DetailView, set the model to Prescription, define context_object_name for template clarity, and specify or create the template file for rendering.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1427,7 +1427,7 @@
               1
             ],
             "details": "Modify the prescription detail template to iterate over the prescription items related to the prescription and display their details, using Django template language to loop through the related items queryset.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1439,7 +1439,7 @@
               2
             ],
             "details": "In the detail template, add buttons or links for print, edit, and delete actions. Use Django's permission system or user checks in the template to conditionally display these links based on user permissions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1451,7 +1451,7 @@
               2
             ],
             "details": "Extend the detail template to include audit fields from the prescription model or related audit logs, showing metadata about the prescription's history and changes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1466,7 +1466,7 @@
         "dependencies": [
           25
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1474,7 +1474,7 @@
             "description": "Implement a Django UpdateView subclass to handle editing of the main model instance, ensuring it loads the object correctly and displays the form with the appropriate fields.",
             "dependencies": [],
             "details": "Use Django's generic UpdateView to create a view that fetches the object by primary key and renders a form for editing. Define the model and fields to be updated. This forms the base for handling updates.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1485,7 +1485,7 @@
               1
             ],
             "details": "Override methods like get_context_data to include formsets, and post to handle saving both the main form and formsets. Manage formset management forms and ensure the primary key is correctly used to update existing instances.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1496,7 +1496,7 @@
               1
             ],
             "details": "Add a permission check or override dispatch or get_object methods to verify the object's timestamp against the current time. If the edit window has expired, deny access or redirect with an appropriate message.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1507,7 +1507,7 @@
               2
             ],
             "details": "Handle formset instances carefully to avoid unintentional deletion of related objects. Use formset management forms and instance binding to maintain existing data integrity during updates.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1521,7 +1521,7 @@
               4
             ],
             "details": "Integrate audit logging either by overriding form_valid or post methods to record changes to the object and related formsets. Store audit data in a dedicated model or logging system.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1536,7 +1536,7 @@
         "dependencies": [
           25
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1544,7 +1544,7 @@
             "description": "Develop a Django DetailView subclass dedicated to rendering the print view of hospital and patient information, specifying the model and template for print.",
             "dependencies": [],
             "details": "Use Django's generic DetailView to create a new view class that fetches the hospital and patient data. Configure it to use a print-specific template to separate print logic from regular views.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1555,7 +1555,7 @@
               1
             ],
             "details": "Create a dedicated print template extending the base layout but optimized for print, including all necessary hospital and patient information fields. Ensure the template is clean and suitable for paper or PDF output.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1566,7 +1566,7 @@
               2
             ],
             "details": "Write CSS using @media print queries to style the print template, hiding unnecessary elements and formatting content for optimal print readability and layout.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1577,7 +1577,7 @@
               3
             ],
             "details": "Test the print view on major browsers (Chrome, Firefox, Edge, Safari) to verify that the print layout, styles, and data rendering are consistent and correct. Fix any browser-specific issues found.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1592,7 +1592,7 @@
         "dependencies": [
           22
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1600,7 +1600,7 @@
             "description": "Create list and detail views for the model, including filtering capabilities to allow users to search or filter the list based on criteria.",
             "dependencies": [],
             "details": "Develop a list view that supports filtering query parameters to display subsets of data. Implement a detail view to show individual record details. Use Django's generic views or function-based views as appropriate.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1611,7 +1611,7 @@
               1
             ],
             "details": "Use Django forms and formsets to manage input data. Ensure proper validation and error handling. Support both single and multiple related forms (formsets) for complex data entry scenarios.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1622,7 +1622,7 @@
               1
             ],
             "details": "Add a confirmation step before deletion. Use Django's permission system to restrict delete operations to authorized users only.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1635,7 +1635,7 @@
               3
             ],
             "details": "Use Django's built-in permission decorators or mixins to enforce access control. Customize permissions as needed for different user roles.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1649,7 +1649,7 @@
               4
             ],
             "details": "Collect and aggregate data on CRUD operations. Present statistics in a user-friendly format, possibly using charts or tables.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1664,7 +1664,7 @@
         "dependencies": [
           28
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1672,7 +1672,7 @@
             "description": "Create URL patterns in the app's urls.py file that map specific URL paths to their corresponding views, using the path() function and optionally including dynamic parameters.",
             "dependencies": [],
             "details": "Import the path function and views module in the app's urls.py. Define urlpatterns as a list of path() calls, each linking a URL pattern to a view function or class-based view. Use angle brackets to capture parameters (e.g., <int:id>). Keep URL patterns simple and readable for maintainability.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1683,7 +1683,7 @@
               1
             ],
             "details": "Add a line app_name = 'your_app_name' at the top of the app's urls.py file. This allows the use of namespaced URL references in templates and reverse() calls, improving clarity and maintainability.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1695,7 +1695,7 @@
               2
             ],
             "details": "In the project's main urls.py, import include and add a path() entry that includes the app's urls.py patterns under a desired prefix (e.g., path('app/', include('app.urls'))). This keeps project-level routing organized and delegates app-specific routing to the app itself.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1710,7 +1710,7 @@
         "dependencies": [
           29
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1718,7 +1718,7 @@
             "description": "Develop the base HTML template that includes the common layout structure, Bootstrap medical theme styling, navigation, and footer to be extended by other templates.",
             "dependencies": [],
             "details": "Use a clean, responsive Bootstrap medical template such as Medilab or Medicio as the foundation. Integrate the Bootstrap CSS and JS files, set up the header with navigation links, and footer with contact info or copyright. Ensure the base.html supports blocks for content injection by child templates.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1729,7 +1729,7 @@
               1
             ],
             "details": "Implement filtering UI elements such as dropdowns or search inputs styled with Bootstrap components. Display the filtered results in a responsive grid or table format consistent with the medical theme. Ensure the template uses Bootstrap classes for layout and styling.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1740,7 +1740,7 @@
               1
             ],
             "details": "Design the detail page to present all relevant information clearly, using Bootstrap cards, typography, and layout utilities. Include images, descriptions, contact info, and any other pertinent details. Maintain consistent styling with the medical theme.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1753,7 +1753,7 @@
               3
             ],
             "details": "Review and unify the color schemes, fonts, spacing, and component styles across all templates. Use a free Bootstrap medical template like Medilab or Medicio as a style guide. Test responsiveness and accessibility on various devices.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1768,7 +1768,7 @@
         "dependencies": [
           30
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1776,7 +1776,7 @@
             "description": "Develop the HTML template 'form.html' that includes the main form and integrates a Django formset to allow multiple form instances on the page.",
             "dependencies": [],
             "details": "Implement the formset management form and render each form in the formset within the template. Ensure the formset is properly included to handle multiple entries as per Django's formset conventions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1787,7 +1787,7 @@
               1
             ],
             "details": "Use JavaScript to clone existing formset forms, increment form indices, update the management form's total form count, and insert new forms into the DOM dynamically, enabling users to add multiple items without page reloads.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1798,7 +1798,7 @@
               1
             ],
             "details": "Design and integrate modal components that can be triggered from the form, enabling selection of drug and prescription templates. Ensure selections update the form fields accordingly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1809,7 +1809,7 @@
               1
             ],
             "details": "Ensure that validation errors from Django forms and formsets are rendered in the template near the relevant fields, providing clear feedback to users on submission errors.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1824,7 +1824,7 @@
         "dependencies": [
           27
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1832,7 +1832,7 @@
             "description": "Develop the basic HTML structure for print.html focusing on a medical-themed layout that includes hospital and patient sections.",
             "dependencies": [],
             "details": "Set up the HTML skeleton with semantic elements to represent hospital information, patient details, and prescription items. Ensure the layout is clean and professional, suitable for medical documentation.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1843,7 +1843,7 @@
               1
             ],
             "details": "Include fields such as hospital name, address, contact info, patient name, ID, demographics, and relevant medical details. Use clear headings and structured formatting to enhance readability.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1854,7 +1854,7 @@
               2
             ],
             "details": "The table should list medication names, dosages, frequency, duration, and any special instructions. Use accessible table markup and ensure it fits well within the medical layout.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1865,7 +1865,7 @@
               3
             ],
             "details": "Include styles to control page breaks, font sizes (preferably sans-serif fonts like Arial or Helvetica), margins, and color schemes aligned with medical branding. Ensure the layout is clear, professional, and easy to read on paper.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1880,7 +1880,7 @@
         "dependencies": [
           31
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1888,7 +1888,7 @@
             "description": "Develop the copy_from_drug_template method to create a deep copy of the drug template data into the target object, ensuring no shared references remain.",
             "dependencies": [],
             "details": "Use Python's copy.deepcopy() to recursively copy all attributes and nested objects from the drug template to the current instance. This prevents side effects from shared mutable objects.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1899,7 +1899,7 @@
               1
             ],
             "details": "Similarly to the drug template copy, use copy.deepcopy() to recursively copy all relevant data from the prescription template to the current instance, avoiding shared references.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1911,7 +1911,7 @@
               2
             ],
             "details": "Review the implementation to confirm that copy.deepcopy() is used appropriately on all nested objects and attributes, preventing any shallow copy or reference sharing issues.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1922,7 +1922,7 @@
               3
             ],
             "details": "Design tests that modify nested data in the copied objects and assert that the original templates remain unchanged, confirming deep copy behavior and data independence.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1937,7 +1937,7 @@
         "dependencies": [
           32
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1945,7 +1945,7 @@
             "description": "Develop the patient_access_required decorator to restrict view access based on patient-related permissions, ensuring only authorized users can access patient data.",
             "dependencies": [],
             "details": "Create a decorator that checks if the requesting user has the necessary permissions to access patient information. This may involve checking user roles, group permissions, or specific user-patient relationships.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1956,7 +1956,7 @@
               1
             ],
             "details": "Develop two separate decorators: one to check if the user can edit an event and another to check if the user can delete an event. These should verify user permissions or roles related to event management.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1967,7 +1967,7 @@
               1
             ],
             "details": "This decorator should verify that the user has a doctor role, potentially using role-based access control mechanisms or group membership checks.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1980,7 +1980,7 @@
               3
             ],
             "details": "Modify views and decorators to include hospital context, which may involve passing hospital identifiers or objects and validating user permissions within that context.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1994,7 +1994,7 @@
               4
             ],
             "details": "Write unit and integration tests that simulate various user roles, permissions, and hospital contexts to verify that access is correctly granted or denied according to the decorators and context logic.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -2009,7 +2009,7 @@
         "dependencies": [
           33
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -2017,7 +2017,7 @@
             "description": "Develop a backend REST API endpoint to handle AJAX search requests, process search terms, query the database, and return search results in JSON format.",
             "dependencies": [],
             "details": "Implement a REST API route (e.g., /search) that accepts GET or POST requests with a search parameter. Use backend logic to query relevant data (posts, pages, or custom post types) based on the search term and format the results for frontend consumption. Include error handling for no results found.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2028,7 +2028,7 @@
               1
             ],
             "details": "Use the AJAX search endpoint to fetch matching results in real-time. Implement throttling or debouncing to optimize requests. Format and prepare the data to be displayed as suggestions or auto-complete options in the UI.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2039,7 +2039,7 @@
               2
             ],
             "details": "Write JavaScript code to listen for input events on the search box, send AJAX requests to the backend endpoint, receive JSON responses, and update the UI with search suggestions. Ensure smooth user experience and accessibility.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2051,7 +2051,7 @@
               3
             ],
             "details": "On the backend, return appropriate error responses (e.g., WP_Error or HTTP error codes) when no results are found or input is invalid. On the frontend, detect these errors and display user-friendly messages or fallback UI states. Also handle network failures gracefully.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -2066,7 +2066,7 @@
         "dependencies": [
           34
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -2074,7 +2074,7 @@
             "description": "Design and develop a reusable UI template for displaying prescription event cards within the timeline. This template should visually represent prescription details clearly and be consistent with the overall UI style.",
             "dependencies": [],
             "details": "Focus on layout, styling, and placeholders for prescription data such as medication name, dosage, prescribing doctor, and date. Ensure the template is adaptable for different prescription event data.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2085,7 +2085,7 @@
               1
             ],
             "details": "Modify the timeline rendering engine to detect event_type for prescriptions and use the prescription event card template for display. Ensure seamless integration with existing event types and smooth UI updates.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2097,7 +2097,7 @@
               2
             ],
             "details": "Implement summary logic to extract and show essential prescription details such as total medications prescribed, active prescriptions, and recent changes. Integrate this summary with the timeline views for enhanced user insight.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -2112,7 +2112,7 @@
         "dependencies": [
           36
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -2120,7 +2120,7 @@
             "description": "Develop unit tests to verify the correctness of model methods, field validations, and database interactions.",
             "dependencies": [],
             "details": "Write tests for model field constraints, custom methods, and string representations to ensure data integrity and expected behavior.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2131,7 +2131,7 @@
               1
             ],
             "details": "Test form validation logic including required fields, custom validators, and form submission scenarios.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2143,7 +2143,7 @@
               2
             ],
             "details": "Use Django's RequestFactory or test client to simulate requests and verify view outputs and side effects.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2154,7 +2154,7 @@
               3
             ],
             "details": "Test interactions between components to ensure they work together correctly, including database state changes and API responses.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2165,7 +2165,7 @@
               3
             ],
             "details": "Simulate requests from users with varying permissions to ensure unauthorized access is properly restricted and authorized access is granted.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -2180,7 +2180,7 @@
               5
             ],
             "details": "Use libraries like factory_boy to create test data efficiently and integrate coverage.py or similar tools to generate coverage reports.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -2366,7 +2366,7 @@
     ],
     "metadata": {
       "created": "2025-06-28T20:43:07.408Z",
-      "updated": "2025-06-28T22:53:13.544Z",
+      "updated": "2025-06-29T17:51:05.785Z",
       "description": "Tasks for master context"
     }
   }

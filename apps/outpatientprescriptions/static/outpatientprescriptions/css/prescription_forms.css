@@ -1,0 +1,421 @@
+/* Prescription Forms Styles */
+
+/* Formset Container */
+#prescription-items-formset {
+    margin-top: 1rem;
+}
+
+/* Individual Form Styling */
+.prescription-item-form {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+    position: relative;
+}
+
+.prescription-item-form:last-child {
+    margin-bottom: 0;
+}
+
+/* Form Title */
+.prescription-item-form .form-title,
+.prescription-item-form .card-header {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Form Fields */
+.prescription-item-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.prescription-item-form .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.prescription-item-form label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.375rem;
+}
+
+.prescription-item-form .form-control {
+    border-radius: 0.25rem;
+}
+
+.prescription-item-form textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Drug Template Select */
+.drug-template-select {
+    background-color: #e3f2fd;
+    border-color: #1976d2;
+}
+
+.drug-template-select:focus {
+    border-color: #1565c0;
+    box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.25);
+}
+
+/* Form Actions */
+.form-actions {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Add Button */
+.add-prescription-item {
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+.add-prescription-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Remove Button */
+.remove-prescription-item {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.remove-prescription-item:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+/* Form Animations */
+.prescription-item-form {
+    transition: all 0.3s ease;
+}
+
+.prescription-item-form:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Hide empty form */
+.empty-form {
+    display: none !important;
+}
+
+/* Deleted forms */
+.prescription-item-form[style*="display: none"] {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Form validation states */
+.prescription-item-form .is-invalid {
+    border-color: #dc3545;
+}
+
+.prescription-item-form .is-valid {
+    border-color: #28a745;
+}
+
+/* Form field focus states */
+.prescription-item-form .form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Required field indicators */
+.prescription-item-form label.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+/* Help text styling */
+.prescription-item-form .form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Loading states */
+.prescription-item-form.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.prescription-item-form.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .prescription-item-form {
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-actions {
+        text-align: center;
+    }
+    
+    .remove-prescription-item {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .prescription-item-form {
+        border: 1px solid #000;
+        margin-bottom: 0.5rem;
+        background-color: white;
+        break-inside: avoid;
+    }
+    
+    .form-actions,
+    .add-prescription-item,
+    .remove-prescription-item {
+        display: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .prescription-item-form {
+        border-color: #000;
+        background-color: #fff;
+    }
+    
+    .prescription-item-form .form-title,
+    .prescription-item-form .card-header {
+        border-bottom-color: #000;
+    }
+}
+
+/* Drug Template Integration Styles */
+
+/* Template Selection Enhancement */
+.drug-template-select {
+    background-color: #e3f2fd;
+    border-color: #1976d2;
+    transition: all 0.3s ease;
+}
+
+.drug-template-select:focus {
+    border-color: #1565c0;
+    box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.25);
+}
+
+.drug-template-select:hover {
+    background-color: #bbdefb;
+}
+
+/* Template Notification */
+.template-notification {
+    margin-bottom: 1rem;
+    border-left: 4px solid #28a745;
+    animation: slideInDown 0.3s ease;
+}
+
+@keyframes slideInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Field Update Animations */
+.field-updating {
+    border-color: #ffc107;
+    background-color: #fff3cd;
+    transition: all 0.3s ease;
+}
+
+.field-updated {
+    border-color: #28a745;
+    background-color: #d4edda;
+    transition: all 0.3s ease;
+}
+
+/* Autocomplete Styles */
+.autocomplete-container {
+    position: relative;
+}
+
+.autocomplete-input.loading {
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    animation: spin 1s linear infinite;
+}
+
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.autocomplete-suggestion {
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+
+.autocomplete-suggestion:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-suggestion:hover,
+.autocomplete-suggestion.active {
+    background-color: #f8f9fa;
+}
+
+.autocomplete-suggestion .suggestion-name {
+    font-weight: 500;
+    color: #495057;
+}
+
+.autocomplete-suggestion .suggestion-presentation {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.no-suggestions {
+    padding: 0.75rem;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Template Search Enhancement */
+.template-search-input {
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Widget Styles */
+.prescription-form-widget {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #f8f9fa;
+    padding: 1rem;
+}
+
+.prescription-form-header {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.prescription-form-header h5 {
+    color: #495057;
+    margin: 0;
+}
+
+.template-selection-notice {
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.prescription-item-widget {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: white;
+}
+
+/* Enhanced Form Styling */
+.prescription-item-form .form-group {
+    position: relative;
+}
+
+.prescription-item-form .form-group.has-template {
+    background-color: #f0f8ff;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Responsive Autocomplete */
+@media (max-width: 768px) {
+    .autocomplete-suggestions {
+        font-size: 0.875rem;
+    }
+    
+    .autocomplete-suggestion {
+        padding: 0.5rem;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .prescription-item-form {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .prescription-item-form .form-title,
+    .prescription-item-form .card-header {
+        color: #e2e8f0;
+        border-bottom-color: #4a5568;
+    }
+    
+    .prescription-item-form label {
+        color: #e2e8f0;
+    }
+    
+    .form-actions {
+        border-top-color: #4a5568;
+    }
+    
+    .autocomplete-suggestions {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .autocomplete-suggestion:hover,
+    .autocomplete-suggestion.active {
+        background-color: #4a5568;
+    }
+    
+    .drug-template-select {
+        background-color: #2a365b;
+        border-color: #4299e1;
+        color: #e2e8f0;
+    }
+}

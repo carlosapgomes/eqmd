@@ -410,10 +410,9 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
-                                        <i class="bi bi-prescription2 me-2 text-muted" aria-hidden="true"></i>
+                                    <a class="dropdown-item" href="{% url 'outpatientprescriptions:outpatientprescription_create_for_patient' patient_uuid=patient.pk %}">
+                                        <i class="bi bi-prescription2 me-2 text-medical-light" aria-hidden="true"></i>
                                         Receita
-                                        <small class="text-muted ms-auto">Em breve</small>
                                     </a>
                                 </li>
                                 <li>
@@ -561,10 +560,9 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
-                                        <i class="bi bi-prescription2 me-2 text-muted" aria-hidden="true"></i>
+                                    <a class="dropdown-item" href="{% url 'outpatientprescriptions:outpatientprescription_create_for_patient' patient_uuid=patient.pk %}">
+                                        <i class="bi bi-prescription2 me-2 text-medical-light" aria-hidden="true"></i>
                                         Receita
-                                        <small class="text-muted ms-auto">Em breve</small>
                                     </a>
                                 </li>
                                 <li>
@@ -861,6 +859,7 @@
                                 DailyNote events (event_type=1) get the specialized template with duplicate button
                                 SimpleNote events (event_type=2) get the specialized template with duplicate button
                                 Photo events (event_type=3) get the specialized template with photo display and modal
+                                Prescription events (event_type=7) get the specialized template with medication summary
                                 PhotoSeries events (event_type=9) get the specialized template with photo series display
                                 VideoClip events (event_type=10) get the specialized template with video player
                                 All other events use the default template
@@ -873,6 +872,8 @@
                                     {% include "events/partials/event_card_simplenote.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 3 %}
                                     {% include "events/partials/event_card_photo.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 7 %}
+                                    {% include "events/partials/event_card_prescription.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 9 %}
                                     {% include "events/partials/event_card_photoseries.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 10 %}

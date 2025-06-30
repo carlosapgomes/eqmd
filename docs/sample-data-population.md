@@ -45,9 +45,9 @@ python manage.py populate_sample_data --clear-existing
 | Residents | 2     | res.{name}@example.com | <res.ana@example.com>   |
 | Students  | 2     | est.{name}@example.com | <est.paula@example.com> |
 
-### 👤 Patients (40 total)
+### 👤 Patients (30 total)
 
-- **30 hospital patients**: 10 per hospital (mix of inpatients/emergency/outpatients)
+- **20 hospital patients**: 10 per hospital (mix of inpatients/emergency/outpatients)
 - **10 outpatients**: Not assigned to any hospital
 - **Realistic data**: Portuguese names, CPF, RG, addresses, phone numbers
 - **Medical records**: Hospital registration numbers and admission dates
@@ -60,6 +60,51 @@ python manage.py populate_sample_data --clear-existing
 - Idoso (violet)
 - Crítico (pink)
 - Alérgico (teal)
+
+### 💊 Drug Templates (15 total)
+
+Realistic pharmaceutical data with Brazilian medications:
+
+**Public Templates (10):**
+- Dipirona Sódica 500mg
+- Paracetamol 750mg
+- Omeprazol 20mg
+- Losartana Potássica 50mg
+- Metformina 850mg
+- Sinvastatina 20mg
+- Captopril 25mg
+- Hidroclorotiazida 25mg
+- Ácido Acetilsalicílico 100mg
+- Atenolol 50mg
+
+**Private Templates (5):**
+- Amoxicilina 500mg
+- Azitromicina 500mg
+- Prednisona 20mg
+- Diclofenaco Sódico 50mg
+- Furosemida 40mg
+
+### 📋 Prescription Templates (5 total)
+
+Common medical scenarios with multiple medications:
+
+**Public Templates (4):**
+- Hipertensão Arterial - Tratamento Inicial (2 medications)
+- Diabetes Mellitus Tipo 2 - Monoterapia (1 medication)
+- Dislipidemia - Tratamento com Estatina (1 medication)
+- Proteção Gástrica + Analgesia (2 medications)
+
+**Private Templates (1):**
+- Infecção Respiratória - Antibiótico (1 medication)
+
+### 📝 Outpatient Prescriptions (60-90 total)
+
+- **2-3 prescriptions per patient** with realistic medical scenarios
+- **Date spread**: Prescriptions distributed across the last 60 days
+- **Doctor-only creation**: Only doctors can create prescriptions
+- **Template usage**: 40% use prescription templates, 60% individual drug selection
+- **Usage tracking**: Drug template usage counts are automatically updated
+- **Realistic instructions**: Portuguese medical instructions and return guidelines
 
 ### 📋 Sample Content Templates
 
@@ -76,7 +121,7 @@ This creates templates for:
 - Discharge reports (Relatório de Alta)
 - Exam requests (Requisição de Exame)
 
-### 📝 Daily Notes (200 total)
+### 📝 Daily Notes (150 total)
 
 - **5 notes per patient** with realistic medical evolution content
 - **Date spread**: Notes distributed across the last 15 days
@@ -105,9 +150,11 @@ python manage.py populate_sample_data --clear-existing
 
 This removes:
 
-- All users with usernames starting with `sample_`
+- All events (including outpatient prescriptions and daily notes) created by sample users
+- All prescription templates created by sample users
+- All drug templates created by sample users
 - All patients created by sample users
-- All daily notes created by sample users
+- All users with usernames starting with `sample_`
 - All hospitals with names starting with `Hospital`
 - All tags with names starting with `Tag`
 
@@ -162,13 +209,22 @@ This removes:
 7. **Dashboard widgets** - Test recent patients and notes displays
 8. **Event timeline** - Test timeline view with type-specific event cards
 9. **Sample content templates** - Test template creation, viewing, and API access
+10. **Drug templates** - Create, edit, and use drug templates in prescriptions
+11. **Prescription templates** - Create multi-drug prescription templates
+12. **Outpatient prescriptions** - Create prescriptions using templates or individual drugs
+13. **Usage tracking** - Verify drug template usage counts are updated
+14. **Template permissions** - Test public vs private template visibility
 
 ### Data Relationships
 
 - **Users ↔ Hospitals**: Staff members assigned to 1-2 hospitals
 - **Patients ↔ Hospitals**: Hospital records with registration numbers
-- **Events ↔ Users**: Daily notes created by medical staff
+- **Events ↔ Users**: Daily notes and prescriptions created by medical staff
 - **Patients ↔ Tags**: Medical condition tags with color coding
+- **Drug Templates ↔ Users**: Templates created by medical staff with public/private visibility
+- **Prescription Templates ↔ Users**: Multi-drug templates created by medical staff
+- **Prescriptions ↔ Drug Templates**: Prescription items linked to source templates with usage tracking
+- **Prescriptions ↔ Patients**: Outpatient prescriptions linked to patients with realistic dates
 
 ## Best Practices
 

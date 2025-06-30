@@ -1,0 +1,44 @@
+{% comment %}
+Widget template for prescription form with enhanced functionality
+{% endcomment %}
+
+<div class="prescription-form-widget" data-widget-type="prescription-form">
+    <div class="prescription-form-container">
+        {% if widget.prescription_form %}
+            <div class="prescription-form-header">
+                <h5 class="mb-3">
+                    <i class="fas fa-prescription-bottle-alt"></i>
+                    Receita Médica
+                </h5>
+            </div>
+        {% endif %}
+
+        <div class="prescription-form-content">
+            {% if widget.supports_templates %}
+                <div class="template-selection-notice alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Dica:</strong> Use os templates de medicamentos para preencher os campos automaticamente.
+                </div>
+            {% endif %}
+
+            <div class="form-fields">
+                {{ widget.rendered_content|safe }}
+            </div>
+        </div>
+
+        {% if widget.dynamic_forms %}
+            <div class="prescription-form-footer">
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary add-prescription-item">
+                        <i class="fas fa-plus"></i>
+                        Adicionar Item
+                    </button>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% comment %}
+Additional widget styles and scripts can be added here
+{% endcomment %}

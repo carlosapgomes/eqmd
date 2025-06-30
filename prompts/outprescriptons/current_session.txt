@@ -1,0 +1,1382 @@
+
+> *always set the current task status to 'in-progress'  before start working in it*
+
+   *always set the task status to 'done' when you finish it*
+
+   *when creating a new template start by extending 'base_app.html' and look at @apps/dailynotes/templates/dailynotes templates as an example of implementation*
+
+   *avoid using crispy forms, do 'manual' html as the example templates do*
+
+   🏷️ tag: master
+
+  ╭────────────────────────────────────────────────────────╮
+  │ Next Task: #18 - Implement PrescriptionTemplate Models │
+  ╰────────────────────────────────────────────────────────╯
+  ┌───────────────┬────────────────────────────────────────────────────────────┐
+  │ ID:           │ 18                                                         │
+  │ Title:        │ Implement PrescriptionTemplate Models                      │
+  │ Priority:     │ medium                                                     │
+  │ Dependencies: │ 17                                                         │
+  │ Complexity:   │ ● 5                                                        │
+  │ Description:  │ Create models for reusable prescription templates          │
+  └───────────────┴────────────────────────────────────────────────────────────┘
+
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ────╮
+  │ Implementation Details:
+      │
+  │
+      │
+  │ Create PrescriptionTemplate model with fields: name (CharField), creator (ForeignKey to User), is_public (BooleanField), created_at/updated_at (DateTimeFields).
+  Create  │
+  │ PrescriptionTemplateItem model with fields: template (ForeignKey), drug_name, presentation, usage_instructions, quantity, order. Add __str__ methods and Meta
+  ordering.  │
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ────╯
+
+  ╭──────────╮
+  │ Subtasks │
+  ╰──────────╯
+  ┌────────┬───────────────┬────────────────────────────────────────────────────┬─────────────────────────┐
+  │ ID     │ Status        │ Title                                              │ Deps                    │
+  │ 18.1   │ pending       │ Design PrescriptionTemplate and                    │ None                    │
+  │        │               │ PrescriptionTemplateItem Models                    │                         │
+  │ 18.2   │ pending       │ Define Relationships and Ordering Between Models   │ 18.1                    │
+  │ 18.3   │ pending       │ Implement Validation and Business Logic            │ 18.2                    │
+  │ 18.4   │ pending       │ Write Unit and Integration Tests for Models and    │ 18.3                    │
+  │        │               │ Relationships                                      │                         │
+  └────────┴───────────────┴────────────────────────────────────────────────────┴─────────────────────────┘
+
+  ╭──────────────────────────────────────────────────────────────────────────────╮
+  │ Suggested Actions:                                                           │
+  │ 1. Mark as in-progress: task-master set-status --id=18 --status=in-progress  │
+  │ 2. Mark as done when completed: task-master set-status --id=18 --status=done │
+  │ 3. Update subtask status: task-master set-status --id=18.1 --status=done     │
+  ╰──────────────────────────────────────────────────────────────────────────────╯
+  ⎿  Listed directory apps/dailynotes/templates/dailynotes/
+
+09:33
+
+● I'll start implementing the PrescriptionTemplate models. Let me first mark this task as in-progress and examine the existing structure.
+
+● Bash(task-master set-status --id=18 --status=in-progress)
+  ⎿  🏷️ tag: master
+     Setting status of task(s) 18 to: in-progress
+     ╭──────────────────────────────────────────╮
+     │                                          │
+     │   Updating Task Status to: in-progress   │
+     │                                          │
+     ╰──────────────────────────────────────────╯
+     [INFO] Reading tasks from .taskmaster/tasks/tasks.json...
+     [INFO] Updated task 18 status from 'pending' to 'in-progress'
+     [INFO] Validating dependencies after status update...
+     ╭──────────────────────────────────────────╮
+     │                                          │
+     │   Successfully updated task 18 status:   │
+     │   From: pending                          │
+     │   To:   in-progress                      │
+     │                                          │
+     ╰──────────────────────────────────────────╯
+
+09:33
+
+● Now let me examine the drugtemplates app structure to understand where to implement the models:
+
+● List(path: "/home/carlos/projects/eqmd/apps/drugtemplates")
+  ⎿  - /home/carlos/projects/eqmd/
+       - apps/
+         - drugtemplates/
+           - __init__.py
+           - admin.py
+           - apps.py
+           - forms.py
+           - migrations/
+             - 0001_initial.py
+             - 0002_drugtemplate_usage_count.py
+             - __init__.py
+           - models.py
+           - static/
+             - drugtemplates/
+               - css/
+               - js/
+           - templates/
+             - drugtemplates/
+               - base.html
+               - drugtemplate_confirm_delete.html
+               - drugtemplate_create_form.html
+               - drugtemplate_detail.html
+               - drugtemplate_list.html
+               - drugtemplate_update_form.html
+           - tests.py
+           - urls.py
+           - views.py
+
+09:33
+
+● Let me first check the existing drugtemplates models to understand the current structure:
+
+● Read(file_path: "/home/carlos/projects/eqmd/apps/drugtemplates/models.py")
+  ⎿  import uuid
+     from django.db import models
+     from django.conf import settings
+     from django.urls import reverse
+     from django.core.exceptions import ValidationError
+
+
+     class DrugTemplate(models.Model):
+         """
+         Drug template model to store commonly used drug information.
+         Users can create private templates or share public ones.
+         """
+
+         id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+         name = models.CharField(max_length=200, verbose_name="Nome do Medicamento")
+         presentation = models.CharField(max_length=300, verbose_name="Apresentação")
+         usage_instructions = models.TextField(
+             verbose_name="Instruções de Uso",
+             help_text="Instruções detalhadas de uso (suporte a markdown)"
+         )
+         creator = models.ForeignKey(
+             settings.AUTH_USER_MODEL,
+             on_delete=models.CASCADE,
+             related_name="drug_templates",
+             verbose_name="Criado por"
+         )
+         is_public = models.BooleanField(
+             default=False,
+             verbose_name="Público",
+             help_text="Se marcado, outros usuários poderão ver este template"
+         )
+         usage_count = models.PositiveIntegerField(
+             default=0,
+             verbose_name="Contador de Uso",
+             help_text="Número de vezes que este template foi utilizado em prescrições"
+         )
+
+         # Timestamps
+         created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+         updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+         def __str__(self):
+             return self.name
+
+         def get_absolute_url(self):
+             return reverse('drugtemplates:detail', kwargs={'pk': self.pk})
+
+         def clean(self):
+             """Validate model fields"""
+             super().clean()
+
+             # Validate name is not empty after stripping whitespace
+             if not self.name or not self.name.strip():
+                 raise ValidationError({'name': 'Nome do medicamento é obrigatório.'})
+
+             # Validate presentation is not empty after stripping whitespace
+             if not self.presentation or not self.presentation.strip():
+                 raise ValidationError({'presentation': 'Apresentação é obrigatória.'})
+
+             # Validate usage instructions are not empty after stripping whitespace
+             if not self.usage_instructions or not self.usage_instructions.strip():
+                 raise ValidationError({'usage_instructions': 'Instruções de uso são obrigatórias.'})
+
+         class Meta:
+             ordering = ['name']
+             verbose_name = "Template de Medicamento"
+             verbose_name_plural = "Templates de Medicamentos"
+             indexes = [
+                 models.Index(fields=['name'], name='drugtemplates_name_idx'),
+                 models.Index(fields=['creator'], name='drugtemplates_creator_idx'),
+                 models.Index(fields=['is_public'], name='drugtemplates_is_public_idx'),
+                 models.Index(fields=['created_at'], name='drugtemplates_created_at_idx'),
+             ]
+
+
+09:33
+
+● Now let me create a TodoList to track the implementation steps:
+
+● Update Todos
+  ⎿  ☐ Design PrescriptionTemplate model structure (P0)
+     ☐ Create PrescriptionTemplateItem model with relationships (P0)
+     ☐ Add validation and business logic methods (P1)
+     ☐ Update admin.py for new models (P1)
+     ☐ Create and run migrations (P1)
+     ☐ Write tests for the new models (P2)
+
+09:33
+
+● Now I'll implement the PrescriptionTemplate models. Based on the existing DrugTemplate structure and the task requirements, I'll add the new models to the models.py
+  file:
+
+● Update(/home/carlos/projects/eqmd/apps/drugtemplates/models.py)
+  ⎿  Updated /home/carlos/projects/eqmd/apps/drugtemplates/models.py with 131 additions
+        71                models.Index(fields=['is_public'], name='drugtemplates_is_public_idx'),
+        72                models.Index(fields=['created_at'], name='drugtemplates_created_at_idx'),
+        73            ]
+        74 +
+        75 +
+        76 +  class PrescriptionTemplate(models.Model):
+        77 +      """
+        78 +      Prescription template model to store reusable prescription templates.
+        79 +      Users can create private templates or share public ones.
+        80 +      Each template can contain multiple prescription items.
+        81 +      """
+        82 +
+        83 +      id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+        84 +      name = models.CharField(
+        85 +          max_length=200,
+        86 +          verbose_name="Nome do Template",
+        87 +          help_text="Nome descritivo para o template de prescrição"
+        88 +      )
+        89 +      creator = models.ForeignKey(
+        90 +          settings.AUTH_USER_MODEL,
+        91 +          on_delete=models.CASCADE,
+        92 +          related_name="prescription_templates",
+        93 +          verbose_name="Criado por"
+        94 +      )
+        95 +      is_public = models.BooleanField(
+        96 +          default=False,
+        97 +          verbose_name="Público",
+        98 +          help_text="Se marcado, outros usuários poderão ver este template"
+        99 +      )
+       100 +
+       101 +      # Timestamps
+       102 +      created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+       103 +      updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+       104 +
+       105 +      def __str__(self):
+       106 +          return self.name
+       107 +
+       108 +      def get_absolute_url(self):
+       109 +          from django.urls import reverse
+       110 +          return reverse('drugtemplates:prescription_template_detail', kwargs={'pk': self.pk})
+       111 +
+       112 +      def clean(self):
+       113 +          """Validate model fields"""
+       114 +          super().clean()
+       115 +
+       116 +          # Validate name is not empty after stripping whitespace
+       117 +          if not self.name or not self.name.strip():
+       118 +              raise ValidationError({'name': 'Nome do template é obrigatório.'})
+       119 +
+       120 +      class Meta:
+       121 +          ordering = ['name']
+       122 +          verbose_name = "Template de Prescrição"
+       123 +          verbose_name_plural = "Templates de Prescrições"
+       124 +          indexes = [
+       125 +              models.Index(fields=['name'], name='prescription_template_name_idx'),
+       126 +              models.Index(fields=['creator'], name='prescription_template_creator_idx'),
+       127 +              models.Index(fields=['is_public'], name='prescription_template_is_public_idx'),
+       128 +              models.Index(fields=['created_at'], name='prescription_template_created_at_idx'),
+       129 +          ]
+       130 +
+       131 +
+       132 +  class PrescriptionTemplateItem(models.Model):
+       133 +      """
+       134 +      Individual prescription item within a prescription template.
+       135 +      Each item represents a medication with its specific instructions.
+       136 +      """
+       137 +
+       138 +      id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+       139 +      template = models.ForeignKey(
+       140 +          PrescriptionTemplate,
+       141 +          on_delete=models.CASCADE,
+       142 +          related_name="items",
+       143 +          verbose_name="Template"
+       144 +      )
+       145 +      drug_name = models.CharField(
+       146 +          max_length=200,
+       147 +          verbose_name="Nome do Medicamento"
+       148 +      )
+       149 +      presentation = models.CharField(
+       150 +          max_length=300,
+       151 +          verbose_name="Apresentação",
+       152 +          help_text="Dosagem, forma farmacêutica, concentração"
+       153 +      )
+       154 +      usage_instructions = models.TextField(
+       155 +          verbose_name="Instruções de Uso",
+       156 +          help_text="Instruções detalhadas de uso"
+       157 +      )
+       158 +      quantity = models.CharField(
+       159 +          max_length=100,
+       160 +          verbose_name="Quantidade",
+       161 +          help_text="Quantidade a ser dispensada"
+       162 +      )
+       163 +      order = models.PositiveIntegerField(
+       164 +          default=0,
+       165 +          verbose_name="Ordem",
+       166 +          help_text="Ordem de exibição do item no template"
+       167 +      )
+       168 +
+       169 +      # Timestamps
+       170 +      created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+       171 +      updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+       172 +
+       173 +      def __str__(self):
+       174 +          return f"{self.drug_name} - {self.presentation}"
+       175 +
+       176 +      def clean(self):
+       177 +          """Validate model fields"""
+       178 +          super().clean()
+       179 +
+       180 +          # Validate drug_name is not empty after stripping whitespace
+       181 +          if not self.drug_name or not self.drug_name.strip():
+       182 +              raise ValidationError({'drug_name': 'Nome do medicamento é obrigatório.'})
+       183 +
+       184 +          # Validate presentation is not empty after stripping whitespace
+       185 +          if not self.presentation or not self.presentation.strip():
+       186 +              raise ValidationError({'presentation': 'Apresentação é obrigatória.'})
+       187 +
+       188 +          # Validate usage instructions are not empty after stripping whitespace
+       189 +          if not self.usage_instructions or not self.usage_instructions.strip():
+       190 +              raise ValidationError({'usage_instructions': 'Instruções de uso são obrigatórias.'})
+       191 +
+       192 +          # Validate quantity is not empty after stripping whitespace
+       193 +          if not self.quantity or not self.quantity.strip():
+       194 +              raise ValidationError({'quantity': 'Quantidade é obrigatória.'})
+       195 +
+       196 +      class Meta:
+       197 +          ordering = ['template', 'order', 'drug_name']
+       198 +          verbose_name = "Item do Template de Prescrição"
+       199 +          verbose_name_plural = "Itens dos Templates de Prescrições"
+       200 +          indexes = [
+       201 +              models.Index(fields=['template'], name='prescription_item_template_idx'),
+       202 +              models.Index(fields=['drug_name'], name='prescription_item_drug_name_idx'),
+       203 +              models.Index(fields=['order'], name='prescription_item_order_idx'),
+       204 +          ]
+
+● Update Todos
+  ⎿  ☒ Design PrescriptionTemplate model structure (P0)
+     ☒ Create PrescriptionTemplateItem model with relationships (P0)
+     ☒ Add validation and business logic methods (P1)
+     ☐ Update admin.py for new models (P1)
+     ☐ Create and run migrations (P1)
+     ☐ Write tests for the new models (P2)
+
+09:33
+
+● Now let me update the admin.py file to include the new models:
+
+● Read(file_path: "/home/carlos/projects/eqmd/apps/drugtemplates/admin.py")
+  ⎿  from django.contrib import admin
+     from .models import DrugTemplate
+
+
+     @admin.register(DrugTemplate)
+     class DrugTemplateAdmin(admin.ModelAdmin):
+         list_display = ('name', 'presentation', 'creator', 'is_public', 'created_at')
+         list_filter = ('is_public', 'creator', 'created_at')
+         search_fields = ('name', 'presentation')
+         readonly_fields = ('created_at', 'updated_at')
+
+         fieldsets = (
+             (None, {
+                 'fields': ('name', 'presentation', 'usage_instructions', 'is_public')
+             }),
+             ('Auditoria', {
+                 'fields': ('creator', 'created_at', 'updated_at'),
+                 'classes': ('collapse',)
+             }),
+         )
+
+         actions = ['make_public', 'make_private']
+
+         def save_model(self, request, obj, form, change):
+             if not change:  # If creating a new object
+                 obj.creator = request.user
+             super().save_model(request, obj, form, change)
+
+         def make_public(self, request, queryset):
+             """Bulk action to make selected drug templates public."""
+             updated = queryset.update(is_public=True)
+             self.message_user(request, f'{updated} template(s) marcado(s) como público(s).')
+         make_public.short_description = "Marcar selecionados como públicos"
+
+         def make_private(self, request, queryset):
+             """Bulk action to make selected drug templates private."""
+             updated = queryset.update(is_public=False)
+             self.message_user(request, f'{updated} template(s) marcado(s) como privado(s).')
+         make_private.short_description = "Marcar selecionados como privados"
+
+
+● Update(/home/carlos/projects/eqmd/apps/drugtemplates/admin.py)
+  ⎿  Updated /home/carlos/projects/eqmd/apps/drugtemplates/admin.py with 1 addition and 1 removal
+       1    from django.contrib import admin
+       2 -  from .models import DrugTemplate
+       2 +  from .models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
+       3
+       4
+       5    @admin.register(DrugTemplate)
+
+● Update(/home/carlos/projects/eqmd/apps/drugtemplates/admin.py)
+  ⎿  Updated /home/carlos/projects/eqmd/apps/drugtemplates/admin.py with 69 additions
+        37            updated = queryset.update(is_public=False)
+        38            self.message_user(request, f'{updated} template(s) marcado(s) como privado(s).')
+        39        make_private.short_description = "Marcar selecionados como privados"
+        40 +
+        41 +
+        42 +  class PrescriptionTemplateItemInline(admin.TabularInline):
+        43 +      """Inline admin for prescription template items."""
+        44 +      model = PrescriptionTemplateItem
+        45 +      extra = 1
+        46 +      fields = ('order', 'drug_name', 'presentation', 'usage_instructions', 'quantity')
+        47 +      ordering = ('order', 'drug_name')
+        48 +
+        49 +
+        50 +  @admin.register(PrescriptionTemplate)
+        51 +  class PrescriptionTemplateAdmin(admin.ModelAdmin):
+        52 +      list_display = ('name', 'creator', 'is_public', 'item_count', 'created_at')
+        53 +      list_filter = ('is_public', 'creator', 'created_at')
+        54 +      search_fields = ('name',)
+        55 +      readonly_fields = ('created_at', 'updated_at')
+        56 +      inlines = [PrescriptionTemplateItemInline]
+        57 +
+        58 +      fieldsets = (
+        59 +          (None, {
+        60 +              'fields': ('name', 'is_public')
+        61 +          }),
+        62 +          ('Auditoria', {
+        63 +              'fields': ('creator', 'created_at', 'updated_at'),
+        64 +              'classes': ('collapse',)
+        65 +          }),
+        66 +      )
+        67 +
+        68 +      actions = ['make_public', 'make_private']
+        69 +
+        70 +      def save_model(self, request, obj, form, change):
+        71 +          if not change:  # If creating a new object
+        72 +              obj.creator = request.user
+        73 +          super().save_model(request, obj, form, change)
+        74 +
+        75 +      def item_count(self, obj):
+        76 +          """Display the number of items in the prescription template."""
+        77 +          return obj.items.count()
+        78 +      item_count.short_description = "Número de Itens"
+        79 +
+        80 +      def make_public(self, request, queryset):
+        81 +          """Bulk action to make selected prescription templates public."""
+        82 +          updated = queryset.update(is_public=True)
+        83 +          self.message_user(request, f'{updated} template(s) de prescrição marcado(s) como público(s).')
+        84 +      make_public.short_description = "Marcar selecionados como públicos"
+        85 +
+        86 +      def make_private(self, request, queryset):
+        87 +          """Bulk action to make selected prescription templates private."""
+        88 +          updated = queryset.update(is_public=False)
+        89 +          self.message_user(request, f'{updated} template(s) de prescrição marcado(s) como privado(s).')
+        90 +      make_private.short_description = "Marcar selecionados como privados"
+        91 +
+        92 +
+        93 +  @admin.register(PrescriptionTemplateItem)
+        94 +  class PrescriptionTemplateItemAdmin(admin.ModelAdmin):
+        95 +      list_display = ('drug_name', 'presentation', 'template', 'order', 'created_at')
+        96 +      list_filter = ('template', 'created_at')
+        97 +      search_fields = ('drug_name', 'presentation', 'template__name')
+        98 +      readonly_fields = ('created_at', 'updated_at')
+        99 +
+       100 +      fieldsets = (
+       101 +          (None, {
+       102 +              'fields': ('template', 'order', 'drug_name', 'presentation', 'usage_instructions', 'quantity')
+       103 +          }),
+       104 +          ('Auditoria', {
+       105 +              'fields': ('created_at', 'updated_at'),
+       106 +              'classes': ('collapse',)
+       107 +          }),
+       108 +      )
+
+● Update Todos
+  ⎿  ☒ Design PrescriptionTemplate model structure (P0)
+     ☒ Create PrescriptionTemplateItem model with relationships (P0)
+     ☒ Add validation and business logic methods (P1)
+     ☒ Update admin.py for new models (P1)
+     ☐ Create and run migrations (P1)
+     ☐ Write tests for the new models (P2)
+
+09:33
+
+● Now let me create and run the migrations:
+
+● Bash(python manage.py makemigrations drugtemplates)
+  ⎿  Error: SystemCheckError: System check identified some issues:
+
+     ERRORS:
+     drugtemplates.PrescriptionTemplate: (models.E034) The index name 'prescription_template_created_at_idx' cannot be longer than 30 characters.
+     drugtemplates.PrescriptionTemplate: (models.E034) The index name 'prescription_template_creator_idx' cannot be longer than 30 characters.
+     drugtemplates.PrescriptionTemplate: (models.E034) The index name 'prescription_template_is_public_idx' cannot be longer than 30 characters.
+     drugtemplates.PrescriptionTemplateItem: (models.E034) The index name 'prescription_item_drug_name_idx' cannot be longer than 30 characters.
+
+09:33
+
+● I need to fix the index names to be shorter (30 characters max):
+
+● Update(/home/carlos/projects/eqmd/apps/drugtemplates/models.py)
+  ⎿  Updated /home/carlos/projects/eqmd/apps/drugtemplates/models.py with 4 additions and 4 removals
+       122            verbose_name = "Template de Prescrição"
+       123            verbose_name_plural = "Templates de Prescrições"
+       124            indexes = [
+       125 -              models.Index(fields=['name'], name='prescription_template_name_idx'),
+       126 -              models.Index(fields=['creator'], name='prescription_template_creator_idx'),
+       127 -              models.Index(fields=['is_public'], name='prescription_template_is_public_idx'),
+       128 -              models.Index(fields=['created_at'], name='prescription_template_created_at_idx'),
+       125 +              models.Index(fields=['name'], name='presc_tmpl_name_idx'),
+       126 +              models.Index(fields=['creator'], name='presc_tmpl_creator_idx'),
+       127 +              models.Index(fields=['is_public'], name='presc_tmpl_public_idx'),
+       128 +              models.Index(fields=['created_at'], name='presc_tmpl_created_idx'),
+       129            ]
+       130
+       131
+
+● Update(/home/carlos/projects/eqmd/apps/drugtemplates/models.py)
+  ⎿  Updated /home/carlos/projects/eqmd/apps/drugtemplates/models.py with 3 additions and 3 removals
+       198            verbose_name = "Item do Template de Prescrição"
+       199            verbose_name_plural = "Itens dos Templates de Prescrições"
+       200            indexes = [
+       201 -              models.Index(fields=['template'], name='prescription_item_template_idx'),
+       202 -              models.Index(fields=['drug_name'], name='prescription_item_drug_name_idx'),
+       203 -              models.Index(fields=['order'], name='prescription_item_order_idx'),
+       201 +              models.Index(fields=['template'], name='presc_item_tmpl_idx'),
+       202 +              models.Index(fields=['drug_name'], name='presc_item_drug_idx'),
+       203 +              models.Index(fields=['order'], name='presc_item_order_idx'),
+       204            ]
+
+09:33
+
+● Now let's try generating the migrations again:
+
+● Bash(python manage.py makemigrations drugtemplates)
+  ⎿  Migrations for 'drugtemplates':
+       apps/drugtemplates/migrations/0003_prescriptiontemplate_prescriptiontemplateitem_and_more.py
+         + Create model PrescriptionTemplate
+         + Create model PrescriptionTemplateItem
+         + Create index presc_tmpl_name_idx on field(s) name of model prescriptiontemplate
+         + Create index presc_tmpl_creator_idx on field(s) creator of model prescriptiontemplate
+         + Create index presc_tmpl_public_idx on field(s) is_public of model prescriptiontemplate
+         + Create index presc_tmpl_created_idx on field(s) created_at of model prescriptiontemplate
+         + Create index presc_item_tmpl_idx on field(s) template of model prescriptiontemplateitem
+         + Create index presc_item_drug_idx on field(s) drug_name of model prescriptiontemplateitem
+         + Create index presc_item_order_idx on field(s) order of model prescriptiontemplateitem
+
+09:33
+
+● Great! Now let's run the migration:
+
+● Bash(python manage.py migrate drugtemplates)
+  ⎿  Operations to perform:
+       Apply all migrations: drugtemplates
+     Running migrations:
+       Applying drugtemplates.0003_prescriptiontemplate_prescriptiontemplateitem_and_more... OK
+
+● Update Todos
+  ⎿  ☒ Design PrescriptionTemplate model structure (P0)
+     ☒ Create PrescriptionTemplateItem model with relationships (P0)
+     ☒ Add validation and business logic methods (P1)
+     ☒ Update admin.py for new models (P1)
+     ☒ Create and run migrations (P1)
+     ☐ Write tests for the new models (P2)
+
+09:33
+
+● Now let me check the existing tests to understand the testing pattern:
+
+● Read(file_path: "/home/carlos/projects/eqmd/apps/drugtemplates/tests.py")
+  ⎿  from django.test import TestCase
+     from django.contrib.auth import get_user_model
+     from django.core.exceptions import ValidationError
+     from django.urls import reverse
+     from .models import DrugTemplate
+     from .forms import DrugTemplateForm
+
+     User = get_user_model()
+
+
+     class DrugTemplateModelTest(TestCase):
+         def setUp(self):
+             self.user = User.objects.create_user(
+                 username='testuser',
+                 email='test@example.com',
+                 password='testpass123',
+                 first_name='Test',
+                 last_name='User'
+             )
+
+         def test_drug_template_creation(self):
+             """Test creating a drug template instance."""
+             drug_template = DrugTemplate.objects.create(
+                 name='Paracetamol',
+                 presentation='500mg comprimidos',
+                 usage_instructions='Tomar 1 comprimido de 8 em 8 horas',
+                 creator=self.user,
+                 is_public=True
+             )
+
+             self.assertEqual(drug_template.name, 'Paracetamol')
+             self.assertEqual(drug_template.presentation, '500mg comprimidos')
+             self.assertEqual(drug_template.usage_instructions, 'Tomar 1 comprimido de 8 em 8 horas')
+             self.assertEqual(drug_template.creator, self.user)
+             self.assertTrue(drug_template.is_public)
+             self.assertIsNotNone(drug_template.created_at)
+             self.assertIsNotNone(drug_template.updated_at)
+
+         def test_drug_template_str_method(self):
+             """Test string representation of drug template."""
+             drug_template = DrugTemplate.objects.create(
+                 name='Ibuprofeno',
+                 presentation='400mg comprimidos',
+                 usage_instructions='Tomar 1 comprimido de 8 em 8 horas',
+                 creator=self.user
+             )
+
+             self.assertEqual(str(drug_template), 'Ibuprofeno')
+
+         def test_drug_template_get_absolute_url(self):
+             """Test get_absolute_url method."""
+             drug_template = DrugTemplate.objects.create(
+                 name='Dipirona',
+                 presentation='500mg comprimidos',
+                 usage_instructions='Tomar 1 comprimido de 6 em 6 horas',
+                 creator=self.user
+             )
+
+             expected_url = reverse('drugtemplates:detail', kwargs={'pk': drug_template.pk})
+             self.assertEqual(drug_template.get_absolute_url(), expected_url)
+
+         def test_drug_template_default_values(self):
+             """Test default values for drug template fields."""
+             drug_template = DrugTemplate.objects.create(
+                 name='Aspirina',
+                 presentation='100mg comprimidos',
+                 usage_instructions='Tomar 1 comprimido por dia',
+                 creator=self.user
+             )
+
+             self.assertFalse(drug_template.is_public)  # Default should be False
+
+         def test_drug_template_clean_method_valid(self):
+             """Test clean method with valid data."""
+             drug_template = DrugTemplate(
+                 name='Amoxicilina',
+                 presentation='875mg comprimidos',
+                 usage_instructions='Tomar 1 comprimido de 12 em 12 horas',
+                 creator=self.user
+             )
+
+             # Should not raise ValidationError
+             drug_template.clean()
+
+         def test_drug_template_clean_method_empty_name(self):
+             """Test clean method with empty name."""
+             drug_template = DrugTemplate(
+                 name='',
+                 presentation='500mg comprimidos',
+                 usage_instructions='Tomar 1 comprimido',
+                 creator=self.user
+             )
+
+             with self.assertRaises(ValidationError) as cm:
+                 drug_template.clean()
+             self.assertIn('name', cm.exception.message_dict)
+
+         def test_drug_template_clean_method_whitespace_name(self):
+             """Test clean method with whitespace-only name."""
+             drug_template = DrugTemplate(
+                 name='   ',
+                 presentation='500mg comprimidos',
+                 usage_instructions='Tomar 1 comprimido',
+                 creator=self.user
+             )
+
+             with self.assertRaises(ValidationError) as cm:
+                 drug_template.clean()
+             self.assertIn('name', cm.exception.message_dict)
+
+         def test_drug_template_clean_method_empty_presentation(self):
+             """Test clean method with empty presentation."""
+             drug_template = DrugTemplate(
+                 name='Paracetamol',
+                 presentation='',
+                 usage_instructions='Tomar 1 comprimido',
+                 creator=self.user
+             )
+
+             with self.assertRaises(ValidationError) as cm:
+                 drug_template.clean()
+             self.assertIn('presentation', cm.exception.message_dict)
+
+         def test_drug_template_clean_method_whitespace_presentation(self):
+             """Test clean method with whitespace-only presentation."""
+             drug_template = DrugTemplate(
+                 name='Paracetamol',
+                 presentation='   ',
+                 usage_instructions='Tomar 1 comprimido',
+                 creator=self.user
+             )
+
+             with self.assertRaises(ValidationError) as cm:
+                 drug_template.clean()
+             self.assertIn('presentation', cm.exception.message_dict)
+
+         def test_drug_template_clean_method_empty_usage_instructions(self):
+             """Test clean method with empty usage instructions."""
+             drug_template = DrugTemplate(
+                 name='Paracetamol',
+                 presentation='500mg comprimidos',
+                 usage_instructions='',
+                 creator=self.user
+             )
+
+             with self.assertRaises(ValidationError) as cm:
+                 drug_template.clean()
+             self.assertIn('usage_instructions', cm.exception.message_dict)
+
+         def test_drug_template_clean_method_whitespace_usage_instructions(self):
+             """Test clean method with whitespace-only usage instructions."""
+             drug_template = DrugTemplate(
+                 name='Paracetamol',
+                 presentation='500mg comprimidos',
+                 usage_instructions='   ',
+                 creator=self.user
+             )
+
+             with self.assertRaises(ValidationError) as cm:
+                 drug_template.clean()
+             self.assertIn('usage_instructions', cm.exception.message_dict)
+
+         def test_drug_template_meta_options(self):
+             """Test Meta class options."""
+             drug_template1 = DrugTemplate.objects.create(
+                 name='Zebra Drug',
+                 presentation='500mg',
+                 usage_instructions='Test',
+                 creator=self.user
+             )
+             drug_template2 = DrugTemplate.objects.create(
+                 name='Alpha Drug',
+                 presentation='250mg',
+                 usage_instructions='Test',
+                 creator=self.user
+             )
+
+             # Test ordering by name
+             templates = list(DrugTemplate.objects.all())
+             self.assertEqual(templates[0].name, 'Alpha Drug')
+             self.assertEqual(templates[1].name, 'Zebra Drug')
+
+         def test_drug_template_related_name(self):
+             """Test related_name for creator foreign key."""
+             drug_template = DrugTemplate.objects.create(
+                 name='Test Drug',
+                 presentation='500mg',
+                 usage_instructions='Test instructions',
+                 creator=self.user
+             )
+
+             # Test that the related_name works
+             self.assertIn(drug_template, self.user.drug_templates.all())
+
+         def test_drug_template_cascade_delete(self):
+             """Test that deleting a user cascades to their drug templates."""
+             drug_template = DrugTemplate.objects.create(
+                 name='Test Drug',
+                 presentation='500mg',
+                 usage_instructions='Test instructions',
+                 creator=self.user
+             )
+
+             template_id = drug_template.id
+             self.user.delete()
+
+             # Drug template should be deleted when user is deleted
+             self.assertFalse(DrugTemplate.objects.filter(id=template_id).exists())
+
+
+     class DrugTemplateFormTest(TestCase):
+         def setUp(self):
+             self.user = User.objects.create_user(
+                 username='testuser',
+                 email='test@example.com',
+                 password='testpass123',
+                 first_name='Test',
+                 last_name='User'
+             )
+
+         def test_drug_template_form_valid_data(self):
+             """Test form with valid data."""
+             form_data = {
+                 'name': 'Paracetamol',
+                 'presentation': '500mg comprimidos',
+                 'usage_instructions': 'Tomar 1 comprimido de 8 em 8 horas para dor ou febre',
+                 'is_public': True
+             }
+             form = DrugTemplateForm(data=form_data, user=self.user)
+             self.assertTrue(form.is_valid())
+
+         def test_drug_template_form_missing_required_fields(self):
+             """Test form with missing required fields."""
+             form_data = {}
+             form = DrugTemplateForm(data=form_data, user=self.user)
+             self.assertFalse(form.is_valid())
+             self.assertIn('name', form.errors)
+             self.assertIn('presentation', form.errors)
+             self.assertIn('usage_instructions', form.errors)
+
+         def test_drug_template_form_duplicate_name_validation(self):
+             """Test that duplicate names by same user are prevented."""
+             # Create an existing drug template
+             DrugTemplate.objects.create(
+                 name='Paracetamol',
+                 presentation='250mg',
+                 usage_instructions='Test',
+                 creator=self.user
+             )
+
+             # Try to create another with same name
+             form_data = {
+                 'name': 'Paracetamol',  # Same name
+                 'presentation': '500mg comprimidos',
+                 'usage_instructions': 'Tomar 1 comprimido de 8 em 8 horas para dor ou febre',
+                 'is_public': False
+             }
+             form = DrugTemplateForm(data=form_data, user=self.user)
+             self.assertFalse(form.is_valid())
+             self.assertIn('name', form.errors)
+             self.assertIn('já possui um template', str(form.errors['name']))
+
+         def test_drug_template_form_duplicate_name_case_insensitive(self):
+             """Test that duplicate name validation is case insensitive."""
+             # Create an existing drug template
+             DrugTemplate.objects.create(
+                 name='paracetamol',
+                 presentation='250mg',
+                 usage_instructions='Test',
+                 creator=self.user
+             )
+
+             # Try to create another with same name but different case
+             form_data = {
+                 'name': 'PARACETAMOL',  # Same name, different case
+                 'presentation': '500mg comprimidos',
+                 'usage_instructions': 'Tomar 1 comprimido de 8 em 8 horas para dor ou febre',
+                 'is_public': False
+             }
+             form = DrugTemplateForm(data=form_data, user=self.user)
+             self.assertFalse(form.is_valid())
+             self.assertIn('name', form.errors)
+
+         def test_drug_template_form_short_usage_instructions(self):
+             """Test validation for short usage instructions."""
+             form_data = {
+                 'name': 'Paracetamol',
+                 'presentation': '500mg comprimidos',
+                 'usage_instructions': 'Short',  # Less than 10 characters
+                 'is_public': False
+             }
+             form = DrugTemplateForm(data=form_data, user=self.user)
+             self.assertFalse(form.is_valid())
+             self.assertIn('usage_instructions', form.errors)
+             self.assertIn('pelo menos 10 caracteres', str(form.errors['usage_instructions']))
+
+         def test_drug_template_form_whitespace_trimming(self):
+             """Test that whitespace is properly trimmed and validated."""
+             form_data = {
+                 'name': '   ',  # Only whitespace
+                 'presentation': '   ',  # Only whitespace
+                 'usage_instructions': '   ',  # Only whitespace
+                 'is_public': False
+             }
+             form = DrugTemplateForm(data=form_data, user=self.user)
+             self.assertFalse(form.is_valid())
+             self.assertIn('name', form.errors)
+             self.assertIn('presentation', form.errors)
+             self.assertIn('usage_instructions', form.errors)
+
+         def test_drug_template_form_save_sets_creator(self):
+             """Test that form save method sets creator correctly."""
+             form_data = {
+                 'name': 'Paracetamol',
+                 'presentation': '500mg comprimidos',
+                 'usage_instructions': 'Tomar 1 comprimido de 8 em 8 horas para dor ou febre',
+                 'is_public': True
+             }
+             form = DrugTemplateForm(data=form_data, user=self.user)
+             self.assertTrue(form.is_valid())
+
+             drug_template = form.save()
+             self.assertEqual(drug_template.creator, self.user)
+             self.assertEqual(drug_template.name, 'Paracetamol')
+
+         def test_drug_template_form_widget_classes(self):
+             """Test that form widgets have correct CSS classes."""
+             form = DrugTemplateForm(user=self.user)
+
+             # Check that widgets have Bootstrap classes
+             self.assertIn('form-control', form.fields['name'].widget.attrs['class'])
+             self.assertIn('form-control', form.fields['presentation'].widget.attrs['class'])
+             self.assertIn('form-control', form.fields['usage_instructions'].widget.attrs['class'])
+             self.assertIn('markdown-editor', form.fields['usage_instructions'].widget.attrs['class'])
+             self.assertIn('form-check-input', form.fields['is_public'].widget.attrs['class'])
+
+             # Check markdown editor attributes
+             self.assertEqual(
+                 form.fields['usage_instructions'].widget.attrs['data-easymde'],
+                 'true'
+             )
+
+
+09:33
+
+● Now I'll add comprehensive tests for the new PrescriptionTemplate models:
+
+● Update(/home/carlos/projects/eqmd/apps/drugtemplates/tests.py)
+  ⎿  Updated /home/carlos/projects/eqmd/apps/drugtemplates/tests.py with 1 addition and 1 removal
+       2    from django.contrib.auth import get_user_model
+       3    from django.core.exceptions import ValidationError
+       4    from django.urls import reverse
+       5 -  from .models import DrugTemplate
+       5 +  from .models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
+       6    from .forms import DrugTemplateForm
+       7
+       8    User = get_user_model()
+
+● Update(/home/carlos/projects/eqmd/apps/drugtemplates/tests.py)
+  ⎿  Error: Found 17 matches of the string to replace, but replace_all is false. To replace all occurrences, set replace_all to true. To replace only one occurrence,
+     please provide more context to uniquely identify the instance.
+     String:         )
+
+09:33
+
+● Let me be more specific with the replacement:
+
+● Update(/home/carlos/projects/eqmd/apps/drugtemplates/tests.py)
+  ⎿  Updated /home/carlos/projects/eqmd/apps/drugtemplates/tests.py with 415 additions
+       339                form.fields['usage_instructions'].widget.attrs['data-easymde'],
+       340                'true'
+       341            )
+       342 +
+       343 +
+       344 +  class PrescriptionTemplateModelTest(TestCase):
+       345 +      def setUp(self):
+       346 +          self.user = User.objects.create_user(
+       347 +              username='testuser',
+       348 +              email='test@example.com',
+       349 +              password='testpass123',
+       350 +              first_name='Test',
+       351 +              last_name='User'
+       352 +          )
+       353 +
+       354 +      def test_prescription_template_creation(self):
+       355 +          """Test creating a prescription template instance."""
+       356 +          prescription_template = PrescriptionTemplate.objects.create(
+       357 +              name='Template de Hipertensão',
+       358 +              creator=self.user,
+       359 +              is_public=True
+       360 +          )
+       361 +
+       362 +          self.assertEqual(prescription_template.name, 'Template de Hipertensão')
+       363 +          self.assertEqual(prescription_template.creator, self.user)
+       364 +          self.assertTrue(prescription_template.is_public)
+       365 +          self.assertIsNotNone(prescription_template.created_at)
+       366 +          self.assertIsNotNone(prescription_template.updated_at)
+       367 +
+       368 +      def test_prescription_template_str_method(self):
+       369 +          """Test string representation of prescription template."""
+       370 +          prescription_template = PrescriptionTemplate.objects.create(
+       371 +              name='Template de Diabetes',
+       372 +              creator=self.user
+       373 +          )
+       374 +
+       375 +          self.assertEqual(str(prescription_template), 'Template de Diabetes')
+       376 +
+       377 +      def test_prescription_template_get_absolute_url(self):
+       378 +          """Test get_absolute_url method."""
+       379 +          prescription_template = PrescriptionTemplate.objects.create(
+       380 +              name='Template de Gripe',
+       381 +              creator=self.user
+       382 +          )
+       383 +
+       384 +          expected_url = reverse('drugtemplates:prescription_template_detail', kwargs={'pk': prescription_template.pk})
+       385 +          self.assertEqual(prescription_template.get_absolute_url(), expected_url)
+       386 +
+       387 +      def test_prescription_template_default_values(self):
+       388 +          """Test default values for prescription template fields."""
+       389 +          prescription_template = PrescriptionTemplate.objects.create(
+       390 +              name='Template Teste',
+       391 +              creator=self.user
+       392 +          )
+       393 +
+       394 +          self.assertFalse(prescription_template.is_public)  # Default should be False
+       395 +
+       396 +      def test_prescription_template_clean_method_valid(self):
+       397 +          """Test clean method with valid data."""
+       398 +          prescription_template = PrescriptionTemplate(
+       399 +              name='Template Válido',
+       400 +              creator=self.user
+       401 +          )
+       402 +
+       403 +          # Should not raise ValidationError
+       404 +          prescription_template.clean()
+       405 +
+       406 +      def test_prescription_template_clean_method_empty_name(self):
+       407 +          """Test clean method with empty name."""
+       408 +          prescription_template = PrescriptionTemplate(
+       409 +              name='',
+       410 +              creator=self.user
+       411 +          )
+       412 +
+       413 +          with self.assertRaises(ValidationError) as cm:
+       414 +              prescription_template.clean()
+       415 +          self.assertIn('name', cm.exception.message_dict)
+       416 +
+       417 +      def test_prescription_template_clean_method_whitespace_name(self):
+       418 +          """Test clean method with whitespace-only name."""
+       419 +          prescription_template = PrescriptionTemplate(
+       420 +              name='   ',
+       421 +              creator=self.user
+       422 +          )
+       423 +
+       424 +          with self.assertRaises(ValidationError) as cm:
+       425 +              prescription_template.clean()
+       426 +          self.assertIn('name', cm.exception.message_dict)
+       427 +
+       428 +      def test_prescription_template_meta_options(self):
+       429 +          """Test Meta class options."""
+       430 +          template1 = PrescriptionTemplate.objects.create(
+       431 +              name='Zebra Template',
+       432 +              creator=self.user
+       433 +          )
+       434 +          template2 = PrescriptionTemplate.objects.create(
+       435 +              name='Alpha Template',
+       436 +              creator=self.user
+       437 +          )
+       438 +
+       439 +          # Test ordering by name
+       440 +          templates = list(PrescriptionTemplate.objects.all())
+       441 +          self.assertEqual(templates[0].name, 'Alpha Template')
+       442 +          self.assertEqual(templates[1].name, 'Zebra Template')
+       443 +
+       444 +      def test_prescription_template_related_name(self):
+       445 +          """Test related_name for creator foreign key."""
+       446 +          prescription_template = PrescriptionTemplate.objects.create(
+       447 +              name='Test Template',
+       448 +              creator=self.user
+       449 +          )
+       450 +
+       451 +          # Test that the related_name works
+       452 +          self.assertIn(prescription_template, self.user.prescription_templates.all())
+       453 +
+       454 +      def test_prescription_template_cascade_delete(self):
+       455 +          """Test that deleting a user cascades to their prescription templates."""
+       456 +          prescription_template = PrescriptionTemplate.objects.create(
+       457 +              name='Test Template',
+       458 +              creator=self.user
+       459 +          )
+       460 +
+       461 +          template_id = prescription_template.id
+       462 +          self.user.delete()
+       463 +
+       464 +          # Prescription template should be deleted when user is deleted
+       465 +          self.assertFalse(PrescriptionTemplate.objects.filter(id=template_id).exists())
+       466 +
+       467 +
+       468 +  class PrescriptionTemplateItemModelTest(TestCase):
+       469 +      def setUp(self):
+       470 +          self.user = User.objects.create_user(
+       471 +              username='testuser',
+       472 +              email='test@example.com',
+       473 +              password='testpass123',
+       474 +              first_name='Test',
+       475 +              last_name='User'
+       476 +          )
+       477 +          self.prescription_template = PrescriptionTemplate.objects.create(
+       478 +              name='Template de Hipertensão',
+       479 +              creator=self.user
+       480 +          )
+       481 +
+       482 +      def test_prescription_template_item_creation(self):
+       483 +          """Test creating a prescription template item instance."""
+       484 +          item = PrescriptionTemplateItem.objects.create(
+       485 +              template=self.prescription_template,
+       486 +              drug_name='Losartana',
+       487 +              presentation='50mg comprimidos',
+       488 +              usage_instructions='Tomar 1 comprimido pela manhã',
+       489 +              quantity='30 comprimidos',
+       490 +              order=1
+       491 +          )
+       492 +
+       493 +          self.assertEqual(item.template, self.prescription_template)
+       494 +          self.assertEqual(item.drug_name, 'Losartana')
+       495 +          self.assertEqual(item.presentation, '50mg comprimidos')
+       496 +          self.assertEqual(item.usage_instructions, 'Tomar 1 comprimido pela manhã')
+       497 +          self.assertEqual(item.quantity, '30 comprimidos')
+       498 +          self.assertEqual(item.order, 1)
+       499 +          self.assertIsNotNone(item.created_at)
+       500 +          self.assertIsNotNone(item.updated_at)
+       501 +
+       502 +      def test_prescription_template_item_str_method(self):
+       503 +          """Test string representation of prescription template item."""
+       504 +          item = PrescriptionTemplateItem.objects.create(
+       505 +              template=self.prescription_template,
+       506 +              drug_name='Atenolol',
+       507 +              presentation='25mg comprimidos',
+       508 +              usage_instructions='Tomar 1 comprimido pela manhã',
+       509 +              quantity='30 comprimidos',
+       510 +              order=1
+       511 +          )
+       512 +
+       513 +          self.assertEqual(str(item), 'Atenolol - 25mg comprimidos')
+       514 +
+       515 +      def test_prescription_template_item_default_order(self):
+       516 +          """Test default value for order field."""
+       517 +          item = PrescriptionTemplateItem.objects.create(
+       518 +              template=self.prescription_template,
+       519 +              drug_name='Hidroclorotiazida',
+       520 +              presentation='25mg comprimidos',
+       521 +              usage_instructions='Tomar 1 comprimido pela manhã',
+       522 +              quantity='30 comprimidos'
+       523 +          )
+       524 +
+       525 +          self.assertEqual(item.order, 0)  # Default should be 0
+       526 +
+       527 +      def test_prescription_template_item_clean_method_valid(self):
+       528 +          """Test clean method with valid data."""
+       529 +          item = PrescriptionTemplateItem(
+       530 +              template=self.prescription_template,
+       531 +              drug_name='Captopril',
+       532 +              presentation='25mg comprimidos',
+       533 +              usage_instructions='Tomar 1 comprimido de 12 em 12 horas',
+       534 +              quantity='60 comprimidos',
+       535 +              order=1
+       536 +          )
+       537 +
+       538 +          # Should not raise ValidationError
+       539 +          item.clean()
+       540 +
+       541 +      def test_prescription_template_item_clean_method_empty_drug_name(self):
+       542 +          """Test clean method with empty drug_name."""
+       543 +          item = PrescriptionTemplateItem(
+       544 +              template=self.prescription_template,
+       545 +              drug_name='',
+       546 +              presentation='25mg comprimidos',
+       547 +              usage_instructions='Tomar 1 comprimido',
+       548 +              quantity='30 comprimidos'
+       549 +          )
+       550 +
+       551 +          with self.assertRaises(ValidationError) as cm:
+       552 +              item.clean()
+       553 +          self.assertIn('drug_name', cm.exception.message_dict)
+       554 +
+       555 +      def test_prescription_template_item_clean_method_whitespace_drug_name(self):
+       556 +          """Test clean method with whitespace-only drug_name."""
+       557 +          item = PrescriptionTemplateItem(
+       558 +              template=self.prescription_template,
+       559 +              drug_name='   ',
+       560 +              presentation='25mg comprimidos',
+       561 +              usage_instructions='Tomar 1 comprimido',
+       562 +              quantity='30 comprimidos'
+       563 +          )
+       564 +
+       565 +          with self.assertRaises(ValidationError) as cm:
+       566 +              item.clean()
+       567 +          self.assertIn('drug_name', cm.exception.message_dict)
+       568 +
+       569 +      def test_prescription_template_item_clean_method_empty_presentation(self):
+       570 +          """Test clean method with empty presentation."""
+       571 +          item = PrescriptionTemplateItem(
+       572 +              template=self.prescription_template,
+       573 +              drug_name='Enalapril',
+       574 +              presentation='',
+       575 +              usage_instructions='Tomar 1 comprimido',
+       576 +              quantity='30 comprimidos'
+       577 +          )
+       578 +
+       579 +          with self.assertRaises(ValidationError) as cm:
+       580 +              item.clean()
+       581 +          self.assertIn('presentation', cm.exception.message_dict)
+       582 +
+       583 +      def test_prescription_template_item_clean_method_empty_usage_instructions(self):
+       584 +          """Test clean method with empty usage_instructions."""
+       585 +          item = PrescriptionTemplateItem(
+       586 +              template=self.prescription_template,
+       587 +              drug_name='Enalapril',
+       588 +              presentation='10mg comprimidos',
+       589 +              usage_instructions='',
+       590 +              quantity='30 comprimidos'
+       591 +          )
+       592 +
+       593 +          with self.assertRaises(ValidationError) as cm:
+       594 +              item.clean()
+       595 +          self.assertIn('usage_instructions', cm.exception.message_dict)
+       596 +
+       597 +      def test_prescription_template_item_clean_method_empty_quantity(self):
+       598 +          """Test clean method with empty quantity."""
+       599 +          item = PrescriptionTemplateItem(
+       600 +              template=self.prescription_template,
+       601 +              drug_name='Enalapril',
+       602 +              presentation='10mg comprimidos',
+       603 +              usage_instructions='Tomar 1 comprimido pela manhã',
+       604 +              quantity=''
+       605 +          )
+       606 +
+       607 +          with self.assertRaises(ValidationError) as cm:
+       608 +              item.clean()
+       609 +          self.assertIn('quantity', cm.exception.message_dict)
+       610 +
+       611 +      def test_prescription_template_item_meta_options(self):
+       612 +          """Test Meta class options."""
+       613 +          item1 = PrescriptionTemplateItem.objects.create(
+       614 +              template=self.prescription_template,
+       615 +              drug_name='Zebra Drug',
+       616 +              presentation='10mg',
+       617 +              usage_instructions='Test',
+       618 +              quantity='30',
+       619 +              order=2
+       620 +          )
+       621 +          item2 = PrescriptionTemplateItem.objects.create(
+       622 +              template=self.prescription_template,
+       623 +              drug_name='Alpha Drug',
+       624 +              presentation='20mg',
+       625 +              usage_instructions='Test',
+       626 +              quantity='30',
+       627 +              order=1
+       628 +          )
+       629 +
+       630 +          # Test ordering by template, order, drug_name
+       631 +          items = list(PrescriptionTemplateItem.objects.all())
+       632 +          self.assertEqual(items[0].order, 1)  # Should be ordered by order first
+       633 +          self.assertEqual(items[1].order, 2)
+       634 +
+       635 +      def test_prescription_template_item_foreign_key_relationship(self):
+       636 +          """Test foreign key relationship with PrescriptionTemplate."""
+       637 +          item = PrescriptionTemplateItem.objects.create(
+       638 +              template=self.prescription_template,
+       639 +              drug_name='Metformina',
+       640 +              presentation='850mg comprimidos',
+       641 +              usage_instructions='Tomar 1 comprimido antes das refeições',
+       642 +              quantity='90 comprimidos',
+       643 +              order=1
+       644 +          )
+       645 +
+       646 +          # Test that the relationship works
+       647 +          self.assertIn(item, self.prescription_template.items.all())
+       648 +
+       649 +      def test_prescription_template_item_cascade_delete(self):
+       650 +          """Test that deleting a prescription template cascades to its items."""
+       651 +          item = PrescriptionTemplateItem.objects.create(
+       652 +              template=self.prescription_template,
+       653 +              drug_name='Glibenclamida',
+       654 +              presentation='5mg comprimidos',
+       655 +              usage_instructions='Tomar 1 comprimido antes do café da manhã',
+       656 +              quantity='30 comprimidos',
+       657 +              order=1
+       658 +          )
+       659 +
+       660 +          item_id = item.id
+       661 +          self.prescription_template.delete()
+       662 +
+       663 +          # Item should be deleted when template is deleted
+       664 +          self.assertFalse(PrescriptionTemplateItem.objects.filter(id=item_id).exists())
+       665 +
+       666 +
+       667 +  class PrescriptionTemplateIntegrationTest(TestCase):
+       668 +      """Integration tests for PrescriptionTemplate and PrescriptionTemplateItem."""
+       669 +
+       670 +      def setUp(self):
+       671 +          self.user = User.objects.create_user(
+       672 +              username='testuser',
+       673 +              email='test@example.com',
+       674 +              password='testpass123',
+       675 +              first_name='Test',
+       676 +              last_name='User'
+       677 +          )
+       678 +
+       679 +      def test_prescription_template_with_multiple_items(self):
+       680 +          """Test prescription template with multiple items."""
+       681 +          template = PrescriptionTemplate.objects.create(
+       682 +              name='Template Completo de Hipertensão',
+       683 +              creator=self.user,
+       684 +              is_public=True
+       685 +          )
+       686 +
+       687 +          # Create multiple items
+       688 +          item1 = PrescriptionTemplateItem.objects.create(
+       689 +              template=template,
+       690 +              drug_name='Losartana',
+       691 +              presentation='50mg comprimidos',
+       692 +              usage_instructions='Tomar 1 comprimido pela manhã',
+       693 +              quantity='30 comprimidos',
+       694 +              order=1
+       695 +          )
+       696 +
+       697 +          item2 = PrescriptionTemplateItem.objects.create(
+       698 +              template=template,
+       699 +              drug_name='Hidroclorotiazida',
+       700 +              presentation='25mg comprimidos',
+       701 +              usage_instructions='Tomar 1 comprimido pela manhã',
+       702 +              quantity='30 comprimidos',
+       703 +              order=2
+       704 +          )
+       705 +
+       706 +          # Test that template has all items
+       707 +          self.assertEqual(template.items.count(), 2)
+       708 +          self.assertIn(item1, template.items.all())
+       709 +          self.assertIn(item2, template.items.all())
+       710 +
+       711 +          # Test ordering
+       712 +          ordered_items = list(template.items.all())
+       713 +          self.assertEqual(ordered_items[0].order, 1)
+       714 +          self.assertEqual(ordered_items[1].order, 2)
+       715 +
+       716 +      def test_prescription_template_items_ordering(self):
+       717 +          """Test that prescription template items are properly ordered."""
+       718 +          template = PrescriptionTemplate.objects.create(
+       719 +              name='Template com Ordem',
+       720 +              creator=self.user
+       721 +          )
+       722 +
+       723 +          # Create items in reverse order
+       724 +          item3 = PrescriptionTemplateItem.objects.create(
+       725 +              template=template,
+       726 +              drug_name='Terceiro',
+       727 +              presentation='10mg',
+       728 +              usage_instructions='Terceiro medicamento',
+       729 +              quantity='30',
+       730 +              order=3
+       731 +          )
+       732 +
+       733 +          item1 = PrescriptionTemplateItem.objects.create(
+       734 +              template=template,
+       735 +              drug_name='Primeiro',
+       736 +              presentation='10mg',
+       737 +              usage_instructions='Primeiro medicamento',
+       738 +              quantity='30',
+       739 +              order=1
+       740 +          )
+       741 +
+       742 +          item2 = PrescriptionTemplateItem.objects.create(
+       743 +              template=template,
+       744 +              drug_name='Segundo',
+       745 +              presentation='10mg',
+       746 +              usage_instructions='Segundo medicamento',
+       747 +              quantity='30',
+       748 +              order=2
+       749 +          )
+       750 +
+       751 +          # Test that items are returned in correct order
+       752 +          ordered_items = list(template.items.all())
+       753 +          self.assertEqual(len(ordered_items), 3)
+       754 +          self.assertEqual(ordered_items[0], item1)
+       755 +          self.assertEqual(ordered_items[1], item2)
+       756 +          self.assertEqual(ordered_items[2], item3)
+
+09:33
+  ⎿  Claude usage limit reached. Your limit will reset at 11am (America/Bahia).
+
+      • /upgrade to increase your usage limit.
+
+> please, dump all the current conversation session to a new file at @prompts/outprescriptons/ called current_session.md
+  ⎿  Listed directory prompts/outprescriptons/
+
+09:33
+  ⎿  Claude usage limit reached. Your limit will reset at 11am (America/Bahia).
+
+      • /upgrade to increase your usage limit.
+
+

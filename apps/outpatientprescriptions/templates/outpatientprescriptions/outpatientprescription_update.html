@@ -1,0 +1,750 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Editar Receita Ambulatorial - {{ prescription.patient.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'outpatientprescriptions/css/prescription_forms.css' %}">
+<style>
+.form-section {
+  background: #f8f9fa;
+  border-left: 4px solid #2c5aa0;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.375rem;
+}
+
+.form-section h6 {
+  color: #2c5aa0;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.readonly .form-control {
+  background-color: #f8f9fa;
+  opacity: 0.65;
+}
+
+.prescription-item-form {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  background: white;
+}
+
+.prescription-item-form.readonly {
+  background: #f8f9fa;
+}
+
+.required-field::after {
+  content: " *";
+  color: #dc3545;
+}
+</style>
+{% endblock extra_css %}
+
+{% block app_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'events:patient_timeline' patient_uuid=prescription.patient.pk %}">
+        {{ prescription.patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{{ prescription.get_absolute_url }}">
+        Receita Ambulatorial
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Editar</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-prescription text-medical-primary me-2"></i>
+    Editar Receita Ambulatorial
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{{ prescription.get_absolute_url }}" class="btn btn-outline-secondary me-2">
+      <i class="bi bi-eye me-1"></i>
+      Ver Detalhes
+    </a>
+    <a href="{% url 'outpatientprescriptions:outpatientprescription_list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar à Lista
+    </a>
+  </div>
+</div>
+
+<!-- Edit Window Warning -->
+{% if not can_edit %}
+  <div class="alert alert-warning" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>Atenção:</strong> Esta receita não pode mais ser editada. O prazo de 24 horas para edição expirou.
+  </div>
+{% endif %}
+
+<!-- Main Form Card -->
+<div class="card shadow-sm">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-file-text me-2"></i>
+      Editar Receita para {{ prescription.patient.name }}
+    </h5>
+  </div>
+  <div class="card-body">
+    <!-- Form Errors -->
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+      <h6 class="alert-heading">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Erro no formulário
+      </h6>
+      {% for error in form.non_field_errors %}
+        <p class="mb-0">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="prescription-form" class="needs-validation" novalidate>
+      {% csrf_token %}
+      
+      <!-- Patient Information Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-person-check me-2"></i>
+          Informações do Paciente
+        </h6>
+        {{ form.patient.as_hidden }}
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label">Paciente</label>
+              <div class="form-control-plaintext">
+                <strong>{{ prescription.patient.name }}</strong>
+                {% if prescription.patient.fiscal_number %}
+                  <small class="text-muted">- {{ prescription.patient.fiscal_number }}</small>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="{{ form.event_datetime.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-calendar-event me-1"></i>
+                {{ form.event_datetime.label }}
+              </label>
+              {{ form.event_datetime }}
+              {% if form.event_datetime.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.event_datetime.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prescription Details Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-file-earmark-medical me-2"></i>
+          Dados da Receita
+        </h6>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="{{ form.prescription_date.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-calendar me-1"></i>
+                {{ form.prescription_date.label }}
+              </label>
+              {{ form.prescription_date }}
+              {% if form.prescription_date.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.prescription_date.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="{{ form.status.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-check-circle me-1"></i>
+                {{ form.status.label }}
+              </label>
+              {{ form.status }}
+              {% if form.status.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.status.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-12">
+            <div class="mb-3">
+              <label for="{{ form.description.id_for_label }}" class="form-label">
+                <i class="bi bi-file-text me-1"></i>
+                {{ form.description.label }}
+              </label>
+              {{ form.description }}
+              {% if form.description.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.description.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-12">
+            <div class="mb-3">
+              <label for="{{ form.instructions.id_for_label }}" class="form-label">
+                <i class="bi bi-chat-text me-1"></i>
+                {{ form.instructions.label }}
+              </label>
+              {{ form.instructions }}
+              {% if form.instructions.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.instructions.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+              {% if form.instructions.help_text %}
+                <div class="form-text">{{ form.instructions.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prescription Items Section -->
+      <div class="form-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6>
+            <i class="bi bi-capsule me-2"></i>
+            Medicamentos
+          </h6>
+          {% if can_edit %}
+            <button type="button" class="btn btn-outline-primary btn-sm" id="add-item-btn">
+              <i class="bi bi-plus-circle me-1"></i>
+              Adicionar Medicamento
+            </button>
+          {% endif %}
+        </div>
+        
+        {{ management_form }}
+        <div id="prescription-items-container">
+          {% for form in formset %}
+            <div class="prescription-item-form p-3 mb-3 {% if not can_edit %}readonly{% endif %}" data-form-index="{{ forloop.counter0 }}">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">
+                  <i class="bi bi-pill me-1"></i>
+                  Medicamento {{ forloop.counter }}
+                </h6>
+                {% if can_edit and not forloop.first %}
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
+                    <i class="bi bi-trash me-1"></i>
+                    Remover
+                  </button>
+                {% endif %}
+              </div>
+              
+              <!-- Drug Template Selection -->
+              {% if can_edit %}
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <label class="form-label">
+                      <i class="bi bi-file-earmark-plus me-1"></i>
+                      Template de Medicamento
+                    </label>
+                    <select class="form-select drug-template-select" data-form-index="{{ forloop.counter0 }}">
+                      <option value="">Selecione um template (opcional)</option>
+                      {% for template in drug_templates %}
+                        <option value="{{ template.id }}" 
+                                data-name="{{ template.name }}"
+                                data-presentation="{{ template.presentation }}"
+                                data-instructions="{{ template.usage_instructions }}">
+                          {{ template.name }} - {{ template.presentation }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+              {% endif %}
+              
+              <!-- Form Fields -->
+              <div class="row">
+                <div class="col-md-6">
+                  {% if can_edit %}
+                    <div class="mb-3">
+                      <label for="{{ form.drug_name.id_for_label }}" class="form-label required-field">
+                        <i class="bi bi-capsule me-1"></i>
+                        {{ form.drug_name.label }}
+                      </label>
+                      {{ form.drug_name }}
+                      {% if form.drug_name.errors %}
+                        <div class="invalid-feedback d-block">
+                          {% for error in form.drug_name.errors %}
+                            {{ error }}
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+                      {% if form.drug_name.help_text %}
+                        <div class="form-text">{{ form.drug_name.help_text }}</div>
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <div class="mb-3">
+                      <label class="form-label">Medicamento</label>
+                      <div class="form-control-plaintext">{{ form.drug_name.value }}</div>
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6">
+                  {% if can_edit %}
+                    <div class="mb-3">
+                      <label for="{{ form.presentation.id_for_label }}" class="form-label required-field">
+                        <i class="bi bi-box me-1"></i>
+                        {{ form.presentation.label }}
+                      </label>
+                      {{ form.presentation }}
+                      {% if form.presentation.errors %}
+                        <div class="invalid-feedback d-block">
+                          {% for error in form.presentation.errors %}
+                            {{ error }}
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+                      {% if form.presentation.help_text %}
+                        <div class="form-text">{{ form.presentation.help_text }}</div>
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <div class="mb-3">
+                      <label class="form-label">Apresentação</label>
+                      <div class="form-control-plaintext">{{ form.presentation.value }}</div>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6">
+                  {% if can_edit %}
+                    <div class="mb-3">
+                      <label for="{{ form.quantity.id_for_label }}" class="form-label required-field">
+                        <i class="bi bi-123 me-1"></i>
+                        {{ form.quantity.label }}
+                      </label>
+                      {{ form.quantity }}
+                      {% if form.quantity.errors %}
+                        <div class="invalid-feedback d-block">
+                          {% for error in form.quantity.errors %}
+                            {{ error }}
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+                      {% if form.quantity.help_text %}
+                        <div class="form-text">{{ form.quantity.help_text }}</div>
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <div class="mb-3">
+                      <label class="form-label">Quantidade</label>
+                      <div class="form-control-plaintext">{{ form.quantity.value }}</div>
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.order.id_for_label }}" class="form-label">
+                      <i class="bi bi-arrow-up-down me-1"></i>
+                      {{ form.order.label }}
+                    </label>
+                    {{ form.order }}
+                    {% if form.order.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form.order.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    {% if form.order.help_text %}
+                      <div class="form-text">{{ form.order.help_text }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-12">
+                  {% if can_edit %}
+                    <div class="mb-3">
+                      <label for="{{ form.usage_instructions.id_for_label }}" class="form-label required-field">
+                        <i class="bi bi-file-text me-1"></i>
+                        {{ form.usage_instructions.label }}
+                      </label>
+                      {{ form.usage_instructions }}
+                      {% if form.usage_instructions.errors %}
+                        <div class="invalid-feedback d-block">
+                          {% for error in form.usage_instructions.errors %}
+                            {{ error }}
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+                      {% if form.usage_instructions.help_text %}
+                        <div class="form-text">{{ form.usage_instructions.help_text }}</div>
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <div class="mb-3">
+                      <label class="form-label">Instruções de Uso</label>
+                      <div class="form-control-plaintext">{{ form.usage_instructions.value }}</div>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              {% if form.DELETE %}
+                {{ form.DELETE }}
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          {% if can_edit %}
+            <button type="submit" name="status" value="draft" class="btn btn-outline-primary me-2">
+              <i class="bi bi-save me-1"></i>
+              Salvar como Rascunho
+            </button>
+            <button type="submit" name="status" value="finalized" class="btn btn-medical-primary">
+              <i class="bi bi-check-circle me-1"></i>
+              Finalizar Receita
+            </button>
+          {% else %}
+            <div class="text-muted">
+              <i class="bi bi-info-circle me-1"></i>
+              Esta receita não pode mais ser editada (prazo de 24h expirado)
+            </div>
+          {% endif %}
+        </div>
+        <div>
+          <a href="{{ prescription.get_absolute_url }}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Templates Sidebar -->
+{% if can_edit and prescription_templates %}
+<div class="card shadow-sm mt-4">
+  <div class="card-header bg-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-clipboard-plus me-2"></i>
+      Templates de Receita
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      {% for template in prescription_templates %}
+        <div class="col-md-6 col-lg-4 mb-2">
+          <button type="button" class="btn btn-outline-info btn-sm w-100 prescription-template-btn"
+                  data-template-id="{{ template.id }}"
+                  data-template-title="{{ template.title }}"
+                  data-template-content="{{ template.content }}">
+            <i class="bi bi-file-earmark-plus me-1"></i>
+            {{ template.title }}
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Audit Information -->
+<div class="card shadow-sm mt-4">
+  <div class="card-header bg-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-info-circle me-2"></i>
+      Informações de Auditoria
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-2">
+          <strong>Criado por:</strong><br>
+          <small class="text-muted">{{ prescription.created_by.get_full_name|default:prescription.created_by.email }}</small><br>
+          <small class="text-muted">{{ prescription.created_at|date:"d/m/Y H:i" }}</small>
+        </div>
+      </div>
+      <div class="col-md-6">
+        {% if prescription.updated_by %}
+          <div class="mb-2">
+            <strong>Última atualização:</strong><br>
+            <small class="text-muted">{{ prescription.updated_by.get_full_name|default:prescription.updated_by.email }}</small><br>
+            <small class="text-muted">{{ prescription.updated_at|date:"d/m/Y H:i" }}</small>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div>
+          <strong>Status:</strong> 
+          <span class="badge bg-{{ prescription.status|yesno:'success,warning' }}">
+            {{ prescription.get_status_display }}
+          </span>
+        </div>
+      </div>
+      <div class="col-md-6">
+        {% if patient_timeline_url %}
+          <a href="{{ patient_timeline_url }}" class="btn btn-outline-info btn-sm">
+            <i class="bi bi-clock-history me-1"></i>
+            Ver Timeline do Paciente
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Empty Form Template (Hidden) -->
+{% if can_edit %}
+<div id="empty-form-template" style="display: none;">
+  <div class="prescription-item-form p-3 mb-3" data-form-index="__prefix__">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="mb-0">
+        <i class="bi bi-pill me-1"></i>
+        Medicamento
+      </h6>
+      <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
+        <i class="bi bi-trash me-1"></i>
+        Remover
+      </button>
+    </div>
+    
+    <!-- Drug Template Selection -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <label class="form-label">
+          <i class="bi bi-file-earmark-plus me-1"></i>
+          Template de Medicamento
+        </label>
+        <select class="form-select drug-template-select" data-form-index="__prefix__">
+          <option value="">Selecione um template (opcional)</option>
+          {% for template in drug_templates %}
+            <option value="{{ template.id }}" 
+                    data-name="{{ template.name }}"
+                    data-presentation="{{ template.presentation }}"
+                    data-instructions="{{ template.usage_instructions }}">
+              {{ template.name }} - {{ template.presentation }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    
+    <!-- Form Fields -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label for="{{ empty_form.drug_name.id_for_label }}" class="form-label required-field">
+            <i class="bi bi-capsule me-1"></i>
+            {{ empty_form.drug_name.label }}
+          </label>
+          {{ empty_form.drug_name }}
+          {% if empty_form.drug_name.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in empty_form.drug_name.errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label for="{{ empty_form.presentation.id_for_label }}" class="form-label required-field">
+            <i class="bi bi-box me-1"></i>
+            {{ empty_form.presentation.label }}
+          </label>
+          {{ empty_form.presentation }}
+          {% if empty_form.presentation.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in empty_form.presentation.errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label for="{{ empty_form.quantity.id_for_label }}" class="form-label required-field">
+            <i class="bi bi-123 me-1"></i>
+            {{ empty_form.quantity.label }}
+          </label>
+          {{ empty_form.quantity }}
+          {% if empty_form.quantity.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in empty_form.quantity.errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="mb-3">
+          <label for="{{ empty_form.order.id_for_label }}" class="form-label">
+            <i class="bi bi-arrow-up-down me-1"></i>
+            {{ empty_form.order.label }}
+          </label>
+          {{ empty_form.order }}
+          {% if empty_form.order.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in empty_form.order.errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col-12">
+        <div class="mb-3">
+          <label for="{{ empty_form.usage_instructions.id_for_label }}" class="form-label required-field">
+            <i class="bi bi-file-text me-1"></i>
+            {{ empty_form.usage_instructions.label }}
+          </label>
+          {{ empty_form.usage_instructions }}
+          {% if empty_form.usage_instructions.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in empty_form.usage_instructions.errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    {% if empty_form.DELETE %}
+      {{ empty_form.DELETE }}
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if can_edit %}
+<script src="{% static 'outpatientprescriptions/js/prescription_forms.js' %}"></script>
+<script src="{% static 'outpatientprescriptions/js/drug_template_integration.js' %}"></script>
+<script>
+// Prescription template functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle prescription template selection
+  document.querySelectorAll('.prescription-template-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      const templateId = this.dataset.templateId;
+      const templateTitle = this.dataset.templateTitle;
+      const templateContent = this.dataset.templateContent;
+      
+      // Populate main form fields
+      const instructionsField = document.querySelector('#id_instructions');
+      const descriptionField = document.querySelector('#id_description');
+      
+      if (instructionsField) {
+        instructionsField.value = templateContent;
+      }
+      
+      if (descriptionField && !descriptionField.value) {
+        descriptionField.value = templateTitle;
+      }
+      
+      // Show notification
+      showNotification('Template de receita aplicado: ' + templateTitle, 'success');
+    });
+  });
+  
+  // Form submission handling for status buttons
+  document.querySelectorAll('button[type="submit"][name="status"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const statusField = document.querySelector('#id_status');
+      if (statusField) {
+        statusField.value = this.value;
+      }
+    });
+  });
+  
+  // Form validation
+  const form = document.querySelector('.needs-validation');
+  form.addEventListener('submit', function(event) {
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    form.classList.add('was-validated');
+  });
+});
+
+// Show notification function
+function showNotification(message, type = 'info') {
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  const appContent = document.querySelector('[data-bs-target="app_content"]') || document.querySelector('.container-fluid');
+  if (appContent) {
+    appContent.insertBefore(alertDiv, appContent.firstChild);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+      alertDiv.remove();
+    }, 3000);
+  }
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -71,6 +71,8 @@ INSTALLED_APPS = [
     "apps.mediafiles",  # Media files app
     "apps.historyandphysicals",  # History and Physical examination app
     "apps.sample_content",  # Sample content app
+    "apps.drugtemplates",  # Drug templates app
+    "apps.outpatientprescriptions",  # Outpatient prescriptions app
     # django-allauth
     "allauth",
     "allauth.account",

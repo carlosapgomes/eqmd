@@ -1,0 +1,155 @@
+{% extends "drugtemplates/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ prescription_template.name }} - Template de Prescrição{% endblock %}
+
+{% block drug_template_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-file-earmark-medical me-2"></i>
+        {{ prescription_template.name }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'drugtemplates:prescription_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+            {% if can_edit_template %}
+            <a href="{% url 'drugtemplates:prescription_update' pk=prescription_template.pk %}" class="btn btn-sm btn-primary">
+                <i class="bi bi-pencil"></i> Editar
+            </a>
+            {% endif %}
+            {% if can_delete_template %}
+            <a href="{% url 'drugtemplates:prescription_delete' pk=prescription_template.pk %}" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i> Excluir
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Template info -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações do Template
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <strong>Nome:</strong><br>
+                        {{ prescription_template.name }}
+                    </div>
+                    <div class="col-sm-6">
+                        <strong>Visibilidade:</strong><br>
+                        {% if prescription_template.is_public %}
+                            <span class="badge bg-success">Público</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Privado</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <strong>Criado por:</strong><br>
+                        {{ prescription_template.creator.get_full_name|default:prescription_template.creator.username }}
+                    </div>
+                    <div class="col-sm-6">
+                        <strong>Criado em:</strong><br>
+                        {{ prescription_template.created_at|date:"d/m/Y H:i" }}
+                    </div>
+                </div>
+                {% if prescription_template.updated_at != prescription_template.created_at %}
+                <hr>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <strong>Última atualização:</strong><br>
+                        {{ prescription_template.updated_at|date:"d/m/Y H:i" }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Estatísticas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total de medicamentos:</span>
+                    <strong>{{ items_count }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Uso em prescrições:</span>
+                    <strong>0</strong>
+                    <small class="text-muted d-block">Em breve</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template items -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            Medicamentos do Template ({{ items_count }})
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if template_items %}
+            <div class="row">
+                {% for item in template_items %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-start border-3 border-primary">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-capsule text-primary me-2"></i>
+                                        {{ item.drug_name }}
+                                    </h6>
+                                    {% if item.order %}
+                                        <span class="badge bg-light text-dark">#{{ item.order }}</span>
+                                    {% endif %}
+                                </div>
+                                <p class="card-text">
+                                    <strong>Apresentação:</strong><br>
+                                    {{ item.presentation }}
+                                </p>
+                                <p class="card-text">
+                                    <strong>Instruções de uso:</strong><br>
+                                    {{ item.usage_instructions|linebreaks }}
+                                </p>
+                                <p class="card-text mb-0">
+                                    <strong>Quantidade:</strong> {{ item.quantity }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                Este template ainda não possui medicamentos cadastrados.
+                {% if can_edit_template %}
+                    <a href="{% url 'drugtemplates:prescription_update' pk=prescription_template.pk %}" class="btn btn-sm btn-outline-primary ms-2">
+                        Adicionar medicamentos
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

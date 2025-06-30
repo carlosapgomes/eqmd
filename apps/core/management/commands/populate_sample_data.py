@@ -8,6 +8,8 @@ from faker import Faker
 from apps.hospitals.models import Hospital, Ward
 from apps.patients.models import Patient, PatientHospitalRecord, AllowedTag, Tag
 from apps.dailynotes.models import DailyNote
+from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
+from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
 
 User = get_user_model()
 fake = Faker('pt_BR')
@@ -30,7 +32,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.dry_run = options['dry_run']
-        
+
         if options['clear_existing']:
             self.clear_existing_data()
 
@@ -42,20 +44,41 @@ class Command(BaseCommand):
         self.create_tags()
         self.create_patients()
         self.create_daily_notes()
-        
+        self.create_drug_templates()
+        self.create_prescription_templates()
+        self.create_outpatient_prescriptions()
+
         self.display_completion_message()
 
     def clear_existing_data(self):
         if self.dry_run:
             self.stdout.write('Would clear existing sample data')
             return
-            
+
         self.stdout.write('Clearing existing sample data...')
-        DailyNote.objects.filter(created_by__username__startswith='sample_').delete()
+        # Clear in proper order to respect foreign key constraints
+
+        # First clear all events (including outpatient prescriptions and daily notes)
+        from apps.events.models import Event
+        Event.objects.filter(created_by__username__startswith='sample_').delete()
+
+        # Clear prescription templates and their items
+        PrescriptionTemplate.objects.filter(creator__username__startswith='sample_').delete()
+        # Clear drug templates
+        DrugTemplate.objects.filter(creator__username__startswith='sample_').delete()
+
+        # Clear tags (both Tag and AllowedTag instances)
+        Tag.objects.filter(created_by__username__startswith='sample_').delete()
+        AllowedTag.objects.filter(created_by__username__startswith='sample_').delete()
+
+        # Clear patients (now safe since events and tags are deleted)
         Patient.objects.filter(created_by__username__startswith='sample_').delete()
-        User.objects.filter(username__startswith='sample_').delete()
+
+        # Clear hospitals
         Hospital.objects.filter(name__startswith='Hospital ').delete()
-        AllowedTag.objects.filter(name__startswith='Tag ').delete()
+
+        # Clear users last (now safe since all dependent objects are deleted)
+        User.objects.filter(username__startswith='sample_').delete()
 
     def create_hospitals(self):
         self.stdout.write('Creating hospitals and wards...')
@@ -341,6 +364,339 @@ class Command(BaseCommand):
         
         self.stdout.write(f'Created {total_notes} daily notes')
 
+    def create_drug_templates(self):
+        self.stdout.write('Creating drug templates...')
+
+        # Realistic drug template data for Brazilian medical context
+        drug_templates_data = [
+            {
+                'name': 'Dipirona Sódica',
+                'presentation': '500mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral a cada 6 horas, se necessário para dor ou febre. Não exceder 4 comprimidos por dia.',
+                'is_public': True
+            },
+            {
+                'name': 'Paracetamol',
+                'presentation': '750mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral a cada 8 horas. Máximo 3 comprimidos por dia.',
+                'is_public': True
+            },
+            {
+                'name': 'Omeprazol',
+                'presentation': '20mg cápsula',
+                'usage_instructions': 'Tomar 1 cápsula por via oral em jejum, 30 minutos antes do café da manhã.',
+                'is_public': True
+            },
+            {
+                'name': 'Losartana Potássica',
+                'presentation': '50mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, preferencialmente pela manhã.',
+                'is_public': True
+            },
+            {
+                'name': 'Metformina',
+                'presentation': '850mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral 2 vezes ao dia, durante as refeições (café da manhã e jantar).',
+                'is_public': True
+            },
+            {
+                'name': 'Sinvastatina',
+                'presentation': '20mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, preferencialmente à noite.',
+                'is_public': True
+            },
+            {
+                'name': 'Captopril',
+                'presentation': '25mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral 2 vezes ao dia, em jejum (1 hora antes das refeições).',
+                'is_public': True
+            },
+            {
+                'name': 'Hidroclorotiazida',
+                'presentation': '25mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, preferencialmente pela manhã.',
+                'is_public': True
+            },
+            {
+                'name': 'Ácido Acetilsalicílico',
+                'presentation': '100mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, após o café da manhã.',
+                'is_public': True
+            },
+            {
+                'name': 'Atenolol',
+                'presentation': '50mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, preferencialmente pela manhã.',
+                'is_public': True
+            },
+            {
+                'name': 'Amoxicilina',
+                'presentation': '500mg cápsula',
+                'usage_instructions': 'Tomar 1 cápsula por via oral a cada 8 horas por 7 dias. Tomar com água, pode ser com alimentos.',
+                'is_public': False
+            },
+            {
+                'name': 'Azitromicina',
+                'presentation': '500mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia por 3 dias, em jejum (1 hora antes ou 2 horas após as refeições).',
+                'is_public': False
+            },
+            {
+                'name': 'Prednisona',
+                'presentation': '20mg comprimido',
+                'usage_instructions': 'Tomar conforme orientação médica. Geralmente 1 comprimido pela manhã, após o café da manhã.',
+                'is_public': False
+            },
+            {
+                'name': 'Diclofenaco Sódico',
+                'presentation': '50mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral a cada 8 horas, após as refeições. Usar pelo menor tempo possível.',
+                'is_public': False
+            },
+            {
+                'name': 'Furosemida',
+                'presentation': '40mg comprimido',
+                'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, preferencialmente pela manhã.',
+                'is_public': False
+            }
+        ]
+
+        self.drug_templates = []
+
+        for template_data in drug_templates_data:
+            if self.dry_run:
+                self.stdout.write(f'Would create drug template: {template_data["name"]}')
+                continue
+
+            creator = random.choice(self.users)
+
+            drug_template = DrugTemplate.objects.create(
+                name=template_data['name'],
+                presentation=template_data['presentation'],
+                usage_instructions=template_data['usage_instructions'],
+                creator=creator,
+                is_public=template_data['is_public']
+            )
+
+            self.drug_templates.append(drug_template)
+            visibility = 'público' if drug_template.is_public else 'privado'
+            self.stdout.write(f'  Created drug template: {drug_template.name} ({visibility})')
+
+        if not self.dry_run:
+            self.stdout.write(f'Created {len(self.drug_templates)} drug templates')
+
+    def create_prescription_templates(self):
+        self.stdout.write('Creating prescription templates...')
+
+        # Common prescription template scenarios
+        prescription_templates_data = [
+            {
+                'name': 'Hipertensão Arterial - Tratamento Inicial',
+                'is_public': True,
+                'items': [
+                    {
+                        'drug_name': 'Losartana Potássica',
+                        'presentation': '50mg comprimido',
+                        'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, preferencialmente pela manhã.',
+                        'quantity': '30 comprimidos',
+                        'order': 1
+                    },
+                    {
+                        'drug_name': 'Hidroclorotiazida',
+                        'presentation': '25mg comprimido',
+                        'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, preferencialmente pela manhã.',
+                        'quantity': '30 comprimidos',
+                        'order': 2
+                    }
+                ]
+            },
+            {
+                'name': 'Diabetes Mellitus Tipo 2 - Monoterapia',
+                'is_public': True,
+                'items': [
+                    {
+                        'drug_name': 'Metformina',
+                        'presentation': '850mg comprimido',
+                        'usage_instructions': 'Tomar 1 comprimido por via oral 2 vezes ao dia, durante as refeições (café da manhã e jantar).',
+                        'quantity': '60 comprimidos',
+                        'order': 1
+                    }
+                ]
+            },
+            {
+                'name': 'Dislipidemia - Tratamento com Estatina',
+                'is_public': True,
+                'items': [
+                    {
+                        'drug_name': 'Sinvastatina',
+                        'presentation': '20mg comprimido',
+                        'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia, preferencialmente à noite.',
+                        'quantity': '30 comprimidos',
+                        'order': 1
+                    }
+                ]
+            },
+            {
+                'name': 'Proteção Gástrica + Analgesia',
+                'is_public': True,
+                'items': [
+                    {
+                        'drug_name': 'Omeprazol',
+                        'presentation': '20mg cápsula',
+                        'usage_instructions': 'Tomar 1 cápsula por via oral em jejum, 30 minutos antes do café da manhã.',
+                        'quantity': '30 cápsulas',
+                        'order': 1
+                    },
+                    {
+                        'drug_name': 'Dipirona Sódica',
+                        'presentation': '500mg comprimido',
+                        'usage_instructions': 'Tomar 1 comprimido por via oral a cada 6 horas, se necessário para dor. Não exceder 4 comprimidos por dia.',
+                        'quantity': '20 comprimidos',
+                        'order': 2
+                    }
+                ]
+            },
+            {
+                'name': 'Infecção Respiratória - Antibiótico',
+                'is_public': False,
+                'items': [
+                    {
+                        'drug_name': 'Azitromicina',
+                        'presentation': '500mg comprimido',
+                        'usage_instructions': 'Tomar 1 comprimido por via oral uma vez ao dia por 3 dias, em jejum (1 hora antes ou 2 horas após as refeições).',
+                        'quantity': '3 comprimidos',
+                        'order': 1
+                    }
+                ]
+            }
+        ]
+
+        self.prescription_templates = []
+
+        for template_data in prescription_templates_data:
+            if self.dry_run:
+                self.stdout.write(f'Would create prescription template: {template_data["name"]}')
+                continue
+
+            creator = random.choice(self.users)
+            items_data = template_data.pop('items')
+
+            prescription_template = PrescriptionTemplate.objects.create(
+                name=template_data['name'],
+                creator=creator,
+                is_public=template_data['is_public']
+            )
+
+            # Create template items
+            for item_data in items_data:
+                PrescriptionTemplateItem.objects.create(
+                    template=prescription_template,
+                    **item_data
+                )
+
+            self.prescription_templates.append(prescription_template)
+            visibility = 'público' if prescription_template.is_public else 'privado'
+            self.stdout.write(f'  Created prescription template: {prescription_template.name} ({visibility}) with {len(items_data)} items')
+
+        if not self.dry_run:
+            self.stdout.write(f'Created {len(self.prescription_templates)} prescription templates')
+
+    def create_outpatient_prescriptions(self):
+        self.stdout.write('Creating outpatient prescriptions...')
+
+        if self.dry_run:
+            self.stdout.write('Would create 2-3 outpatient prescriptions per patient')
+            return
+
+        self.outpatient_prescriptions = []
+
+        # Create prescriptions for outpatients and some inpatients
+        eligible_patients = [p for p in self.patients if p.status in [Patient.Status.OUTPATIENT, Patient.Status.INPATIENT]]
+
+        for patient in eligible_patients:
+            # Create 2-3 prescriptions per patient with different dates
+            num_prescriptions = random.randint(2, 3)
+
+            for i in range(num_prescriptions):
+                # Create prescriptions from 60 days ago to today
+                days_ago = random.randint(0, 60)
+                prescription_date = timezone.now().date() - timedelta(days=days_ago)
+                event_datetime = timezone.now() - timedelta(days=days_ago,
+                                                          hours=random.randint(8, 18),
+                                                          minutes=random.randint(0, 59))
+
+                # Select a prescribing doctor (only doctors can prescribe)
+                doctors = [u for u in self.users if u.profession_type == 0]  # MEDICAL_DOCTOR
+                if not doctors:
+                    continue
+
+                prescriber = random.choice(doctors)
+
+                # Create prescription
+                prescription = OutpatientPrescription.objects.create(
+                    event_datetime=event_datetime,
+                    description=f'Receita médica - {patient.name}',
+                    patient=patient,
+                    created_by=prescriber,
+                    updated_by=prescriber,
+                    instructions=self.get_random_prescription_instructions(),
+                    status=random.choice(['draft', 'finalized']),
+                    prescription_date=prescription_date
+                )
+
+                # Add prescription items - either from templates or individual drugs
+                if random.random() < 0.4 and hasattr(self, 'prescription_templates') and self.prescription_templates:
+                    # 40% chance to use a prescription template
+                    template = random.choice(self.prescription_templates)
+                    prescription.copy_from_prescription_template(template)
+                else:
+                    # Create individual prescription items from drug templates
+                    num_items = random.randint(1, 4)
+                    available_drugs = list(self.drug_templates) if hasattr(self, 'drug_templates') else []
+
+                    if available_drugs:
+                        selected_drugs = random.sample(available_drugs, min(num_items, len(available_drugs)))
+
+                        for order, drug_template in enumerate(selected_drugs, 1):
+                            # Create prescription item
+                            prescription_item = PrescriptionItem.objects.create(
+                                prescription=prescription,
+                                drug_name=drug_template.name,
+                                presentation=drug_template.presentation,
+                                usage_instructions=drug_template.usage_instructions,
+                                quantity=self.get_random_quantity(),
+                                order=order,
+                                source_template=drug_template
+                            )
+
+                self.outpatient_prescriptions.append(prescription)
+
+        self.stdout.write(f'Created {len(self.outpatient_prescriptions)} outpatient prescriptions')
+
+    def get_random_prescription_instructions(self):
+        """Generate random prescription instructions."""
+        instructions = [
+            "Retornar em 30 dias para reavaliação. Manter dieta hipossódica e atividade física regular.",
+            "Controle da pressão arterial em casa. Retorno em 15 dias com exames laboratoriais.",
+            "Tomar medicações conforme prescrição. Evitar automedicação. Retorno em 1 mês.",
+            "Manter jejum de 12 horas antes dos exames de controle. Agendar retorno em 3 meses.",
+            "Seguir orientações nutricionais. Controle glicêmico domiciliar. Retorno em 2 meses.",
+            "Medicação de uso contínuo. Não interromper sem orientação médica. Retorno em 6 meses.",
+            "Evitar exposição solar excessiva durante o tratamento. Retorno se houver efeitos adversos.",
+            "Tomar medicação sempre no mesmo horário. Retorno em 45 dias para ajuste de dose."
+        ]
+        return random.choice(instructions)
+
+    def get_random_quantity(self):
+        """Generate random medication quantities."""
+        quantities = [
+            "30 comprimidos", "60 comprimidos", "90 comprimidos",
+            "20 cápsulas", "30 cápsulas", "60 cápsulas",
+            "1 frasco", "2 frascos", "100ml",
+            "15 comprimidos", "21 comprimidos", "28 comprimidos"
+        ]
+        return random.choice(quantities)
+
     def display_completion_message(self):
         if self.dry_run:
             self.stdout.write(self.style.SUCCESS('\nDRY RUN COMPLETED - No data was actually created'))
@@ -385,7 +741,15 @@ class Command(BaseCommand):
         self.stdout.write(f'Created {len(self.patients)} patients')
         self.stdout.write(f'Created {DailyNote.objects.count()} daily notes')
         self.stdout.write(f'Created {len(self.allowed_tags)} sample tags')
-        
+
+        # Add statistics for new data types
+        if hasattr(self, 'drug_templates'):
+            self.stdout.write(f'Created {len(self.drug_templates)} drug templates')
+        if hasattr(self, 'prescription_templates'):
+            self.stdout.write(f'Created {len(self.prescription_templates)} prescription templates')
+        if hasattr(self, 'outpatient_prescriptions'):
+            self.stdout.write(f'Created {len(self.outpatient_prescriptions)} outpatient prescriptions')
+
         self.stdout.write(self.style.SUCCESS('='*60))
         self.stdout.write(self.style.ERROR('Remember: All users password is "samplepass123"'))
         self.stdout.write(self.style.SUCCESS('='*60))

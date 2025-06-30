@@ -47,6 +47,14 @@ urlpatterns = [
         "sample-content/",
         include("apps.sample_content.urls", namespace="sample_content"),
     ),
+    path(
+        "drugtemplates/",
+        include("apps.drugtemplates.urls", namespace="drugtemplates"),
+    ),
+    path(
+        "prescriptions/",
+        include("apps.outpatientprescriptions.urls", namespace="outpatientprescriptions"),
+    ),
 ]
 
 # Serve media and static files during development

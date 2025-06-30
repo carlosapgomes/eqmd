@@ -85,7 +85,7 @@ class Event(models.Model):
             4: "bg-medical-danger",  # Exam Results
             5: "bg-medical-secondary",  # Exam Request
             6: "bg-medical-dark",  # Discharge Report
-            7: "bg-medical-light",  # Prescription
+            7: "bg-medical-teal",  # Prescription - Changed from bg-medical-light to bg-medical-teal
             8: "bg-medical-teal",  # Report
             9: "bg-info",  # Photo Series
             10: "bg-primary",  # Video Clip

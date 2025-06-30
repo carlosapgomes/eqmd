@@ -1,0 +1,139 @@
+{% extends "drugtemplates/base.html" %}
+{% load i18n %}
+
+{% block title %}Templates de Medicamentos{% endblock %}
+
+{% block drug_template_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-capsule drug-template-icon me-2"></i>
+        Templates de Medicamentos
+    </h1>
+</div>
+
+            <!-- Filters -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="name" class="form-label">Buscar por Nome</label>
+                            <input type="text" name="name" id="name" class="form-control" 
+                                   value="{{ name_search }}" placeholder="Digite o nome do medicamento">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="creator" class="form-label">Criado por</label>
+                            <select name="creator" id="creator" class="form-select">
+                                <option value="">Todos os criadores</option>
+                                {% for creator_id, first_name, last_name in available_creators %}
+                                    <option value="{{ creator_id }}" {% if selected_creator == creator_id|stringformat:"s" %}selected{% endif %}>
+                                        {{ first_name }} {{ last_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="visibility" class="form-label">Visibilidade</label>
+                            <select name="visibility" id="visibility" class="form-select">
+                                <option value="">Todos os templates</option>
+                                <option value="public" {% if selected_visibility == 'public' %}selected{% endif %}>Apenas públicos</option>
+                                <option value="private" {% if selected_visibility == 'private' %}selected{% endif %}>Apenas privados</option>
+                                <option value="mine" {% if selected_visibility == 'mine' %}selected{% endif %}>Apenas meus</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="sort" class="form-label">Ordenar por</label>
+                            <select name="sort" id="sort" class="form-select">
+                                <option value="name" {% if selected_sort == 'name' %}selected{% endif %}>Nome (A-Z)</option>
+                                <option value="name_desc" {% if selected_sort == 'name_desc' %}selected{% endif %}>Nome (Z-A)</option>
+                                <option value="created_at" {% if selected_sort == 'created_at' %}selected{% endif %}>Mais recentes</option>
+                                <option value="created_at_asc" {% if selected_sort == 'created_at_asc' %}selected{% endif %}>Mais antigos</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary me-2">Filtrar</button>
+                            <a href="{% url 'drugtemplates:list' %}" class="btn btn-outline-secondary">Limpar filtros</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Drug templates list -->
+            <div class="row">
+                {% for drug_template in drug_templates %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title mb-1">{{ drug_template.name }}</h5>
+                                    <small class="text-muted">{{ drug_template.presentation }}</small>
+                                </div>
+                                <div class="text-end">
+                                    {% if drug_template.is_public %}
+                                        <span class="badge bg-success">Público</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Privado</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">{{ drug_template.usage_instructions|truncatewords:20 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ drug_template.get_absolute_url }}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-eye"></i> Ver
+                                        </a>
+                                        {% if drug_template.creator == request.user %}
+                                        <a href="{% url 'drugtemplates:update' pk=drug_template.pk %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'drugtemplates:delete' pk=drug_template.pk %}" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted">
+                                <small>
+                                    Por {{ drug_template.creator.get_full_name|default:drug_template.creator.username }}
+                                    em {{ drug_template.created_at|date:"d/m/Y H:i" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Nenhum template de medicamento encontrado.
+                            {% if name_search or selected_creator or selected_visibility %}
+                                <a href="{% url 'drugtemplates:list' %}" class="btn btn-sm btn-outline-primary ms-2">Limpar filtros</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <nav aria-label="Navegação das páginas">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if name_search %}name={{ name_search }}&{% endif %}{% if selected_creator %}creator={{ selected_creator }}&{% endif %}{% if selected_visibility %}visibility={{ selected_visibility }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if name_search %}name={{ name_search }}&{% endif %}{% if selected_creator %}creator={{ selected_creator }}&{% endif %}{% if selected_visibility %}visibility={{ selected_visibility }}&{% endif %}{% if selected_sort %}sort={{ selected_sort }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+{% endblock %}

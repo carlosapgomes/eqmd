@@ -1,0 +1,483 @@
+{% extends "drugtemplates/base.html" %}
+{% load static %}
+
+{% block title %}{{ drugtemplate.name }} - Template de Medicamento{% endblock %}
+
+{% block extra_head %}
+<style>
+  .markdown-content {
+    line-height: 1.6;
+  }
+  
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3,
+  .markdown-content h4,
+  .markdown-content h5,
+  .markdown-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  
+  .markdown-content p {
+    margin-bottom: 1rem;
+  }
+  
+  .markdown-content ul,
+  .markdown-content ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+  }
+  
+  .markdown-content blockquote {
+    border-left: 4px solid #dee2e6;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #6c757d;
+  }
+  
+  .markdown-content code {
+    background-color: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+  }
+  
+  .markdown-content pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+  }
+
+  .template-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+
+  .usage-stats {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  }
+
+  /* Mobile-first responsive improvements */
+  @media (max-width: 991.98px) {
+    .mobile-action-buttons .btn {
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+    }
+    
+    .card-body {
+      padding: 1rem 0.75rem;
+    }
+    
+    .card-header {
+      padding: 0.75rem;
+    }
+    
+    .template-compact-info {
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    
+    .content-section {
+      margin-top: 1rem;
+    }
+  }
+  
+  @media (min-width: 992px) {
+    .desktop-layout {
+      display: flex;
+      gap: 1.5rem;
+    }
+    
+    .template-sidebar {
+      flex: 0 0 420px;
+      max-width: 420px;
+    }
+    
+    .content-main {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .template-sidebar .card-body {
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+    
+    .template-sidebar .collapse .row {
+      font-size: 0.875rem;
+    }
+    
+    .template-sidebar .btn[data-bs-toggle="collapse"] {
+      border: 1px solid #dee2e6;
+      transition: all 0.2s ease;
+    }
+    
+    .template-sidebar .btn[data-bs-toggle="collapse"]:hover {
+      background-color: #f8f9fa;
+      border-color: #adb5bd;
+    }
+    
+    .template-sidebar .btn[data-bs-toggle="collapse"][aria-expanded="true"] .bi-chevron-down {
+      transform: rotate(180deg);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block drug_template_content %}
+<!-- Header with breadcrumb and actions -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'drugtemplates:list' %}">
+        <i class="bi bi-prescription2 me-1"></i>
+        Templates de Medicamentos
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      {{ drugtemplate.name }}
+    </li>
+  </ol>
+</nav>
+
+<!-- Desktop Header with actions -->
+<div class="d-none d-lg-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-prescription2 text-medical-primary me-2"></i>
+    Template de Medicamento
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group me-2">
+      <button type="button" 
+              class="btn btn-outline-secondary btn-sm copy-content-btn" 
+              title="Copiar informações do template"
+              data-content="Nome: {{ drugtemplate.name|escape }}&#10;Apresentação: {{ drugtemplate.presentation|escape }}&#10;Instruções: {{ drugtemplate.usage_instructions|escape }}">
+        <i class="bi bi-clipboard me-1"></i>
+        Copiar
+      </button>
+    </div>
+    
+    {% if can_edit_template %}
+    <a href="{% url 'drugtemplates:update' pk=drugtemplate.pk %}" class="btn btn-medical-primary btn-sm me-2">
+      <i class="bi bi-pencil me-1"></i>
+      Editar
+    </a>
+    {% endif %}
+    
+    {% if can_delete_template %}
+    <a href="{% url 'drugtemplates:delete' pk=drugtemplate.pk %}" class="btn btn-outline-danger btn-sm me-2">
+      <i class="bi bi-trash me-1"></i>
+      Excluir
+    </a>
+    {% endif %}
+    
+    <a href="{% url 'drugtemplates:list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
+<!-- Mobile Header -->
+<div class="d-lg-none pt-3 pb-2 mb-3">
+  <h1 class="h3 mb-3">
+    <i class="bi bi-prescription2 text-medical-primary me-2"></i>
+    Template de Medicamento
+  </h1>
+  
+  <!-- Mobile Action Buttons -->
+  <div class="mobile-action-buttons">
+    <div class="btn-group-vertical btn-group-sm d-grid gap-1">
+      <div class="btn-group" role="group">
+        <button type="button" 
+                class="btn btn-outline-secondary copy-content-btn" 
+                title="Copiar informações"
+                data-content="Nome: {{ drugtemplate.name|escape }}&#10;Apresentação: {{ drugtemplate.presentation|escape }}&#10;Instruções: {{ drugtemplate.usage_instructions|escape }}">
+          <i class="bi bi-clipboard me-1"></i>
+          Copiar
+        </button>
+      </div>
+      
+      {% if can_edit_template or can_delete_template %}
+      <div class="btn-group" role="group">
+        {% if can_edit_template %}
+        <a href="{% url 'drugtemplates:update' pk=drugtemplate.pk %}" class="btn btn-medical-primary">
+          <i class="bi bi-pencil me-1"></i>
+          Editar
+        </a>
+        {% endif %}
+        {% if can_delete_template %}
+        <a href="{% url 'drugtemplates:delete' pk=drugtemplate.pk %}" class="btn btn-outline-danger">
+          <i class="bi bi-trash me-1"></i>
+          Excluir
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+      
+      <div class="btn-group" role="group">
+        <a href="{% url 'drugtemplates:list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>
+          Voltar
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile: Compact template info -->
+<div class="d-lg-none mb-3">
+  <div class="card shadow-sm template-compact-info">
+    <div class="card-body p-2">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="template-avatar bg-medical-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px; font-size: 1rem;">
+            {{ drugtemplate.name|first|upper }}
+          </div>
+          <div>
+            <h6 class="mb-0 fs-6">{{ drugtemplate.name }}</h6>
+            <small class="text-muted">{{ drugtemplate.presentation }}</small>
+          </div>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#templateDetailsCollapse" aria-expanded="false" aria-controls="templateDetailsCollapse">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      
+      <div class="collapse mt-2" id="templateDetailsCollapse">
+        <hr class="my-2">
+        <div class="row g-2">
+          <div class="col-6">
+            <small class="text-muted">Visibilidade:</small><br>
+            <span class="fw-medium">
+              {% if drugtemplate.is_public %}
+                <i class="bi bi-globe text-success me-1"></i>Público
+              {% else %}
+                <i class="bi bi-lock text-warning me-1"></i>Privado
+              {% endif %}
+            </span>
+          </div>
+          <div class="col-6">
+            <small class="text-muted">Uso Registrado:</small><br>
+            <span class="fw-medium">{{ drugtemplate.usage_count }} prescrições</span>
+          </div>
+          <div class="col-12">
+            <small class="text-muted">Criado por:</small><br>
+            <span class="fw-medium">{{ drugtemplate.creator.get_full_name|default:drugtemplate.creator.username }}</span>
+            <small class="text-muted ms-2">{{ drugtemplate.created_at|date:"d/m/Y H:i" }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Desktop: Optimized two-column layout -->
+<div class="d-none d-lg-block desktop-layout">
+  <!-- Template Information Sidebar -->
+  <div class="template-sidebar">
+    <div class="card shadow-sm">
+      <div class="card-body p-3">
+        <!-- Template Info Header -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="d-flex align-items-center">
+            <div class="template-avatar bg-medical-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
+              {{ drugtemplate.name|first|upper }}
+            </div>
+            <div>
+              <h6 class="mb-0 fs-6">{{ drugtemplate.name }}</h6>
+              <small class="text-muted">{{ drugtemplate.presentation }}</small>
+            </div>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm p-1" type="button" data-bs-toggle="collapse" data-bs-target="#desktopTemplateDetails" aria-expanded="false" aria-controls="desktopTemplateDetails" style="width: 28px; height: 28px;">
+            <i class="bi bi-chevron-down" style="font-size: 0.75rem;"></i>
+          </button>
+        </div>
+        
+        <!-- Collapsible Details -->
+        <div class="collapse" id="desktopTemplateDetails">
+          <hr class="my-2">
+          <div class="row g-2">
+            <div class="col-6">
+              <small class="text-muted">Visibilidade:</small><br>
+              <span class="fw-medium fs-7">
+                {% if drugtemplate.is_public %}
+                  <i class="bi bi-globe text-success me-1"></i>Público
+                {% else %}
+                  <i class="bi bi-lock text-warning me-1"></i>Privado
+                {% endif %}
+              </span>
+            </div>
+            <div class="col-6">
+              <small class="text-muted">Uso Registrado:</small><br>
+              <span class="fw-medium fs-7">{{ drugtemplate.usage_count }} prescrições</span>
+            </div>
+            <div class="col-12">
+              <small class="text-muted">Criado por:</small><br>
+              <div class="d-flex align-items-center">
+                <div class="avatar-sm bg-medical-teal text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; font-size: 0.65rem;">
+                  {{ drugtemplate.creator.get_full_name|default:drugtemplate.creator.username|first|upper }}
+                </div>
+                <div>
+                  <span class="fw-medium fs-7">{{ drugtemplate.creator.get_full_name|default:drugtemplate.creator.username }}</span><br>
+                  <small class="text-muted">{{ drugtemplate.created_at|date:"d/m/Y H:i" }}</small>
+                </div>
+              </div>
+            </div>
+            {% if drugtemplate.updated_at != drugtemplate.created_at %}
+            <div class="col-12">
+              <small class="text-muted">Atualizado em:</small><br>
+              <small class="text-muted">{{ drugtemplate.updated_at|date:"d/m/Y H:i" }}</small>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage Statistics Card -->
+    <div class="card shadow-sm mt-3">
+      <div class="card-header usage-stats">
+        <h6 class="card-title mb-0">
+          <i class="bi bi-graph-up me-2"></i>
+          Estatísticas de Uso
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted">Uso Registrado:</span>
+          <span class="fw-bold">{{ drugtemplate.usage_count }}</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="text-muted">Visibilidade:</span>
+          <span class="fw-bold">
+            {% if drugtemplate.is_public %}
+              <i class="bi bi-globe text-success me-1"></i>Público
+            {% else %}
+              <i class="bi bi-lock text-warning me-1"></i>Privado
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Main Content Area -->
+  <div class="content-main">
+    <div class="card shadow-sm">
+      <div class="card-header bg-medical-light">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-file-text me-2"></i>
+          Instruções de Uso
+        </h5>
+      </div>
+      <div class="card-body">
+        {% if drugtemplate.usage_instructions %}
+        <div class="markdown-content">
+          {{ drugtemplate.usage_instructions|linebreaks }}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-file-text text-muted" style="font-size: 2rem;"></i>
+          <p class="text-muted mt-2 mb-0">Nenhuma instrução de uso foi adicionada a este template.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Content Section -->
+<div class="d-lg-none content-section">
+  <div class="card shadow-sm">
+    <div class="card-header bg-medical-light">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-file-text me-2"></i>
+        Instruções de Uso
+      </h5>
+    </div>
+    <div class="card-body">
+      {% if drugtemplate.usage_instructions %}
+      <div class="markdown-content">
+        {{ drugtemplate.usage_instructions|linebreaks }}
+      </div>
+      {% else %}
+      <div class="text-center py-4">
+        <i class="bi bi-file-text text-muted" style="font-size: 2rem;"></i>
+        <p class="text-muted mt-2 mb-0">Nenhuma instrução de uso foi adicionada a este template.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  
+  .fs-7 {
+    font-size: 0.875rem;
+  }
+</style>
+
+<script>
+// Copy content functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const copyButtons = document.querySelectorAll('.copy-content-btn');
+    
+    copyButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            const content = this.getAttribute('data-content');
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(content).then(function() {
+                    showToast('Informações copiadas para área de transferência!', 'success');
+                }).catch(function() {
+                    showToast('Erro ao copiar informações.', 'error');
+                });
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = content;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('Informações copiadas para área de transferência!', 'success');
+                } catch(err) {
+                    showToast('Erro ao copiar informações.', 'error');
+                }
+                document.body.removeChild(textArea);
+            }
+        });
+    });
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 4000);
+    }
+});
+</script>
+{% endblock %}

@@ -5,7 +5,7 @@
 - [x] review use of crispy forms, consider removing it from some apps
 - [x] complete remove crispy forms from the project and update all documentation
 - [] add simplenotes app
-- [] brainstorm the best strategy to implement photos/photos series/video clips
+- [x] brainstorm the best strategy to implement photos/photos series/video clips
 - [] add examsresults app
 - [] add examsrequests app
 - [] add dischargereports app
@@ -14,7 +14,7 @@
 
 ## SampleContent
 
-[x] create sample_content app
+- [x] create sample_content app
 
 ## Dailynotes
 
@@ -34,18 +34,9 @@
 - [x] cleanup patients app templates
 - [x] remove crispy forms from patients app
 
-## Try this
+## Mediafiles
 
-Create the PRD in Gemini, with questions raised by Gemini, and answered by me. I review the PRD, point out changes required, more questions, repeat until we're both happy.
-
-Use task-master to generate tasks, and expand them.
-
-Tell claude to do tasks, in the recommended sequence.Create the PRD in Gemini, with questions raised by Gemini, and answered by me. I review the PRD, point out changes required, more questions, repeat until we're both happy.
-
-Use task-master to generate tasks, and expand them.
-
-Tell claude to do tasks, in the recommended sequence.
-
-### code investigations
-
-please explain to me how we are storing the video information, what is the relationship between events, mediafiles and videoclips.
+- [] incorporate filepond assets into the project static files
+- [] fix photos and photoseries caption text field styling
+- [] evaluate mediafiles event cards for UI/UX
+- [] evaluate create, edit, and details templates UI/UX visual polution

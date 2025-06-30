@@ -81,7 +81,7 @@ python manage.py setup_groups
 # Create sample tags (optional)
 python manage.py create_sample_tags
 
-# Basic usage - create all sample data
+# Create comprehensive sample data (hospitals, users, patients, daily notes, drug templates, prescriptions)
 python manage.py populate_sample_data
 
 # Assign users to hospitals if needed
@@ -195,9 +195,10 @@ After completing a database reset, verify:
 
 - [ ] Development server starts without errors: `python manage.py runserver`
 - [ ] Admin interface loads: `http://localhost:8000/admin/`
-- [ ] Can create test patients, events, and daily notes
+- [ ] Can create test patients, events, daily notes, drug templates, and prescriptions
 - [ ] Permissions system works correctly
 - [ ] Hospital context middleware functions properly
+- [ ] Drug templates and prescription functionality works
 
 ## Best Practices
 

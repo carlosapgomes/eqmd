@@ -1,0 +1,369 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Receita - {{ prescription.patient.name }}{% endblock %}
+
+{% block app_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-receipt text-medical-primary me-2"></i>
+    Receita Ambulatorial
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group me-2" role="group">
+      <a href="{% url 'outpatientprescriptions:outpatientprescription_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>
+        Voltar
+      </a>
+      <a href="{{ patient_timeline_url }}" class="btn btn-outline-primary">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline do Paciente
+      </a>
+    </div>
+    <div class="btn-group" role="group">
+      <a href="{% url 'outpatientprescriptions:outpatientprescription_print' prescription.pk %}" target="_blank" class="btn btn-medical-secondary">
+        <i class="bi bi-printer me-1"></i>
+        Imprimir
+      </a>
+      {% if can_edit and perms.events.change_event %}
+      <a href="{{ prescription.get_edit_url }}" class="btn btn-outline-primary">
+        <i class="bi bi-pencil me-1"></i>
+        Editar
+      </a>
+      {% endif %}
+      {% if can_delete and perms.events.delete_event %}
+      <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+        <i class="bi bi-trash me-1"></i>
+        Excluir
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Main Prescription Card -->
+<div class="row">
+  <div class="col-lg-8">
+    <!-- Prescription Header -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-medical-light">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-info-circle me-2"></i>
+          Informações da Receita
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-medical-primary">Paciente</h6>
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar-md bg-medical-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                {{ prescription.patient.name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-bold">{{ prescription.patient.name }}</div>
+                <small class="text-muted">ID: {{ prescription.patient.id|slice:":8" }}...</small>
+                {% if prescription.patient.fiscal_number %}
+                <br><small class="text-muted">CPF: {{ prescription.patient.fiscal_number }}</small>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold text-medical-primary">Data da Receita</h6>
+            <p class="mb-1 fw-medium">{{ prescription.prescription_date|date:"d/m/Y" }}</p>
+            <small class="text-muted">Criada em {{ prescription.event_datetime|date:"d/m/Y H:i" }}</small>
+          </div>
+        </div>
+        
+        <div class="row mt-3">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-medical-primary">Status</h6>
+            {% if prescription.status == 'draft' %}
+              <span class="badge bg-warning text-dark fs-6">
+                <i class="bi bi-pencil-square me-1"></i>
+                Rascunho
+              </span>
+            {% elif prescription.status == 'finalized' %}
+              <span class="badge bg-success fs-6">
+                <i class="bi bi-check-circle me-1"></i>
+                Finalizada
+              </span>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold text-medical-primary">Profissional</h6>
+            <p class="mb-1 fw-medium">
+              {{ prescription.created_by.get_full_name|default:prescription.created_by.username }}
+            </p>
+            <small class="text-muted">{{ prescription.created_by.profile.profession_display|default:"Profissional" }}</small>
+          </div>
+        </div>
+
+        {% if prescription.instructions %}
+        <div class="mt-3">
+          <h6 class="fw-bold text-medical-primary">Instruções Gerais</h6>
+          <div class="bg-light p-3 rounded">
+            <p class="mb-0">{{ prescription.instructions|linebreaks }}</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Prescription Items -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-medical-light d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-capsule me-2"></i>
+          Medicamentos Prescritos
+        </h5>
+        <span class="badge bg-medical-primary">
+          {{ prescription_items.count }} medicamento{{ prescription_items.count|pluralize }}
+        </span>
+      </div>
+      <div class="card-body p-0">
+        {% if prescription_items %}
+        <div class="list-group list-group-flush">
+          {% for item in prescription_items %}
+          <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center mb-2">
+                  <span class="badge bg-medical-secondary me-2">{{ forloop.counter }}</span>
+                  <h6 class="mb-0 fw-bold text-medical-primary">{{ item.drug_name }}</h6>
+                </div>
+                
+                <div class="row">
+                  <div class="col-lg-6">
+                    <small class="text-muted d-block mb-1">
+                      <i class="bi bi-box me-1"></i>
+                      <strong>Apresentação:</strong>
+                    </small>
+                    <p class="mb-2">{{ item.presentation }}</p>
+                  </div>
+                  <div class="col-lg-6">
+                    <small class="text-muted d-block mb-1">
+                      <i class="bi bi-calculator me-1"></i>
+                      <strong>Quantidade:</strong>
+                    </small>
+                    <p class="mb-2 fw-medium">{{ item.quantity }}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <small class="text-muted d-block mb-1">
+                    <i class="bi bi-clipboard-pulse me-1"></i>
+                    <strong>Instruções de Uso:</strong>
+                  </small>
+                  <div class="bg-light p-2 rounded">
+                    <p class="mb-0 small">{{ item.usage_instructions|linebreaks }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-capsule text-muted" style="font-size: 2rem;"></i>
+          <p class="text-muted mt-2">Nenhum medicamento prescrito</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+    <!-- Audit Information -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-light">
+        <h6 class="card-title mb-0">
+          <i class="bi bi-clock-history me-2"></i>
+          Informações de Auditoria
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <small class="text-muted d-block">Criado em</small>
+          <div class="fw-medium">{{ prescription.created_at|date:"d/m/Y H:i:s" }}</div>
+          <small class="text-muted">
+            por {{ prescription.created_by.get_full_name|default:prescription.created_by.username }}
+          </small>
+        </div>
+
+        {% if prescription.updated_at != prescription.created_at %}
+        <div class="mb-3">
+          <small class="text-muted d-block">Última atualização</small>
+          <div class="fw-medium">{{ prescription.updated_at|date:"d/m/Y H:i:s" }}</div>
+          <small class="text-muted">
+            por {{ prescription.updated_by.get_full_name|default:prescription.updated_by.username }}
+          </small>
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <small class="text-muted d-block">ID da Receita</small>
+          <code class="small">{{ prescription.id }}</code>
+        </div>
+
+        <div>
+          <small class="text-muted d-block">Tipo de Evento</small>
+          <span class="badge bg-info">{{ prescription.get_event_type_display }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Patient Information -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-light">
+        <h6 class="card-title mb-0">
+          <i class="bi bi-person me-2"></i>
+          Dados do Paciente
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="mb-2">
+          <small class="text-muted d-block">Nome completo</small>
+          <div class="fw-medium">{{ prescription.patient.name }}</div>
+        </div>
+
+        {% if prescription.patient.fiscal_number %}
+        <div class="mb-2">
+          <small class="text-muted d-block">CPF</small>
+          <div>{{ prescription.patient.fiscal_number }}</div>
+        </div>
+        {% endif %}
+
+        {% if prescription.patient.health_card_number %}
+        <div class="mb-2">
+          <small class="text-muted d-block">Cartão SUS</small>
+          <div>{{ prescription.patient.health_card_number }}</div>
+        </div>
+        {% endif %}
+
+        <div class="mb-2">
+          <small class="text-muted d-block">Status</small>
+          <div>
+            {% load patient_tags %}
+            {% patient_status_badge prescription.patient %}
+          </div>
+        </div>
+
+        {% if prescription.patient.current_hospital %}
+        <div class="mb-2">
+          <small class="text-muted d-block">Hospital atual</small>
+          <div>{{ prescription.patient.current_hospital.name }}</div>
+        </div>
+        {% endif %}
+
+        <div class="mt-3">
+          <a href="{{ patient_timeline_url }}" class="btn btn-outline-primary btn-sm w-100">
+            <i class="bi bi-clock-history me-1"></i>
+            Ver Timeline
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+{% if can_delete and perms.events.delete_event %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">
+          <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+          Confirmar Exclusão
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Tem certeza que deseja excluir esta receita?</p>
+        <div class="alert alert-warning">
+          <i class="bi bi-info-circle me-2"></i>
+          Esta ação não pode ser desfeita. Todos os medicamentos prescritos também serão removidos.
+        </div>
+        <div class="bg-light p-3 rounded">
+          <strong>Receita:</strong> {{ prescription.patient.name }}<br>
+          <strong>Data:</strong> {{ prescription.prescription_date|date:"d/m/Y" }}<br>
+          <strong>Medicamentos:</strong> {{ prescription_items.count }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form method="post" action="#" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash me-1"></i>
+            Excluir Receita
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .avatar-md {
+    width: 48px;
+    height: 48px;
+    font-size: 1.2rem;
+  }
+  
+  .list-group-item {
+    border-left: none;
+    border-right: none;
+  }
+  
+  .list-group-item:first-child {
+    border-top: none;
+  }
+  
+  .list-group-item:last-child {
+    border-bottom: none;
+  }
+  
+  @media print {
+    .btn-toolbar,
+    .card-header,
+    #deleteModal {
+      display: none !important;
+    }
+    
+    .card {
+      border: none !important;
+      box-shadow: none !important;
+    }
+    
+    .bg-light {
+      background-color: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+    }
+    
+    .text-medical-primary {
+      color: #0d6efd !important;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Print functionality
+  window.addEventListener('beforeprint', function() {
+    document.title = 'Receita - {{ prescription.patient.name }} - {{ prescription.prescription_date|date:"d-m-Y" }}';
+  });
+});
+</script>
+{% endblock %}

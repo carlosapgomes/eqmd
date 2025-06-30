@@ -1,0 +1,439 @@
+{% extends 'drugtemplates/base.html' %}
+{% load static %}
+
+{% block title %}Novo Template de Prescrição{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-section {
+    background: #f8f9fa;
+    border-left: 4px solid #2c5aa0;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.375rem;
+  }
+  
+  .form-section h6 {
+    color: #2c5aa0;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  
+  .required-field::after {
+    content: " *";
+    color: #dc3545;
+  }
+  
+  .formset-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: white;
+    position: relative;
+  }
+  
+  .formset-item.to-delete {
+    opacity: 0.5;
+    background: #f8d7da;
+  }
+  
+  .formset-item-header {
+    display: flex;
+    justify-content-between;
+    align-items-center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+  
+  .formset-delete-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  
+  .add-formset-item {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.375rem;
+    padding: 2rem;
+    text-align: center;
+    color: #6c757d;
+    background: #fafafa;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .add-formset-item:hover {
+    border-color: #2c5aa0;
+    color: #2c5aa0;
+    background: #f0f4ff;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block drug_template_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'drugtemplates:prescription_list' %}">
+        <i class="bi bi-file-earmark-medical me-1"></i>
+        Templates de Prescrições
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Novo Template</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-file-earmark-medical drug-template-icon me-2"></i>
+    Novo Template de Prescrição
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'drugtemplates:prescription_list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
+<!-- Form Card -->
+<div class="card shadow-sm">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-file-text me-2"></i>
+      Informações do Template
+    </h5>
+  </div>
+  <div class="card-body">
+    <!-- Form Errors -->
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+      <h6 class="alert-heading">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Erro no formulário
+      </h6>
+      {% for error in form.non_field_errors %}
+        <p class="mb-0">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" class="needs-validation" novalidate id="prescription-template-form">
+      {% csrf_token %}
+      
+      <!-- Basic Information Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-info-circle me-2"></i>
+          Informações Básicas
+        </h6>
+        <div class="row">
+          <div class="col-md-8">
+            <div class="mb-3">
+              <label for="{{ form.name.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-file-earmark-medical me-1"></i>
+                {{ form.name.label }}
+              </label>
+              {{ form.name }}
+              {% if form.name.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.name.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+              {% if form.name.help_text %}
+                <div class="form-text">{{ form.name.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-3">
+              <div class="form-check" style="margin-top: 2rem;">
+                {{ form.is_public }}
+                <label class="form-check-label" for="{{ form.is_public.id_for_label }}">
+                  {{ form.is_public.label }}
+                </label>
+                {% if form.is_public.help_text %}
+                  <div class="form-text">{{ form.is_public.help_text }}</div>
+                {% endif %}
+              </div>
+              {% if form.is_public.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.is_public.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medications Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-capsule me-2"></i>
+          Medicamentos do Template
+        </h6>
+        
+        <!-- Formset errors -->
+        {% if formset.non_form_errors %}
+          <div class="alert alert-danger">
+            <h6 class="alert-heading">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Erro nos medicamentos
+            </h6>
+            {% for error in formset.non_form_errors %}
+              <p class="mb-0">{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- Formset management -->
+        {{ formset.management_form }}
+        
+        <div id="formset-container">
+          {% for form_item in formset %}
+            <div class="formset-item" data-form-index="{{ forloop.counter0 }}">
+              <div class="formset-item-header">
+                <h6 class="mb-0">
+                  <i class="bi bi-capsule text-primary me-2"></i>
+                  Medicamento {% if form_item.instance.pk %}{{ forloop.counter }}{% else %}#{{ forloop.counter }}{% endif %}
+                </h6>
+                {% if not forloop.first %}
+                  <button type="button" class="btn btn-sm btn-outline-danger formset-delete-btn" onclick="deleteFormsetItem(this)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                {% endif %}
+              </div>
+              
+              <!-- Hidden fields -->
+              {% for hidden in form_item.hidden_fields %}
+                {{ hidden }}
+              {% endfor %}
+              
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form_item.drug_name.id_for_label }}" class="form-label required-field">
+                      {{ form_item.drug_name.label }}
+                    </label>
+                    {{ form_item.drug_name }}
+                    {% if form_item.drug_name.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form_item.drug_name.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form_item.presentation.id_for_label }}" class="form-label required-field">
+                      {{ form_item.presentation.label }}
+                    </label>
+                    {{ form_item.presentation }}
+                    {% if form_item.presentation.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form_item.presentation.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-8">
+                  <div class="mb-3">
+                    <label for="{{ form_item.usage_instructions.id_for_label }}" class="form-label required-field">
+                      {{ form_item.usage_instructions.label }}
+                    </label>
+                    {{ form_item.usage_instructions }}
+                    {% if form_item.usage_instructions.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form_item.usage_instructions.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="mb-3">
+                    <label for="{{ form_item.quantity.id_for_label }}" class="form-label required-field">
+                      {{ form_item.quantity.label }}
+                    </label>
+                    {{ form_item.quantity }}
+                    {% if form_item.quantity.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form_item.quantity.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="mb-3">
+                    <label for="{{ form_item.order.id_for_label }}" class="form-label">
+                      {{ form_item.order.label }}
+                    </label>
+                    {{ form_item.order }}
+                    {% if form_item.order.errors %}
+                      <div class="invalid-feedback d-block">
+                        {% for error in form_item.order.errors %}
+                          {{ error }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        
+        <!-- Add new medication button -->
+        <div class="add-formset-item" onclick="addFormsetItem()">
+          <i class="bi bi-plus-circle fs-2 mb-2"></i>
+          <div>Adicionar Medicamento</div>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <button type="submit" class="btn btn-medical-primary">
+            <i class="bi bi-check-circle me-1"></i>
+            Criar Template
+          </button>
+          <a href="{% url 'drugtemplates:prescription_list' %}" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let formsetIndex = {{ formset.total_form_count }};
+
+function addFormsetItem() {
+  const container = document.getElementById('formset-container');
+  const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+  
+  // Clone the last formset item template
+  const emptyForm = `
+    <div class="formset-item" data-form-index="${formsetIndex}">
+      <div class="formset-item-header">
+        <h6 class="mb-0">
+          <i class="bi bi-capsule text-primary me-2"></i>
+          Medicamento #${formsetIndex + 1}
+        </h6>
+        <button type="button" class="btn btn-sm btn-outline-danger formset-delete-btn" onclick="deleteFormsetItem(this)">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+      
+      <input type="hidden" name="items-${formsetIndex}-id" id="id_items-${formsetIndex}-id">
+      <input type="hidden" name="items-${formsetIndex}-DELETE" id="id_items-${formsetIndex}-DELETE">
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="id_items-${formsetIndex}-drug_name" class="form-label required-field">
+              Nome do Medicamento
+            </label>
+            <input type="text" name="items-${formsetIndex}-drug_name" class="form-control" id="id_items-${formsetIndex}-drug_name" placeholder="Nome do medicamento" maxlength="200">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="id_items-${formsetIndex}-presentation" class="form-label required-field">
+              Apresentação
+            </label>
+            <input type="text" name="items-${formsetIndex}-presentation" class="form-control" id="id_items-${formsetIndex}-presentation" placeholder="Apresentação (ex: 500mg, comprimido)" maxlength="300">
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-8">
+          <div class="mb-3">
+            <label for="id_items-${formsetIndex}-usage_instructions" class="form-label required-field">
+              Instruções de Uso
+            </label>
+            <textarea name="items-${formsetIndex}-usage_instructions" class="form-control" id="id_items-${formsetIndex}-usage_instructions" placeholder="Instruções de uso..." rows="3"></textarea>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="mb-3">
+            <label for="id_items-${formsetIndex}-quantity" class="form-label required-field">
+              Quantidade
+            </label>
+            <input type="text" name="items-${formsetIndex}-quantity" class="form-control" id="id_items-${formsetIndex}-quantity" placeholder="Quantidade (ex: 30 comprimidos)" maxlength="100">
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="mb-3">
+            <label for="id_items-${formsetIndex}-order" class="form-label">
+              Ordem
+            </label>
+            <input type="number" name="items-${formsetIndex}-order" class="form-control" id="id_items-${formsetIndex}-order" min="0" value="${formsetIndex + 1}">
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Insert before the add button
+  const addButton = document.querySelector('.add-formset-item');
+  addButton.insertAdjacentHTML('beforebegin', emptyForm);
+  
+  // Update form count
+  formsetIndex++;
+  totalForms.value = formsetIndex;
+}
+
+function deleteFormsetItem(button) {
+  const formsetItem = button.closest('.formset-item');
+  const deleteInput = formsetItem.querySelector('input[name$="-DELETE"]');
+  
+  if (deleteInput) {
+    deleteInput.value = 'on';
+    formsetItem.classList.add('to-delete');
+    formsetItem.style.display = 'none';
+  } else {
+    // If no DELETE input, this is a new form, so just remove it
+    formsetItem.remove();
+    formsetIndex--;
+    document.getElementById('id_items-TOTAL_FORMS').value = formsetIndex;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  // Form validation
+  const form = document.querySelector('.needs-validation');
+  form.addEventListener('submit', function(event) {
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    form.classList.add('was-validated');
+  });
+});
+</script>
+{% endblock %}
