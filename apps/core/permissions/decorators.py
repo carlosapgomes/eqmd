@@ -29,7 +29,7 @@ def patient_access_required(view_func):
     @login_required
     def wrapper(request, *args, **kwargs):
         # Get patient_id from kwargs
-        patient_id = kwargs.get('patient_id') or kwargs.get('pk')
+        patient_id = kwargs.get('patient_id') or kwargs.get('pk') or kwargs.get('patient_uuid')
         if not patient_id:
             return HttpResponseForbidden("Patient ID not provided")
         
@@ -123,7 +123,7 @@ def patient_data_change_required(view_func):
     @login_required
     def wrapper(request, *args, **kwargs):
         # Get patient_id from kwargs
-        patient_id = kwargs.get('patient_id') or kwargs.get('pk')
+        patient_id = kwargs.get('patient_id') or kwargs.get('pk') or kwargs.get('patient_uuid')
         if not patient_id:
             return HttpResponseForbidden("Patient ID not provided")
 

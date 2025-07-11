@@ -9,6 +9,7 @@
     // Configuration
     const CONFIG = {
         templateSelectClass: 'drug-template-select',
+        prescriptionTemplateItemSelectClass: 'prescription-template-item-select',
         autocompleteClass: 'autocomplete-input',
         autocompleteContainerClass: 'autocomplete-container',
         suggestionClass: 'autocomplete-suggestions',
@@ -27,6 +28,8 @@
      */
     function initializeDrugTemplateIntegration() {
         initializeTemplateSelects();
+        initializePrescriptionTemplateItemSelects();
+        initializeManualEntryToggles();
         initializeAutocomplete();
         initializeDrugNameAutocomplete();
         loadTemplateData();
@@ -34,6 +37,7 @@
         console.log('Drug template integration initialized');
     }
     
+
     /**
      * Initialize autocomplete for drug name fields
      */
@@ -53,6 +57,26 @@
                         const newDrugNameFields = node.querySelectorAll('input[name$="-drug_name"], input[name="drug_name"]');
                         newDrugNameFields.forEach(field => {
                             setupDrugNameAutocomplete(field);
+                        });
+                        
+                        // Initialize new template selects
+                        const newTemplateSelects = node.querySelectorAll(`.${CONFIG.templateSelectClass}`);
+                        newTemplateSelects.forEach(select => {
+                            select.addEventListener('change', handleTemplateSelection);
+                            enhanceSelectWithSearch(select);
+                        });
+                        
+                        // Initialize new prescription template item selects
+                        const newPrescriptionTemplateSelects = node.querySelectorAll(`.${CONFIG.prescriptionTemplateItemSelectClass}`);
+                        newPrescriptionTemplateSelects.forEach(select => {
+                            select.addEventListener('change', handlePrescriptionTemplateItemSelection);
+                            enhanceSelectWithSearch(select);
+                        });
+                        
+                        // Initialize new manual entry toggles
+                        const newManualEntryCheckboxes = node.querySelectorAll('input[type="checkbox"][id^="manual-entry-"]');
+                        newManualEntryCheckboxes.forEach(checkbox => {
+                            checkbox.addEventListener('change', handleManualEntryToggle);
                         });
                     }
                 });
@@ -98,6 +122,31 @@
     }
 
     /**
+     * Initialize prescription template item select dropdowns
+     */
+    function initializePrescriptionTemplateItemSelects() {
+        const templateItemSelects = document.querySelectorAll(`.${CONFIG.prescriptionTemplateItemSelectClass}`);
+        
+        templateItemSelects.forEach(select => {
+            select.addEventListener('change', handlePrescriptionTemplateItemSelection);
+            
+            // Enhance with search functionality if needed
+            enhanceSelectWithSearch(select);
+        });
+    }
+
+    /**
+     * Initialize manual entry toggles
+     */
+    function initializeManualEntryToggles() {
+        const manualEntryCheckboxes = document.querySelectorAll('input[type="checkbox"][id^="manual-entry-"]');
+        
+        manualEntryCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', handleManualEntryToggle);
+        });
+    }
+
+    /**
      * Initialize template select dropdowns
      */
     function initializeTemplateSelects() {
@@ -109,6 +158,58 @@
             // Enhance with search functionality if needed
             enhanceSelectWithSearch(select);
         });
+    }
+
+    /**
+     * Handle prescription template item selection and populate form fields
+     */
+    function handlePrescriptionTemplateItemSelection(event) {
+        const select = event.target;
+        const selectedOption = select.selectedOptions[0];
+        
+        if (!selectedOption || !selectedOption.value) {
+            return;
+        }
+
+        const templateData = extractPrescriptionTemplateItemData(selectedOption);
+        if (templateData) {
+            populateFormFields(select, templateData);
+            showTemplateAppliedNotification(`${templateData.templateName}: ${templateData.drugName}`);
+            
+            // Clear manual entry checkbox and hide manual section
+            const formIndex = select.dataset.formIndex;
+            const manualCheckbox = document.getElementById(`manual-entry-${formIndex}`);
+            const manualSection = document.querySelector(`.manual-entry-section[data-form-index="${formIndex}"]`);
+            
+            if (manualCheckbox) {
+                manualCheckbox.checked = false;
+            }
+            if (manualSection) {
+                manualSection.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Handle manual entry toggle
+     */
+    function handleManualEntryToggle(event) {
+        const checkbox = event.target;
+        const formIndex = checkbox.dataset.formIndex;
+        const manualSection = document.querySelector(`.manual-entry-section[data-form-index="${formIndex}"]`);
+        const prescriptionTemplateSelect = document.querySelector(`.prescription-template-item-select[data-form-index="${formIndex}"]`);
+        
+        if (manualSection) {
+            if (checkbox.checked) {
+                manualSection.style.display = 'block';
+                // Clear prescription template selection
+                if (prescriptionTemplateSelect) {
+                    prescriptionTemplateSelect.value = '';
+                }
+            } else {
+                manualSection.style.display = 'none';
+            }
+        }
     }
 
     /**
@@ -130,6 +231,21 @@
     }
 
     /**
+     * Extract prescription template item data from select option
+     */
+    function extractPrescriptionTemplateItemData(option) {
+        return {
+            id: option.value,
+            drugName: option.dataset.drugName || '',
+            name: option.dataset.drugName || '', // For compatibility with existing code
+            presentation: option.dataset.presentation || '',
+            quantity: option.dataset.quantity || '',
+            usageInstructions: option.dataset.usageInstructions || '',
+            templateName: option.dataset.templateName || ''
+        };
+    }
+
+    /**
      * Extract template data from select option
      */
     function extractTemplateData(option) {
@@ -137,7 +253,7 @@
             id: option.dataset.templateId || option.value,
             name: option.dataset.name || option.textContent,
             presentation: option.dataset.presentation || '',
-            usageInstructions: option.dataset.usageInstructions || ''
+            usageInstructions: option.dataset.usageInstructions || option.dataset.instructions || ''
         };
     }
 
@@ -152,6 +268,7 @@
         const fields = {
             drugName: form.querySelector('input[name$="-drug_name"], input[name="drug_name"]'),
             presentation: form.querySelector('input[name$="-presentation"], input[name="presentation"]'),
+            quantity: form.querySelector('input[name$="-quantity"], input[name="quantity"]'),
             usageInstructions: form.querySelector('textarea[name$="-usage_instructions"], textarea[name="usage_instructions"]'),
             sourceTemplate: form.querySelector('input[name$="-source_template"], input[name="source_template"]')
         };
@@ -165,10 +282,8 @@
                 if (fieldName === 'sourceTemplate') {
                     element.value = value;
                 } else if (value && value.trim()) {
-                    // Only populate if field is empty or user confirms overwrite
-                    if (!element.value.trim() || confirmFieldOverwrite(fieldName, element.value)) {
-                        animateFieldUpdate(element, value);
-                    }
+                    // Always populate field with template value
+                    animateFieldUpdate(element, value);
                 }
             }
         });
@@ -180,19 +295,6 @@
         }
     }
     
-    /**
-     * Confirm field overwrite when field already has content
-     */
-    function confirmFieldOverwrite(fieldName, currentValue) {
-        const fieldLabels = {
-            drugName: 'Nome do Medicamento',
-            presentation: 'Apresentação',
-            usageInstructions: 'Instruções de Uso'
-        };
-        
-        const fieldLabel = fieldLabels[fieldName] || fieldName;
-        return confirm(`O campo "${fieldLabel}" já possui conteúdo. Deseja substituir?`);
-    }
 
     /**
      * Get data key for field name
@@ -201,6 +303,7 @@
         const mapping = {
             drugName: 'name',
             presentation: 'presentation',
+            quantity: 'quantity',
             usageInstructions: 'usageInstructions',
             sourceTemplate: 'id'
         };

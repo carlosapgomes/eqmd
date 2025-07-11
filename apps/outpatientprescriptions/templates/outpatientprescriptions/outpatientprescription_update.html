@@ -53,7 +53,7 @@
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a href="{% url 'events:patient_timeline' patient_uuid=prescription.patient.pk %}">
+      <a href="{% url 'events:patient_events_list' patient_id=prescription.patient.pk %}">
         {{ prescription.patient.name }} - Timeline
       </a>
     </li>
@@ -179,11 +179,24 @@
           </div>
           <div class="col-md-6">
             <div class="mb-3">
-              <label for="{{ form.status.id_for_label }}" class="form-label required-field">
+              <label class="form-label required-field">
                 <i class="bi bi-check-circle me-1"></i>
                 {{ form.status.label }}
               </label>
-              {{ form.status }}
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input type="radio" class="form-check-input" name="status" value="draft" id="id_status_draft" {% if prescription.status == 'draft' %}checked{% endif %}>
+                  <label class="form-check-label" for="id_status_draft">
+                    Rascunho
+                  </label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input type="radio" class="form-check-input" name="status" value="finalized" id="id_status_finalized" {% if prescription.status == 'finalized' %}checked{% endif %}>
+                  <label class="form-check-label" for="id_status_finalized">
+                    Finalizada
+                  </label>
+                </div>
+              </div>
               {% if form.status.errors %}
                 <div class="invalid-feedback d-block">
                   {% for error in form.status.errors %}

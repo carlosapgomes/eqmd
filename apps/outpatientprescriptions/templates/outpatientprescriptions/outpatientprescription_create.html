@@ -45,7 +45,7 @@
     </li>
     {% if patient %}
       <li class="breadcrumb-item">
-        <a href="{% url 'events:patient_timeline' patient_uuid=patient.pk %}">
+        <a href="{% url 'events:patient_events_list' patient_id=patient.pk %}">
           {{ patient.name }} - Timeline
         </a>
       </li>
@@ -101,15 +101,15 @@
     <form method="post" id="prescription-form" class="needs-validation" novalidate>
       {% csrf_token %}
       
-      <!-- Patient Information Section -->
-      <div class="form-section">
-        <h6>
-          <i class="bi bi-person-check me-2"></i>
-          Informações do Paciente
-        </h6>
-        {% if not patient %}
+      <!-- Patient Selection (Only when no patient is pre-selected) -->
+      {% if not patient %}
+        <div class="form-section">
+          <h6>
+            <i class="bi bi-person-check me-2"></i>
+            Seleção do Paciente
+          </h6>
           <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-12">
               <div class="mb-3">
                 <label for="{{ form.patient.id_for_label }}" class="form-label required-field">
                   <i class="bi bi-person me-1"></i>
@@ -125,74 +125,29 @@
                 {% endif %}
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="{{ form.event_datetime.id_for_label }}" class="form-label required-field">
-                  <i class="bi bi-calendar-event me-1"></i>
-                  {{ form.event_datetime.label }}
-                </label>
-                {{ form.event_datetime }}
-                {% if form.event_datetime.errors %}
-                  <div class="invalid-feedback d-block">
-                    {% for error in form.event_datetime.errors %}
-                      {{ error }}
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              </div>
-            </div>
           </div>
-        {% else %}
-          {{ form.patient.as_hidden }}
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Paciente</label>
-                <div class="form-control-plaintext">
-                  <strong>{{ patient.name }}</strong>
-                  {% if patient.fiscal_number %}
-                    <small class="text-muted">- {{ patient.fiscal_number }}</small>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="{{ form.event_datetime.id_for_label }}" class="form-label required-field">
-                  <i class="bi bi-calendar-event me-1"></i>
-                  {{ form.event_datetime.label }}
-                </label>
-                {{ form.event_datetime }}
-                {% if form.event_datetime.errors %}
-                  <div class="invalid-feedback d-block">
-                    {% for error in form.event_datetime.errors %}
-                      {{ error }}
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        {% endif %}
-      </div>
+        </div>
+      {% else %}
+        {{ form.patient.as_hidden }}
+      {% endif %}
 
-      <!-- Prescription Details Section -->
+      <!-- Prescription Information Section -->
       <div class="form-section">
         <h6>
           <i class="bi bi-file-earmark-medical me-2"></i>
-          Dados da Receita
+          Informações da Receita
         </h6>
         <div class="row">
           <div class="col-md-6">
             <div class="mb-3">
-              <label for="{{ form.prescription_date.id_for_label }}" class="form-label required-field">
-                <i class="bi bi-calendar me-1"></i>
-                {{ form.prescription_date.label }}
+              <label for="{{ form.event_datetime.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-calendar-event me-1"></i>
+                {{ form.event_datetime.label }}
               </label>
-              {{ form.prescription_date }}
-              {% if form.prescription_date.errors %}
+              {{ form.event_datetime }}
+              {% if form.event_datetime.errors %}
                 <div class="invalid-feedback d-block">
-                  {% for error in form.prescription_date.errors %}
+                  {% for error in form.event_datetime.errors %}
                     {{ error }}
                   {% endfor %}
                 </div>
@@ -201,33 +156,27 @@
           </div>
           <div class="col-md-6">
             <div class="mb-3">
-              <label for="{{ form.status.id_for_label }}" class="form-label required-field">
+              <label class="form-label required-field">
                 <i class="bi bi-check-circle me-1"></i>
                 {{ form.status.label }}
               </label>
-              {{ form.status }}
+              <div class="mt-2">
+                <div class="form-check form-check-inline">
+                  <input type="radio" class="form-check-input" name="status" value="draft" id="id_status_draft" checked>
+                  <label class="form-check-label" for="id_status_draft">
+                    Rascunho
+                  </label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input type="radio" class="form-check-input" name="status" value="finalized" id="id_status_finalized">
+                  <label class="form-check-label" for="id_status_finalized">
+                    Finalizada
+                  </label>
+                </div>
+              </div>
               {% if form.status.errors %}
                 <div class="invalid-feedback d-block">
                   {% for error in form.status.errors %}
-                    {{ error }}
-                  {% endfor %}
-                </div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        
-        <div class="row">
-          <div class="col-12">
-            <div class="mb-3">
-              <label for="{{ form.description.id_for_label }}" class="form-label">
-                <i class="bi bi-file-text me-1"></i>
-                {{ form.description.label }}
-              </label>
-              {{ form.description }}
-              {% if form.description.errors %}
-                <div class="invalid-feedback d-block">
-                  {% for error in form.description.errors %}
                     {{ error }}
                   {% endfor %}
                 </div>
@@ -289,24 +238,68 @@
                 {% endif %}
               </div>
               
-              <!-- Drug Template Selection -->
+              <!-- Prescription Template Selection (Primary) -->
               <div class="row mb-3">
                 <div class="col-12">
                   <label class="form-label">
-                    <i class="bi bi-file-earmark-plus me-1"></i>
-                    Template de Medicamento
+                    <i class="bi bi-prescription me-1"></i>
+                    Template de Prescrição (com quantidade)
+                  </label>
+                  <select class="form-select prescription-template-item-select" data-form-index="{{ forloop.counter0 }}">
+                    <option value="">Selecione um template completo (recomendado)</option>
+                    {% for item in prescription_template_items %}
+                      <option value="{{ item.id }}" 
+                              data-drug-name="{{ item.drug_name }}"
+                              data-presentation="{{ item.presentation }}"
+                              data-quantity="{{ item.quantity }}"
+                              data-usage-instructions="{{ item.usage_instructions }}"
+                              data-template-name="{{ item.template.name }}">
+                        {{ item.template.name }}: {{ item.drug_name }} ({{ item.quantity }})
+                      </option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Templates completos incluem medicamento, quantidade e instruções pré-definidas
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Manual Entry Toggle -->
+              <div class="row mb-3">
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="manual-entry-{{ forloop.counter0 }}" data-form-index="{{ forloop.counter0 }}">
+                    <label class="form-check-label" for="manual-entry-{{ forloop.counter0 }}">
+                      <i class="bi bi-pencil me-1"></i>
+                      Entrada manual (buscar medicamentos individuais)
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Drug Template Selection (Manual Entry) -->
+              <div class="row mb-3 manual-entry-section" style="display: none;" data-form-index="{{ forloop.counter0 }}">
+                <div class="col-12">
+                  <label class="form-label">
+                    <i class="bi bi-search me-1"></i>
+                    Buscar Medicamento
                   </label>
                   <select class="form-select drug-template-select" data-form-index="{{ forloop.counter0 }}">
-                    <option value="">Selecione um template (opcional)</option>
+                    <option value="">Selecione um medicamento</option>
                     {% for template in drug_templates %}
                       <option value="{{ template.id }}" 
                               data-name="{{ template.name }}"
                               data-presentation="{{ template.presentation }}"
-                              data-instructions="{{ template.usage_instructions }}">
+                              data-usage-instructions="{{ template.usage_instructions }}">
                         {{ template.name }} - {{ template.presentation }}
                       </option>
                     {% endfor %}
                   </select>
+                  <div class="form-text">
+                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                    Medicamentos individuais requerem entrada manual da quantidade
+                  </div>
                 </div>
               </div>
               
@@ -487,24 +480,68 @@
       </button>
     </div>
     
-    <!-- Drug Template Selection -->
+    <!-- Prescription Template Selection (Primary) -->
     <div class="row mb-3">
       <div class="col-12">
         <label class="form-label">
-          <i class="bi bi-file-earmark-plus me-1"></i>
-          Template de Medicamento
+          <i class="bi bi-prescription me-1"></i>
+          Template de Prescrição (com quantidade)
+        </label>
+        <select class="form-select prescription-template-item-select" data-form-index="__prefix__">
+          <option value="">Selecione um template completo (recomendado)</option>
+          {% for item in prescription_template_items %}
+            <option value="{{ item.id }}" 
+                    data-drug-name="{{ item.drug_name }}"
+                    data-presentation="{{ item.presentation }}"
+                    data-quantity="{{ item.quantity }}"
+                    data-usage-instructions="{{ item.usage_instructions }}"
+                    data-template-name="{{ item.template.name }}">
+              {{ item.template.name }}: {{ item.drug_name }} ({{ item.quantity }})
+            </option>
+          {% endfor %}
+        </select>
+        <div class="form-text">
+          <i class="bi bi-info-circle me-1"></i>
+          Templates completos incluem medicamento, quantidade e instruções pré-definidas
+        </div>
+      </div>
+    </div>
+    
+    <!-- Manual Entry Toggle -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="manual-entry-__prefix__" data-form-index="__prefix__">
+          <label class="form-check-label" for="manual-entry-__prefix__">
+            <i class="bi bi-pencil me-1"></i>
+            Entrada manual (buscar medicamentos individuais)
+          </label>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Drug Template Selection (Manual Entry) -->
+    <div class="row mb-3 manual-entry-section" style="display: none;" data-form-index="__prefix__">
+      <div class="col-12">
+        <label class="form-label">
+          <i class="bi bi-search me-1"></i>
+          Buscar Medicamento
         </label>
         <select class="form-select drug-template-select" data-form-index="__prefix__">
-          <option value="">Selecione um template (opcional)</option>
+          <option value="">Selecione um medicamento</option>
           {% for template in drug_templates %}
             <option value="{{ template.id }}" 
                     data-name="{{ template.name }}"
                     data-presentation="{{ template.presentation }}"
-                    data-instructions="{{ template.usage_instructions }}">
+                    data-usage-instructions="{{ template.usage_instructions }}">
               {{ template.name }} - {{ template.presentation }}
             </option>
           {% endfor %}
         </select>
+        <div class="form-text">
+          <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+          Medicamentos individuais requerem entrada manual da quantidade
+        </div>
       </div>
     </div>
     

@@ -40,3 +40,14 @@
 - [] fix photos and photoseries caption text field styling
 - [] evaluate mediafiles event cards for UI/UX
 - [] evaluate create, edit, and details templates UI/UX visual polution
+
+## OutpatientPrescriptions
+
+- [] fix single drug card UI/UX
+- [] fix list of drugs ordering, consider using drag and drop for reordering
+- [] improve new item button visibility
+
+## Observations
+
+- try to use
+  `Always use the actual code/codebase as your source of truth. Do not rely on your progress docs efforts. Your docs are pointers to what you've done, not reliable memories.`

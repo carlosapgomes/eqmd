@@ -22,7 +22,6 @@ from datetime import datetime, timedelta
 from .models import OutpatientPrescription, PrescriptionItem
 from .forms.prescription_forms import OutpatientPrescriptionForm, PrescriptionItemFormSet, PrescriptionItemFormSetHelper
 from apps.core.permissions import (
-    patient_access_required,
     can_edit_event_required,
     can_delete_event_required,
     hospital_context_required,
@@ -33,7 +32,7 @@ from apps.core.permissions import (
 from apps.patients.models import Patient
 from apps.sample_content.models import SampleContent
 from apps.events.models import Event
-from apps.drugtemplates.models import DrugTemplate
+from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 
 
 @method_decorator(hospital_context_required, name="dispatch")
@@ -182,7 +181,6 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
         return context
 
 
-@method_decorator(patient_access_required, name="dispatch")
 @method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
@@ -199,7 +197,14 @@ class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMix
         """Get the patient from URL parameter."""
         patient_uuid = self.kwargs.get('patient_uuid')
         if patient_uuid:
-            return get_object_or_404(Patient, id=patient_uuid)
+            patient = get_object_or_404(Patient, id=patient_uuid)
+            # Check if user can access this patient
+            if not can_access_patient(self.request.user, patient):
+                from django.core.exceptions import PermissionDenied
+                raise PermissionDenied(
+                    "You don't have permission to access this patient"
+                )
+            return patient
         return None
     
     def get_form_kwargs(self):
@@ -239,7 +244,12 @@ class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMix
         formset_data = PrescriptionItemFormSetHelper.prepare_formset_data(formset)
         context.update(formset_data)
         
-        # Add drug templates for AJAX functionality
+        # Add prescription template items (complete templates with quantities)
+        context['prescription_template_items'] = PrescriptionTemplateItem.objects.filter(
+            Q(template__creator=self.request.user) | Q(template__is_public=True)
+        ).select_related('template').order_by('template__name', 'order', 'drug_name')
+        
+        # Add drug templates for manual entry/autocomplete functionality
         context['drug_templates'] = DrugTemplate.objects.filter(
             Q(creator=self.request.user) | Q(is_public=True)
         ).order_by('name')
@@ -273,6 +283,7 @@ class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMix
             # Save the main prescription
             self.object = form.save(commit=False)
             self.object.created_by = self.request.user
+            self.object.updated_by = self.request.user
             self.object.save()
             
             # Save the formset
@@ -292,8 +303,12 @@ class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMix
             return self.render_to_response(context)
     
     def get_success_url(self):
-        """Redirect to prescription detail or list after successful creation."""
-        return self.object.get_absolute_url()
+        """Redirect to patient timeline after successful creation."""
+        from django.urls import reverse
+        return reverse(
+            'events:patient_events_list',
+            kwargs={'patient_id': self.object.patient.id}
+        )
 
 
 @login_required
@@ -364,7 +379,6 @@ def search_drug_templates(request):
         return JsonResponse({'error': 'Erro na busca'}, status=500)
 
 
-@method_decorator(patient_access_required, name="dispatch")
 @method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
     """
@@ -387,6 +401,19 @@ class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
             )
         )
     
+    def get_object(self, queryset=None):
+        """Get object and check patient access permissions."""
+        obj = super().get_object(queryset)
+        
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "You don't have permission to access this patient's prescriptions"
+            )
+        
+        return obj
+    
     def get_context_data(self, **kwargs):
         """Add permission checks and additional context data."""
         context = super().get_context_data(**kwargs)
@@ -401,15 +428,14 @@ class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
         # Add timeline URL for patient
         from django.urls import reverse
         context['patient_timeline_url'] = reverse(
-            'events:patient_timeline', 
-            kwargs={'patient_uuid': self.object.patient.id}
+            'events:patient_events_list', 
+            kwargs={'patient_id': self.object.patient.id}
         )
         
         return context
 
 
 @method_decorator(can_edit_event_required, name="dispatch")
-@method_decorator(patient_access_required, name="dispatch")
 @method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
@@ -478,8 +504,8 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
         # Add timeline URL for patient
         from django.urls import reverse
         context['patient_timeline_url'] = reverse(
-            'events:patient_timeline', 
-            kwargs={'patient_uuid': self.object.patient.id}
+            'events:patient_events_list', 
+            kwargs={'patient_id': self.object.patient.id}
         )
         
         return context
@@ -519,7 +545,6 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
         return self.object.get_absolute_url()
 
 
-@method_decorator(patient_access_required, name="dispatch")
 @method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionPrintView(LoginRequiredMixin, DetailView):
     """
@@ -541,6 +566,19 @@ class OutpatientPrescriptionPrintView(LoginRequiredMixin, DetailView):
                 "items"
             )
         )
+    
+    def get_object(self, queryset=None):
+        """Get object and check patient access permissions."""
+        obj = super().get_object(queryset)
+        
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "You don't have permission to access this patient's prescriptions"
+            )
+        
+        return obj
     
     def get_context_data(self, **kwargs):
         """Add prescription items and medical information for print template."""
@@ -567,8 +605,8 @@ class OutpatientPrescriptionDeleteView(LoginRequiredMixin, PermissionRequiredMix
         """Redirect to patient timeline after successful deletion."""
         from django.urls import reverse
         return reverse(
-            'events:patient_timeline', 
-            kwargs={'patient_uuid': self.object.patient.id}
+            'events:patient_events_list', 
+            kwargs={'patient_id': self.object.patient.id}
         )
     
     def get_object(self, queryset=None):
