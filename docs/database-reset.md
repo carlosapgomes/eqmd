@@ -57,35 +57,35 @@ mysql -u root -p -e "DROP DATABASE your_database_name; CREATE DATABASE your_data
 ### Step 4: Create Fresh Migrations
 
 ```bash
-python manage.py makemigrations
+uv run python manage.py makemigrations
 ```
 
 ### Step 5: Apply Migrations
 
 ```bash
-python manage.py migrate
+uv run python manage.py migrate
 ```
 
 ### Step 6: Create Superuser
 
 ```bash
-python manage.py createsuperuser
+uv run python manage.py createsuperuser
 ```
 
 ### Step 7: Set Up Initial Data
 
 ```bash
 # Create permission groups
-python manage.py setup_groups
+uv run python manage.py setup_groups
 
 # Create sample tags (optional)
-python manage.py create_sample_tags
+uv run python manage.py create_sample_tags
 
 # Create comprehensive sample data (hospitals, users, patients, daily notes, drug templates, prescriptions)
-python manage.py populate_sample_data
+uv run python manage.py populate_sample_data
 
 # Assign users to hospitals if needed
-python manage.py assign_users_to_hospitals
+uv run python manage.py assign_users_to_hospitals
 ```
 
 ## Option 2: Database-Only Reset
@@ -108,15 +108,15 @@ mysql -u root -p -e "DROP DATABASE your_database_name; CREATE DATABASE your_data
 ### Step 2: Apply Existing Migrations
 
 ```bash
-python manage.py migrate
+uv run python manage.py migrate
 ```
 
 ### Step 3: Recreate Initial Data
 
 ```bash
-python manage.py createsuperuser
-python manage.py setup_groups
-python manage.py create_sample_tags
+uv run python manage.py createsuperuser
+uv run python manage.py setup_groups
+uv run python manage.py create_sample_tags
 ```
 
 ## Option 3: Selective App Reset
@@ -135,7 +135,7 @@ rm apps/dailynotes/migrations/0*.py
 
 ```bash
 # This requires manual SQL or django-extensions
-python manage.py shell
+uv run python manage.py shell
 ```
 
 ```python
@@ -149,8 +149,8 @@ cursor.execute("DROP TABLE IF EXISTS dailynotes_dailynote CASCADE;")
 ### Step 3: Recreate App Migrations
 
 ```bash
-python manage.py makemigrations events dailynotes
-python manage.py migrate
+uv run python manage.py makemigrations events dailynotes
+uv run python manage.py migrate
 ```
 
 ## Troubleshooting
@@ -160,7 +160,7 @@ python manage.py migrate
 If you get migration conflicts after reset:
 
 ```bash
-python manage.py migrate --fake-initial
+uv run python manage.py migrate --fake-initial
 ```
 
 ### Permission Errors
@@ -185,15 +185,15 @@ ps aux | grep python
 If you get foreign key errors during selective reset:
 
 ```bash
-python manage.py migrate --fake
-python manage.py migrate --fake-initial
+uv run python manage.py migrate --fake
+uv run python manage.py migrate --fake-initial
 ```
 
 ## Post-Reset Checklist
 
 After completing a database reset, verify:
 
-- [ ] Development server starts without errors: `python manage.py runserver`
+- [ ] Development server starts without errors: `uv run python manage.py runserver`
 - [ ] Admin interface loads: `http://localhost:8000/admin/`
 - [ ] Can create test patients, events, daily notes, drug templates, and prescriptions
 - [ ] Permissions system works correctly
@@ -212,16 +212,16 @@ After completing a database reset, verify:
 
 ```bash
 # Check migration status
-python manage.py showmigrations
+uv run python manage.py showmigrations
 
 # Check for migration issues
-python manage.py makemigrations --dry-run
+uv run python manage.py makemigrations --dry-run
 
 # Reset specific app
-python manage.py migrate app_name zero
+uv run python manage.py migrate app_name zero
 
 # Show SQL for migrations
-python manage.py sqlmigrate app_name migration_number
+uv run python manage.py sqlmigrate app_name migration_number
 ```
 
 ## Getting Help

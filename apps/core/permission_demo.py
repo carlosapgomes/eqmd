@@ -2,7 +2,7 @@
 Demo views for showcasing the permission system features.
 
 These views demonstrate all aspects of the EquipeMed permission system
-including role-based access, hospital context, and object-level permissions.
+including role-based access and object-level permissions.
 """
 
 from django.shortcuts import render, get_object_or_404
@@ -21,11 +21,9 @@ from apps.core.permissions import (
     can_delete_event,
     can_see_patient_in_search,
     is_doctor,
-    has_hospital_context,
     get_user_profession_type,
     patient_access_required,
     doctor_required,
-    hospital_context_required,
 )
 from apps.core.permissions.constants import (
     MEDICAL_DOCTOR,
@@ -96,7 +94,7 @@ def permission_demo_dashboard(request):
         'email': request.user.email,
         'profession': get_user_profession_type(request.user),
         'is_doctor': is_doctor(request.user),
-        'has_hospital_context': has_hospital_context(request.user),
+        # 'has_hospital_context': has_hospital_context(request.user),  # removed
         'current_hospital': getattr(request.user, 'current_hospital', None),
         'groups': list(request.user.groups.values_list('name', flat=True)),
     }
@@ -258,18 +256,18 @@ def demo_doctor_only(request):
     return render(request, 'core/permission_demo/doctor_only.html', context)
 
 
-@hospital_context_required
+# @hospital_context_required - removed for single-hospital refactor
 def demo_hospital_context(request):
     """Demo view that requires hospital context."""
     
-    current_hospital = getattr(request.user, 'current_hospital', None)
+    # current_hospital = getattr(request.user, 'current_hospital', None)
     
     context = {
-        'message': 'This view requires hospital context.',
-        'current_hospital': {
-            'id': current_hospital.id if current_hospital else None,
-            'name': getattr(current_hospital, 'name', 'Unknown') if current_hospital else None,
-        } if current_hospital else None,
+        'message': 'Hospital context functionality removed for single-hospital refactor.',
+        # 'current_hospital': {
+        #     'id': current_hospital.id if current_hospital else None,
+        #     'name': getattr(current_hospital, 'name', 'Unknown') if current_hospital else None,
+        # } if current_hospital else None,
     }
     
     return render(request, 'core/permission_demo/hospital_context.html', context)
@@ -367,7 +365,7 @@ def demo_permission_test(request):
         'available_tests': ['patient_access', 'status_change'],
         'user_info': {
             'profession': get_user_profession_type(request.user),
-            'has_hospital_context': has_hospital_context(request.user),
+            # 'has_hospital_context': has_hospital_context(request.user),  # removed
         }
     }
     

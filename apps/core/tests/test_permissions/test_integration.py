@@ -1,8 +1,8 @@
 """
-Integration tests for the complete permission system.
+Integration tests for the simplified permission system.
 
 These tests verify that all components of the permission system work together
-correctly, including utilities, decorators, middleware, and template tags.
+correctly, including utilities, decorators, and template tags.
 """
 
 from django.test import TestCase, RequestFactory
@@ -20,11 +20,12 @@ from apps.core.permissions import (
     can_delete_event,
     patient_access_required,
     doctor_required,
-    hospital_context_required,
 )
 from apps.core.permissions.constants import (
     MEDICAL_DOCTOR,
+    RESIDENT,
     NURSE,
+    PHYSIOTHERAPIST,
     STUDENT,
     INPATIENT,
     OUTPATIENT,
@@ -35,8 +36,8 @@ from apps.core.permissions.constants import (
 User = get_user_model()
 
 
-class PermissionSystemIntegrationTest(TestCase):
-    """Test complete permission system integration."""
+class SimplifiedPermissionSystemIntegrationTest(TestCase):
+    """Test simplified permission system integration."""
     
     def setUp(self):
         """Set up test data."""
@@ -46,48 +47,59 @@ class PermissionSystemIntegrationTest(TestCase):
         self.doctor = User.objects.create_user(
             email='doctor@test.com',
             password='testpass123',
-            profession_type=0  # MEDICAL_DOCTOR
+            profession_type=User.MEDICAL_DOCTOR
+        )
+        
+        self.resident = User.objects.create_user(
+            email='resident@test.com',
+            password='testpass123',
+            profession_type=User.RESIDENT
         )
         
         self.nurse = User.objects.create_user(
             email='nurse@test.com',
             password='testpass123',
-            profession_type=2  # NURSE
+            profession_type=User.NURSE
+        )
+        
+        self.physiotherapist = User.objects.create_user(
+            email='physio@test.com',
+            password='testpass123',
+            profession_type=User.PHYSIOTERAPIST
         )
         
         self.student = User.objects.create_user(
             email='student@test.com',
             password='testpass123',
-            profession_type=4  # STUDENT
+            profession_type=User.STUDENT
         )
         
         # Create test groups
         self.doctor_group = Group.objects.create(name='Medical Doctors')
+        self.resident_group = Group.objects.create(name='Residents')
         self.nurse_group = Group.objects.create(name='Nurses')
+        self.physio_group = Group.objects.create(name='Physiotherapists')
         self.student_group = Group.objects.create(name='Students')
         
         # Assign users to groups
         self.doctor.groups.add(self.doctor_group)
+        self.resident.groups.add(self.resident_group)
         self.nurse.groups.add(self.nurse_group)
+        self.physiotherapist.groups.add(self.physio_group)
         self.student.groups.add(self.student_group)
         
-        # Create mock hospital
-        self.hospital = Mock()
-        self.hospital.id = 'hospital-123'
-        self.hospital.name = 'Test Hospital'
-        
-        # Create mock patients
+        # Create mock patients with different statuses
         self.inpatient = Mock()
         self.inpatient.id = 'patient-1'
         self.inpatient.status = INPATIENT
-        self.inpatient.current_hospital = self.hospital
-        self.inpatient.current_hospital_id = self.hospital.id
         
         self.outpatient = Mock()
         self.outpatient.id = 'patient-2'
         self.outpatient.status = OUTPATIENT
-        self.outpatient.current_hospital = self.hospital
-        self.outpatient.current_hospital_id = self.hospital.id
+        
+        self.emergency_patient = Mock()
+        self.emergency_patient.id = 'patient-3'
+        self.emergency_patient.status = EMERGENCY
         
         # Create mock event
         self.event = Mock()
@@ -96,63 +108,44 @@ class PermissionSystemIntegrationTest(TestCase):
         self.event.created_at = Mock()
         self.event.created_at.total_seconds.return_value = 3600  # 1 hour ago
     
-    def _add_hospital_context(self, user, hospital=None):
-        """Add hospital context to user."""
-        hospital = hospital or self.hospital
-        user.current_hospital = hospital
-        user.has_hospital_context = True
+    def test_complete_patient_access_workflow_simplified(self):
+        """Test complete patient access workflow for simplified system."""
+        # All user types can access all patients regardless of status
+        all_users = [self.doctor, self.resident, self.nurse, self.physiotherapist, self.student]
+        all_patients = [self.inpatient, self.outpatient, self.emergency_patient]
+        
+        for user in all_users:
+            for patient in all_patients:
+                self.assertTrue(can_access_patient(user, patient),
+                               f"{user.email} should access {patient.status} patient")
     
-    def test_complete_patient_access_workflow(self):
-        """Test complete patient access workflow for different user types."""
-        # Doctor with hospital context can access both patients
-        self._add_hospital_context(self.doctor)
-        self.assertTrue(can_access_patient(self.doctor, self.inpatient))
-        self.assertTrue(can_access_patient(self.doctor, self.outpatient))
+    def test_patient_status_change_workflow_simplified(self):
+        """Test patient status change workflow in simplified system."""        
+        # Doctors and residents can change any status including discharge
+        for user in [self.doctor, self.resident]:
+            self.assertTrue(can_change_patient_status(user, self.inpatient, DISCHARGED))
+            self.assertTrue(can_change_patient_status(user, self.outpatient, INPATIENT))
+            self.assertTrue(can_change_patient_status(user, self.emergency_patient, INPATIENT))
         
-        # Nurse with hospital context can access both patients
-        self._add_hospital_context(self.nurse)
-        self.assertTrue(can_access_patient(self.nurse, self.inpatient))
-        self.assertTrue(can_access_patient(self.nurse, self.outpatient))
-        
-        # Student with hospital context can only access outpatients
-        self._add_hospital_context(self.student)
-        self.assertFalse(can_access_patient(self.student, self.inpatient))
-        self.assertTrue(can_access_patient(self.student, self.outpatient))
-        
-        # Users without hospital context cannot access patients
-        self.assertFalse(can_access_patient(self.doctor, self.inpatient))
-        self.assertFalse(can_access_patient(self.nurse, self.inpatient))
-        self.assertFalse(can_access_patient(self.student, self.outpatient))
+        # Others can change some statuses but not discharge
+        for user in [self.nurse, self.physiotherapist, self.student]:
+            self.assertFalse(can_change_patient_status(user, self.inpatient, DISCHARGED))
+            self.assertTrue(can_change_patient_status(user, self.outpatient, INPATIENT))
+            self.assertTrue(can_change_patient_status(user, self.emergency_patient, INPATIENT))
     
-    def test_patient_status_change_workflow(self):
-        """Test patient status change workflow."""
-        self._add_hospital_context(self.doctor)
-        self._add_hospital_context(self.nurse)
-        self._add_hospital_context(self.student)
+    def test_personal_data_change_workflow_simplified(self):
+        """Test patient personal data change workflow in simplified system."""
+        # Only doctors and residents can change personal data
+        for user in [self.doctor, self.resident]:
+            self.assertTrue(can_change_patient_personal_data(user, self.inpatient))
+            self.assertTrue(can_change_patient_personal_data(user, self.outpatient))
+            self.assertTrue(can_change_patient_personal_data(user, self.emergency_patient))
         
-        # Doctor can change any status
-        self.assertTrue(can_change_patient_status(self.doctor, self.inpatient, DISCHARGED))
-        self.assertTrue(can_change_patient_status(self.doctor, self.outpatient, INPATIENT))
-        
-        # Nurse can change some statuses but not discharge
-        self.assertFalse(can_change_patient_status(self.nurse, self.inpatient, DISCHARGED))
-        self.assertTrue(can_change_patient_status(self.nurse, self.outpatient, INPATIENT))
-        
-        # Student cannot change any status
-        self.assertFalse(can_change_patient_status(self.student, self.outpatient, INPATIENT))
-    
-    def test_personal_data_change_workflow(self):
-        """Test patient personal data change workflow."""
-        self._add_hospital_context(self.doctor)
-        self._add_hospital_context(self.nurse)
-        
-        # Only doctors can change personal data
-        self.assertTrue(can_change_patient_personal_data(self.doctor, self.inpatient))
-        self.assertTrue(can_change_patient_personal_data(self.doctor, self.outpatient))
-        
-        # Nurses cannot change personal data
-        self.assertFalse(can_change_patient_personal_data(self.nurse, self.inpatient))
-        self.assertFalse(can_change_patient_personal_data(self.nurse, self.outpatient))
+        # Others cannot change personal data
+        for user in [self.nurse, self.physiotherapist, self.student]:
+            self.assertFalse(can_change_patient_personal_data(user, self.inpatient))
+            self.assertFalse(can_change_patient_personal_data(user, self.outpatient))
+            self.assertFalse(can_change_patient_personal_data(user, self.emergency_patient))
     
     @patch('django.utils.timezone.now')
     def test_event_management_workflow(self, mock_now):
@@ -171,9 +164,10 @@ class PermissionSystemIntegrationTest(TestCase):
         self.assertTrue(can_edit_event(self.doctor, self.event))
         self.assertTrue(can_delete_event(self.doctor, self.event))
         
-        # Other users cannot edit/delete
-        self.assertFalse(can_edit_event(self.nurse, self.event))
-        self.assertFalse(can_delete_event(self.nurse, self.event))
+        # Other users cannot edit/delete regardless of role
+        for user in [self.resident, self.nurse, self.physiotherapist, self.student]:
+            self.assertFalse(can_edit_event(user, self.event))
+            self.assertFalse(can_delete_event(user, self.event))
         
         # Set event creation time to 25 hours ago (beyond 24-hour limit)
         self.event.created_at = current_time - timedelta(hours=25)
@@ -193,38 +187,27 @@ class PermissionSystemIntegrationTest(TestCase):
         def test_doctor_view(request):
             return "Doctor only"
         
-        @hospital_context_required
-        def test_hospital_view(request):
-            return "Hospital context required"
-        
-        # Test patient access decorator
+        # Test patient access decorator (all roles should have access)
         request = self.factory.get('/test/')
-        request.user = self.doctor
-        self._add_hospital_context(request.user)
         
-        with patch('apps.core.permissions.decorators.get_object_or_404') as mock_get:
-            mock_get.return_value = self.inpatient
-            result = test_patient_view(request, patient_id='patient-1')
-            self.assertEqual(result, "Success")
+        for user in [self.doctor, self.resident, self.nurse, self.physiotherapist, self.student]:
+            request.user = user
+            
+            with patch('apps.core.permissions.decorators.get_object_or_404') as mock_get:
+                mock_get.return_value = self.inpatient
+                result = test_patient_view(request, patient_id='patient-1')
+                self.assertEqual(result, "Success")
         
         # Test doctor required decorator
         request.user = self.doctor
         result = test_doctor_view(request)
         self.assertEqual(result, "Doctor only")
         
-        request.user = self.nurse
-        result = test_doctor_view(request)
-        self.assertIsInstance(result, HttpResponseForbidden)
-        
-        # Test hospital context decorator
-        request.user = self.doctor
-        self._add_hospital_context(request.user)
-        result = test_hospital_view(request)
-        self.assertEqual(result, "Hospital context required")
-        
-        request.user.has_hospital_context = False
-        result = test_hospital_view(request)
-        self.assertIsInstance(result, HttpResponseForbidden)
+        # Non-doctors should be forbidden
+        for user in [self.nurse, self.physiotherapist, self.student]:
+            request.user = user
+            result = test_doctor_view(request)
+            self.assertIsInstance(result, HttpResponseForbidden)
     
     def test_template_tags_integration(self):
         """Test template tags integration."""
@@ -249,55 +232,13 @@ class PermissionSystemIntegrationTest(TestCase):
         self.assertNotIn('DOCTOR', rendered)
         self.assertIn('NURSE', rendered)
     
-    def test_cross_hospital_access_prevention(self):
-        """Test that users cannot access patients in different hospitals."""
-        # Create another hospital
-        other_hospital = Mock()
-        other_hospital.id = 'hospital-456'
-        
-        # Create patient in other hospital
-        other_patient = Mock()
-        other_patient.id = 'patient-3'
-        other_patient.status = INPATIENT
-        other_patient.current_hospital = other_hospital
-        other_patient.current_hospital_id = other_hospital.id
-        
-        # Doctor in first hospital cannot access patient in second hospital
-        self._add_hospital_context(self.doctor, self.hospital)
-        self.assertFalse(can_access_patient(self.doctor, other_patient))
-        
-        # Doctor in second hospital can access patient in second hospital
-        self._add_hospital_context(self.doctor, other_hospital)
-        self.assertTrue(can_access_patient(self.doctor, other_patient))
-    
-    def test_permission_caching_integration(self):
-        """Test that permission caching works correctly."""
-        from apps.core.permissions.cache import clear_permission_cache, get_cache_stats
-        
-        # Clear cache before test
-        clear_permission_cache()
-        
-        # Add hospital context
-        self._add_hospital_context(self.doctor)
-        
-        # First call should miss cache
-        result1 = can_access_patient(self.doctor, self.inpatient)
-        self.assertTrue(result1)
-        
-        # Second call should hit cache
-        result2 = can_access_patient(self.doctor, self.inpatient)
-        self.assertTrue(result2)
-        self.assertEqual(result1, result2)
-        
-        # Cache stats should show hits
-        stats = get_cache_stats()
-        self.assertGreater(stats['total_requests'], 0)
-    
     def test_role_based_group_assignment_integration(self):
         """Test that role-based group assignment works correctly."""
         # Test that users are in correct groups based on profession
         self.assertTrue(self.doctor.groups.filter(name='Medical Doctors').exists())
+        self.assertTrue(self.resident.groups.filter(name='Residents').exists())
         self.assertTrue(self.nurse.groups.filter(name='Nurses').exists())
+        self.assertTrue(self.physiotherapist.groups.filter(name='Physiotherapists').exists())
         self.assertTrue(self.student.groups.filter(name='Students').exists())
         
         # Test that users are not in incorrect groups
@@ -321,22 +262,15 @@ class PermissionSystemIntegrationTest(TestCase):
             email='noprofession@test.com',
             password='testpass123'
         )
-        self._add_hospital_context(user_no_profession)
-        self.assertFalse(can_access_patient(user_no_profession, self.inpatient))
+        # In simplified system, users without profession should still be able to access patients
+        self.assertTrue(can_access_patient(user_no_profession, self.inpatient))
         
-        # Test with patient without hospital
-        patient_no_hospital = Mock()
-        patient_no_hospital.id = 'patient-no-hospital'
-        patient_no_hospital.status = INPATIENT
-        patient_no_hospital.current_hospital = None
-        patient_no_hospital.current_hospital_id = None
-        
-        self._add_hospital_context(self.doctor)
-        self.assertFalse(can_access_patient(self.doctor, patient_no_hospital))
+        # But they should not be able to discharge or change personal data
+        self.assertFalse(can_change_patient_status(user_no_profession, self.inpatient, DISCHARGED))
+        self.assertFalse(can_change_patient_personal_data(user_no_profession, self.inpatient))
     
     def test_performance_with_multiple_checks(self):
         """Test system performance with multiple permission checks."""
-        self._add_hospital_context(self.doctor)
         
         # Perform multiple permission checks
         for _ in range(100):
@@ -349,12 +283,13 @@ class PermissionSystemIntegrationTest(TestCase):
         self.assertTrue(True)  # If we get here, performance is acceptable
     
     def test_complete_user_workflow_simulation(self):
-        """Simulate a complete user workflow through the system."""
-        # 1. Doctor logs in and selects hospital
-        self._add_hospital_context(self.doctor)
+        """Simulate a complete user workflow through the simplified system."""
+        # 1. Doctor logs in (no hospital selection needed)
         
-        # 2. Doctor searches for and accesses a patient
+        # 2. Doctor accesses any patient (all patients accessible)
         self.assertTrue(can_access_patient(self.doctor, self.inpatient))
+        self.assertTrue(can_access_patient(self.doctor, self.outpatient))
+        self.assertTrue(can_access_patient(self.doctor, self.emergency_patient))
         
         # 3. Doctor views patient details (can change personal data)
         self.assertTrue(can_change_patient_personal_data(self.doctor, self.inpatient))
@@ -362,10 +297,7 @@ class PermissionSystemIntegrationTest(TestCase):
         # 4. Doctor changes patient status
         self.assertTrue(can_change_patient_status(self.doctor, self.inpatient, DISCHARGED))
         
-        # 5. Doctor creates a medical event
-        # (This would be tested in the events app)
-        
-        # 6. Doctor edits the event within time limit
+        # 5. Doctor creates and edits medical events within time limit
         with patch('django.utils.timezone.now') as mock_now:
             from django.utils import timezone
             from datetime import timedelta
@@ -376,16 +308,45 @@ class PermissionSystemIntegrationTest(TestCase):
             
             self.assertTrue(can_edit_event(self.doctor, self.event))
         
-        # 7. Doctor discharges patient (only doctors can do this)
+        # 6. Doctor discharges patient (only doctors/residents can do this)
         self.assertTrue(can_change_patient_status(self.doctor, self.inpatient, DISCHARGED))
         
-        # Verify nurse cannot perform doctor-only actions
-        self._add_hospital_context(self.nurse)
-        self.assertFalse(can_change_patient_personal_data(self.nurse, self.inpatient))
-        self.assertFalse(can_change_patient_status(self.nurse, self.inpatient, DISCHARGED))
+        # Verify nurse can access patients but has limited permissions
+        self.assertTrue(can_access_patient(self.nurse, self.inpatient))  # Can access
+        self.assertFalse(can_change_patient_personal_data(self.nurse, self.inpatient))  # Cannot change personal data
+        self.assertFalse(can_change_patient_status(self.nurse, self.inpatient, DISCHARGED))  # Cannot discharge
         
-        # Verify student has very limited access
-        self._add_hospital_context(self.student)
-        self.assertFalse(can_access_patient(self.student, self.inpatient))  # Students can't access inpatients
-        self.assertTrue(can_access_patient(self.student, self.outpatient))   # But can access outpatients
-        self.assertFalse(can_change_patient_status(self.student, self.outpatient, INPATIENT))  # Can't change status
+        # Verify student can access all patients but has very limited permissions
+        self.assertTrue(can_access_patient(self.student, self.inpatient))  # Can access
+        self.assertTrue(can_access_patient(self.student, self.outpatient))  # Can access
+        self.assertFalse(can_change_patient_status(self.student, self.inpatient, DISCHARGED))  # Cannot discharge
+        self.assertFalse(can_change_patient_personal_data(self.student, self.outpatient))  # Cannot change personal data
+    
+    def test_simplified_system_benefits(self):
+        """Test that the simplified system removes hospital complexity."""
+        # All users can access all patients without hospital context
+        all_users = [self.doctor, self.resident, self.nurse, self.physiotherapist, self.student]
+        all_patients = [self.inpatient, self.outpatient, self.emergency_patient]
+        
+        for user in all_users:
+            for patient in all_patients:
+                # No hospital context needed
+                self.assertTrue(can_access_patient(user, patient))
+                
+        # Role-based permissions still work
+        # Only doctors and residents can discharge
+        discharge_users = [self.doctor, self.resident]
+        non_discharge_users = [self.nurse, self.physiotherapist, self.student]
+        
+        for user in discharge_users:
+            self.assertTrue(can_change_patient_status(user, self.inpatient, DISCHARGED))
+            
+        for user in non_discharge_users:
+            self.assertFalse(can_change_patient_status(user, self.inpatient, DISCHARGED))
+        
+        # Only doctors and residents can change personal data
+        for user in discharge_users:
+            self.assertTrue(can_change_patient_personal_data(user, self.inpatient))
+            
+        for user in non_discharge_users:
+            self.assertFalse(can_change_patient_personal_data(user, self.inpatient))

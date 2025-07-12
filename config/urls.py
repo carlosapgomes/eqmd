@@ -33,7 +33,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.account.urls")),
     path("profiles/", include("apps.accounts.urls", namespace="apps.accounts")),
-    path("hospitals/", include("apps.hospitals.urls", namespace="apps.hospitals")),
     path("patients/", include("apps.patients.urls", namespace="patients")),
     path("events/", include("apps.events.urls", namespace="events")),
     path("dailynotes/", include("apps.dailynotes.urls", namespace="dailynotes")),

@@ -136,16 +136,32 @@ LOGIN_REDIRECT_URL = '/hospitals/select/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 ```
 
-### 5. Remove Hospital Management Commands
+### 5. Update Management Commands
 
-**Delete hospital-related management commands:**
-- [ ] Delete `apps/hospitals/management/commands/`
-- [ ] Delete any hospital setup commands
-- [ ] Delete hospital data import/export commands
+**Delete hospital-specific management commands:**
+- [ ] Delete `apps/hospitals/management/` (entire directory with hospitals app)
+- [ ] Delete `apps/core/management/commands/assign_users_to_hospitals.py` (assigns users to hospitals)
 
-**Check other apps for hospital-related commands:**
-- [ ] `apps/core/management/commands/` - Remove hospital permission commands
-- [ ] `apps/patients/management/commands/` - Remove hospital assignment commands
+**Update hospital-dependent management commands:**
+
+**`setup_groups.py` updates needed:**
+- [ ] Remove `_get_hospital_permissions()` and `_get_hospital_view_permissions()` methods
+- [ ] Remove hospital permission calls from group creation methods (lines 93, 110, 126, 142)
+- [ ] Remove PatientHospitalRecord references from patient permission methods
+- [ ] Update to work with simplified permission model
+
+**`populate_sample_data.py` updates needed:**
+- [ ] Remove hospital creation logic (`create_hospitals()` method)
+- [ ] Remove hospital imports (`from apps.hospitals.models import Hospital, Ward`)
+- [ ] Remove user-hospital assignments in `create_users()` method
+- [ ] Remove hospital assignments in patient creation
+- [ ] Remove PatientHospitalRecord creation
+- [ ] Update to work with environment-based hospital configuration
+
+**Keep as-is (no hospital dependencies):**
+- [ ] `apps/core/management/commands/permission_audit.py` - Works with profession-based groups
+- [ ] `apps/core/management/commands/permission_performance.py` - Tests permission functions
+- [ ] `apps/core/management/commands/user_permissions.py` - Manages user-group assignments
 
 ### 6. Update Database Configuration
 
@@ -199,12 +215,36 @@ LOGGING = {
 - [ ] Remove hospital-related CORS settings (if any)
 - [ ] Simplify session security
 
-### 11. Environment Variables Cleanup
+### 11. Hospital Configuration via Environment Variables
 
-**Update environment variables (.env files):**
-- [ ] Remove hospital-related environment variables
-- [ ] Remove hospital context settings
-- [ ] Update configuration templates
+**Add single hospital configuration (.env files):**
+```bash
+# Hospital Information
+HOSPITAL_NAME="Your Hospital Name"
+HOSPITAL_ADDRESS="123 Medical Center Drive, City, State 12345"
+HOSPITAL_PHONE="+1-555-123-4567"
+HOSPITAL_EMAIL="info@yourhospital.com"
+HOSPITAL_WEBSITE="https://www.yourhospital.com"
+
+# Hospital Logo for Reports
+HOSPITAL_LOGO_PATH="static/images/hospital-logo.png"
+# Alternative: Use URL for external logo
+# HOSPITAL_LOGO_URL="https://yourcdn.com/logo.png"
+```
+
+**Update settings.py to include hospital config:**
+```python
+# Hospital Configuration
+HOSPITAL_CONFIG = {
+    'name': os.getenv('HOSPITAL_NAME', 'Medical Center'),
+    'address': os.getenv('HOSPITAL_ADDRESS', ''),
+    'phone': os.getenv('HOSPITAL_PHONE', ''),
+    'email': os.getenv('HOSPITAL_EMAIL', ''),
+    'website': os.getenv('HOSPITAL_WEBSITE', ''),
+    'logo_path': os.getenv('HOSPITAL_LOGO_PATH', 'static/images/default-logo.png'),
+    'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
+}
+```
 
 ### 12. Docker Configuration (if applicable)
 
@@ -224,67 +264,69 @@ LOGGING = {
 ### Files to Delete:
 - [ ] `apps/hospitals/urls.py`
 - [ ] `apps/hospitals/management/` (entire directory)
+- [ ] `apps/core/management/commands/assign_users_to_hospitals.py`
 - [ ] Any hospital-specific configuration files
 
-### Management Commands:
-- [ ] Review all management commands for hospital references
-- [ ] Remove hospital-related commands
-- [ ] Update remaining commands to remove hospital logic
+### Management Commands Modified:
+- [ ] **Deleted:** `assign_users_to_hospitals.py` (hospital-specific functionality)
+- [ ] **Updated:** `setup_groups.py` (remove hospital permissions)
+- [ ] **Updated:** `populate_sample_data.py` (remove hospital creation/assignment)
+- [ ] **Unchanged:** `permission_audit.py`, `permission_performance.py`, `user_permissions.py`
 
 ## Validation Steps
 
 **Test configuration changes:**
 ```bash
 # Check Django configuration
-python manage.py check
+uv run python manage.py check
 
 # Test settings loading
-python manage.py shell -c "from django.conf import settings; print('Settings loaded successfully')"
+uv run python manage.py shell -c "from django.conf import settings; print('Settings loaded successfully')"
 
 # Test URL patterns
-python manage.py show_urls
+uv run python manage.py show_urls
 
 # Test management commands
-python manage.py help
+uv run python manage.py help
 ```
 
 ### 1. Verify Django Check Passes
 ```bash
-python manage.py check
+uv run python manage.py check
 # Should show no errors
 
-python manage.py check --deploy
+uv run python manage.py check --deploy
 # Should show no critical issues
 ```
 
 ### 2. Test URL Resolution
 ```bash
-python manage.py show_urls
+uv run python manage.py show_urls
 # Should not show any hospital URLs
 ```
 
 ### 3. Test Static Files
 ```bash
-python manage.py collectstatic --dry-run
+uv run python manage.py collectstatic --dry-run
 # Should work without hospital-related files
 ```
 
 ### 4. Test Development Server
 ```bash
-python manage.py runserver
+uv run python manage.py runserver
 # Should start without errors
 ```
 
 ### 5. Test Database Connection
 ```bash
-python manage.py migrate --dry-run
+uv run python manage.py migrate --dry-run
 # Should show no pending migrations
 ```
 
 ## Validation Checklist
 
 Before proceeding to Phase 7:
-- [ ] `python manage.py check` passes
+- [ ] `uv run python manage.py check` passes
 - [ ] Development server starts successfully
 - [ ] No hospital URLs in URL patterns
 - [ ] No hospital apps in INSTALLED_APPS

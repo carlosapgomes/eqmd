@@ -6,6 +6,8 @@ This folder contains the detailed step-by-step plan for refactoring EquipeMed fr
 
 The refactor will completely remove the multi-hospital functionality to simplify the codebase by approximately 40-60%. This is a greenfield project decision to avoid unnecessary complexity.
 
+**Migration Strategy:** Since this is a greenfield project with no production data, we will delete existing migrations and create fresh initial migrations with the simplified schema. This avoids complex step-by-step field removal migrations.
+
 ## Execution Order
 
 Execute the phases in this exact order, with each phase being a separate coding session:
@@ -16,7 +18,7 @@ Execute the phases in this exact order, with each phase being a separate coding 
 
 2. **Phase 2: Database Models Refactor** (`phase-2-models.md`)
    - Remove hospital-related models and fields
-   - Create database migrations
+   - Create fresh initial migrations (greenfield approach)
 
 3. **Phase 3: Permission System Simplification** (`phase-3-permissions.md`)
    - Drastically simplify permission logic
@@ -42,6 +44,11 @@ Execute the phases in this exact order, with each phase being a separate coding 
    - Update CLAUDE.md
    - Update project documentation
    - Update README and setup instructions
+
+9. **Phase 9: Documentation Audit & Update** (`phase-9-documentation-audit.md`)
+   - Comprehensive audit of docs/ folder
+   - Remove/update hospital-related documentation
+   - Verify documentation accuracy against codebase
 
 ## Success Criteria
 

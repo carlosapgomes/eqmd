@@ -137,7 +137,6 @@ class PhotoAdmin(admin.ModelAdmin):
     list_filter = [
         'event_datetime',
         'created_by',
-        'patient__current_hospital',
         'event_type',
     ]
 
@@ -299,7 +298,6 @@ class PhotoSeriesAdmin(admin.ModelAdmin):
     list_filter = [
         'event_datetime',
         'created_by',
-        'patient__current_hospital',
         'event_type',
     ]
     
@@ -436,7 +434,6 @@ class VideoClipAdmin(admin.ModelAdmin):
     list_filter = [
         'event_datetime',
         'created_by',
-        'patient__current_hospital',
         'duration',
         'video_codec',
         'event_type',

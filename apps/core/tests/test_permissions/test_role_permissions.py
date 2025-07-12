@@ -16,8 +16,6 @@ from apps.core.permissions.utils import (
     can_view_patients,
     can_manage_events,
     can_view_events,
-    can_manage_hospitals,
-    can_view_hospitals,
 )
 from apps.core.permissions.constants import (
     MEDICAL_DOCTOR,
@@ -217,20 +215,6 @@ class RolePermissionUtilsTestCase(TestCase):
         self.assertTrue(result)
         self.doctor.has_perm.assert_called_once_with('events.view_event')
 
-    def test_can_manage_hospitals_with_permissions(self):
-        """Test can_manage_hospitals with user having all required permissions"""
-        self.doctor.has_perm = Mock(return_value=True)
-        
-        result = can_manage_hospitals(self.doctor)
-        self.assertTrue(result)
-
-    def test_can_view_hospitals_with_permission(self):
-        """Test can_view_hospitals with user having view permission"""
-        self.doctor.has_perm = Mock(return_value=True)
-        
-        result = can_view_hospitals(self.doctor)
-        self.assertTrue(result)
-        self.doctor.has_perm.assert_called_once_with('hospitals.view_hospital')
 
     def test_unauthenticated_user_all_functions(self):
         """Test all permission functions return False for unauthenticated users"""
@@ -242,5 +226,3 @@ class RolePermissionUtilsTestCase(TestCase):
         self.assertFalse(can_view_patients(unauthenticated_user))
         self.assertFalse(can_manage_events(unauthenticated_user))
         self.assertFalse(can_view_events(unauthenticated_user))
-        self.assertFalse(can_manage_hospitals(unauthenticated_user))
-        self.assertFalse(can_view_hospitals(unauthenticated_user))

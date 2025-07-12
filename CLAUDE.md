@@ -8,18 +8,18 @@ This file provides guidance to Claude Code when working with this repository.
 
 ```bash
 # Development server
-python manage.py runserver
+uv run python manage.py runserver
 
 # Database
-python manage.py migrate
-python manage.py makemigrations
-python manage.py createsuperuser
+uv run python manage.py migrate
+uv run python manage.py makemigrations
+uv run python manage.py createsuperuser
 
 # Testing
-pytest                                      # All tests with coverage
-pytest --no-cov                           # Without coverage
-python manage.py test apps.patients.tests # Recommended for patients/events/dailynotes/sample_content apps
-python manage.py test apps.core.tests.test_permissions
+uv run pytest                                      # All tests with coverage
+uv run pytest --no-cov                           # Without coverage
+uv run python manage.py test apps.patients.tests # Recommended for patients/events/dailynotes/sample_content apps
+uv run python manage.py test apps.core.tests.test_permissions
 
 # Frontend
 npm install && npm run build
@@ -29,20 +29,19 @@ uv install
 uv add package-name
 
 # Sample data
-python manage.py create_sample_tags
-python manage.py create_sample_content
+uv run python manage.py create_sample_tags
+uv run python manage.py create_sample_content
 ```
 
 ## Project Architecture
 
-**EquipeMed** - Django 5 medical team collaboration platform for patient tracking across hospitals.
+**EquipeMed** - Django 5 medical team collaboration platform for single-hospital patient tracking and care management.
 
 ### Apps Overview
 
-- **core**: Dashboard, permissions, landing page
+- **core**: Dashboard, permissions, landing page, hospital configuration
 - **accounts**: Custom user model with medical professions (Doctor, Resident, Nurse, Physiotherapist, Student)
-- **hospitals**: Hospital/ward management with context middleware
-- **patients**: Patient management with tagging system and hospital records
+- **patients**: Patient management with tagging system and status tracking
 - **events**: Base event model for medical records (UUID, audit trail, 24h edit window)
 - **dailynotes**: Daily evolution notes extending Event model
 - **sample_content**: Template content management for various event types
@@ -54,14 +53,16 @@ python manage.py create_sample_content
 - **Frontend**: Bootstrap 5.3, Webpack, Portuguese localization
 - **Security**: UUID identifiers, CSRF protection, role-based permissions
 - **Testing**: pytest + Django test runner, factory-boy, comprehensive coverage
+- **Hospital Configuration**: Environment-based single hospital setup
+- **Permission System**: Simple role-based access control for medical staff
 
 ## App Details
 
 ### Patients App
 
-**Full CRUD patient management with tagging system and intelligent hospital relationships**
+**Full CRUD patient management with tagging system and status tracking**
 
-- Patient models: Patient, PatientHospitalRecord, AllowedTag, Tag
+- Patient models: Patient, AllowedTag, Tag
 - Search by name, ID, fiscal/health card numbers
 - Status tracking: inpatient, outpatient, emergency, discharged, transferred
 - Color-coded tagging system with web admin interface
@@ -69,13 +70,12 @@ python manage.py create_sample_content
 - Template tags: `patient_status_badge`, `patient_tags`
 - URL structure: `/patients/`, `/patients/<uuid>/`, `/patients/tags/`
 
-#### Hospital Assignment Logic
+#### Patient Status Management
 
-- **Admitted Patients** (inpatient, emergency, transferred): Require `current_hospital` assignment
-- **Outpatients/Discharged**: No `current_hospital` assignment (hospital-independent)
-- **Automatic Management**: Hospital assignments auto-cleared/set on status changes
-- **Historical Tracking**: PatientHospitalRecord maintains treatment history across facilities
-- **Form Validation**: Dynamic hospital field visibility based on patient status
+- **Status Types**: inpatient, outpatient, emergency, discharged, transferred
+- **Role-Based Access**: Different access levels based on user profession and patient status
+- **Simple Validation**: Basic status validation without complex assignment logic
+- **Universal Access**: All medical staff can access all patients regardless of status
 
 ### Events App
 
@@ -136,15 +136,6 @@ python manage.py create_sample_content
 - **Filter Caching**: Cached filter dropdown options for list views (5-minute cache)
 - **Query Patterns**: Optimized patient/creator lookups with `only()` clauses
 
-### Hospitals App
-
-**Hospital and ward management with context middleware**
-
-- Hospital/Ward models with capacity tracking
-- HospitalContextMiddleware for session-based hospital selection
-- Template tag: `capacity_bar` with color-coded occupancy
-- URLs: `/hospitals/`, `/hospitals/wards/`, `/hospitals/select/`
-
 ### Sample Content App
 
 **Template content management for various event types**
@@ -179,7 +170,7 @@ GET /sample-content/api/event-type/1/  # Returns JSON with daily note templates
 #### Management Commands
 
 ```bash
-python manage.py create_sample_content  # Create initial sample content templates
+uv run python manage.py create_sample_content  # Create initial sample content templates
 ```
 
 ### MediaFiles App
@@ -197,7 +188,7 @@ python manage.py create_sample_content  # Create initial sample content template
 
 - **Secure File Storage**: UUID-based filenames prevent enumeration attacks
 - **File Deduplication**: SHA-256 hash-based duplicate detection and storage optimization (photos only)
-- **Permission-Based Access**: Hospital context and role-based access control
+- **Permission-Based Access**: Role-based access control
 - **Multiple Media Types**: Photos (PHOTO_EVENT = 3), Photo Series (PHOTO_SERIES_EVENT = 9), Videos (VIDEO_CLIP_EVENT = 10)
 - **Thumbnail Generation**: Automatic thumbnails for images and video previews
 - **Audit Trail**: Complete access logging and file operation tracking
@@ -548,7 +539,7 @@ Each page loads only required bundles:
 
 ## Permission System
 
-**Comprehensive role-based access control with hospital context**
+**Simple role-based access control for medical professionals**
 
 ### Core Framework
 
@@ -557,53 +548,55 @@ Located in `apps/core/permissions/`:
 - **constants.py**: Profession types (Doctor, Resident, Nurse, Physiotherapist, Student)
 - **utils.py**: Core permission functions (`can_access_patient`, `can_edit_event`, etc.)
 - **decorators.py**: View decorators (`@patient_access_required`, `@doctor_required`)
-- **cache.py**: Permission caching system
-- **backends.py**: Custom Django permission backend
 
 ### Permission Rules
 
-- **Doctors**: Full permissions, can discharge patients
-- **Residents/Physiotherapists**: Full access to current hospital patients
-- **Nurses**: Limited status changes, cannot discharge
-- **Students**: View-only outpatients (accessible across all user hospitals)
-- **Time limits**: 24-hour edit/delete window for events
-- **Hospital context**: Status-dependent access control
+**Doctors:**
+- Full access to all patients regardless of status
+- Can discharge patients
+- Can edit patient personal data
+- Can create and edit all types of events
 
-#### Patient Access Rules (Updated)
+**Residents:**
+- Full access to all patients
+- Can discharge patients
+- Can edit patient personal data
+- Can create and edit all types of events
 
-- **Admitted Patients** (inpatient, emergency, transferred): Strict hospital matching required
-- **Outpatients/Discharged**: Broader access - users can access patients from any hospital where:
-  - Patient has historical records (PatientHospitalRecord) at user's hospitals, OR
-  - Patient has current hospital assignment at user's hospitals, OR
-  - User belongs to hospitals where patient was previously treated
-- **Students**: Limited to outpatients only, but accessible across all user hospitals
+**Nurses:**
+- Access to all patients
+- Limited status changes (cannot discharge)
+- Cannot edit patient personal data
+- Can create daily notes and basic events
+
+**Physiotherapists:**
+- Full access to all patients
+- Cannot discharge patients
+- Cannot edit patient personal data
+- Can create and edit all types of events
+
+**Students:**
+- Full access to all patients
+- Cannot edit patient personal data
+- Cannot discharge patients
+- Can create basic events and daily notes
 
 ### Key Functions
 
 ```python
-can_access_patient(user, patient)           # Status-dependent hospital access
-can_edit_event(user, event)                 # Time-limited editing
-can_change_patient_status(user, patient, status)  # Role-based status changes
-can_change_patient_personal_data(user, patient)   # Doctor-only data changes
-get_user_accessible_patients(user)          # Optimized patient queryset filtering
-```
-
-### Patient Model Methods
-
-```python
-patient.requires_hospital_assignment        # Check if status requires hospital
-patient.should_clear_hospital_assignment    # Check if status should clear hospital
-patient.is_currently_admitted()             # Check if patient is actively admitted
-patient.has_hospital_record_at(hospital)    # Check treatment history at hospital
+can_access_patient(user, patient)           # Always True (all roles can access all patients)
+can_edit_event(user, event)                 # Time-limited editing (24h)
+can_change_patient_status(user, patient, status)  # Doctors/residents only for discharge
+can_change_patient_personal_data(user, patient)   # Doctors/residents only
+get_user_accessible_patients(user)          # Returns all patients for all roles
 ```
 
 ### Management Commands
 
 ```bash
-python manage.py setup_groups              # Create profession-based groups
-python manage.py permission_audit --action=report  # System audit
-python manage.py user_permissions --action=assign # Assign user to group
-python manage.py permission_performance --action=stats  # Performance stats
+uv run python manage.py setup_groups              # Create profession-based groups
+uv run python manage.py permission_audit --action=report  # System audit
+uv run python manage.py user_permissions --action=assign # Assign user to group
 ```
 
 ### Template Tags
@@ -613,6 +606,54 @@ python manage.py permission_performance --action=stats  # Performance stats
 {% if user|has_permission:"patients.add_patient" %}...{% endif %}
 {% if user|in_group:"Medical Doctors" %}...{% endif %}
 {% check_multiple_permissions user "perm1" "perm2" as has_all %}
+```
+
+## Hospital Configuration
+
+**Environment-based single hospital configuration**
+
+### Hospital Settings
+
+Located in `config/settings.py` as `HOSPITAL_CONFIG`:
+
+```python
+HOSPITAL_CONFIG = {
+    'name': os.getenv('HOSPITAL_NAME', 'Hospital Name'),
+    'address': os.getenv('HOSPITAL_ADDRESS', ''),
+    'phone': os.getenv('HOSPITAL_PHONE', ''),
+    'email': os.getenv('HOSPITAL_EMAIL', ''),
+    'website': os.getenv('HOSPITAL_WEBSITE', ''),
+    'logo_path': os.getenv('HOSPITAL_LOGO_PATH', ''),
+    'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
+}
+```
+
+### Template Tags
+
+Available in `apps/core/templatetags/hospital_tags.py`:
+
+```django
+{% load hospital_tags %}
+{% hospital_name %}        # Get configured hospital name
+{% hospital_address %}     # Get configured hospital address
+{% hospital_phone %}       # Get configured hospital phone
+{% hospital_email %}       # Get configured hospital email
+{% hospital_logo %}        # Get configured hospital logo URL
+{% hospital_header %}      # Render hospital header with configuration
+{% hospital_branding %}    # Get complete hospital branding info
+```
+
+### Environment Variables
+
+```bash
+# Hospital Configuration
+HOSPITAL_NAME="Your Hospital Name"
+HOSPITAL_ADDRESS="123 Medical Center Drive, City, State 12345"
+HOSPITAL_PHONE="+1-555-123-4567"
+HOSPITAL_EMAIL="info@yourhospital.com"
+HOSPITAL_WEBSITE="https://www.yourhospital.com"
+HOSPITAL_LOGO_PATH="static/images/hospital-logo.png"
+HOSPITAL_LOGO_URL="https://cdn.yourhospital.com/logo.png"
 ```
 
 ## Django Template Development Best Practices
@@ -697,3 +738,8 @@ Task Master provides MCP tools when connected via `.mcp.json`. Key tools include
 
 **See `CLAUDE-taskmaster.md` for complete documentation, configuration, and workflows.**
 
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

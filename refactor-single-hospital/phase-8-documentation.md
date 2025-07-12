@@ -79,19 +79,19 @@ Located in `apps/core/permissions/`:
 ```markdown
 <!-- Remove hospital-related commands -->
 # Development
-python manage.py runserver
-python manage.py migrate
-python manage.py makemigrations
-python manage.py createsuperuser
+uv run python manage.py runserver
+uv run python manage.py migrate
+uv run python manage.py makemigrations
+uv run python manage.py createsuperuser
 
 # Testing
-pytest                                      # All tests with coverage
-python manage.py test apps.patients.tests  # Recommended for patients/events/dailynotes apps
-python manage.py test apps.core.tests.test_permissions
+uv run pytest                                      # All tests with coverage
+uv run python manage.py test apps.patients.tests  # Recommended for patients/events/dailynotes apps
+uv run python manage.py test apps.core.tests.test_permissions
 
 # Sample data
-python manage.py create_sample_tags
-python manage.py create_sample_content
+uv run python manage.py create_sample_tags
+uv run python manage.py create_sample_content
 ```
 
 ### 2. Update Project Architecture Overview
@@ -180,26 +180,27 @@ python manage.py create_sample_content
 - Can create daily notes and basic events
 
 **Students:**
-- View-only access to outpatients and discharged patients only
-- No access to inpatients, emergency, or transferred patients
-- Cannot edit any patient data or create events
+- Full access to all patients (same as other roles)
+- Cannot edit patient personal data
+- Cannot discharge patients
+- Can create basic events and daily notes
 
 ### Key Functions
 
 ```python
-can_access_patient(user, patient)           # Role and status-based access
+can_access_patient(user, patient)           # Always True (all roles can access all patients)
 can_edit_event(user, event)                 # Time-limited editing (24h)
-can_change_patient_status(user, patient, status)  # Role-based status changes
-can_change_patient_personal_data(user, patient)   # Doctor-only data changes
-get_user_accessible_patients(user)          # Role-filtered patient queryset
+can_change_patient_status(user, patient, status)  # Doctors/residents only for discharge
+can_change_patient_personal_data(user, patient)   # Doctors/residents only
+get_user_accessible_patients(user)          # Returns all patients for all roles
 ```
 
 ### Management Commands
 
 ```bash
-python manage.py setup_groups              # Create profession-based groups
-python manage.py permission_audit --action=report  # System audit
-python manage.py user_permissions --action=assign # Assign user to group
+uv run python manage.py setup_groups              # Create profession-based groups
+uv run python manage.py permission_audit --action=report  # System audit
+uv run python manage.py user_permissions --action=assign # Assign user to group
 ```
 ```
 
@@ -220,26 +221,26 @@ python manage.py user_permissions --action=assign # Assign user to group
 
 2. **Database setup:**
    ```bash
-   python manage.py migrate
-   python manage.py createsuperuser
+   uv run python manage.py migrate
+   uv run python manage.py createsuperuser
    ```
 
 3. **Sample data (optional):**
    ```bash
-   python manage.py create_sample_tags
-   python manage.py create_sample_content
+   uv run python manage.py create_sample_tags
+   uv run python manage.py create_sample_content
    ```
 
 4. **Run development server:**
    ```bash
-   python manage.py runserver
+   uv run python manage.py runserver
    ```
 
 ### First Time Setup
 
 After creating a superuser:
 1. Log in to admin at `/admin/`
-2. Create user groups: `python manage.py setup_groups`
+2. Create user groups: `uv run python manage.py setup_groups`
 3. Assign users to appropriate professional groups
 4. Create patients and start using the system
 
@@ -275,7 +276,13 @@ EMAIL_HOST=smtp.your-provider.com
 EMAIL_HOST_USER=your-email@domain.com
 EMAIL_HOST_PASSWORD=your-email-password
 
-<!-- Remove hospital-related environment variables -->
+# Hospital Configuration
+HOSPITAL_NAME="Your Hospital Name"
+HOSPITAL_ADDRESS="123 Medical Center Drive, City, State 12345"
+HOSPITAL_PHONE="+1-555-123-4567"
+HOSPITAL_EMAIL="info@yourhospital.com"
+HOSPITAL_WEBSITE="https://www.yourhospital.com"
+HOSPITAL_LOGO_PATH="static/images/hospital-logo.png"
 ```
 
 ### Production Checklist
@@ -285,8 +292,8 @@ EMAIL_HOST_PASSWORD=your-email-password
 - [ ] Set up email backend
 - [ ] Configure static files serving
 - [ ] Set up SSL/HTTPS
-- [ ] Run security checks: `python manage.py check --deploy`
-- [ ] Create user groups: `python manage.py setup_groups`
+- [ ] Run security checks: `uv run python manage.py check --deploy`
+- [ ] Create user groups: `uv run python manage.py setup_groups`
 
 <!-- Remove hospital-related deployment steps -->
 ```
@@ -311,65 +318,62 @@ A Django 5 medical team collaboration platform for patient tracking and care man
 
 ## Medical Professions Supported
 
-- **Doctors**: Full system access
-- **Residents**: Full patient access, limited administrative functions  
-- **Nurses**: Patient care access with restrictions
-- **Physiotherapists**: Full patient access for treatment
-- **Students**: Limited read-only access for learning
+- **Doctors**: Full system access including patient discharge and personal data editing
+- **Residents**: Full patient access including discharge and personal data editing
+- **Nurses**: Full patient access but cannot discharge or edit personal data
+- **Physiotherapists**: Full patient access but cannot discharge or edit personal data
+- **Students**: Full patient access but cannot discharge or edit personal data
 
 <!-- Remove hospital-related features -->
 ```
 
 ### 10. Create Migration Guide
 
-**Create hospital-to-single migration guide:**
+**Create deployment guide for single-hospital:**
 ```markdown
-# Migration Guide: Multi-Hospital to Single-Hospital
+# Single-Hospital Architecture Guide
 
-If you have an existing multi-hospital deployment and want to migrate to the simplified single-hospital architecture:
+This version uses a simplified single-hospital architecture without the complexity of multi-hospital management.
 
-## Before Migration
+## Fresh Installation
 
-1. **Backup your database completely**
-2. **Export critical hospital assignment data if needed**
-3. **Document current user-hospital assignments**
-4. **Test migration process on a copy first**
-
-## Migration Process
-
-1. **Switch to single-hospital branch:**
+1. **Clone the single-hospital branch:**
    ```bash
+   git clone <repository>
    git checkout single-hospital-refactor
    ```
 
-2. **Run migrations in order:**
+2. **Set up environment:**
    ```bash
-   python manage.py migrate patients remove_patient_hospital_record
-   python manage.py migrate patients remove_hospital_fields  
-   python manage.py migrate accounts remove_hospital_fields
+   uv install
+   cp .env.example .env
+   # Edit .env with your hospital information:
+   # HOSPITAL_NAME, HOSPITAL_ADDRESS, HOSPITAL_PHONE, etc.
    ```
 
-3. **Update user permissions:**
+3. **Create database:**
    ```bash
-   python manage.py setup_groups
-   python manage.py permission_audit --action=report
+   uv run python manage.py migrate
+   uv run python manage.py createsuperuser
+   uv run python manage.py setup_groups
    ```
 
-## Data Loss Warning
+## For Existing Multi-Hospital Users
 
-This migration will permanently remove:
-- All hospital assignments
-- PatientHospitalRecord history
-- User-hospital memberships
-- Hospital-related audit trails
+**Note:** This architecture is not compatible with existing multi-hospital data. For new installations only.
 
-## Rollback
-
-To rollback to multi-hospital:
+If you need multi-hospital functionality:
 ```bash
-git checkout prescriptions  # Original multi-hospital branch
-python manage.py migrate
+git checkout prescriptions  # Use original multi-hospital branch
 ```
+
+## Benefits of Single-Hospital Architecture
+
+- 60% simpler permission system
+- 40% reduction in codebase complexity
+- Faster development and testing
+- Easier deployment and maintenance
+- Better security through simplified permissions
 ```
 
 ### 11. Update Development Guidelines

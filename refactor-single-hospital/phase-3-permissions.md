@@ -19,12 +19,14 @@
 **Target:** ~200 lines with simple role-based permissions
 
 **Remove hospital context logic:**
+
 - [ ] Remove `can_access_patient()` hospital matching logic
 - [ ] Remove `has_hospital_context()` checks
 - [ ] Remove `get_user_accessible_patients()` hospital filtering
 - [ ] Simplify to role-based access only
 
 **Before (complex hospital logic):**
+
 ```python
 def can_access_patient(user, patient):
     if patient.status in [INPATIENT, EMERGENCY, TRANSFERRED]:
@@ -39,15 +41,15 @@ def can_access_patient(user, patient):
 ```
 
 **After (simple role-based):**
+
 ```python
 def can_access_patient(user, patient):
-    # Simple role-based access
-    if user.profession == 'student':
-        return patient.status in ['outpatient', 'discharged']
-    return True  # All other roles can access all patients
+    # Simple role-based access - all roles can access all patients
+    return True
 ```
 
 **Simplified permission functions:**
+
 - [ ] `can_access_patient(user, patient)` - Role-based only
 - [ ] `can_edit_event(user, event)` - Time-based + role-based
 - [ ] `can_change_patient_status(user, patient, status)` - Role-based only
@@ -56,6 +58,7 @@ def can_access_patient(user, patient):
 ### 2. Remove Hospital Context Functions
 
 **Delete these functions entirely:**
+
 - [ ] `has_hospital_context(user)`
 - [ ] `get_user_hospitals(user)`
 - [ ] `get_patients_for_hospital(hospital)`
@@ -64,16 +67,19 @@ def can_access_patient(user, patient):
 ### 3. Simplify Permission Decorators (`apps/core/permissions/decorators.py`)
 
 **Remove hospital-related decorators:**
+
 - [ ] `@hospital_context_required`
 - [ ] `@patient_hospital_access_required`
 - [ ] Any decorators checking hospital membership
 
 **Keep and simplify:**
+
 - [ ] `@patient_access_required` - Remove hospital logic
 - [ ] `@doctor_required` - Keep as-is
 - [ ] `@nurse_required` - Keep as-is
 
 **Example simplification:**
+
 ```python
 # Before (complex hospital logic)
 def patient_access_required(view_func):
@@ -95,11 +101,13 @@ def patient_access_required(view_func):
 ### 4. Remove Hospital-Aware Caching (`apps/core/permissions/cache.py`)
 
 **Remove hospital context from cache keys:**
+
 - [ ] Remove hospital_id from cache key generation
 - [ ] Simplify cache invalidation logic
 - [ ] Remove hospital-specific cache versioning
 
 **Simplify caching:**
+
 ```python
 # Before (hospital-aware)
 def get_cache_key(user, patient, action):
@@ -114,6 +122,7 @@ def get_cache_key(user, patient, action):
 ### 5. Update Permission Backend (`apps/core/permissions/backends.py`)
 
 **Remove hospital context logic:**
+
 - [ ] Remove hospital membership checks
 - [ ] Simplify permission checking to role-based only
 - [ ] Remove hospital context from permission resolution
@@ -121,6 +130,7 @@ def get_cache_key(user, patient, action):
 ### 6. Simplify Patient Access Queries
 
 **Update `get_user_accessible_patients()`:**
+
 ```python
 # Before (complex hospital filtering)
 def get_user_accessible_patients(user):
@@ -133,14 +143,14 @@ def get_user_accessible_patients(user):
 
 # After (simple role filtering)
 def get_user_accessible_patients(user):
-    if user.profession == 'student':
-        return Patient.objects.filter(status__in=['outpatient', 'discharged'])
+    # All roles can access all patients
     return Patient.objects.all()
 ```
 
 ### 7. Update Template Tags (`apps/core/templatetags/permission_tags.py`)
 
 **Remove hospital-related template tags:**
+
 - [ ] Remove any hospital context template tags
 - [ ] Simplify permission checking template tags
 - [ ] Remove hospital membership checks
@@ -148,6 +158,7 @@ def get_user_accessible_patients(user):
 ### 8. Update Management Commands
 
 **Simplify permission-related management commands:**
+
 - [ ] `apps/core/management/commands/permission_audit.py`
 - [ ] Remove hospital context from permission reports
 - [ ] Simplify user permission assignment commands
@@ -156,44 +167,42 @@ def get_user_accessible_patients(user):
 
 ### New Permission Rules (Much Simpler)
 
-**Doctors:**
+**Doctors/Residents:**
+
 - Full access to all patients
 - Can discharge patients
 - Can edit patient personal data
 
-**Residents/Physiotherapists:**
+**Nurses/Physiotherapists/Students:**
+
 - Full access to all patients
+- Cannot edit patient personal data
 - Cannot discharge patients
 
-**Nurses:**
-- Access to all patients
-- Limited status changes (cannot discharge)
-- Cannot edit patient personal data
-
-**Students:**
-- View-only access to outpatients and discharged patients only
-- No access to inpatients, emergency, or transferred patients
-
 ### Time-Based Rules (Unchanged)
+
 - 24-hour edit/delete window for events
 - Role-based event editing permissions
 
 ## Critical File Changes
 
-### Files to Modify:
+### Files to Modify
+
 - [ ] `apps/core/permissions/utils.py` - Major simplification
 - [ ] `apps/core/permissions/decorators.py` - Remove hospital decorators
 - [ ] `apps/core/permissions/cache.py` - Remove hospital context
 - [ ] `apps/core/permissions/backends.py` - Simplify permission backend
 - [ ] `apps/core/templatetags/permission_tags.py` - Remove hospital tags
 
-### Files to Delete:
+### Files to Delete
+
 - [ ] Any hospital-specific permission modules
 - [ ] Hospital context management utilities
 
 ## Testing Strategy
 
 **Test the simplified permissions:**
+
 ```python
 # Test basic role access
 def test_doctor_access_all_patients():
@@ -209,6 +218,7 @@ def test_role_based_patient_operations():
 ## Validation Checklist
 
 Before proceeding to Phase 4:
+
 - [ ] Permission system reduced to ~200 lines
 - [ ] No hospital context references in permission code
 - [ ] All permission decorators work without hospital logic
@@ -219,6 +229,7 @@ Before proceeding to Phase 4:
 ## Performance Impact
 
 **Expected improvements:**
+
 - Faster permission checks (no hospital context lookups)
 - Simpler database queries
 - Reduced cache complexity
@@ -227,7 +238,9 @@ Before proceeding to Phase 4:
 ## Risk Mitigation
 
 **Ensure security is maintained:**
+
 - [ ] Role-based restrictions still enforced
 - [ ] Time-based edit windows preserved
 - [ ] Student access properly limited
 - [ ] No accidental permission escalation
+

@@ -63,7 +63,6 @@ INSTALLED_APPS = [
     "taggit",
     "apps.core",  # New app for core/pages functionality
     "apps.accounts.apps.AccountsConfig",  # New accounts app
-    "apps.hospitals",  # Hospital management app
     "apps.patients",  # Patient management app
     "apps.events",  # Events management app
     "apps.dailynotes",  # Daily notes app
@@ -103,7 +102,6 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    "apps.hospitals.middleware.HospitalContextMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -124,7 +122,6 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.patients.context_processors.patient_stats",
                 "apps.patients.context_processors.recent_patients",
-                "apps.hospitals.context_processors.hospital_context",
             ],
         },
     },
@@ -321,4 +318,15 @@ DJANGO_DRF_FILEPOND_FILE_FIELD_NAME = 'file'
 
 # Default field name (try both possible setting names)
 DJANGO_DRF_FILEPOND_FIELD_NAME = 'file'
+
+# Hospital Configuration
+HOSPITAL_CONFIG = {
+    'name': os.getenv('HOSPITAL_NAME', 'Medical Center'),
+    'address': os.getenv('HOSPITAL_ADDRESS', ''),
+    'phone': os.getenv('HOSPITAL_PHONE', ''),
+    'email': os.getenv('HOSPITAL_EMAIL', ''),
+    'website': os.getenv('HOSPITAL_WEBSITE', ''),
+    'logo_path': os.getenv('HOSPITAL_LOGO_PATH', 'static/images/default-logo.png'),
+    'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
+}
 

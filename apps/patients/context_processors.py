@@ -1,5 +1,4 @@
-from .models import Patient, PatientHospitalRecord
-from apps.hospitals.models import Hospital
+from .models import Patient
 
 def patient_stats(request):
     """
@@ -16,13 +15,10 @@ def patient_stats(request):
         total_patients = Patient.objects.count()
         inpatient_count = Patient.objects.filter(status=Patient.Status.INPATIENT).count()
         outpatient_count = Patient.objects.filter(status=Patient.Status.OUTPATIENT).count()
-        hospital_count = Hospital.objects.count()
-
         return {
             'total_patients': total_patients,
             'inpatient_count': inpatient_count,
             'outpatient_count': outpatient_count,
-            'hospital_count': hospital_count,
         }
     except:
         # Return empty dict if database isn't set up yet

@@ -5,8 +5,7 @@ from datetime import datetime, timedelta
 import random
 from faker import Faker
 
-from apps.hospitals.models import Hospital, Ward
-from apps.patients.models import Patient, PatientHospitalRecord, AllowedTag, Tag
+from apps.patients.models import Patient, AllowedTag, Tag
 from apps.dailynotes.models import DailyNote
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
@@ -39,7 +38,6 @@ class Command(BaseCommand):
         if self.dry_run:
             self.stdout.write(self.style.WARNING('DRY RUN MODE - No data will be created'))
 
-        self.create_hospitals()
         self.create_users()
         self.create_tags()
         self.create_patients()
@@ -74,66 +72,14 @@ class Command(BaseCommand):
         # Clear patients (now safe since events and tags are deleted)
         Patient.objects.filter(created_by__username__startswith='sample_').delete()
 
-        # Clear hospitals
-        Hospital.objects.filter(name__startswith='Hospital ').delete()
 
         # Clear users last (now safe since all dependent objects are deleted)
         User.objects.filter(username__startswith='sample_').delete()
 
-    def create_hospitals(self):
-        self.stdout.write('Creating hospitals and wards...')
-        
-        hospitals_data = [
-            {
-                'name': 'Hospital São João',
-                'short_name': 'HSJ',
-                'address': 'Rua das Flores, 123',
-                'city': 'São Paulo',
-                'state': 'SP',
-                'zip_code': '01234-567',
-                'phone': '(11) 1234-5678',
-                'wards': [
-                    {'name': 'UTI', 'description': 'Unidade de Terapia Intensiva', 'capacity': 12},
-                    {'name': 'Clínica Médica', 'description': 'Enfermaria de Clínica Médica', 'capacity': 30},
-                    {'name': 'Cardiologia', 'description': 'Enfermaria de Cardiologia', 'capacity': 20},
-                ]
-            },
-            {
-                'name': 'Hospital Santa Maria',
-                'short_name': 'HSM',
-                'address': 'Avenida Central, 456',
-                'city': 'Rio de Janeiro',
-                'state': 'RJ',
-                'zip_code': '20000-000',
-                'phone': '(21) 9876-5432',
-                'wards': [
-                    {'name': 'Emergência', 'description': 'Pronto Socorro', 'capacity': 25},
-                    {'name': 'Cirurgia', 'description': 'Enfermaria Cirúrgica', 'capacity': 18},
-                    {'name': 'Pediatria', 'description': 'Enfermaria Pediátrica', 'capacity': 15},
-                ]
-            }
-        ]
-
-        self.hospitals = []
-        for hospital_data in hospitals_data:
-            if self.dry_run:
-                self.stdout.write(f'Would create hospital: {hospital_data["name"]}')
-                continue
-                
-            wards_data = hospital_data.pop('wards')
-            hospital = Hospital.objects.create(**hospital_data)
-            self.hospitals.append(hospital)
-            
-            for ward_data in wards_data:
-                Ward.objects.create(hospital=hospital, **ward_data)
-                
-            self.stdout.write(f'  Created hospital: {hospital.name} with {len(wards_data)} wards')
 
     def create_users(self):
         self.stdout.write('Creating users...')
         
-        # Get existing hospitals (including the one user already created)
-        all_hospitals = list(Hospital.objects.all())
         
         users_data = [
             # Doctors
@@ -172,11 +118,6 @@ class Command(BaseCommand):
                 **user_data
             )
             
-            # Assign user to random hospitals
-            user_hospitals = random.sample(all_hospitals, random.randint(1, 2))
-            user.hospitals.set(user_hospitals)
-            user.last_hospital = user_hospitals[0]
-            user.save()
             
             self.users.append(user)
             profession_name = user.get_profession_type_display()
@@ -213,29 +154,21 @@ class Command(BaseCommand):
     def create_patients(self):
         self.stdout.write('Creating patients...')
         
-        all_hospitals = list(Hospital.objects.all())
         self.patients = []
         
-        # Create 10 patients per hospital (30 total)
-        for hospital in all_hospitals:
-            for i in range(10):
-                patient = self.create_patient(hospital, i < 5)  # First 5 are inpatients
-                if patient:
-                    self.patients.append(patient)
-        
-        # Create 10 outpatients (no hospital)
-        for i in range(10):
-            patient = self.create_patient(None, False)
+        # Create 20 patients with mixed statuses
+        for i in range(20):
+            is_inpatient = i < 10  # First 10 are inpatients
+            patient = self.create_patient(is_inpatient)
             if patient:
                 self.patients.append(patient)
         
         self.stdout.write(f'Created {len(self.patients)} patients total')
 
-    def create_patient(self, hospital, is_inpatient):
+    def create_patient(self, is_inpatient):
         if self.dry_run:
             status = 'inpatient' if is_inpatient else 'outpatient'
-            hospital_name = hospital.name if hospital else 'No hospital'
-            self.stdout.write(f'Would create {status} patient at {hospital_name}')
+            self.stdout.write(f'Would create {status} patient')
             return None
             
         creator = random.choice(self.users)
@@ -251,13 +184,10 @@ class Command(BaseCommand):
         name = f'{first_name} {last_name}'
         
         # Determine status
-        if hospital:
-            if is_inpatient:
-                status = random.choice([Patient.Status.INPATIENT, Patient.Status.EMERGENCY])
-            else:
-                status = Patient.Status.OUTPATIENT
+        if is_inpatient:
+            status = random.choice([Patient.Status.INPATIENT, Patient.Status.EMERGENCY])
         else:
-            status = Patient.Status.OUTPATIENT
+            status = random.choice([Patient.Status.OUTPATIENT, Patient.Status.DISCHARGED])
         
         patient = Patient.objects.create(
             name=name,
@@ -271,24 +201,12 @@ class Command(BaseCommand):
             state=fake.state_abbr(),
             zip_code=fake.postcode(),
             status=status,
-            current_hospital=hospital,
             bed=f'Leito {random.randint(1, 50)}' if is_inpatient else '',
-            last_admission_date=fake.date_between(start_date='-30d', end_date='today') if hospital else None,
+            last_admission_date=fake.date_between(start_date='-30d', end_date='today') if is_inpatient else None,
             created_by=creator,
             updated_by=creator,
         )
         
-        # Create hospital record if patient belongs to a hospital
-        if hospital:
-            PatientHospitalRecord.objects.create(
-                patient=patient,
-                hospital=hospital,
-                record_number=f'REG{random.randint(100000, 999999)}',
-                first_admission_date=patient.last_admission_date,
-                last_admission_date=patient.last_admission_date,
-                created_by=creator,
-                updated_by=creator,
-            )
         
         # Assign random tags
         if self.allowed_tags:
@@ -737,8 +655,8 @@ class Command(BaseCommand):
                 self.stdout.write(f'  - {user.email} ({user.get_full_name()})')
         
         self.stdout.write('')
-        self.stdout.write(f'Created {len(Hospital.objects.all())} hospitals')
-        self.stdout.write(f'Created {len(self.patients)} patients')
+        self.stdout.write(f'Created {len(self.patients)} patients (single-hospital configuration)')
+        self.stdout.write(f'Hospital info configured via environment variables')
         self.stdout.write(f'Created {DailyNote.objects.count()} daily notes')
         self.stdout.write(f'Created {len(self.allowed_tags)} sample tags')
 

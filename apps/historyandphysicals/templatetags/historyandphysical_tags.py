@@ -29,9 +29,6 @@ def recent_historyandphysicals_widget(context, limit=5):
         created_at__gte=week_ago
     ).order_by('-created_at')
     
-    # Filter by hospital context if available
-    if hasattr(user, 'current_hospital') and user.current_hospital:
-        queryset = queryset.filter(patient__current_hospital=user.current_hospital)
     
     # Filter based on patient access permissions
     accessible_historyandphysicals = []
@@ -65,9 +62,6 @@ def historyandphysicals_count_today(context):
         created_at__date=today
     )
     
-    # Filter by hospital context if available
-    if hasattr(user, 'current_hospital') and user.current_hospital:
-        queryset = queryset.filter(patient__current_hospital=user.current_hospital)
     
     # Count accessible history and physicals
     count = 0
@@ -95,9 +89,6 @@ def historyandphysicals_count_week(context):
         created_at__gte=week_ago
     )
     
-    # Filter by hospital context if available
-    if hasattr(user, 'current_hospital') and user.current_hospital:
-        queryset = queryset.filter(patient__current_hospital=user.current_hospital)
     
     # Count accessible history and physicals
     count = 0

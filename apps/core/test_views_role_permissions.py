@@ -18,8 +18,6 @@ from apps.core.permissions import (
     can_view_patients,
     can_manage_events,
     can_view_events,
-    can_manage_hospitals,
-    can_view_hospitals,
 )
 
 
@@ -51,13 +49,7 @@ def role_permissions_test_view(request):
             'can_change': has_django_permission(user, 'events.change_event'),
             'can_delete': has_django_permission(user, 'events.delete_event'),
         },
-        'hospitals': {
-            'can_manage': can_manage_hospitals(user),
-            'can_view': can_view_hospitals(user),
-            'can_add': has_django_permission(user, 'hospitals.add_hospital'),
-            'can_change': has_django_permission(user, 'hospitals.change_hospital'),
-            'can_delete': has_django_permission(user, 'hospitals.delete_hospital'),
-        },
+        # 'hospitals': removed for single-hospital refactor
     }
     
     # Check group memberships
@@ -118,13 +110,7 @@ def role_permissions_api_view(request):
             'change': has_django_permission(user, 'events.change_event'),
             'delete': has_django_permission(user, 'events.delete_event'),
         },
-        'hospitals': {
-            'manage': can_manage_hospitals(user),
-            'view': can_view_hospitals(user),
-            'add': has_django_permission(user, 'hospitals.add_hospital'),
-            'change': has_django_permission(user, 'hospitals.change_hospital'),
-            'delete': has_django_permission(user, 'hospitals.delete_hospital'),
-        },
+        # 'hospitals': removed for single-hospital refactor
     }
     
     # Check group memberships

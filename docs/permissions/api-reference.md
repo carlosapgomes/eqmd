@@ -34,9 +34,8 @@ Check if a user can access a specific patient.
 - `bool`: True if user can access the patient, False otherwise
 
 **Rules:**
-- Doctors, nurses, physiotherapists, and residents: Full access to patients in their current hospital
-- Students: Limited to outpatients in their current hospital
-- No access if user lacks hospital context or patient is in different hospital
+- **Universal Access**: All medical staff can access all patients in single-hospital environment
+- **No Hospital Context Required**: Hospital restrictions removed in simplified architecture
 
 **Example:**
 ```python
@@ -89,9 +88,9 @@ Check if a user can modify patient personal information.
 - `bool`: True if user can change personal data, False otherwise
 
 **Rules:**
-- Only doctors can change patient personal data
-- For outpatients: Any doctor can change data
-- For inpatients/emergency/discharged/transferred: Doctor must be in same hospital with hospital context
+- **Doctors/Residents**: Can change patient personal data
+- **Others**: Cannot change patient personal data
+- **No Hospital Restrictions**: Single hospital environment simplifies access
 
 **Example:**
 ```python
@@ -861,10 +860,10 @@ Set up role-based permission groups.
 **Usage:**
 ```bash
 # Set up all profession-based groups
-python manage.py setup_groups
+uv run python manage.py setup_groups
 
 # Force recreation of groups
-python manage.py setup_groups --force
+uv run python manage.py setup_groups --force
 ```
 
 ### permission_performance
@@ -874,16 +873,16 @@ Monitor and analyze permission system performance.
 **Usage:**
 ```bash
 # Show cache statistics
-python manage.py permission_performance --action=stats
+uv run python manage.py permission_performance --action=stats
 
 # Run benchmarks
-python manage.py permission_performance --action=benchmark --iterations=1000
+uv run python manage.py permission_performance --action=benchmark --iterations=1000
 
 # Clear cache
-python manage.py permission_performance --action=clear-cache
+uv run python manage.py permission_performance --action=clear-cache
 
 # Test query optimization
-python manage.py permission_performance --action=test-queries --user-id=1
+uv run python manage.py permission_performance --action=test-queries --user-id=1
 ```
 
 ## Constants

@@ -90,7 +90,7 @@ class Command(BaseCommand):
         # Residents get full permissions for patients, events, and hospital records
         permissions = self._get_patient_related_permissions()
         permissions.extend(self._get_event_permissions())
-        permissions.extend(self._get_hospital_permissions())
+        # Hospital permissions removed for single-hospital refactor
         
         group.permissions.set(permissions)
         
@@ -107,7 +107,7 @@ class Command(BaseCommand):
         permissions = []
         permissions.extend(self._get_patient_view_change_permissions())
         permissions.extend(self._get_event_permissions())
-        permissions.extend(self._get_hospital_view_permissions())
+        # Hospital view permissions removed for single-hospital refactor
         
         group.permissions.set(permissions)
         
@@ -123,7 +123,7 @@ class Command(BaseCommand):
         # Physiotherapists get similar permissions to residents
         permissions = self._get_patient_related_permissions()
         permissions.extend(self._get_event_permissions())
-        permissions.extend(self._get_hospital_permissions())
+        # Hospital permissions removed for single-hospital refactor
         
         group.permissions.set(permissions)
         
@@ -139,7 +139,7 @@ class Command(BaseCommand):
         # Students get only view permissions for patients and limited event access
         permissions = self._get_patient_view_permissions()
         permissions.extend(self._get_event_view_permissions())
-        permissions.extend(self._get_hospital_view_permissions())
+        # Hospital view permissions removed for single-hospital refactor
         
         group.permissions.set(permissions)
         
@@ -155,16 +155,14 @@ class Command(BaseCommand):
         
         # Get patient app content types
         try:
-            from apps.patients.models import Patient, PatientHospitalRecord, AllowedTag, Tag
+            from apps.patients.models import Patient, AllowedTag, Tag
             
             patient_ct = ContentType.objects.get_for_model(Patient)
-            record_ct = ContentType.objects.get_for_model(PatientHospitalRecord)
             tag_ct = ContentType.objects.get_for_model(AllowedTag)
             tag_instance_ct = ContentType.objects.get_for_model(Tag)
             
             # Add all permissions for these models
             permissions.extend(Permission.objects.filter(content_type=patient_ct))
-            permissions.extend(Permission.objects.filter(content_type=record_ct))
             permissions.extend(Permission.objects.filter(content_type=tag_ct))
             permissions.extend(Permission.objects.filter(content_type=tag_instance_ct))
             
@@ -178,15 +176,14 @@ class Command(BaseCommand):
         permissions = []
         
         try:
-            from apps.patients.models import Patient, PatientHospitalRecord, AllowedTag, Tag
+            from apps.patients.models import Patient, AllowedTag, Tag
             
             patient_ct = ContentType.objects.get_for_model(Patient)
-            record_ct = ContentType.objects.get_for_model(PatientHospitalRecord)
             tag_ct = ContentType.objects.get_for_model(AllowedTag)
             tag_instance_ct = ContentType.objects.get_for_model(Tag)
             
             # Add view and change permissions (no delete)
-            for ct in [patient_ct, record_ct, tag_ct, tag_instance_ct]:
+            for ct in [patient_ct, tag_ct, tag_instance_ct]:
                 permissions.extend(Permission.objects.filter(
                     content_type=ct,
                     codename__in=[f'view_{ct.model}', f'change_{ct.model}', f'add_{ct.model}']
@@ -202,15 +199,14 @@ class Command(BaseCommand):
         permissions = []
         
         try:
-            from apps.patients.models import Patient, PatientHospitalRecord, AllowedTag, Tag
+            from apps.patients.models import Patient, AllowedTag, Tag
             
             patient_ct = ContentType.objects.get_for_model(Patient)
-            record_ct = ContentType.objects.get_for_model(PatientHospitalRecord)
             tag_ct = ContentType.objects.get_for_model(AllowedTag)
             tag_instance_ct = ContentType.objects.get_for_model(Tag)
             
             # Add only view permissions
-            for ct in [patient_ct, record_ct, tag_ct, tag_instance_ct]:
+            for ct in [patient_ct, tag_ct, tag_instance_ct]:
                 permissions.extend(Permission.objects.filter(
                     content_type=ct,
                     codename=f'view_{ct.model}'
@@ -255,40 +251,9 @@ class Command(BaseCommand):
         return permissions
 
     def _get_hospital_permissions(self):
-        """Get all hospital-related permissions."""
-        permissions = []
-        
-        try:
-            from apps.hospitals.models import Hospital, Ward
-            
-            hospital_ct = ContentType.objects.get_for_model(Hospital)
-            ward_ct = ContentType.objects.get_for_model(Ward)
-            
-            permissions.extend(Permission.objects.filter(content_type=hospital_ct))
-            permissions.extend(Permission.objects.filter(content_type=ward_ct))
-            
-        except ImportError:
-            self.stdout.write(self.style.WARNING('Hospitals app not available'))
-        
-        return permissions
+        """Hospital permissions removed for single-hospital refactor."""
+        return []
 
     def _get_hospital_view_permissions(self):
-        """Get only view permissions for hospitals."""
-        permissions = []
-        
-        try:
-            from apps.hospitals.models import Hospital, Ward
-            
-            hospital_ct = ContentType.objects.get_for_model(Hospital)
-            ward_ct = ContentType.objects.get_for_model(Ward)
-            
-            for ct in [hospital_ct, ward_ct]:
-                permissions.extend(Permission.objects.filter(
-                    content_type=ct,
-                    codename=f'view_{ct.model}'
-                ))
-            
-        except ImportError:
-            self.stdout.write(self.style.WARNING('Hospitals app not available'))
-        
-        return permissions
+        """Hospital view permissions removed for single-hospital refactor."""
+        return []

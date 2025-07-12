@@ -12,7 +12,6 @@ from .permissions import (
     patient_access_required,
     doctor_required,
     can_edit_event_required,
-    hospital_context_required,
     patient_data_change_required,
     can_delete_event_required,
     can_access_patient,
@@ -75,15 +74,15 @@ def doctor_only_view(request):
     return JsonResponse({'message': 'Success! You have doctor privileges.'})
 
 
-@hospital_context_required
-def hospital_context_view(request):
-    """
-    Test view that requires hospital context.
-    """
-    return JsonResponse({
-        'message': 'Success! You have hospital context.',
-        'hospital_id': getattr(request.user, 'current_hospital_id', None)
-    })
+# hospital_context_required decorator removed for single-hospital refactor
+# def hospital_context_view(request):
+#     """
+#     Test view that requires hospital context.
+#     """
+#     return JsonResponse({
+#         'message': 'Success! You have hospital context.',
+#         'hospital_id': getattr(request.user, 'current_hospital_id', None)
+#     })
 
 
 @patient_access_required

@@ -200,15 +200,15 @@
                 </div>
               </div>
 
-              <!-- Hospital Information -->
+              <!-- Status Information -->
               <hr class="my-4">
               <h6 class="text-medical-dark-gray mb-3">
-                <i class="bi bi-building me-2"></i>
-                Informações Hospitalares
+                <i class="bi bi-activity me-2"></i>
+                Status do Paciente
               </h6>
               
               <div class="row">
-                <div class="col-md-4 mb-3">
+                <div class="col-md-6 mb-3">
                   <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
                   {{ form.status }}
                   {% if form.status.help_text %}
@@ -220,19 +220,7 @@
                     </div>
                   {% endif %}
                 </div>
-                <div class="col-md-4 mb-3">
-                  <label for="{{ form.current_hospital.id_for_label }}" class="form-label">{{ form.current_hospital.label }}</label>
-                  {{ form.current_hospital }}
-                  {% if form.current_hospital.help_text %}
-                    <div class="form-text">{{ form.current_hospital.help_text }}</div>
-                  {% endif %}
-                  {% if form.current_hospital.errors %}
-                    <div class="invalid-feedback d-block">
-                      {{ form.current_hospital.errors.0 }}
-                    </div>
-                  {% endif %}
-                </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-6 mb-3">
                   <label for="{{ form.bed.id_for_label }}" class="form-label">{{ form.bed.label }}</label>
                   {{ form.bed }}
                   {% if form.bed.help_text %}
@@ -268,111 +256,6 @@
                 </div>
               </div>
 
-              <!-- Enhanced Hospital Record Section -->
-              <div id="hospital-record-section" class="d-none">
-                <hr class="my-4">
-                <h6 class="text-medical-dark-gray mb-3">
-                  <i class="bi bi-hospital me-2"></i>
-                  Registros Hospitalares
-                </h6>
-                
-                <!-- Existing Records Summary -->
-                {% include 'patients/partials/hospital_records_summary.html' %}
-                
-                <!-- Hospital Record Form -->
-                <div class="card border-primary" id="hospital-record-form-container">
-                  <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h6 class="card-title mb-0">
-                      <i class="bi bi-plus-circle me-2 text-primary"></i>
-                      <span id="form-mode-text">Adicionar Novo Registro</span>
-                    </h6>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-edit-btn" style="display: none;">
-                      <i class="bi bi-x me-1"></i>Cancelar
-                    </button>
-                  </div>
-                  <div class="card-body">
-                    <!-- Loading State -->
-                    <div id="hospital-record-loading" class="text-center py-3" style="display: none;">
-                      <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                      </div>
-                      Carregando dados do registro...
-                    </div>
-                    
-                    <!-- Form Fields -->
-                    <div id="hospital-record-form-fields">
-                      <div class="row">
-                        <div class="col-md-6 mb-3">
-                          <label for="{{ hospital_record_form.hospital.id_for_label }}" class="form-label">
-                            {{ hospital_record_form.hospital.label }}
-                            <span class="text-danger">*</span>
-                          </label>
-                          {{ hospital_record_form.hospital }}
-                          <div class="form-text">Selecione o hospital para criar/editar registro</div>
-                          {% if hospital_record_form.hospital.errors %}
-                            <div class="invalid-feedback d-block">
-                              {{ hospital_record_form.hospital.errors.0 }}
-                            </div>
-                          {% endif %}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                          <label for="{{ hospital_record_form.record_number.id_for_label }}" class="form-label">
-                            {{ hospital_record_form.record_number.label }}
-                            <span class="text-danger">*</span>
-                          </label>
-                          {{ hospital_record_form.record_number }}
-                          <div class="form-text">Número de registro no hospital selecionado</div>
-                          {% if hospital_record_form.record_number.errors %}
-                            <div class="invalid-feedback d-block">
-                              {{ hospital_record_form.record_number.errors.0 }}
-                            </div>
-                          {% endif %}
-                        </div>
-                      </div>
-                      <div class="row">
-                        <div class="col-md-4 mb-3">
-                          <label for="{{ hospital_record_form.first_admission_date.id_for_label }}" class="form-label">{{ hospital_record_form.first_admission_date.label }}</label>
-                          {{ hospital_record_form.first_admission_date }}
-                          {% if hospital_record_form.first_admission_date.errors %}
-                            <div class="invalid-feedback d-block">
-                              {{ hospital_record_form.first_admission_date.errors.0 }}
-                            </div>
-                          {% endif %}
-                        </div>
-                        <div class="col-md-4 mb-3">
-                          <label for="{{ hospital_record_form.last_admission_date.id_for_label }}" class="form-label">{{ hospital_record_form.last_admission_date.label }}</label>
-                          {{ hospital_record_form.last_admission_date }}
-                          {% if hospital_record_form.last_admission_date.errors %}
-                            <div class="invalid-feedback d-block">
-                              {{ hospital_record_form.last_admission_date.errors.0 }}
-                            </div>
-                          {% endif %}
-                        </div>
-                        <div class="col-md-4 mb-3">
-                          <label for="{{ hospital_record_form.last_discharge_date.id_for_label }}" class="form-label">{{ hospital_record_form.last_discharge_date.label }}</label>
-                          {{ hospital_record_form.last_discharge_date }}
-                          {% if hospital_record_form.last_discharge_date.errors %}
-                            <div class="invalid-feedback d-block">
-                              {{ hospital_record_form.last_discharge_date.errors.0 }}
-                            </div>
-                          {% endif %}
-                        </div>
-                      </div>
-                      
-                      <!-- Status Messages -->
-                      <div id="hospital-record-status" class="alert" style="display: none;">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <span id="status-message"></span>
-                      </div>
-                      
-                      <div class="alert alert-info">
-                        <i class="bi bi-lightbulb me-2"></i>
-                        <strong>Dica:</strong> Selecione um hospital no dropdown acima para ver se já existe um registro para este paciente neste hospital.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               <!-- Form Actions -->
               <hr class="my-4">
@@ -426,6 +309,11 @@
               <p class="text-medical-gray mb-0">Defina se é ambulatorial, internado, emergência, alta ou transferido.</p>
             </div>
             
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Leito</h6>
+              <p class="text-medical-gray mb-0">Número do leito para pacientes internados (opcional).</p>
+            </div>
+            
             <div class="mb-0">
               <h6 class="text-medical-dark-gray">Tags</h6>
               <p class="text-medical-gray mb-0">Selecione tags para categorizar o paciente (opcional).</p>
@@ -437,172 +325,4 @@
   </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const statusField = document.querySelector('#{{ form.status.id_for_label }}');
-    const hospitalRecordSection = document.querySelector('#hospital-record-section');
-    const hospitalField = document.querySelector('#{{ hospital_record_form.hospital.id_for_label }}');
-    const recordNumberField = document.querySelector('#{{ hospital_record_form.record_number.id_for_label }}');
-    const firstAdmissionField = document.querySelector('#{{ hospital_record_form.first_admission_date.id_for_label }}');
-    const lastAdmissionField = document.querySelector('#{{ hospital_record_form.last_admission_date.id_for_label }}');
-    const lastDischargeField = document.querySelector('#{{ hospital_record_form.last_discharge_date.id_for_label }}');
-    const loadingDiv = document.querySelector('#hospital-record-loading');
-    const formFieldsDiv = document.querySelector('#hospital-record-form-fields');
-    const statusDiv = document.querySelector('#hospital-record-status');
-    const statusMessage = document.querySelector('#status-message');
-    const formModeText = document.querySelector('#form-mode-text');
-    const cancelEditBtn = document.querySelector('#cancel-edit-btn');
-    
-    // Status values that require hospital records
-    const hospitalRequiredStatuses = ['2', '3', '5']; // INPATIENT, EMERGENCY, TRANSFERRED
-    const patientId = '{{ patient_id }}';
-    let currentEditingRecord = null;
-    
-    function toggleHospitalRecordSection() {
-        const selectedStatus = statusField.value;
-        const shouldShow = hospitalRequiredStatuses.includes(selectedStatus);
-        
-        if (shouldShow) {
-            hospitalRecordSection.classList.remove('d-none');
-        } else {
-            hospitalRecordSection.classList.add('d-none');
-            resetForm();
-        }
-    }
-    
-    function showLoading() {
-        loadingDiv.style.display = 'block';
-        formFieldsDiv.style.display = 'none';
-    }
-    
-    function hideLoading() {
-        loadingDiv.style.display = 'none';
-        formFieldsDiv.style.display = 'block';
-    }
-    
-    function showStatus(message, type = 'info') {
-        statusDiv.className = `alert alert-${type}`;
-        statusMessage.textContent = message;
-        statusDiv.style.display = 'block';
-    }
-    
-    function hideStatus() {
-        statusDiv.style.display = 'none';
-    }
-    
-    function resetForm() {
-        hospitalField.value = '';
-        recordNumberField.value = '';
-        firstAdmissionField.value = '';
-        lastAdmissionField.value = '';
-        lastDischargeField.value = '';
-        hideStatus();
-        setFormMode('create');
-        currentEditingRecord = null;
-    }
-    
-    function setFormMode(mode) {
-        if (mode === 'edit') {
-            formModeText.textContent = 'Editar Registro Existente';
-            cancelEditBtn.style.display = 'inline-block';
-        } else {
-            formModeText.textContent = 'Adicionar Novo Registro';
-            cancelEditBtn.style.display = 'none';
-        }
-    }
-    
-    function populateForm(recordData) {
-        recordNumberField.value = recordData.record_number || '';
-        firstAdmissionField.value = recordData.first_admission_date || '';
-        lastAdmissionField.value = recordData.last_admission_date || '';
-        lastDischargeField.value = recordData.last_discharge_date || '';
-    }
-    
-    function loadHospitalRecord(hospitalId) {
-        if (!patientId || !hospitalId) return;
-        
-        showLoading();
-        hideStatus();
-        
-        fetch(`/patients/api/hospital-record/${hospitalId}/?patient_id=${patientId}`)
-            .then(response => response.json())
-            .then(data => {
-                hideLoading();
-                
-                if (data.exists) {
-                    populateForm(data.record);
-                    setFormMode('edit');
-                    currentEditingRecord = data.record;
-                    showStatus('Registro existente encontrado. Você pode editar os dados acima.', 'success');
-                } else {
-                    resetForm();
-                    hospitalField.value = hospitalId;  // Keep hospital selected
-                    setFormMode('create');
-                    showStatus('Nenhum registro encontrado para este hospital. Você pode criar um novo registro.', 'info');
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                console.error('Error loading hospital record:', error);
-                showStatus('Erro ao carregar dados do registro. Tente novamente.', 'danger');
-            });
-    }
-    
-    // Initial state
-    toggleHospitalRecordSection();
-    
-    // Listen for status changes
-    statusField.addEventListener('change', toggleHospitalRecordSection);
-    
-    // Listen for hospital selection changes
-    if (hospitalField) {
-        hospitalField.addEventListener('change', function() {
-            const selectedHospitalId = this.value;
-            if (selectedHospitalId) {
-                loadHospitalRecord(selectedHospitalId);
-            } else {
-                resetForm();
-            }
-        });
-    }
-    
-    // Handle cancel edit button
-    if (cancelEditBtn) {
-        cancelEditBtn.addEventListener('click', function() {
-            resetForm();
-        });
-    }
-    
-    // Handle edit buttons for existing records
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.edit-hospital-record')) {
-            const button = e.target.closest('.edit-hospital-record');
-            const hospitalId = button.dataset.hospitalId;
-            const hospitalName = button.dataset.hospitalName;
-            const recordData = {
-                id: button.dataset.recordId,
-                record_number: button.dataset.recordNumber,
-                first_admission_date: button.dataset.firstAdmission,
-                last_admission_date: button.dataset.lastAdmission,
-                last_discharge_date: button.dataset.lastDischarge
-            };
-            
-            // Set hospital field
-            hospitalField.value = hospitalId;
-            
-            // Populate form with existing data
-            populateForm(recordData);
-            setFormMode('edit');
-            currentEditingRecord = recordData;
-            showStatus(`Editando registro do hospital: ${hospitalName}`, 'primary');
-            
-            // Scroll to form
-            document.querySelector('#hospital-record-form-container').scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    });
-});
-</script>
 {% endblock %}

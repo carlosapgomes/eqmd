@@ -1,0 +1,33 @@
+{% load static %}
+<div class="hospital-header border-bottom bg-light py-2 mb-3">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                {% if hospital.logo_url or hospital.logo_path %}
+                    <img src="{% if hospital.logo_url %}{{ hospital.logo_url }}{% else %}{% static hospital.logo_path %}{% endif %}" 
+                         alt="{{ hospital_name }} Logo" 
+                         class="hospital-logo" 
+                         style="height: 40px;">
+                {% endif %}
+            </div>
+            <div class="col">
+                <h6 class="mb-0 fw-bold text-primary">{{ hospital_name }}</h6>
+                {% if hospital_address %}
+                    <small class="text-muted">{{ hospital_address }}</small>
+                {% endif %}
+            </div>
+            <div class="col-auto text-end">
+                {% if hospital_phone %}
+                    <small class="text-muted d-block">
+                        <i class="fas fa-phone me-1"></i>{{ hospital_phone }}
+                    </small>
+                {% endif %}
+                {% if hospital_email %}
+                    <small class="text-muted d-block">
+                        <i class="fas fa-envelope me-1"></i>{{ hospital_email }}
+                    </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

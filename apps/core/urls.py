@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from . import test_views
-from . import test_views_hospital_context
+# from . import test_views_hospital_context  # Temporarily disabled for single-hospital refactor
 from . import test_views_role_permissions
 from . import permission_demo
 
@@ -13,11 +13,11 @@ urlpatterns = [
     # Permission test URLs
     path("test/permissions/", test_views.permission_test_view, name="permission_test"),
     path("test/doctor-only/", test_views.doctor_only_view, name="doctor_only_test"),
-    path(
-        "test/hospital-context/",
-        test_views.hospital_context_view,
-        name="hospital_context_test",
-    ),
+    # path(
+    #     "test/hospital-context/",
+    #     test_views.hospital_context_view,
+    #     name="hospital_context_test",
+    # ),  # Removed for single-hospital refactor
     path(
         "test/patient-access/<uuid:patient_id>/",
         test_views.patient_access_view,
@@ -43,22 +43,22 @@ urlpatterns = [
         test_views.object_level_permissions_test_view,
         name="object_level_permissions_test",
     ),
-    # Hospital context test URLs
-    path(
-        "test/hospital-context-middleware/",
-        test_views_hospital_context.hospital_context_test_view,
-        name="hospital_context_middleware_test",
-    ),
-    path(
-        "test/hospital-context-required/",
-        test_views_hospital_context.hospital_context_required_view,
-        name="hospital_context_required_test",
-    ),
-    path(
-        "test/hospital-context-api/",
-        test_views_hospital_context.hospital_context_api_view,
-        name="hospital_context_api_test",
-    ),
+    # Hospital context test URLs - Temporarily disabled for single-hospital refactor
+    # path(
+    #     "test/hospital-context-middleware/",
+    #     test_views_hospital_context.hospital_context_test_view,
+    #     name="hospital_context_middleware_test",
+    # ),
+    # path(
+    #     "test/hospital-context-required/",
+    #     test_views_hospital_context.hospital_context_required_view,
+    #     name="hospital_context_required_test",
+    # ),
+    # path(
+    #     "test/hospital-context-api/",
+    #     test_views_hospital_context.hospital_context_api_view,
+    #     name="hospital_context_api_test",
+    # ),
     # Role-based permissions test URLs
     path(
         "test/role-permissions/",
@@ -107,11 +107,11 @@ urlpatterns = [
         permission_demo.demo_doctor_only,
         name="permission_demo_doctor",
     ),
-    path(
-        "demo/permissions/hospital-context/",
-        permission_demo.demo_hospital_context,
-        name="permission_demo_hospital",
-    ),
+    # path(
+    #     "demo/permissions/hospital-context/",
+    #     permission_demo.demo_hospital_context,
+    #     name="permission_demo_hospital",
+    # ),  # Removed for single-hospital refactor
     path(
         "demo/permissions/cache/",
         permission_demo.demo_cache_management,

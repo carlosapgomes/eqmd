@@ -61,7 +61,6 @@ def permission_performance_api(request):
             'id': request.user.id,
             'email': request.user.email,
             'profession_type': getattr(request.user, 'profession_type', None),
-            'has_hospital_context': getattr(request.user, 'has_hospital_context', False),
         }
     }
 

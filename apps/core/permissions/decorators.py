@@ -96,21 +96,6 @@ def can_edit_event_required(view_func):
     return wrapper
 
 
-def hospital_context_required(view_func):
-    """
-    Decorator that requires the user to have a hospital context.
-    """
-    @wraps(view_func)
-    @login_required
-    def wrapper(request, *args, **kwargs):
-        from .utils import has_hospital_context
-
-        if not has_hospital_context(request.user):
-            return HttpResponseForbidden("You must select a hospital context to access this page")
-
-        return view_func(request, *args, **kwargs)
-
-    return wrapper
 
 
 def patient_data_change_required(view_func):

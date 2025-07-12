@@ -23,7 +23,6 @@ from apps.core.permissions import (
     patient_access_required,
     can_edit_event_required,
     can_delete_event_required,
-    hospital_context_required,
     can_access_patient,
     can_edit_event,
     can_delete_event,
@@ -33,7 +32,6 @@ from apps.sample_content.models import SampleContent
 from apps.events.models import Event
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class DailyNoteListView(LoginRequiredMixin, ListView):
     """
     List view for DailyNote instances with search and filtering capabilities.
@@ -49,28 +47,15 @@ class DailyNoteListView(LoginRequiredMixin, ListView):
         """Filter queryset based on search parameters and user permissions."""
         queryset = (
             DailyNote.objects.select_related("patient", "created_by", "updated_by")
-            .prefetch_related(
-                "patient__current_hospital", "patient__hospitalrecord_set"
-            )
             .all()
         )
 
-        # Filter by user's hospital context and patient access permissions
-        if (
-            hasattr(self.request.user, "current_hospital")
-            and self.request.user.current_hospital
-        ):
-            # Only show daily notes for patients in the user's current hospital
-            queryset = queryset.filter(
-                patient__current_hospital=self.request.user.current_hospital
-            )
-
-        # Optimize patient access check with bulk operations
-        from apps.core.permissions.cache import get_user_accessible_patients
-
-        accessible_patient_ids = get_user_accessible_patients(self.request.user)
-        if accessible_patient_ids:
-            queryset = queryset.filter(patient__id__in=accessible_patient_ids)
+        # Filter by user's patient access permissions (simplified)
+        from apps.core.permissions.utils import get_user_accessible_patients
+        
+        accessible_patients = get_user_accessible_patients(self.request.user)
+        if accessible_patients:
+            queryset = queryset.filter(patient__in=accessible_patients)
         else:
             queryset = queryset.none()
 
@@ -122,44 +107,32 @@ class DailyNoteListView(LoginRequiredMixin, ListView):
         context["date_to"] = self.request.GET.get("date_to", "")
         context["selected_creator"] = self.request.GET.get("creator", "")
 
-        # Cache key for filter options
-        cache_key = f"dailynotes_filters_{self.request.user.id}_{getattr(self.request.user, 'current_hospital_id', 'none')}"
+        # Cache key for filter options (simplified)
+        cache_key = f"dailynotes_filters_{self.request.user.id}"
 
         # Try to get filter options from cache
         filter_options = cache.get(cache_key)
         if filter_options is None:
-            # Get available patients for filter dropdown (only accessible ones)
-            from apps.core.permissions.cache import get_user_accessible_patients
-
-            if (
-                hasattr(self.request.user, "current_hospital")
-                and self.request.user.current_hospital
-            ):
-                accessible_patient_ids = get_user_accessible_patients(self.request.user)
-                accessible_patients = Patient.objects.filter(
-                    id__in=accessible_patient_ids,
-                    current_hospital=self.request.user.current_hospital,
-                ).only("id", "name", "fiscal_number")
+            # Get available patients for filter dropdown (accessible ones only)
+            from apps.core.permissions.utils import get_user_accessible_patients
+            
+            accessible_patients = get_user_accessible_patients(self.request.user)
+            if accessible_patients:
+                accessible_patients = accessible_patients.only("id", "name", "fiscal_number")
             else:
                 accessible_patients = Patient.objects.none()
 
-            # Get available creators (users who have created daily notes in this hospital)
+            # Get available creators (users who have created daily notes)
             from django.contrib.auth import get_user_model
-
             User = get_user_model()
-            if (
-                hasattr(self.request.user, "current_hospital")
-                and self.request.user.current_hospital
-            ):
-                available_creators = (
-                    User.objects.filter(
-                        dailynote_created__patient__current_hospital=self.request.user.current_hospital
-                    )
-                    .distinct()
-                    .only("id", "first_name", "last_name", "email")
+            
+            available_creators = (
+                User.objects.filter(
+                    dailynote_created__isnull=False
                 )
-            else:
-                available_creators = User.objects.none()
+                .distinct()
+                .only("id", "first_name", "last_name", "email")
+            )
 
             filter_options = {
                 "available_patients": accessible_patients,
@@ -180,7 +153,6 @@ class DailyNoteListView(LoginRequiredMixin, ListView):
         return context
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class DailyNoteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Detail view for DailyNote instances.
@@ -222,7 +194,6 @@ class DailyNoteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailVie
         return context
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class DailyNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Update view for DailyNote instances with permission checking.
@@ -291,7 +262,6 @@ class DailyNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class DailyNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Delete view for DailyNote instances with permission checking.
@@ -342,8 +312,7 @@ class DailyNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
         return super().delete(request, *args, **kwargs)
 
 
-# @method_decorator(hospital_context_required, name="dispatch")
-# class PatientDailyNoteListView(LoginRequiredMixin, ListView):
+# # class PatientDailyNoteListView(LoginRequiredMixin, ListView):
 #     """
 #     List view for DailyNote instances for a specific patient with date filtering.
 #     """
@@ -420,7 +389,6 @@ class DailyNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
 #
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PatientDailyNoteCreateView(
     LoginRequiredMixin, PermissionRequiredMixin, CreateView
 ):
@@ -479,7 +447,6 @@ class PatientDailyNoteCreateView(
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class DailyNoteDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Duplicate view for DailyNote instances - creates a new dailynote based on an existing one.
@@ -543,7 +510,6 @@ class DailyNoteDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, Create
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class DailyNotePrintView(LoginRequiredMixin, DetailView):
     """
     Print view for DailyNote instances - clean print layout.

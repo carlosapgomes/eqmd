@@ -51,12 +51,17 @@ def test_doctor_can_access_all_patients(self):
     patient = create_patient()
     self.assertTrue(can_access_patient(doctor, patient))
 
-def test_student_can_only_access_outpatients(self):
+def test_all_roles_can_access_patients(self):
+    """All roles can access all patients"""
     student = create_user(profession='student')
-    outpatient = create_patient(status='outpatient')
+    nurse = create_user(profession='nurse')
     inpatient = create_patient(status='inpatient')
+    outpatient = create_patient(status='outpatient')
     
+    self.assertTrue(can_access_patient(student, inpatient))
     self.assertTrue(can_access_patient(student, outpatient))
+    self.assertTrue(can_access_patient(nurse, inpatient))
+    self.assertTrue(can_access_patient(nurse, outpatient))
     self.assertFalse(can_access_patient(student, inpatient))
 ```
 
@@ -256,23 +261,43 @@ class SimplifiedPermissionTests(TestCase):
         self.assertTrue(can_access_patient(doctor, inpatient))
         self.assertTrue(can_access_patient(doctor, outpatient))
     
-    def test_student_limited_access(self):
-        """Students can only access outpatients and discharged patients"""
+    def test_all_roles_patient_access(self):
+        """All roles can access all patients"""
         student = UserFactory(profession='student')
+        nurse = UserFactory(profession='nurse')
         inpatient = PatientFactory(status='inpatient')
         outpatient = PatientFactory(status='outpatient')
         
-        self.assertFalse(can_access_patient(student, inpatient))
+        self.assertTrue(can_access_patient(student, inpatient))
         self.assertTrue(can_access_patient(student, outpatient))
+        self.assertTrue(can_access_patient(nurse, inpatient))
+        self.assertTrue(can_access_patient(nurse, outpatient))
     
     def test_role_based_discharge_permissions(self):
-        """Only doctors can discharge patients"""
+        """Only doctors/residents can discharge patients"""
         doctor = UserFactory(profession='doctor')
+        resident = UserFactory(profession='resident')
         nurse = UserFactory(profession='nurse')
+        student = UserFactory(profession='student')
         patient = PatientFactory(status='inpatient')
         
         self.assertTrue(can_change_patient_status(doctor, patient, 'discharged'))
+        self.assertTrue(can_change_patient_status(resident, patient, 'discharged'))
         self.assertFalse(can_change_patient_status(nurse, patient, 'discharged'))
+        self.assertFalse(can_change_patient_status(student, patient, 'discharged'))
+    
+    def test_role_based_personal_data_permissions(self):
+        """Only doctors/residents can edit patient personal data"""
+        doctor = UserFactory(profession='doctor')
+        resident = UserFactory(profession='resident')
+        nurse = UserFactory(profession='nurse')
+        student = UserFactory(profession='student')
+        patient = PatientFactory()
+        
+        self.assertTrue(can_change_patient_personal_data(doctor, patient))
+        self.assertTrue(can_change_patient_personal_data(resident, patient))
+        self.assertFalse(can_change_patient_personal_data(nurse, patient))
+        self.assertFalse(can_change_patient_personal_data(student, patient))
 ```
 
 ## Test Command Updates
@@ -283,10 +308,10 @@ class SimplifiedPermissionTests(TestCase):
 # Update test configurations to exclude removed apps
 
 # Test specific areas
-python manage.py test apps.core.tests.test_permissions
-python manage.py test apps.patients.tests
-python manage.py test apps.events.tests
-python manage.py test apps.accounts.tests
+uv run python manage.py test apps.core.tests.test_permissions
+uv run python manage.py test apps.patients.tests
+uv run python manage.py test apps.events.tests
+uv run python manage.py test apps.accounts.tests
 ```
 
 ## Coverage Analysis
@@ -336,15 +361,15 @@ python manage.py test apps.accounts.tests
 **Run comprehensive tests:**
 ```bash
 # Run all tests
-python manage.py test
+uv run python manage.py test
 
 # Run tests with coverage
-pytest --cov=apps --cov-report=html
+uv run pytest --cov=apps --cov-report=html
 
 # Run specific test categories
-python manage.py test apps.core.tests.test_permissions
-python manage.py test apps.patients.tests
-python manage.py test apps.accounts.tests
+uv run python manage.py test apps.core.tests.test_permissions
+uv run python manage.py test apps.patients.tests
+uv run python manage.py test apps.accounts.tests
 ```
 
 Before proceeding to Phase 8:

@@ -16,7 +16,6 @@ from apps.core.permissions import (
     can_delete_event,
     can_see_patient_in_search,
     is_doctor,
-    has_hospital_context,
 )
 from apps.core.permissions.constants import (
     MEDICAL_DOCTOR,
@@ -120,14 +119,6 @@ def is_doctor_user(user):
     return is_doctor(user)
 
 
-@register.filter
-def has_hospital_context_user(user):
-    """
-    Check if user has hospital context.
-    
-    Usage: {% if user|has_hospital_context_user %}
-    """
-    return has_hospital_context(user)
 
 
 @register.inclusion_tag('core/tags/permission_debug.html')
@@ -150,18 +141,12 @@ def permission_debug(user):
     profession_type = getattr(user, 'profession_type', None)
     profession_display = user.get_profession_type_display() if profession_type is not None else 'Not set'
     
-    # Get hospital context
-    current_hospital = getattr(user, 'current_hospital', None)
-    has_context = has_hospital_context(user)
-    
     return {
         'user': user,
         'groups': groups,
         'permissions': sorted(permissions),
         'profession_type': profession_type,
         'profession_display': profession_display,
-        'current_hospital': current_hospital,
-        'has_hospital_context': has_context,
     }
 
 
@@ -427,7 +412,5 @@ def get_user_accessible_models(user):
         accessible.append('patients')
     if user.has_perm('events.view_event'):
         accessible.append('events')
-    if user.has_perm('hospitals.view_hospital'):
-        accessible.append('hospitals')
 
     return accessible

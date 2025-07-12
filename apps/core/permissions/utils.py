@@ -1,9 +1,8 @@
 """
-Utility functions for permission checking in EquipeMed.
+Simplified utility functions for permission checking in EquipeMed.
 
-This module provides the core permission checking logic for various
-operations in the EquipeMed application. It integrates with Django's
-permission system and role-based access control.
+This module provides simplified role-based permission checking logic
+after removing hospital context complexity.
 """
 
 from django.utils import timezone
@@ -16,26 +15,18 @@ from .constants import (
     PHYSIOTHERAPIST,
     RESIDENT,
     STUDENT,
-    INPATIENT,
     OUTPATIENT,
-    EMERGENCY,
     DISCHARGED,
-    TRANSFERRED,
     EVENT_EDIT_TIME_LIMIT,
 )
-from .cache import cache_permission_result
 
 
-@cache_permission_result('access_patient', use_object_id=True)
 def can_access_patient(user: Any, patient: Any) -> bool:
     """
     Check if a user can access a specific patient.
     
-    Rules:
-    - For INPATIENTS/EMERGENCY/TRANSFERRED: User must be in the same hospital as patient
-    - For OUTPATIENTS/DISCHARGED: User can access if they belong to any hospital where 
-      patient has a record OR if user is in any hospital the patient has been treated at
-    - Students can only access outpatients
+    Simplified Rules:
+    - All authenticated users can access all patients
     
     Args:
         user: The user requesting access
@@ -44,82 +35,11 @@ def can_access_patient(user: Any, patient: Any) -> bool:
     Returns:
         bool: True if access is allowed, False otherwise
     """
-    if not user.is_authenticated:
+    if user is None or patient is None:
         return False
-    
-    # Get user profession type
-    profession_type = getattr(user, 'profession_type', None)
-    profession_map = {
-        0: MEDICAL_DOCTOR,  # User.MEDICAL_DOCTOR
-        1: RESIDENT,        # User.RESIDENT 
-        2: NURSE,           # User.NURSE
-        3: PHYSIOTHERAPIST, # User.PHYSIOTERAPIST
-        4: STUDENT,         # User.STUDENT
-    }
-    profession = profession_map.get(profession_type)
-    
-    # Get patient status
-    patient_status = getattr(patient, 'status', None)
-    
-    # Students can only access outpatients
-    if profession == STUDENT:
-        if patient_status != OUTPATIENT:
-            return False
-    
-    # For admitted patients (inpatient, emergency, transferred), strict hospital matching
-    if patient_status in [INPATIENT, EMERGENCY, TRANSFERRED]:
-        # User must have hospital context
-        if not has_hospital_context(user):
-            return False
-        
-        current_hospital = getattr(user, 'current_hospital', None)
-        if not current_hospital:
-            return False
-        
-        # Patient must have current hospital assignment
-        patient_hospital_id = None
-        if hasattr(patient, 'current_hospital') and patient.current_hospital:
-            patient_hospital_id = patient.current_hospital.id
-        elif hasattr(patient, 'current_hospital_id'):
-            patient_hospital_id = patient.current_hospital_id
-        
-        if not patient_hospital_id:
-            return False
-            
-        return current_hospital.id == patient_hospital_id
-    
-    # For outpatients and discharged patients, broader access rules
-    if patient_status in [OUTPATIENT, DISCHARGED]:
-        # Get user's accessible hospitals
-        user_hospitals = []
-        if hasattr(user, 'hospitals'):
-            user_hospitals = list(user.hospitals.values_list('id', flat=True))
-        elif user.is_superuser:
-            from apps.hospitals.models import Hospital
-            user_hospitals = list(Hospital.objects.values_list('id', flat=True))
-        
-        if not user_hospitals:
-            return False
-        
-        # Check if patient has any hospital records at user's hospitals
-        if hasattr(patient, 'hospital_records'):
-            patient_hospital_records = patient.hospital_records.values_list('hospital_id', flat=True)
-            # User can access if they belong to any hospital where patient has records
-            if any(hospital_id in user_hospitals for hospital_id in patient_hospital_records):
-                return True
-        
-        # Fallback: if patient has current hospital and user belongs to it
-        if hasattr(patient, 'current_hospital') and patient.current_hospital:
-            return patient.current_hospital.id in user_hospitals
-        
-        # If patient has no hospital records, allow access from any user hospital
-        # (for new outpatients or edge cases)
-        return len(user_hospitals) > 0
-    
-    return False
+    return getattr(user, 'is_authenticated', False)
 
 
-@cache_permission_result('edit_event', use_object_id=True)
 def can_edit_event(user: Any, event: Any) -> bool:
     """
     Check if a user can edit a specific event.
@@ -135,7 +55,10 @@ def can_edit_event(user: Any, event: Any) -> bool:
     Returns:
         bool: True if editing is allowed, False otherwise
     """
-    if not user.is_authenticated:
+    if user is None or event is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
         return False
     
     # Check if user is the creator
@@ -155,16 +78,13 @@ def can_edit_event(user: Any, event: Any) -> bool:
     return True
 
 
-@cache_permission_result('change_patient_status', use_object_id=True)
 def can_change_patient_status(user: Any, patient: Any, new_status: str) -> bool:
     """
     Check if a user can change a patient's status.
     
-    Rules:
-    - User must be able to access the patient (includes hospital membership)
-    - Doctors can change any patient status
-    - Nurses can change from emergency to inpatient, but cannot discharge
-    - Students cannot change patient status
+    Simplified Rules:
+    - Doctors/Residents: Can change any patient status (including discharge)
+    - Others: Cannot discharge patients
     
     Args:
         user: The user requesting the change
@@ -174,49 +94,25 @@ def can_change_patient_status(user: Any, patient: Any, new_status: str) -> bool:
     Returns:
         bool: True if status change is allowed, False otherwise
     """
-    if not user.is_authenticated:
+    if user is None or patient is None:
         return False
     
-    # First check if user can access the patient (includes hospital membership)
-    if not can_access_patient(user, patient):
+    if not getattr(user, 'is_authenticated', False):
         return False
     
-    # Get user profession type and map to constants
+    # Get user profession type
     profession_type = getattr(user, 'profession_type', None)
-    profession_map = {
-        0: MEDICAL_DOCTOR,  # User.MEDICAL_DOCTOR
-        1: RESIDENT,        # User.RESIDENT 
-        2: NURSE,           # User.NURSE
-        3: PHYSIOTHERAPIST, # User.PHYSIOTERAPIST
-        4: STUDENT,         # User.STUDENT
-    }
-    profession = profession_map.get(profession_type)
     
-    # Students cannot change patient status
-    if profession == STUDENT:
-        return False
-    
-    # Doctors can change any status
-    if profession == MEDICAL_DOCTOR:
+    # Doctors and residents can change any status including discharge
+    if profession_type in [0, 1]:  # MEDICAL_DOCTOR, RESIDENT
         return True
     
-    # Nurses have limited status change abilities
-    if profession in [NURSE, PHYSIOTHERAPIST, RESIDENT]:
-        current_status = getattr(patient, 'status', None)
-        
-        # Nurses cannot discharge patients
-        if new_status == DISCHARGED:
-            return False
-        
-        # Nurses can admit emergency patients
-        if current_status == EMERGENCY and new_status == INPATIENT:
-            return True
-        
-        # Nurses can change between inpatient/outpatient/transferred
-        if new_status in [INPATIENT, OUTPATIENT, TRANSFERRED]:
-            return True
+    # Others cannot discharge patients
+    if new_status == DISCHARGED:
+        return False
     
-    return False
+    # All other status changes are allowed for non-doctors
+    return True
 
 
 def is_doctor(user: Any) -> bool:
@@ -229,36 +125,34 @@ def is_doctor(user: Any) -> bool:
     Returns:
         bool: True if user is a doctor, False otherwise
     """
-    if not user.is_authenticated:
+    if user is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
         return False
     
     profession_type = getattr(user, 'profession_type', None)
-    profession_map = {
-        0: MEDICAL_DOCTOR,  # User.MEDICAL_DOCTOR
-        1: RESIDENT,        # User.RESIDENT 
-        2: NURSE,           # User.NURSE
-        3: PHYSIOTHERAPIST, # User.PHYSIOTERAPIST
-        4: STUDENT,         # User.STUDENT
-    }
-    profession = profession_map.get(profession_type)
-    return profession == MEDICAL_DOCTOR
+    return profession_type == 0  # User.MEDICAL_DOCTOR
 
 
-def has_hospital_context(user: Any) -> bool:
+def is_doctor_or_resident(user: Any) -> bool:
     """
-    Check if a user has a valid hospital context.
-
+    Check if a user is a doctor or resident.
+    
     Args:
         user: The user to check
-
+        
     Returns:
-        bool: True if user has hospital context, False otherwise
+        bool: True if user is a doctor or resident, False otherwise
     """
-    if not user.is_authenticated:
+    if user is None:
         return False
-
-    # Updated to use middleware-provided hospital context
-    return getattr(user, 'has_hospital_context', False)
+    
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    
+    profession_type = getattr(user, 'profession_type', None)
+    return profession_type in [0, 1]  # MEDICAL_DOCTOR or RESIDENT
 
 
 def has_django_permission(user: Any, permission: str) -> bool:
@@ -278,7 +172,6 @@ def has_django_permission(user: Any, permission: str) -> bool:
     return user.has_perm(permission)
 
 
-@cache_permission_result('in_group')
 def is_in_group(user: Any, group_name: str) -> bool:
     """
     Check if user is in a specific group.
@@ -321,7 +214,6 @@ def get_user_profession_type(user: Any) -> Optional[str]:
     return profession_map.get(profession_type)
 
 
-@cache_permission_result('manage_patients')
 def can_manage_patients(user: Any) -> bool:
     """
     Check if user can manage patients (add, change, delete).
@@ -398,54 +290,12 @@ def can_view_events(user: Any) -> bool:
     return user.has_perm('events.view_event')
 
 
-def can_manage_hospitals(user: Any) -> bool:
-    """
-    Check if user can manage hospitals (add, change, delete).
-
-    Args:
-        user: The user to check
-
-    Returns:
-        bool: True if user can manage hospitals, False otherwise
-    """
-    if not user.is_authenticated:
-        return False
-
-    required_permissions = [
-        'hospitals.add_hospital',
-        'hospitals.change_hospital',
-        'hospitals.delete_hospital',
-    ]
-
-    return all(user.has_perm(perm) for perm in required_permissions)
-
-
-def can_view_hospitals(user: Any) -> bool:
-    """
-    Check if user can view hospitals.
-
-    Args:
-        user: The user to check
-
-    Returns:
-        bool: True if user can view hospitals, False otherwise
-    """
-    if not user.is_authenticated:
-        return False
-
-    return user.has_perm('hospitals.view_hospital')
-
-
-@cache_permission_result('change_patient_personal_data', use_object_id=True)
 def can_change_patient_personal_data(user: Any, patient: Any) -> bool:
     """
     Check if a user can change a patient's personal data.
 
-    Rules:
-    - For inpatients: Only medical doctors can change personal data
-    - The doctor must be a member of the patient's hospital
-    - The doctor must be logged into the patient's hospital
-    - For outpatients: Any doctor can change personal data
+    Simplified Rules:
+    - Only doctors and residents can change personal data
 
     Args:
         user: The user requesting the change
@@ -454,62 +304,16 @@ def can_change_patient_personal_data(user: Any, patient: Any) -> bool:
     Returns:
         bool: True if personal data change is allowed, False otherwise
     """
-    if not user.is_authenticated:
+    if user is None or patient is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
         return False
 
-    # Only doctors can change patient personal data
-    if not is_doctor(user):
-        return False
-
-    # Get patient status
-    patient_status = getattr(patient, 'status', None)
-
-    # For outpatients, any doctor can change personal data
-    if patient_status == OUTPATIENT:
-        return True
-
-    # For inpatients, doctor must be in the same hospital
-    if patient_status == INPATIENT:
-        # Check if user has hospital context
-        if not has_hospital_context(user):
-            return False
-
-        current_hospital = getattr(user, 'current_hospital', None)
-        if not current_hospital:
-            return False
-
-        # Check if patient is in the same hospital
-        patient_hospital_id = None
-        if hasattr(patient, 'current_hospital') and patient.current_hospital:
-            patient_hospital_id = patient.current_hospital.id
-        elif hasattr(patient, 'current_hospital_id'):
-            patient_hospital_id = patient.current_hospital_id
-
-        return current_hospital.id == patient_hospital_id
-
-    # For other statuses (emergency, discharged, transferred), apply same rules as inpatients
-    if patient_status in [EMERGENCY, DISCHARGED, TRANSFERRED]:
-        # Check if user has hospital context
-        if not has_hospital_context(user):
-            return False
-
-        current_hospital = getattr(user, 'current_hospital', None)
-        if not current_hospital:
-            return False
-
-        # Check if patient is in the same hospital
-        patient_hospital_id = None
-        if hasattr(patient, 'current_hospital') and patient.current_hospital:
-            patient_hospital_id = patient.current_hospital.id
-        elif hasattr(patient, 'current_hospital_id'):
-            patient_hospital_id = patient.current_hospital_id
-
-        return current_hospital.id == patient_hospital_id
-
-    return False
+    # Only doctors and residents can change patient personal data
+    return is_doctor_or_resident(user)
 
 
-@cache_permission_result('delete_event', use_object_id=True)
 def can_delete_event(user: Any, event: Any) -> bool:
     """
     Check if a user can delete a specific event.
@@ -525,7 +329,10 @@ def can_delete_event(user: Any, event: Any) -> bool:
     Returns:
         bool: True if deletion is allowed, False otherwise
     """
-    if not user.is_authenticated:
+    if user is None or event is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
         return False
 
     # Check if user is the creator
@@ -545,14 +352,9 @@ def can_delete_event(user: Any, event: Any) -> bool:
     return True
 
 
-@cache_permission_result('see_patient_in_search', use_object_id=True)
 def can_see_patient_in_search(user: Any, patient: Any) -> bool:
     """
     Check if a user can see a patient in search results.
-
-    Rules:
-    - Same as can_access_patient but may have additional filtering logic
-    - Users can only see patients they have access to
 
     Args:
         user: The user performing the search
@@ -561,150 +363,34 @@ def can_see_patient_in_search(user: Any, patient: Any) -> bool:
     Returns:
         bool: True if patient should be visible in search, False otherwise
     """
-    if not user.is_authenticated:
-        return False
-
-    # For now, use the same logic as can_access_patient
-    # This can be extended in the future for more specific search filtering
+    # Same as can_access_patient
     return can_access_patient(user, patient)
-
-
-@cache_permission_result('is_hospital_member', use_object_id=True)
-def is_hospital_member(user: Any, hospital: Any) -> bool:
-    """
-    Check if user is a member of the given hospital.
-    
-    Args:
-        user: The user to check
-        hospital: The hospital object
-        
-    Returns:
-        bool: True if user is a member, False otherwise
-    """
-    if not user.is_authenticated:
-        return False
-    
-    if not hospital:
-        return False
-    
-    # Superusers have access to all hospitals
-    if user.is_superuser:
-        return True
-        
-    # Check if user has hospital membership method
-    if hasattr(user, 'is_hospital_member'):
-        return user.is_hospital_member(hospital)
-    
-    # Fallback: check if user has hospitals relationship
-    if hasattr(user, 'hospitals'):
-        return user.hospitals.filter(id=hospital.id).exists()
-    
-    return False
-
-
-def has_any_hospital_membership(user: Any) -> bool:
-    """
-    Check if user is a member of at least one hospital.
-    
-    Args:
-        user: The user to check
-        
-    Returns:
-        bool: True if user is a member of at least one hospital, False otherwise
-    """
-    if not user.is_authenticated:
-        return False
-    
-    # Superusers have access to all hospitals
-    if user.is_superuser:
-        return True
-        
-    # Check if user has hospitals relationship
-    if hasattr(user, 'hospitals'):
-        return user.hospitals.exists()
-    
-    return False
 
 
 def get_user_accessible_patients(user: Any):
     """
-    Get patients accessible to user based on hospital membership and role.
+    Get patients accessible to user (simplified - all patients for authenticated users).
     
     Args:
         user: The user requesting access
         
     Returns:
-        QuerySet: Patients the user can access
+        QuerySet: All patients for authenticated users
     """
     if not user.is_authenticated:
         from apps.patients.models import Patient
         return Patient.objects.none()
     
-    # Get user's hospitals
-    user_hospitals = []
-    if hasattr(user, 'hospitals'):
-        user_hospitals = list(user.hospitals.values_list('id', flat=True))
-    elif user.is_superuser:
-        from apps.hospitals.models import Hospital
-        user_hospitals = list(Hospital.objects.values_list('id', flat=True))
-    
-    if not user_hospitals:
-        from apps.patients.models import Patient
-        return Patient.objects.none()
-    
-    # Get user profession type
-    profession_type = getattr(user, 'profession_type', None)
-    profession_map = {
-        0: MEDICAL_DOCTOR,  # User.MEDICAL_DOCTOR
-        1: RESIDENT,        # User.RESIDENT 
-        2: NURSE,           # User.NURSE
-        3: PHYSIOTHERAPIST, # User.PHYSIOTERAPIST
-        4: STUDENT,         # User.STUDENT
-    }
-    profession = profession_map.get(profession_type)
-    
-    # Import Patient and related models
     from apps.patients.models import Patient
-    from django.db.models import Q
-    
-    # Build query based on new access rules
-    query = Q()
-    
-    # For admitted patients (inpatient, emergency, transferred): strict hospital matching
-    admitted_statuses = [INPATIENT, EMERGENCY, TRANSFERRED]
-    admitted_query = Q(
-        status__in=admitted_statuses,
-        current_hospital_id__in=user_hospitals
-    )
-    
-    # For outpatients and discharged: broader access through hospital records
-    outpatient_statuses = [OUTPATIENT, DISCHARGED]
-    outpatient_query = Q(
-        status__in=outpatient_statuses,
-        hospital_records__hospital_id__in=user_hospitals
-    ) | Q(
-        status__in=outpatient_statuses,
-        current_hospital_id__in=user_hospitals
-    ) | Q(
-        status__in=outpatient_statuses,
-        current_hospital__isnull=True,
-        hospital_records__hospital_id__in=user_hospitals
-    )
-    
-    # Combine queries
-    query = admitted_query | outpatient_query
-    
-    # Students can only see outpatients
-    if profession == STUDENT:
-        query = Q(status=OUTPATIENT) & (outpatient_query)
-    
-    return Patient.objects.filter(query).distinct()
+    return Patient.objects.all()
 
 
-@cache_permission_result('can_create_event_type', use_object_id=True)
 def can_create_event_type(user: Any, patient: Any, event_type: str) -> bool:
     """
     Check if user can create specific event type for patient.
+    
+    Simplified Rules:
+    - All authenticated users can create all event types
     
     Args:
         user: The user requesting to create the event
@@ -714,43 +400,4 @@ def can_create_event_type(user: Any, patient: Any, event_type: str) -> bool:
     Returns:
         bool: True if user can create this event type, False otherwise
     """
-    if not user.is_authenticated:
-        return False
-    
-    # First check if user can access the patient at all
-    if not can_access_patient(user, patient):
-        return False
-    
-    # Get user profession type
-    profession_type = getattr(user, 'profession_type', None)
-    profession_map = {
-        0: MEDICAL_DOCTOR,  # User.MEDICAL_DOCTOR
-        1: RESIDENT,        # User.RESIDENT 
-        2: NURSE,           # User.NURSE
-        3: PHYSIOTHERAPIST, # User.PHYSIOTERAPIST
-        4: STUDENT,         # User.STUDENT
-    }
-    profession = profession_map.get(profession_type)
-    
-    # Event type restrictions based on profession
-    if profession == STUDENT:
-        # Students can only create basic notes, not medical records
-        allowed_event_types = ['Daily Notes', 'Notes']
-        return event_type in allowed_event_types
-    
-    if profession == NURSE:
-        # Nurses can create most events except diagnosis/prescriptions
-        restricted_event_types = ['History and Physical', 'Diagnosis', 'Prescription']
-        return event_type not in restricted_event_types
-    
-    if profession in [PHYSIOTHERAPIST, RESIDENT]:
-        # Physiotherapists and residents can create most events
-        restricted_event_types = ['Discharge Summary']
-        return event_type not in restricted_event_types
-    
-    if profession == MEDICAL_DOCTOR:
-        # Doctors can create all event types
-        return True
-    
-    # Default: no access
-    return False
+    return user.is_authenticated

@@ -15,7 +15,7 @@ from django.conf import settings
 from .constants import PERMISSION_CACHE_TIMEOUT, PERMISSION_CACHE_PREFIX
 
 
-def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[str] = None, hospital_context_id: Optional[str] = None) -> str:
+def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[str] = None) -> str:
     """
     Generate a cache key for permission checks.
     
@@ -23,7 +23,6 @@ def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[s
         user_id: The user's ID
         permission_type: Type of permission being checked
         object_id: Optional object ID for object-level permissions
-        hospital_context_id: Optional hospital context ID for hospital-sensitive permissions
         
     Returns:
         str: Cache key for the permission check
@@ -31,8 +30,6 @@ def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[s
     key_parts = [PERMISSION_CACHE_PREFIX, str(user_id), permission_type]
     if object_id:
         key_parts.append(str(object_id))
-    if hospital_context_id:
-        key_parts.append(f"hospital:{hospital_context_id}")
     
     # Create a hash to ensure key length limits
     key_string = ':'.join(key_parts)
@@ -71,14 +68,7 @@ def cache_permission_result(
             if use_object_id and obj:
                 object_id = getattr(obj, 'pk', None) or getattr(obj, 'id', None)
             
-            # Include hospital context for hospital-sensitive permissions
-            hospital_context_id = None
-            if permission_type in ['access_patient', 'change_patient_status', 'change_patient_personal_data', 'can_create_event_type']:
-                current_hospital = getattr(user, 'current_hospital', None)
-                if current_hospital:
-                    hospital_context_id = str(current_hospital.id)
-            
-            cache_key = generate_cache_key(user.id, permission_type, object_id, hospital_context_id)
+            cache_key = generate_cache_key(user.id, permission_type, object_id)
             
             # Try to get from cache
             cached_result = cache.get(cache_key)
@@ -160,17 +150,13 @@ def clear_permission_cache() -> None:
 
 def get_user_accessible_patients(user):
     """
-    Get list of patient IDs that a user can access.
-    
-    This function provides a cached, optimized way to get all patient IDs
-    that a user has permission to access, reducing the need for individual
-    permission checks in bulk operations.
+    Get list of patient IDs that a user can access (simplified).
     
     Args:
         user: The user object
         
     Returns:
-        list: List of patient IDs the user can access
+        list: List of all patient IDs for authenticated users
     """
     if not getattr(user, 'is_authenticated', False):
         return []
@@ -183,21 +169,10 @@ def get_user_accessible_patients(user):
     if cached_result is not None:
         return cached_result
     
-    # Calculate accessible patients
+    # Get all patient IDs (simplified - all patients accessible)
     from apps.patients.models import Patient
-    from .utils import can_access_patient
     
-    accessible_patient_ids = []
-    
-    # Get patients from user's current hospital
-    if hasattr(user, 'current_hospital') and user.current_hospital:
-        patients = Patient.objects.filter(
-            current_hospital=user.current_hospital
-        ).only('id')
-        
-        for patient in patients:
-            if can_access_patient(user, patient):
-                accessible_patient_ids.append(patient.id)
+    accessible_patient_ids = list(Patient.objects.values_list('id', flat=True))
     
     # Cache the result
     cache.set(cache_key, accessible_patient_ids, PERMISSION_CACHE_TIMEOUT)

@@ -24,7 +24,6 @@ from .forms.prescription_forms import OutpatientPrescriptionForm, PrescriptionIt
 from apps.core.permissions import (
     can_edit_event_required,
     can_delete_event_required,
-    hospital_context_required,
     can_access_patient,
     can_edit_event,
     can_delete_event,
@@ -35,7 +34,6 @@ from apps.events.models import Event
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
     """
     List view for OutpatientPrescription instances with search and filtering capabilities.
@@ -181,7 +179,6 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
         return context
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Create view for OutpatientPrescription instances with drug template integration.
@@ -379,7 +376,6 @@ def search_drug_templates(request):
         return JsonResponse({'error': 'Erro na busca'}, status=500)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
     """
     Detail view for OutpatientPrescription instances showing complete prescription information.
@@ -436,7 +432,6 @@ class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
 
 
 @method_decorator(can_edit_event_required, name="dispatch")
-@method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Update view for OutpatientPrescription instances with 24-hour edit window check.
@@ -545,7 +540,6 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
         return self.object.get_absolute_url()
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionPrintView(LoginRequiredMixin, DetailView):
     """
     Print view for OutpatientPrescription instances with print-optimized template.
@@ -590,7 +584,6 @@ class OutpatientPrescriptionPrintView(LoginRequiredMixin, DetailView):
         return context
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class OutpatientPrescriptionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Delete view for OutpatientPrescription instances with permission checking.

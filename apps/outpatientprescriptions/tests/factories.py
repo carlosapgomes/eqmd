@@ -5,7 +5,6 @@ from django.utils import timezone
 from datetime import date, timedelta
 import random
 
-from apps.hospitals.models import Hospital
 from apps.patients.models import Patient
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
@@ -62,18 +61,6 @@ class StudentFactory(UserFactory):
     profession = 5  # Student
 
 
-class HospitalFactory(factory.django.DjangoModelFactory):
-    """Factory for creating Hospital instances."""
-    
-    class Meta:
-        model = Hospital
-    
-    name = factory.Faker('company')
-    address = factory.Faker('address')
-    created_by = factory.SubFactory(DoctorFactory)
-    updated_by = factory.SelfAttribute('created_by')
-    created_at = factory.LazyFunction(timezone.now)
-    updated_at = factory.LazyFunction(timezone.now)
 
 
 class PatientFactory(factory.django.DjangoModelFactory):
@@ -101,13 +88,11 @@ class PatientFactory(factory.django.DjangoModelFactory):
 class OutpatientFactory(PatientFactory):
     """Factory for creating outpatient Patient instances."""
     status = 1  # Outpatient
-    current_hospital = None
 
 
 class InpatientFactory(PatientFactory):
     """Factory for creating inpatient Patient instances."""
     status = 2  # Inpatient
-    current_hospital = factory.SubFactory(HospitalFactory)
 
 
 class DrugTemplateFactory(factory.django.DjangoModelFactory):
@@ -299,9 +284,8 @@ class CompleteTestDataFactory:
     """Factory for creating complete test data sets."""
     
     @staticmethod
-    def create_hospital_with_staff():
-        """Create a hospital with various staff members."""
-        hospital = HospitalFactory()
+    def create_staff_users():
+        """Create various staff members."""
         doctor = DoctorFactory()
         resident = ResidentFactory()
         nurse = NurseFactory()
@@ -309,7 +293,6 @@ class CompleteTestDataFactory:
         student = StudentFactory()
         
         return {
-            'hospital': hospital,
             'doctor': doctor,
             'resident': resident,
             'nurse': nurse,
@@ -361,13 +344,9 @@ class CompleteTestDataFactory:
         nurse = NurseFactory()
         student = StudentFactory()
         
-        # Create hospitals
-        hospital1 = HospitalFactory(created_by=doctor)
-        hospital2 = HospitalFactory(created_by=doctor)
-        
         # Create patients with different statuses
         outpatient = OutpatientFactory(created_by=doctor)
-        inpatient = InpatientFactory(created_by=doctor, current_hospital=hospital1)
+        inpatient = InpatientFactory(created_by=doctor)
         
         # Create prescriptions by different users
         doctor_prescription = RecentPrescriptionFactory(
@@ -386,10 +365,6 @@ class CompleteTestDataFactory:
                 'resident': resident,
                 'nurse': nurse,
                 'student': student,
-            },
-            'hospitals': {
-                'hospital1': hospital1,
-                'hospital2': hospital2,
             },
             'patients': {
                 'outpatient': outpatient,
@@ -466,7 +441,6 @@ def create_prescription_with_drug_templates():
 
 def create_multi_user_test_scenario():
     """Create a scenario with multiple users and cross-permissions."""
-    hospital = HospitalFactory()
     
     # Create users
     doctor1 = DoctorFactory()
@@ -476,7 +450,7 @@ def create_multi_user_test_scenario():
     
     # Create patients
     patient1 = OutpatientFactory(created_by=doctor1)
-    patient2 = InpatientFactory(created_by=doctor2, current_hospital=hospital)
+    patient2 = InpatientFactory(created_by=doctor2)
     
     # Create prescriptions by different users
     prescriptions = [
@@ -492,7 +466,6 @@ def create_multi_user_test_scenario():
         )
     
     return {
-        'hospital': hospital,
         'users': {
             'doctor1': doctor1,
             'doctor2': doctor2,

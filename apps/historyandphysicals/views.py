@@ -23,7 +23,6 @@ from apps.core.permissions import (
     patient_access_required,
     can_edit_event_required,
     can_delete_event_required,
-    hospital_context_required,
     can_access_patient,
     can_edit_event,
     can_delete_event,
@@ -33,7 +32,6 @@ from apps.sample_content.models import SampleContent
 from apps.events.models import Event
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
     """
     List view for HistoryAndPhysical instances with search and filtering capabilities.
@@ -180,7 +178,6 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
         return context
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class HistoryAndPhysicalDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Detail view for HistoryAndPhysical instances.
@@ -222,7 +219,6 @@ class HistoryAndPhysicalDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
         return context
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Update view for HistoryAndPhysical instances with permission checking.
@@ -291,7 +287,6 @@ class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, 
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class HistoryAndPhysicalDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Delete view for HistoryAndPhysical instances with permission checking.
@@ -342,7 +337,6 @@ class HistoryAndPhysicalDeleteView(LoginRequiredMixin, PermissionRequiredMixin, 
         return super().delete(request, *args, **kwargs)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PatientHistoryAndPhysicalCreateView(
     LoginRequiredMixin, PermissionRequiredMixin, CreateView
 ):
@@ -401,7 +395,6 @@ class PatientHistoryAndPhysicalCreateView(
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class HistoryAndPhysicalDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Duplicate view for HistoryAndPhysical instances - creates a new history and physical based on an existing one.
@@ -465,7 +458,6 @@ class HistoryAndPhysicalDuplicateView(LoginRequiredMixin, PermissionRequiredMixi
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class HistoryAndPhysicalPrintView(LoginRequiredMixin, DetailView):
     """
     Print view for HistoryAndPhysical instances - clean print layout.

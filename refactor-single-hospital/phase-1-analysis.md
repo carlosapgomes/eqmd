@@ -38,28 +38,33 @@ grep -r "hospital" apps/*/templates/
 
 Document in this file:
 
-#### Files to Remove Completely:
+#### Files to Remove Completely
+
 - [ ] `apps/hospitals/` (entire app)
 - [ ] Hospital-related migrations in other apps
 - [ ] Hospital-specific templates
 - [ ] Hospital-related management commands
 
-#### Models to Modify:
+#### Models to Modify
+
 - [ ] `apps/accounts/models.py` - User model (remove hospitals M2M, last_hospital)
 - [ ] `apps/patients/models.py` - Patient model (remove current_hospital)
 - [ ] Remove `PatientHospitalRecord` model entirely
 
-#### Permission System Files:
+#### Permission System Files
+
 - [ ] `apps/core/permissions/utils.py` - Simplify drastically
 - [ ] `apps/core/permissions/cache.py` - Remove hospital-aware caching
 - [ ] `apps/core/permissions/decorators.py` - Remove hospital decorators
 
-#### Settings and Configuration:
+#### Settings and Configuration
+
 - [ ] `eqmd/settings.py` - Remove hospital middleware, apps
 - [ ] `eqmd/urls.py` - Remove hospital URL includes
 - [ ] Template context processors
 
-#### Views and Forms:
+#### Views and Forms
+
 - [ ] All forms with hospital fields
 - [ ] Views with hospital context logic
 - [ ] Admin configurations with hospital references
@@ -67,6 +72,7 @@ Document in this file:
 ### 3. Database Impact Assessment
 
 Review current database schema:
+
 - Identify foreign key relationships to Hospital model
 - Plan migration sequence to avoid FK constraint issues
 - Document data that will be lost (hospital assignments, records)
@@ -74,6 +80,7 @@ Review current database schema:
 ### 4. Test Impact Assessment
 
 Count tests that will need modification:
+
 ```bash
 grep -r "hospital" apps/*/tests/
 ```
@@ -88,6 +95,7 @@ grep -r "hospital" apps/*/tests/
 ## Validation Checklist
 
 Before proceeding to Phase 2:
+
 - [ ] Complete inventory created
 - [ ] All hospital references catalogued
 - [ ] Database impact understood
@@ -97,6 +105,7 @@ Before proceeding to Phase 2:
 ## Output for Next Phase
 
 Create `hospital-inventory.md` with:
+
 1. Complete list of files to modify/remove
 2. Database schema changes required
 3. Critical dependencies identified
@@ -108,3 +117,4 @@ Create `hospital-inventory.md` with:
 - Focus on comprehensive discovery to avoid surprises later
 - Document any complex dependencies that might affect later phases
 - Identify any hospital-related functionality that might be critical to preserve
+

@@ -21,18 +21,11 @@ python manage.py populate_sample_data --clear-existing
 
 ## What Gets Created
 
-### 🏥 Hospitals (2 additional)
+### 🏥 Hospital Configuration
 
-- **Hospital São João** (São Paulo)
-
-  - UTI (12 beds)
-  - Clínica Médica (30 beds)
-  - Cardiologia (20 beds)
-
-- **Hospital Santa Maria** (Rio de Janeiro)
-  - Emergência (25 beds)
-  - Cirurgia (18 beds)
-  - Pediatria (15 beds)
+- **Single Hospital Environment**: Configured via environment variables
+- **Hospital Settings**: Name, address, phone, email, logo set via HOSPITAL_CONFIG  
+- **No Database Models**: Hospital information stored in settings, not database
 
 ### 👥 Medical Staff (11 users)
 
@@ -47,10 +40,10 @@ python manage.py populate_sample_data --clear-existing
 
 ### 👤 Patients (30 total)
 
-- **20 hospital patients**: 10 per hospital (mix of inpatients/emergency/outpatients)
-- **10 outpatients**: Not assigned to any hospital
+- **30 patients total**: Mix of inpatients, emergency, outpatients, discharged, transferred
+- **Universal Access**: All patients accessible to all medical staff
 - **Realistic data**: Portuguese names, CPF, RG, addresses, phone numbers
-- **Medical records**: Hospital registration numbers and admission dates
+- **Simplified Records**: No hospital assignments, focus on medical care
 
 ### 🏷️ Sample Tags (6 medical conditions)
 

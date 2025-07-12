@@ -12,33 +12,33 @@ urlpatterns = [
     path("create/", views.PatientCreateView.as_view(), name="patient_create"),
     path("<uuid:pk>/update/", views.PatientUpdateView.as_view(), name="patient_update"),
     path("<uuid:pk>/delete/", views.PatientDeleteView.as_view(), name="patient_delete"),
-    # Hospital Record URLs
-    path(
-        "<uuid:patient_id>/records/create/",
-        views.HospitalRecordCreateView.as_view(),
-        name="hospital_record_create",
-    ),
-    path(
-        "records/<uuid:pk>/update/",
-        views.HospitalRecordUpdateView.as_view(),
-        name="hospital_record_update",
-    ),
-    path(
-        "records/<uuid:pk>/delete/",
-        views.HospitalRecordDeleteView.as_view(),
-        name="hospital_record_delete",
-    ),
-    # API URLs
-    path(
-        "api/<uuid:patient_id>/hospital-records/",
-        views.PatientHospitalRecordsAPIView.as_view(),
-        name="api_patient_hospital_records",
-    ),
-    path(
-        "api/hospital-record/<uuid:hospital_id>/",
-        views.HospitalRecordByHospitalAPIView.as_view(),
-        name="api_hospital_record_by_hospital",
-    ),
+    # Hospital Record URLs - temporarily disabled for single-hospital refactor
+    # path(
+    #     "<uuid:patient_id>/records/create/",
+    #     views.HospitalRecordCreateView.as_view(),
+    #     name="hospital_record_create",
+    # ),
+    # path(
+    #     "records/<uuid:pk>/update/",
+    #     views.HospitalRecordUpdateView.as_view(),
+    #     name="hospital_record_update",
+    # ),
+    # path(
+    #     "records/<uuid:pk>/delete/",
+    #     views.HospitalRecordDeleteView.as_view(),
+    #     name="hospital_record_delete",
+    # ),
+    # API URLs - temporarily disabled for single-hospital refactor
+    # path(
+    #     "api/<uuid:patient_id>/hospital-records/",
+    #     views.PatientHospitalRecordsAPIView.as_view(),
+    #     name="api_patient_hospital_records",
+    # ),
+    # path(
+    #     "api/hospital-record/<uuid:hospital_id>/",
+    #     views.HospitalRecordByHospitalAPIView.as_view(),
+    #     name="api_hospital_record_by_hospital",
+    # ),
     # Tag URLs
     path("tags/", views.AllowedTagListView.as_view(), name="tag_list"),
     path("tags/create/", views.AllowedTagCreateView.as_view(), name="tag_create"),

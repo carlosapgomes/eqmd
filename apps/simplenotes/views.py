@@ -23,7 +23,6 @@ from apps.core.permissions import (
     patient_access_required,
     can_edit_event_required,
     can_delete_event_required,
-    hospital_context_required,
     can_access_patient,
     can_edit_event,
     can_delete_event,
@@ -33,7 +32,6 @@ from apps.sample_content.models import SampleContent
 from apps.events.models import Event
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class SimpleNoteListView(LoginRequiredMixin, ListView):
     """
     List view for SimpleNote instances with search and filtering capabilities.
@@ -180,7 +178,6 @@ class SimpleNoteListView(LoginRequiredMixin, ListView):
         return context
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class SimpleNoteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Detail view for SimpleNote instances.
@@ -222,7 +219,6 @@ class SimpleNoteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailVi
         return context
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class SimpleNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Update view for SimpleNote instances with permission checking.
@@ -291,7 +287,6 @@ class SimpleNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVi
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class SimpleNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Delete view for SimpleNote instances with permission checking.
@@ -342,7 +337,6 @@ class SimpleNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVi
         return super().delete(request, *args, **kwargs)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PatientSimpleNoteCreateView(
     LoginRequiredMixin, PermissionRequiredMixin, CreateView
 ):
@@ -401,7 +395,6 @@ class PatientSimpleNoteCreateView(
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class SimpleNoteDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Duplicate view for SimpleNote instances - creates a new simplenote based on an existing one.
@@ -465,7 +458,6 @@ class SimpleNoteDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
         return super().form_valid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class SimpleNotePrintView(LoginRequiredMixin, DetailView):
     """
     Print view for SimpleNote instances - clean print layout.

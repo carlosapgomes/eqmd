@@ -13,7 +13,6 @@ from .utils import (
     can_delete_event,
     can_see_patient_in_search,
     is_doctor,
-    has_hospital_context,
     has_django_permission,
     is_in_group,
     get_user_profession_type,
@@ -21,15 +20,12 @@ from .utils import (
     can_view_patients,
     can_manage_events,
     can_view_events,
-    can_manage_hospitals,
-    can_view_hospitals,
 )
 
 from .decorators import (
     patient_access_required,
     doctor_required,
     can_edit_event_required,
-    hospital_context_required,
     patient_data_change_required,
     can_delete_event_required,
 )
@@ -81,7 +77,6 @@ __all__ = [
     'can_delete_event',
     'can_see_patient_in_search',
     'is_doctor',
-    'has_hospital_context',
     'has_django_permission',
     'is_in_group',
     'get_user_profession_type',
@@ -89,14 +84,11 @@ __all__ = [
     'can_view_patients',
     'can_manage_events',
     'can_view_events',
-    'can_manage_hospitals',
-    'can_view_hospitals',
 
     # Permission decorators
     'patient_access_required',
     'doctor_required',
     'can_edit_event_required',
-    'hospital_context_required',
     'patient_data_change_required',
     'can_delete_event_required',
 
@@ -126,10 +118,8 @@ __all__ = [
     'get_optimized_user_queryset',
     'get_optimized_patient_queryset',
     'get_optimized_event_queryset',
-    'get_optimized_hospital_queryset',
     'get_patients_for_user',
     'get_events_for_user',
-    'get_hospitals_for_user',
     'get_recent_patients_optimized',
     'get_permission_summary_optimized',
 ]

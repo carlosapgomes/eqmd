@@ -9,7 +9,7 @@ The MediaFiles app provides comprehensive media file management capabilities for
 - **Secure File Storage**: UUID-based file naming with comprehensive security validation
 - **Multiple Media Types**: Support for single photos, photo series, and short video clips
 - **Event Integration**: Seamless integration with the Event system for medical record tracking
-- **Permission-Based Access**: Hospital context and role-based access control
+- **Permission-Based Access**: Role-based access control for medical staff
 - **File Deduplication**: SHA-256 hash-based duplicate detection and storage optimization
 - **Thumbnail Generation**: Automatic thumbnail creation for images and video previews
 - **Audit Trail**: Complete access logging and file operation tracking
@@ -463,7 +463,7 @@ The MediaFiles app seamlessly integrates with the existing Event system:
 2. **Timeline Integration**: Media events appear in patient timelines with appropriate icons
 3. **Permission Inheritance**: Uses existing patient access permissions
 4. **Audit Trail**: Leverages Event model's audit trail capabilities
-5. **Hospital Context**: Respects hospital-based access control
+5. **Access Control**: Respects role-based access control
 
 ## Performance Considerations
 

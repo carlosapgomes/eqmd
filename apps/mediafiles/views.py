@@ -40,7 +40,6 @@ from .models import Photo, MediaFile, PhotoSeries, VideoClip
 from .forms import PhotoCreateForm, PhotoCreateFormNew, PhotoUpdateForm, PhotoSeriesCreateForm, PhotoSeriesCreateFormNew, PhotoSeriesUpdateForm, PhotoSeriesPhotoForm, VideoClipCreateForm, VideoClipUpdateForm
 from apps.patients.models import Patient
 from apps.core.permissions import (
-    hospital_context_required,
     can_access_patient,
     can_edit_event,
     can_delete_event,
@@ -954,7 +953,6 @@ def serve_video_stream(request: HttpRequest, file_id: str) -> HttpResponse:
 
 # Photo CRUD Views
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Create view for Photo instances for a specific patient.
@@ -1006,7 +1004,6 @@ class PhotoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         return response
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Detail view for Photo instances.
@@ -1049,7 +1046,6 @@ class PhotoDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Update view for Photo instances.
@@ -1114,7 +1110,6 @@ class PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Delete view for Photo instances with permission checking.
@@ -1174,7 +1169,6 @@ class PhotoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Download view for Photo instances.
@@ -1258,7 +1252,6 @@ class PhotoDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
 
 # PhotoSeries CRUD Views
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoSeriesCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Create view for PhotoSeries instances for a specific patient.
@@ -1322,7 +1315,6 @@ class PhotoSeriesCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateV
         return super().form_invalid(form)
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoSeriesDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Detail view for PhotoSeries instances.
@@ -1371,7 +1363,6 @@ class PhotoSeriesDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoSeriesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Update view for PhotoSeries instances.
@@ -1442,7 +1433,6 @@ class PhotoSeriesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateV
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class PhotoSeriesDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Delete view for PhotoSeries instances with permission checking.
@@ -1516,7 +1506,6 @@ class PhotoSeriesDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteV
 
 @login_required
 @require_POST
-@hospital_context_required
 def photoseries_add_photo(request, pk):
     """
     AJAX view for adding photos to existing series.
@@ -1579,7 +1568,6 @@ def photoseries_add_photo(request, pk):
 
 @login_required
 @require_POST
-@hospital_context_required
 def photoseries_remove_photo(request, pk, photo_id):
     """
     AJAX view for removing photos from series.
@@ -1632,7 +1620,6 @@ def photoseries_remove_photo(request, pk, photo_id):
 
 @login_required
 @require_POST
-@hospital_context_required
 def photoseries_reorder(request, pk):
     """
     AJAX view for reordering photos in series.
@@ -1693,7 +1680,6 @@ def photoseries_reorder(request, pk):
 
 
 @login_required
-@hospital_context_required
 def photoseries_download(request, pk):
     """
     Download view for PhotoSeries instances.
@@ -1767,7 +1753,6 @@ def photoseries_download(request, pk):
 
 # VideoClip CRUD Views
 
-@method_decorator(hospital_context_required, name="dispatch")
 class VideoClipCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     Create view for VideoClip instances for a specific patient.
@@ -1827,7 +1812,6 @@ class VideoClipCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class VideoClipDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Detail view for VideoClip instances.
@@ -1870,7 +1854,6 @@ class VideoClipDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailVie
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class VideoClipUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     Update view for VideoClip instances.
@@ -1936,7 +1919,6 @@ class VideoClipUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class VideoClipDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     """
     Delete view for VideoClip instances.
@@ -1996,7 +1978,6 @@ class VideoClipDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class VideoClipDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Download view for VideoClip instances.
@@ -2066,7 +2047,6 @@ class VideoClipDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
         )
 
 
-@method_decorator(hospital_context_required, name="dispatch")
 class VideoClipStreamView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """
     Streaming view for VideoClip instances.

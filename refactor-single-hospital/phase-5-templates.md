@@ -107,7 +107,7 @@
 - [ ] Remove hospital record inline formsets
 - [ ] Simplify form validation display
 
-**Simplified patient form:**
+**Simplified patient form with hospital header:**
 ```django
 <!-- Before (complex hospital form) -->
 <div class="form-group">
@@ -118,14 +118,12 @@
     {% endif %}
 </div>
 
-<!-- Formset for hospital records -->
-{{ hospital_records_formset.management_form }}
-{% for form in hospital_records_formset %}
-    <!-- Complex hospital record form -->
-{% endfor %}
+<!-- After (simple form with hospital context) -->
+{% load hospital_tags %}
+<div class="hospital-context mb-3">
+    <small class="text-muted">{% hospital_name %} - {% hospital_address %}</small>
+</div>
 
-<!-- After (simple form, no hospital fields) -->
-<!-- Hospital fields completely removed -->
 <div class="form-group">
     {{ form.status.label_tag }}
     {{ form.status }}
@@ -139,16 +137,44 @@
 - [ ] Remove hospital management links
 - [ ] Remove hospital context from breadcrumbs
 
-### 8. Update Template Tags
+### 8. Update Template Tags and Add Hospital Context
 
 **Remove hospital-related template tags:**
 - [ ] Remove hospital context template tags
 - [ ] Remove hospital filtering template tags
 - [ ] Update permission template tags to remove hospital logic
 
+**Add hospital configuration template tags:**
+```python
+# apps/core/templatetags/hospital_tags.py
+from django import template
+from django.conf import settings
+
+register = template.Library()
+
+@register.simple_tag
+def hospital_name():
+    return settings.HOSPITAL_CONFIG['name']
+
+@register.simple_tag
+def hospital_address():
+    return settings.HOSPITAL_CONFIG['address']
+
+@register.simple_tag
+def hospital_logo():
+    if settings.HOSPITAL_CONFIG['logo_url']:
+        return settings.HOSPITAL_CONFIG['logo_url']
+    return settings.STATIC_URL + settings.HOSPITAL_CONFIG['logo_path']
+
+@register.inclusion_tag('core/partials/hospital_header.html')
+def hospital_header():
+    return {'hospital': settings.HOSPITAL_CONFIG}
+```
+
 **Files to update:**
 - [ ] `apps/core/templatetags/permission_tags.py` - Remove hospital checks
 - [ ] `apps/patients/templatetags/patient_tags.py` - Remove hospital context
+- [ ] **Create:** `apps/core/templatetags/hospital_tags.py` - Hospital config access
 - [ ] Remove any hospital-specific template tag files
 
 ### 9. Update Static Templates
@@ -248,16 +274,18 @@
 ## Files to Modify
 
 ### Template Files:
-- [ ] `templates/base.html` - Remove hospital context
-- [ ] `templates/navbar.html` - Remove hospital selector
-- [ ] `apps/core/templates/core/dashboard.html` - Remove hospital widgets
-- [ ] `apps/patients/templates/patients/*.html` - Remove hospital fields
-- [ ] `apps/events/templates/events/*.html` - Remove hospital context
-- [ ] `apps/dailynotes/templates/dailynotes/*.html` - Remove hospital context
+- [ ] `templates/base.html` - Add hospital logo and name to header
+- [ ] `templates/navbar.html` - Add hospital branding
+- [ ] `apps/core/templates/core/dashboard.html` - Add hospital info widget
+- [ ] `apps/patients/templates/patients/*.html` - Add hospital context display
+- [ ] `apps/events/templates/events/*.html` - Add hospital header to reports
+- [ ] `apps/dailynotes/templates/dailynotes/*.html` - Add hospital context
+- [ ] **Create:** `apps/core/templates/core/partials/hospital_header.html` - Hospital branding partial
 
 ### Template Tag Files:
-- [ ] `apps/core/templatetags/permission_tags.py`
-- [ ] `apps/patients/templatetags/patient_tags.py`
+- [ ] `apps/core/templatetags/permission_tags.py` - Remove hospital logic
+- [ ] `apps/patients/templatetags/patient_tags.py` - Remove hospital context
+- [ ] **Create:** `apps/core/templatetags/hospital_tags.py` - Hospital configuration tags
 - [ ] Remove hospital-specific template tag files
 
 ### Static Files (if any hospital-specific):
