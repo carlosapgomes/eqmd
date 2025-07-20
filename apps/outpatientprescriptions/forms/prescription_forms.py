@@ -80,6 +80,9 @@ class OutpatientPrescriptionForm(EventForm):
         self.fields[
             "instructions"
         ].help_text = "Instruções gerais que se aplicam a toda a receita"
+        
+        # Make instructions field not required
+        self.fields["instructions"].required = False
         self.fields[
             "event_datetime"
         ].help_text = "Data e hora em que a receita está sendo emitida"
@@ -166,6 +169,7 @@ class PrescriptionItemForm(forms.ModelForm):
         self.fields["presentation"].label = "Apresentação"
         self.fields["usage_instructions"].label = "Instruções de Uso"
         self.fields["quantity"].label = "Quantidade"
+        self.fields["order"].label = "Ordem"
 
         # Update drug template field with user context
         if self.user:

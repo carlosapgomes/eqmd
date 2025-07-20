@@ -2,7 +2,8 @@
 <div class="hospital-header border-bottom bg-light py-2 mb-3">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-auto">
+            <!-- Desktop Layout -->
+            <div class="col-auto d-none d-md-block">
                 {% if hospital.logo_url or hospital.logo_path %}
                     <img src="{% if hospital.logo_url %}{{ hospital.logo_url }}{% else %}{% static hospital.logo_path %}{% endif %}" 
                          alt="{{ hospital_name }} Logo" 
@@ -10,13 +11,13 @@
                          style="height: 40px;">
                 {% endif %}
             </div>
-            <div class="col">
+            <div class="col d-none d-md-block">
                 <h6 class="mb-0 fw-bold text-primary">{{ hospital_name }}</h6>
                 {% if hospital_address %}
                     <small class="text-muted">{{ hospital_address }}</small>
                 {% endif %}
             </div>
-            <div class="col-auto text-end">
+            <div class="col-auto text-end d-none d-md-block">
                 {% if hospital_phone %}
                     <small class="text-muted d-block">
                         <i class="fas fa-phone me-1"></i>{{ hospital_phone }}
@@ -27,6 +28,19 @@
                         <i class="fas fa-envelope me-1"></i>{{ hospital_email }}
                     </small>
                 {% endif %}
+            </div>
+            
+            <!-- Mobile Layout - Compact -->
+            <div class="col-12 d-md-none text-center">
+                <div class="d-flex align-items-center justify-content-center">
+                    {% if hospital.logo_url or hospital.logo_path %}
+                        <img src="{% if hospital.logo_url %}{{ hospital.logo_url }}{% else %}{% static hospital.logo_path %}{% endif %}" 
+                             alt="{{ hospital_name }} Logo" 
+                             class="hospital-logo me-2" 
+                             style="height: 24px;">
+                    {% endif %}
+                    <span class="fw-bold text-primary small">{{ hospital_name }}</span>
+                </div>
             </div>
         </div>
     </div>

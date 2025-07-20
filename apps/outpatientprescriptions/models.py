@@ -22,7 +22,9 @@ class OutpatientPrescription(Event):
     
     instructions = models.TextField(
         verbose_name="Instruções",
-        help_text="Instruções gerais da receita"
+        help_text="Instruções gerais da receita",
+        blank=True,
+        null=True
     )
     status = models.CharField(
         max_length=20,

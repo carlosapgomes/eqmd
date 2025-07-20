@@ -109,6 +109,11 @@
     display: none !important;
 }
 
+/* Hide DELETE checkboxes - they should only be used internally by JavaScript */
+input[id*="-DELETE"] {
+    display: none !important;
+}
+
 /* Deleted forms */
 .prescription-item-form[style*="display: none"] {
     opacity: 0.5;
