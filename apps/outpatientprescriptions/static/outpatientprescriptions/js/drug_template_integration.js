@@ -29,7 +29,6 @@
     function initializeDrugTemplateIntegration() {
         initializeTemplateSelects();
         initializePrescriptionTemplateItemSelects();
-        initializeManualEntryToggles();
         initializeAutocomplete();
         initializeDrugNameAutocomplete();
         loadTemplateData();
@@ -73,11 +72,7 @@
                             enhanceSelectWithSearch(select);
                         });
                         
-                        // Initialize new manual entry toggles
-                        const newManualEntryCheckboxes = node.querySelectorAll('input[type="checkbox"][id^="manual-entry-"]');
-                        newManualEntryCheckboxes.forEach(checkbox => {
-                            checkbox.addEventListener('change', handleManualEntryToggle);
-                        });
+                        // Manual entry toggles removed - autocomplete is now always available
                     }
                 });
             });
@@ -135,16 +130,7 @@
         });
     }
 
-    /**
-     * Initialize manual entry toggles
-     */
-    function initializeManualEntryToggles() {
-        const manualEntryCheckboxes = document.querySelectorAll('input[type="checkbox"][id^="manual-entry-"]');
-        
-        manualEntryCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', handleManualEntryToggle);
-        });
-    }
+    // Manual entry toggles removed - autocomplete is now always available on drug name fields
 
     /**
      * Initialize template select dropdowns
@@ -176,41 +162,11 @@
             populateFormFields(select, templateData);
             showTemplateAppliedNotification(`${templateData.templateName}: ${templateData.drugName}`);
             
-            // Clear manual entry checkbox and hide manual section
-            const formIndex = select.dataset.formIndex;
-            const manualCheckbox = document.getElementById(`manual-entry-${formIndex}`);
-            const manualSection = document.querySelector(`.manual-entry-section[data-form-index="${formIndex}"]`);
-            
-            if (manualCheckbox) {
-                manualCheckbox.checked = false;
-            }
-            if (manualSection) {
-                manualSection.style.display = 'none';
-            }
+            // Manual entry logic removed - autocomplete is always available
         }
     }
 
-    /**
-     * Handle manual entry toggle
-     */
-    function handleManualEntryToggle(event) {
-        const checkbox = event.target;
-        const formIndex = checkbox.dataset.formIndex;
-        const manualSection = document.querySelector(`.manual-entry-section[data-form-index="${formIndex}"]`);
-        const prescriptionTemplateSelect = document.querySelector(`.prescription-template-item-select[data-form-index="${formIndex}"]`);
-        
-        if (manualSection) {
-            if (checkbox.checked) {
-                manualSection.style.display = 'block';
-                // Clear prescription template selection
-                if (prescriptionTemplateSelect) {
-                    prescriptionTemplateSelect.value = '';
-                }
-            } else {
-                manualSection.style.display = 'none';
-            }
-        }
-    }
+    // Manual entry toggle function removed - no longer needed
 
     /**
      * Handle template selection and populate form fields

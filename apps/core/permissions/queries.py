@@ -54,18 +54,16 @@ def get_optimized_patient_queryset():
     Get an optimized queryset for patients with permission-related data.
     
     Returns:
-        QuerySet: Optimized patient queryset with related hospital data
+        QuerySet: Optimized patient queryset with related data
     """
     try:
         from apps.patients.models import Patient
         return Patient.objects.select_related(
-            'current_hospital',
             'created_by',
             'updated_by'
         ).prefetch_related(
             'tags',
-            'tags__allowed_tag',
-            'hospital_records__hospital'
+            'tags__allowed_tag'
         )
     except ImportError:
         # Return empty queryset if patients app is not available
@@ -83,7 +81,6 @@ def get_optimized_event_queryset():
         from apps.events.models import Event
         return Event.objects.select_related(
             'patient',
-            'patient__current_hospital',
             'created_by',
             'updated_by'
         )

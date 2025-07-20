@@ -53,7 +53,7 @@
       </a>
     </li>
     <li class="breadcrumb-item">
-      <a href="{% url 'events:patient_events_list' patient_id=prescription.patient.pk %}">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=prescription.patient.pk %}">
         {{ prescription.patient.name }} - Timeline
       </a>
     </li>
@@ -76,9 +76,9 @@
       <i class="bi bi-eye me-1"></i>
       Ver Detalhes
     </a>
-    <a href="{% url 'outpatientprescriptions:outpatientprescription_list' %}" class="btn btn-outline-secondary">
+    <a href="{% url 'patients:patient_events_timeline' patient_id=prescription.patient.pk %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>
-      Voltar à Lista
+      Voltar
     </a>
   </div>
 </div>
@@ -441,6 +441,7 @@
               {% if form.DELETE %}
                 {{ form.DELETE }}
               {% endif %}
+              {{ form.id.as_hidden }}
             </div>
           {% endfor %}
         </div>
@@ -466,7 +467,7 @@
           {% endif %}
         </div>
         <div>
-          <a href="{{ prescription.get_absolute_url }}" class="btn btn-outline-secondary">
+          <a href="{% url 'patients:patient_events_timeline' patient_id=prescription.patient.pk %}" class="btn btn-outline-secondary">
             <i class="bi bi-x-circle me-1"></i>
             Cancelar
           </a>
@@ -680,6 +681,7 @@
     {% if empty_form.DELETE %}
       {{ empty_form.DELETE }}
     {% endif %}
+    {{ empty_form.id.as_hidden }}
   </div>
 </div>
 {% endif %}

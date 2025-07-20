@@ -1,5 +1,6 @@
 {% extends "base_app.html" %}
 {% load static %}
+{% load patient_tags %}
 
 {% block title %}Receita - {{ prescription.patient.name }}{% endblock %}
 
@@ -247,8 +248,7 @@
         <div class="mb-2">
           <small class="text-muted d-block">Status</small>
           <div>
-            {% load patient_tags %}
-            {% patient_status_badge prescription.patient %}
+            {{ prescription.patient.status|patient_status_badge }}
           </div>
         </div>
 

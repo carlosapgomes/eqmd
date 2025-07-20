@@ -47,21 +47,11 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
         """Filter queryset based on search parameters and user permissions."""
         queryset = (
             HistoryAndPhysical.objects.select_related("patient", "created_by", "updated_by")
-            .prefetch_related(
-                "patient__current_hospital", "patient__hospitalrecord_set"
-            )
             .all()
         )
 
-        # Filter by user's hospital context and patient access permissions
-        if (
-            hasattr(self.request.user, "current_hospital")
-            and self.request.user.current_hospital
-        ):
-            # Only show history and physicals for patients in the user's current hospital
-            queryset = queryset.filter(
-                patient__current_hospital=self.request.user.current_hospital
-            )
+        # Filter by patient access permissions (single hospital configuration)
+        # All users can access all patients in the single hospital setup
 
         # Optimize patient access check with bulk operations
         from apps.core.permissions.cache import get_user_accessible_patients
@@ -121,7 +111,7 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
         context["selected_creator"] = self.request.GET.get("creator", "")
 
         # Cache key for filter options
-        cache_key = f"historyandphysicals_filters_{self.request.user.id}_{getattr(self.request.user, 'current_hospital_id', 'none')}"
+        cache_key = f"historyandphysicals_filters_{self.request.user.id}"
 
         # Try to get filter options from cache
         filter_options = cache.get(cache_key)
@@ -129,14 +119,10 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
             # Get available patients for filter dropdown (only accessible ones)
             from apps.core.permissions.cache import get_user_accessible_patients
 
-            if (
-                hasattr(self.request.user, "current_hospital")
-                and self.request.user.current_hospital
-            ):
-                accessible_patient_ids = get_user_accessible_patients(self.request.user)
+            accessible_patient_ids = get_user_accessible_patients(self.request.user)
+            if accessible_patient_ids:
                 accessible_patients = Patient.objects.filter(
-                    id__in=accessible_patient_ids,
-                    current_hospital=self.request.user.current_hospital,
+                    id__in=accessible_patient_ids
                 ).only("id", "name", "fiscal_number")
             else:
                 accessible_patients = Patient.objects.none()
@@ -145,19 +131,13 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
             from django.contrib.auth import get_user_model
 
             User = get_user_model()
-            if (
-                hasattr(self.request.user, "current_hospital")
-                and self.request.user.current_hospital
-            ):
-                available_creators = (
-                    User.objects.filter(
-                        historyandphysical_created__patient__current_hospital=self.request.user.current_hospital
-                    )
-                    .distinct()
-                    .only("id", "first_name", "last_name", "email")
+            available_creators = (
+                User.objects.filter(
+                    historyandphysical_created__patient__id__in=accessible_patient_ids
                 )
-            else:
-                available_creators = User.objects.none()
+                .distinct()
+                .only("id", "first_name", "last_name", "email")
+            )
 
             filter_options = {
                 "available_patients": accessible_patients,

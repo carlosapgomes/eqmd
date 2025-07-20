@@ -16,10 +16,15 @@ class OutpatientPrescriptionForm(EventForm):
 
     class Meta:
         model = OutpatientPrescription
-        fields = ["patient", "event_datetime", "instructions", "status"]
+        fields = ["patient", "event_datetime", "prescription_date", "instructions", "status"]
         widgets = {
             "event_datetime": forms.DateTimeInput(
-                attrs={"type": "datetime-local", "class": "form-control"}
+                attrs={"type": "datetime-local", "class": "form-control"},
+                format="%Y-%m-%dT%H:%M",
+            ),
+            "prescription_date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control"},
+                format="%Y-%m-%d",
             ),
             "instructions": forms.TextInput(
                 attrs={
@@ -35,16 +40,39 @@ class OutpatientPrescriptionForm(EventForm):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
-        # Set default event_datetime to current datetime in ISO format for HTML5 datetime-local input
+        # Set input formats for datetime field
+        self.fields["event_datetime"].input_formats = [
+            "%Y-%m-%dT%H:%M",  # HTML5 datetime-local format
+            "%Y-%m-%dT%H:%M:%S",
+            "%d/%m/%Y %H:%M:%S",  # Format in error messages
+            "%d/%m/%Y %H:%M",
+        ]
+
+        # Set input formats for prescription_date field
+        self.fields["prescription_date"].input_formats = [
+            "%Y-%m-%d",  # HTML5 date format
+            "%d/%m/%Y",  # Format in error messages
+        ]
+
+        # Set default values for new instances
         if not self.instance.pk:
             utc_now = timezone.now().astimezone(timezone.get_default_timezone())
             self.fields["event_datetime"].initial = utc_now.strftime("%Y-%m-%dT%H:%M")
+            self.fields["prescription_date"].initial = utc_now.strftime("%Y-%m-%d")
             # Set default status to draft for new instances
             self.fields["status"].initial = 'draft'
+        else:
+            # Format existing instance datetime for HTML5 input
+            dt = self.instance.event_datetime.astimezone(timezone.get_default_timezone())
+            self.fields["event_datetime"].initial = dt.strftime("%Y-%m-%dT%H:%M")
+            # Format existing prescription_date for HTML5 input
+            if self.instance.prescription_date:
+                self.fields["prescription_date"].initial = self.instance.prescription_date.strftime("%Y-%m-%d")
 
         # Configure field labels and help texts
         self.fields["patient"].label = "Paciente"
         self.fields["event_datetime"].label = "Data e Hora da Receita"
+        self.fields["prescription_date"].label = "Data da Receita"
         self.fields["instructions"].label = "Instruções Gerais"
         self.fields["status"].label = "Status"
 
@@ -55,6 +83,9 @@ class OutpatientPrescriptionForm(EventForm):
         self.fields[
             "event_datetime"
         ].help_text = "Data e hora em que a receita está sendo emitida"
+        self.fields[
+            "prescription_date"
+        ].help_text = "Data da receita para fins administrativos"
 
     def save(self, commit=True):
         """Save the prescription with the current user as creator."""
@@ -62,7 +93,6 @@ class OutpatientPrescriptionForm(EventForm):
 
         # Set description from event type choices
         from apps.events.models import Event
-
         prescription.description = Event.EVENT_TYPE_CHOICES[
             Event.OUTPT_PRESCRIPTION_EVENT
         ][1]
@@ -70,8 +100,8 @@ class OutpatientPrescriptionForm(EventForm):
         if not prescription.pk and self.user:
             prescription.created_by = self.user
 
-        # Automatically set prescription_date to the date part of event_datetime
-        if prescription.event_datetime:
+        # Automatically set prescription_date to the date part of event_datetime if not provided
+        if prescription.event_datetime and not prescription.prescription_date:
             prescription.prescription_date = prescription.event_datetime.date()
 
         if commit:
@@ -160,7 +190,7 @@ PrescriptionItemFormSet = inlineformset_factory(
     OutpatientPrescription,
     PrescriptionItem,
     form=PrescriptionItemForm,
-    extra=1,  # Start with one empty form
+    extra=0,  # No extra forms - min_num=1 ensures one form
     min_num=1,  # Require at least one item
     validate_min=True,
     can_delete=True,

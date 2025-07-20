@@ -45,7 +45,7 @@
     </li>
     {% if patient %}
       <li class="breadcrumb-item">
-        <a href="{% url 'events:patient_events_list' patient_id=patient.pk %}">
+        <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}">
           {{ patient.name }} - Timeline
         </a>
       </li>
@@ -69,10 +69,17 @@
     {% endif %}
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
-    <a href="{% url 'outpatientprescriptions:outpatientprescription_list' %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left me-1"></i>
-      Voltar à Lista
-    </a>
+    {% if patient %}
+      <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>
+        Voltar
+      </a>
+    {% else %}
+      <a href="{% url 'outpatientprescriptions:outpatientprescription_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>
+        Voltar
+      </a>
+    {% endif %}
   </div>
 </div>
 
@@ -156,30 +163,42 @@
           </div>
           <div class="col-md-6">
             <div class="mb-3">
-              <label class="form-label required-field">
-                <i class="bi bi-check-circle me-1"></i>
-                {{ form.status.label }}
+              <label for="{{ form.prescription_date.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-calendar me-1"></i>
+                {{ form.prescription_date.label }}
               </label>
-              <div class="mt-2">
-                <div class="form-check form-check-inline">
-                  <input type="radio" class="form-check-input" name="status" value="draft" id="id_status_draft" checked>
-                  <label class="form-check-label" for="id_status_draft">
-                    Rascunho
-                  </label>
-                </div>
-                <div class="form-check form-check-inline">
-                  <input type="radio" class="form-check-input" name="status" value="finalized" id="id_status_finalized">
-                  <label class="form-check-label" for="id_status_finalized">
-                    Finalizada
-                  </label>
-                </div>
-              </div>
-              {% if form.status.errors %}
+              {{ form.prescription_date }}
+              {% if form.prescription_date.errors %}
                 <div class="invalid-feedback d-block">
-                  {% for error in form.status.errors %}
+                  {% for error in form.prescription_date.errors %}
                     {{ error }}
                   {% endfor %}
                 </div>
+              {% endif %}
+              {% if form.prescription_date.help_text %}
+                <div class="form-text">{{ form.prescription_date.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-12">
+            <div class="mb-3">
+              <label for="{{ form.description.id_for_label }}" class="form-label">
+                <i class="bi bi-file-text me-1"></i>
+                {{ form.description.label }}
+              </label>
+              {{ form.description }}
+              {% if form.description.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.description.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+              {% if form.description.help_text %}
+                <div class="form-text">{{ form.description.help_text }}</div>
               {% endif %}
             </div>
           </div>
@@ -265,40 +284,14 @@
                 </div>
               </div>
               
-              <!-- Manual Entry Toggle -->
+              <!-- Info about manual entry -->
               <div class="row mb-3">
                 <div class="col-12">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="manual-entry-{{ forloop.counter0 }}" data-form-index="{{ forloop.counter0 }}">
-                    <label class="form-check-label" for="manual-entry-{{ forloop.counter0 }}">
-                      <i class="bi bi-pencil me-1"></i>
-                      Entrada manual (buscar medicamentos individuais)
-                    </label>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Drug Template Selection (Manual Entry) -->
-              <div class="row mb-3 manual-entry-section" style="display: none;" data-form-index="{{ forloop.counter0 }}">
-                <div class="col-12">
-                  <label class="form-label">
-                    <i class="bi bi-search me-1"></i>
-                    Buscar Medicamento
-                  </label>
-                  <select class="form-select drug-template-select" data-form-index="{{ forloop.counter0 }}">
-                    <option value="">Selecione um medicamento</option>
-                    {% for template in drug_templates %}
-                      <option value="{{ template.id }}" 
-                              data-name="{{ template.name }}"
-                              data-presentation="{{ template.presentation }}"
-                              data-usage-instructions="{{ template.usage_instructions }}">
-                        {{ template.name }} - {{ template.presentation }}
-                      </option>
-                    {% endfor %}
-                  </select>
-                  <div class="form-text">
-                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
-                    Medicamentos individuais requerem entrada manual da quantidade
+                  <div class="alert alert-info">
+                    <small>
+                      <i class="bi bi-info-circle me-1"></i>
+                      Ou digite no campo "Nome do Medicamento" abaixo para buscar medicamentos individuais
+                    </small>
                   </div>
                 </div>
               </div>
@@ -411,6 +404,7 @@
               {% if form.DELETE %}
                 {{ form.DELETE }}
               {% endif %}
+              {{ form.id.as_hidden }}
             </div>
           {% endfor %}
         </div>
@@ -429,10 +423,17 @@
           </button>
         </div>
         <div>
-          <a href="{% url 'outpatientprescriptions:outpatientprescription_list' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-x-circle me-1"></i>
-            Cancelar
-          </a>
+          {% if patient %}
+            <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-circle me-1"></i>
+              Cancelar
+            </a>
+          {% else %}
+            <a href="{% url 'outpatientprescriptions:outpatientprescription_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-circle me-1"></i>
+              Cancelar
+            </a>
+          {% endif %}
         </div>
       </div>
     </form>
@@ -507,40 +508,14 @@
       </div>
     </div>
     
-    <!-- Manual Entry Toggle -->
+    <!-- Info about manual entry -->
     <div class="row mb-3">
       <div class="col-12">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="manual-entry-__prefix__" data-form-index="__prefix__">
-          <label class="form-check-label" for="manual-entry-__prefix__">
-            <i class="bi bi-pencil me-1"></i>
-            Entrada manual (buscar medicamentos individuais)
-          </label>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Drug Template Selection (Manual Entry) -->
-    <div class="row mb-3 manual-entry-section" style="display: none;" data-form-index="__prefix__">
-      <div class="col-12">
-        <label class="form-label">
-          <i class="bi bi-search me-1"></i>
-          Buscar Medicamento
-        </label>
-        <select class="form-select drug-template-select" data-form-index="__prefix__">
-          <option value="">Selecione um medicamento</option>
-          {% for template in drug_templates %}
-            <option value="{{ template.id }}" 
-                    data-name="{{ template.name }}"
-                    data-presentation="{{ template.presentation }}"
-                    data-usage-instructions="{{ template.usage_instructions }}">
-              {{ template.name }} - {{ template.presentation }}
-            </option>
-          {% endfor %}
-        </select>
-        <div class="form-text">
-          <i class="bi bi-exclamation-triangle text-warning me-1"></i>
-          Medicamentos individuais requerem entrada manual da quantidade
+        <div class="alert alert-info">
+          <small>
+            <i class="bi bi-info-circle me-1"></i>
+            Ou digite no campo "Nome do Medicamento" abaixo para buscar medicamentos individuais
+          </small>
         </div>
       </div>
     </div>
@@ -638,6 +613,7 @@
     {% if empty_form.DELETE %}
       {{ empty_form.DELETE }}
     {% endif %}
+    {{ empty_form.id.as_hidden }}
   </div>
 </div>
 {% endblock %}
@@ -674,15 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Form submission handling for status buttons
-  document.querySelectorAll('button[type="submit"][name="status"]').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const statusField = document.querySelector('#id_status');
-      if (statusField) {
-        statusField.value = this.value;
-      }
-    });
-  });
+  // Status is now handled directly by the submit buttons via their name/value attributes
   
   // Form validation
   const form = document.querySelector('.needs-validation');

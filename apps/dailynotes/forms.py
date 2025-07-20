@@ -81,7 +81,7 @@ class DailyNoteForm(forms.ModelForm):
         """Override save to set created_by and updated_by fields."""
         instance = super().save(commit=False)
 
-        self.description = Event.EVENT_TYPE_CHOICES[Event.DAILY_NOTE_EVENT][1]
+        instance.description = Event.EVENT_TYPE_CHOICES[Event.DAILY_NOTE_EVENT][1]
         if self.user:
             if not instance.pk:  # New instance
                 instance.created_by = self.user

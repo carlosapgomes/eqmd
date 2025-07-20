@@ -49,22 +49,12 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
         """Filter queryset based on search parameters and user permissions."""
         queryset = (
             OutpatientPrescription.objects.select_related("patient", "created_by", "updated_by")
-            .prefetch_related(
-                "patient__current_hospital", "patient__hospitalrecord_set", "items"
-            )
+            .prefetch_related("items")
             .all()
         )
 
-        # Filter by user's hospital context and patient access permissions
-        if (
-            hasattr(self.request.user, "current_hospital")
-            and self.request.user.current_hospital
-        ):
-            # Only show prescriptions for patients in the user's current hospital or outpatients
-            queryset = queryset.filter(
-                Q(patient__current_hospital=self.request.user.current_hospital) |
-                Q(patient__status__in=['outpatient', 'discharged'])
-            )
+        # Filter by patient access permissions (single hospital configuration)
+        # All users can access all patients in the single hospital setup
 
         # Optimize patient access check with bulk operations
         from apps.core.permissions.cache import get_user_accessible_patients
@@ -130,7 +120,7 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
         context["selected_creator"] = self.request.GET.get("creator", "")
 
         # Cache key for filter options
-        cache_key = f"prescriptions_filters_{self.request.user.id}_{getattr(self.request.user, 'current_hospital_id', 'none')}"
+        cache_key = f"prescriptions_filters_{self.request.user.id}"
 
         # Try to get filter options from cache
         filter_options = cache.get(cache_key)
@@ -152,7 +142,8 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
             User = get_user_model()
             available_creators = (
                 User.objects.filter(
-                    outpatientprescription_created__patient__id__in=accessible_patient_ids
+                    event_set__event_type=Event.OUTPT_PRESCRIPTION_EVENT,
+                    event_set__patient__id__in=accessible_patient_ids
                 )
                 .distinct()
                 .only("id", "first_name", "last_name", "email")
@@ -303,7 +294,7 @@ class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMix
         """Redirect to patient timeline after successful creation."""
         from django.urls import reverse
         return reverse(
-            'events:patient_events_list',
+            'patients:patient_events_timeline',
             kwargs={'patient_id': self.object.patient.id}
         )
 
@@ -390,11 +381,7 @@ class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
         return (
             OutpatientPrescription.objects
             .select_related("patient", "created_by", "updated_by")
-            .prefetch_related(
-                "patient__current_hospital", 
-                "patient__hospitalrecord_set",
-                "items"
-            )
+            .prefetch_related("items")
         )
     
     def get_object(self, queryset=None):
@@ -424,7 +411,7 @@ class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
         # Add timeline URL for patient
         from django.urls import reverse
         context['patient_timeline_url'] = reverse(
-            'events:patient_events_list', 
+            'patients:patient_events_timeline', 
             kwargs={'patient_id': self.object.patient.id}
         )
         
@@ -441,6 +428,7 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
     model = OutpatientPrescription
     form_class = OutpatientPrescriptionForm
     template_name = "outpatientprescriptions/outpatientprescription_update.html"
+    context_object_name = "prescription"
     permission_required = "events.change_event"
     
     def get_queryset(self):
@@ -448,11 +436,7 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
         return (
             OutpatientPrescription.objects
             .select_related("patient", "created_by", "updated_by")
-            .prefetch_related(
-                "patient__current_hospital", 
-                "patient__hospitalrecord_set",
-                "items"
-            )
+            .prefetch_related("items")
         )
     
     def get_form_kwargs(self):
@@ -499,7 +483,7 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
         # Add timeline URL for patient
         from django.urls import reverse
         context['patient_timeline_url'] = reverse(
-            'events:patient_events_list', 
+            'patients:patient_events_timeline', 
             kwargs={'patient_id': self.object.patient.id}
         )
         
@@ -511,6 +495,19 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
         formset = PrescriptionItemFormSetHelper.get_formset_with_user(
             self.request.user, self.request.POST, instance=self.object
         )
+        
+        # Debug logging
+        print(f"DEBUG: Form is valid: {form.is_valid()}")
+        if not form.is_valid():
+            print(f"DEBUG: Form errors: {form.errors}")
+        
+        print(f"DEBUG: Formset is valid: {formset.is_valid()}")
+        if not formset.is_valid():
+            print(f"DEBUG: Formset errors: {formset.errors}")
+            print(f"DEBUG: Formset non-form errors: {formset.non_form_errors()}")
+            for i, f in enumerate(formset):
+                if not f.is_valid():
+                    print(f"DEBUG: Form {i} errors: {f.errors}")
         
         if form.is_valid() and formset.is_valid():
             # Save the main prescription
@@ -536,8 +533,12 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
             return self.render_to_response(context)
     
     def get_success_url(self):
-        """Redirect to prescription detail after successful update."""
-        return self.object.get_absolute_url()
+        """Redirect to patient timeline after successful update."""
+        from django.urls import reverse
+        return reverse(
+            'patients:patient_events_timeline', 
+            kwargs={'patient_id': self.object.patient.id}
+        )
 
 
 class OutpatientPrescriptionPrintView(LoginRequiredMixin, DetailView):
@@ -554,11 +555,7 @@ class OutpatientPrescriptionPrintView(LoginRequiredMixin, DetailView):
         return (
             OutpatientPrescription.objects
             .select_related("patient", "created_by", "updated_by")
-            .prefetch_related(
-                "patient__current_hospital", 
-                "patient__hospitalrecord_set",
-                "items"
-            )
+            .prefetch_related("items")
         )
     
     def get_object(self, queryset=None):
@@ -598,7 +595,7 @@ class OutpatientPrescriptionDeleteView(LoginRequiredMixin, PermissionRequiredMix
         """Redirect to patient timeline after successful deletion."""
         from django.urls import reverse
         return reverse(
-            'events:patient_events_list', 
+            'patients:patient_events_timeline', 
             kwargs={'patient_id': self.object.patient.id}
         )
     
@@ -627,11 +624,7 @@ class OutpatientPrescriptionDeleteView(LoginRequiredMixin, PermissionRequiredMix
         return (
             OutpatientPrescription.objects
             .select_related("patient", "created_by", "updated_by")
-            .prefetch_related(
-                "patient__current_hospital", 
-                "patient__hospitalrecord_set",
-                "items"
-            )
+            .prefetch_related("items")
         )
     
     def delete(self, request, *args, **kwargs):
