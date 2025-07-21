@@ -392,7 +392,7 @@
      */
     async function fetchAutocompleteSuggestions(query) {
         try {
-            const response = await fetch(`/outpatient-prescriptions/ajax/drug-templates/search/?q=${encodeURIComponent(query)}&limit=10`);
+            const response = await fetch(`/prescriptions/ajax/drug-templates/search/?q=${encodeURIComponent(query)}&limit=10`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -680,6 +680,12 @@
     function enhanceSelectWithSearch(select) {
         // Add search input above select for large lists
         if (select.options.length > 10) {
+            // Check if search input already exists
+            const existingSearchInput = select.parentNode.querySelector('input[type="text"][placeholder="Buscar template..."]');
+            if (existingSearchInput) {
+                return; // Search input already exists, don't add another
+            }
+            
             const searchInput = document.createElement('input');
             searchInput.type = 'text';
             searchInput.className = 'form-control mb-2';

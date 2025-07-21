@@ -105,17 +105,64 @@
     </div>
     {% endif %}
 
+    <!-- Debug Information -->
+    {% if DEBUG or request.user.is_superuser %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+      <h6 class="alert-heading">
+        <i class="bi bi-info-circle me-2"></i>
+        Debug Information
+      </h6>
+      <p><strong>Form valid:</strong> {{ form.is_valid }}</p>
+      <p><strong>Formset valid:</strong> {{ formset.is_valid }}</p>
+      <p><strong>Management form valid:</strong> {{ management_form.is_valid }}</p>
+      <p><strong>Form errors:</strong> {{ form.errors }}</p>
+      <p><strong>Formset errors:</strong> {{ formset.errors }}</p>
+      <p><strong>Formset non-form errors:</strong> {{ formset.non_form_errors }}</p>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Formset Errors -->
+    {% if formset.non_form_errors %}
+    <div class="alert alert-danger" role="alert">
+      <h6 class="alert-heading">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Erros nos medicamentos
+      </h6>
+      {% for error in formset.non_form_errors %}
+        <p class="mb-0">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Individual Formset Form Errors -->
+    {% for form_errors in formset.errors %}
+      {% if form_errors %}
+      <div class="alert alert-warning" role="alert">
+        <h6 class="alert-heading">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          Erro no medicamento {{ forloop.counter }}
+        </h6>
+        {% for field, errors in form_errors.items %}
+          <p><strong>{{ field }}:</strong> {% for error in errors %}{{ error }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endfor %}
+
     <form method="post" id="prescription-form" class="needs-validation" novalidate>
       {% csrf_token %}
       
-      <!-- Patient Selection (Only when no patient is pre-selected) -->
+      <!-- Prescription Information Section -->
       {% if not patient %}
+        {{ form.patient.as_hidden }}
         <div class="form-section">
           <h6>
             <i class="bi bi-person-check me-2"></i>
-            Seleção do Paciente
+            Informações da Receita
           </h6>
-          <div class="row">
+          <!-- Patient Selection -->
+          <div class="row mb-3">
             <div class="col-md-12">
               <div class="mb-3">
                 <label for="{{ form.patient.id_for_label }}" class="form-label required-field">
@@ -133,76 +180,59 @@
               </div>
             </div>
           </div>
-        </div>
+          <!-- Prescription Date -->
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="{{ form.prescription_date.id_for_label }}" class="form-label required-field">
+                  <i class="bi bi-calendar me-1"></i>
+                  {{ form.prescription_date.label }}
+                </label>
+                {{ form.prescription_date }}
+                {% if form.prescription_date.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.prescription_date.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.prescription_date.help_text %}
+                  <div class="form-text">{{ form.prescription_date.help_text }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
       {% else %}
         {{ form.patient.as_hidden }}
+        <div class="form-section">
+          <h6>
+            <i class="bi bi-file-earmark-medical me-2"></i>
+            Informações da Receita
+          </h6>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="{{ form.prescription_date.id_for_label }}" class="form-label required-field">
+                  <i class="bi bi-calendar me-1"></i>
+                  {{ form.prescription_date.label }}
+                </label>
+                {{ form.prescription_date }}
+                {% if form.prescription_date.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.prescription_date.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.prescription_date.help_text %}
+                  <div class="form-text">{{ form.prescription_date.help_text }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
       {% endif %}
-
-      <!-- Prescription Information Section -->
-      <div class="form-section">
-        <h6>
-          <i class="bi bi-file-earmark-medical me-2"></i>
-          Informações da Receita
-        </h6>
-        <div class="row">
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label for="{{ form.event_datetime.id_for_label }}" class="form-label required-field">
-                <i class="bi bi-calendar-event me-1"></i>
-                {{ form.event_datetime.label }}
-              </label>
-              {{ form.event_datetime }}
-              {% if form.event_datetime.errors %}
-                <div class="invalid-feedback d-block">
-                  {% for error in form.event_datetime.errors %}
-                    {{ error }}
-                  {% endfor %}
-                </div>
-              {% endif %}
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label for="{{ form.prescription_date.id_for_label }}" class="form-label required-field">
-                <i class="bi bi-calendar me-1"></i>
-                {{ form.prescription_date.label }}
-              </label>
-              {{ form.prescription_date }}
-              {% if form.prescription_date.errors %}
-                <div class="invalid-feedback d-block">
-                  {% for error in form.prescription_date.errors %}
-                    {{ error }}
-                  {% endfor %}
-                </div>
-              {% endif %}
-              {% if form.prescription_date.help_text %}
-                <div class="form-text">{{ form.prescription_date.help_text }}</div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        
-        <div class="row">
-          <div class="col-12">
-            <div class="mb-3">
-              <label for="{{ form.description.id_for_label }}" class="form-label">
-                <i class="bi bi-file-text me-1"></i>
-                {{ form.description.label }}
-              </label>
-              {{ form.description }}
-              {% if form.description.errors %}
-                <div class="invalid-feedback d-block">
-                  {% for error in form.description.errors %}
-                    {{ error }}
-                  {% endfor %}
-                </div>
-              {% endif %}
-              {% if form.description.help_text %}
-                <div class="form-text">{{ form.description.help_text }}</div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
+        {{ form.description.as_hidden }}
+        {{ form.event_datetime.as_hidden }}
         
         <div class="row">
           <div class="col-12">
@@ -362,20 +392,13 @@
                 </div>
                 <div class="col-md-6">
                   <div class="mb-3">
-                    <label for="{{ form.order.id_for_label }}" class="form-label">
-                      <i class="bi bi-arrow-up-down me-1"></i>
-                      {{ form.order.label }}
-                    </label>
-                    {{ form.order }}
+                    {{ form.order.as_hidden }}
                     {% if form.order.errors %}
                       <div class="invalid-feedback d-block">
                         {% for error in form.order.errors %}
                           {{ error }}
                         {% endfor %}
                       </div>
-                    {% endif %}
-                    {% if form.order.help_text %}
-                      <div class="form-text">{{ form.order.help_text }}</div>
                     {% endif %}
                   </div>
                 </div>
@@ -423,11 +446,11 @@
       <!-- Form Actions -->
       <div class="d-flex justify-content-between flex-wrap gap-2">
         <div>
-          <button type="submit" name="status" value="draft" class="btn btn-outline-primary me-2">
+          <button type="submit" name="status" value="draft" class="btn btn-outline-primary me-2" id="draft-btn">
             <i class="bi bi-save me-1"></i>
             Salvar como Rascunho
           </button>
-          <button type="submit" name="status" value="finalized" class="btn btn-medical-primary">
+          <button type="submit" name="status" value="finalized" class="btn btn-medical-primary" id="finalize-btn">
             <i class="bi bi-check-circle me-1"></i>
             Finalizar Receita
           </button>
@@ -593,11 +616,7 @@
       </div>
       <div class="col-md-6">
         <div class="mb-3">
-          <label for="{{ empty_form.order.id_for_label }}" class="form-label">
-            <i class="bi bi-arrow-up-down me-1"></i>
-            {{ empty_form.order.label }}
-          </label>
-          {{ empty_form.order }}
+          {{ empty_form.order.as_hidden }}
           {% if empty_form.order.errors %}
             <div class="invalid-feedback d-block">
               {% for error in empty_form.order.errors %}

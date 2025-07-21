@@ -290,6 +290,7 @@ class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMix
             context.update(formset_data)
             return self.render_to_response(context)
     
+    
     def get_success_url(self):
         """Redirect to patient timeline after successful creation."""
         from django.urls import reverse
@@ -489,25 +490,13 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
         
         return context
     
+    
     def form_valid(self, form):
         """Handle form validation including formset and audit trail."""
         context = self.get_context_data()
         formset = PrescriptionItemFormSetHelper.get_formset_with_user(
             self.request.user, self.request.POST, instance=self.object
         )
-        
-        # Debug logging
-        print(f"DEBUG: Form is valid: {form.is_valid()}")
-        if not form.is_valid():
-            print(f"DEBUG: Form errors: {form.errors}")
-        
-        print(f"DEBUG: Formset is valid: {formset.is_valid()}")
-        if not formset.is_valid():
-            print(f"DEBUG: Formset errors: {formset.errors}")
-            print(f"DEBUG: Formset non-form errors: {formset.non_form_errors()}")
-            for i, f in enumerate(formset):
-                if not f.is_valid():
-                    print(f"DEBUG: Form {i} errors: {f.errors}")
         
         if form.is_valid() and formset.is_valid():
             # Save the main prescription
