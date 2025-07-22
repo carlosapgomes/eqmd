@@ -169,22 +169,22 @@
         </h6>
         {{ form.patient.as_hidden }}
         <!-- Patient Information -->
-        <div class="row mb-3">
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label class="form-label">
-                <i class="bi bi-person me-1"></i>
-                Paciente
-              </label>
-              <div class="form-control-plaintext">
-                <strong>{{ prescription.patient.name }}</strong>
-                {% if prescription.patient.fiscal_number %}
-                  <small class="text-muted">- {{ prescription.patient.fiscal_number }}</small>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- <div class="row mb-3"> -->
+        <!--   <div class="col-md-6"> -->
+        <!--     <div class="mb-3"> -->
+        <!--       <label class="form-label"> -->
+        <!--         <i class="bi bi-person me-1"></i> -->
+        <!--         Paciente -->
+        <!--       </label> -->
+        <!--       <div class="form-control-plaintext"> -->
+        <!--         <strong>{{ prescription.patient.name }}</strong> -->
+        <!--         {% if prescription.patient.fiscal_number %} -->
+        <!--           <small class="text-muted">- {{ prescription.patient.fiscal_number }}</small> -->
+        <!--         {% endif %} -->
+        <!--       </div> -->
+        <!--     </div> -->
+        <!--   </div> -->
+        <!-- </div> -->
         <!-- Prescription Details -->
         <div class="row">
           <div class="col-md-6">
@@ -259,6 +259,39 @@
         </div>
       </div>
 
+      <!-- Prescription Template Selection Section -->
+      {% if can_edit and prescription_templates %}
+      <div class="form-section">
+        <div class="mb-3">
+          <h6>
+            <i class="bi bi-clipboard-plus me-2"></i>
+            Modelos de Receita
+          </h6>
+        </div>
+        
+        <div class="row mb-3">
+          <div class="col-12">
+            <!-- <label class="form-label"> -->
+            <!--   <i class="bi bi-prescription2 me-1"></i> -->
+            <!--   Aplicar Template Completo (Opcional) -->
+            <!-- </label> -->
+            <select class="form-select" id="prescription-template-select">
+              <option value="">Selecione um modelo</option>
+              {% for template in prescription_templates %}
+                <option value="{{ template.id }}">
+                  {{ template.name }} ({{ template.items.count }} medicamentos)
+                </option>
+              {% endfor %}
+            </select>
+            <!-- <div class="form-text"> -->
+            <!--   <i class="bi bi-info-circle me-1"></i> -->
+            <!--   Templates aplicam múltiplos medicamentos de uma só vez. Você ainda poderá adicionar ou remover medicamentos após aplicar um template. -->
+            <!-- </div> -->
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Prescription Items Section -->
       <div class="form-section">
         <div class="mb-3">
@@ -293,28 +326,6 @@
                 {% endif %}
               </div>
               
-              <!-- Drug Template Selection -->
-              {% if can_edit %}
-                <div class="row mb-3">
-                  <div class="col-12">
-                    <label class="form-label">
-                      <i class="bi bi-file-earmark-plus me-1"></i>
-                      Template de Medicamento
-                    </label>
-                    <select class="form-select drug-template-select" data-form-index="{{ forloop.counter0 }}">
-                      <option value="">Selecione um template (opcional)</option>
-                      {% for template in drug_templates %}
-                        <option value="{{ template.id }}" 
-                                data-name="{{ template.name }}"
-                                data-presentation="{{ template.presentation }}"
-                                data-instructions="{{ template.usage_instructions }}">
-                          {{ template.name }} - {{ template.presentation }}
-                        </option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-              {% endif %}
               
               <!-- Form Fields -->
               <div class="row">
@@ -333,9 +344,10 @@
                           {% endfor %}
                         </div>
                       {% endif %}
-                      {% if form.drug_name.help_text %}
-                        <div class="form-text">{{ form.drug_name.help_text }}</div>
-                      {% endif %}
+                      <div class="form-text">
+                        <i class="bi bi-search me-1"></i>
+                        Digite para buscar medicamentos ou preencha manualmente
+                      </div>
                     </div>
                   {% else %}
                     <div class="mb-3">
@@ -497,32 +509,6 @@
   </div>
 </div>
 
-<!-- Templates Sidebar -->
-{% if can_edit and prescription_templates %}
-<div class="card shadow-sm mt-4">
-  <div class="card-header bg-light">
-    <h6 class="card-title mb-0">
-      <i class="bi bi-clipboard-plus me-2"></i>
-      Templates de Receita
-    </h6>
-  </div>
-  <div class="card-body">
-    <div class="row">
-      {% for template in prescription_templates %}
-        <div class="col-md-6 col-lg-4 mb-2">
-          <button type="button" class="btn btn-outline-info btn-sm w-100 prescription-template-btn"
-                  data-template-id="{{ template.id }}"
-                  data-template-title="{{ template.title }}"
-                  data-template-content="{{ template.content }}">
-            <i class="bi bi-file-earmark-plus me-1"></i>
-            {{ template.title }}
-          </button>
-        </div>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-{% endif %}
 
 <!-- Audit Information -->
 <div class="card shadow-sm mt-4">
@@ -595,26 +581,6 @@
       </div>
     </div>
     
-    <!-- Drug Template Selection -->
-    <div class="row mb-3">
-      <div class="col-12">
-        <label class="form-label">
-          <i class="bi bi-file-earmark-plus me-1"></i>
-          Template de Medicamento
-        </label>
-        <select class="form-select drug-template-select" data-form-index="__prefix__">
-          <option value="">Selecione um template (opcional)</option>
-          {% for template in drug_templates %}
-            <option value="{{ template.id }}" 
-                    data-name="{{ template.name }}"
-                    data-presentation="{{ template.presentation }}"
-                    data-instructions="{{ template.usage_instructions }}">
-              {{ template.name }} - {{ template.presentation }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
     
     <!-- Form Fields -->
     <div class="row">
@@ -632,6 +598,10 @@
               {% endfor %}
             </div>
           {% endif %}
+          <div class="form-text">
+            <i class="bi bi-search me-1"></i>
+            Digite para buscar medicamentos ou preencha manualmente
+          </div>
         </div>
       </div>
       <div class="col-md-6">

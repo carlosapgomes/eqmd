@@ -53,16 +53,7 @@
     min-height: 80px;
 }
 
-/* Drug Template Select */
-.drug-template-select {
-    background-color: #e3f2fd;
-    border-color: #1976d2;
-}
-
-.drug-template-select:focus {
-    border-color: #1565c0;
-    box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.25);
-}
+/* Drug Template Select - REMOVED: Now using unified autocomplete approach */
 
 /* Form Actions */
 .form-actions {
@@ -221,21 +212,7 @@ input[id*="-DELETE"] {
 
 /* Drug Template Integration Styles */
 
-/* Template Selection Enhancement */
-.drug-template-select {
-    background-color: #e3f2fd;
-    border-color: #1976d2;
-    transition: all 0.3s ease;
-}
-
-.drug-template-select:focus {
-    border-color: #1565c0;
-    box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.25);
-}
-
-.drug-template-select:hover {
-    background-color: #bbdefb;
-}
+/* Template Selection Enhancement - REMOVED: Now using unified autocomplete */
 
 /* Template Notification */
 .template-notification {
@@ -407,20 +384,7 @@ input[id*="-DELETE"] {
         border-top-color: #4a5568;
     }
     
-    .autocomplete-suggestions {
-        background-color: #2d3748;
-        border-color: #4a5568;
-        color: #e2e8f0;
-    }
+    /* Autocomplete suggestions removed from dark mode - keeping light theme to match page */
     
-    .autocomplete-suggestion:hover,
-    .autocomplete-suggestion.active {
-        background-color: #4a5568;
-    }
-    
-    .drug-template-select {
-        background-color: #2a365b;
-        border-color: #4299e1;
-        color: #e2e8f0;
-    }
+    /* .drug-template-select styles removed - using unified autocomplete */
 }

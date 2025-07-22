@@ -14,27 +14,23 @@ class OutpatientPrescription(Event):
     Outpatient Prescription model that extends the base Event model.
     Used for medical outpatient prescriptions.
     """
-    
+
     STATUS_CHOICES = (
-        ('draft', 'Rascunho'),
-        ('finalized', 'Finalizada'),
+        ("draft", "Rascunho"),
+        ("finalized", "Finalizada"),
     )
-    
+
     instructions = models.TextField(
         verbose_name="Instruções",
-        help_text="Instruções gerais da receita",
+        # help_text="Instruções gerais da receita",
         blank=True,
-        null=True
+        null=True,
     )
     status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='draft',
-        verbose_name="Status"
+        max_length=20, choices=STATUS_CHOICES, default="draft", verbose_name="Status"
     )
     prescription_date = models.DateField(
-        default=get_current_date,
-        verbose_name="Data da Receita"
+        default=get_current_date, verbose_name="Data da Receita"
     )
 
     def save(self, *args, **kwargs):
@@ -45,12 +41,20 @@ class OutpatientPrescription(Event):
     def get_absolute_url(self):
         """Return the absolute URL for this outpatient prescription."""
         from django.urls import reverse
-        return reverse('outpatientprescriptions:outpatientprescription_detail', kwargs={'pk': self.pk})
+
+        return reverse(
+            "outpatientprescriptions:outpatientprescription_detail",
+            kwargs={"pk": self.pk},
+        )
 
     def get_edit_url(self):
         """Return the edit URL for this outpatient prescription."""
         from django.urls import reverse
-        return reverse('outpatientprescriptions:outpatientprescription_update', kwargs={'pk': self.pk})
+
+        return reverse(
+            "outpatientprescriptions:outpatientprescription_update",
+            kwargs={"pk": self.pk},
+        )
 
     def copy_from_prescription_template(self, prescription_template):
         """
@@ -59,12 +63,12 @@ class OutpatientPrescription(Event):
         """
         # Import here to avoid circular import
         from apps.drugtemplates.models import PrescriptionTemplateItem
-        
+
         # Clear existing items
         self.items.all().delete()
-        
+
         # Copy items from template
-        template_items = prescription_template.items.all().order_by('order')
+        template_items = prescription_template.items.all().order_by("order")
         for template_item in template_items:
             prescription_item = PrescriptionItem(
                 prescription=self,
@@ -72,7 +76,7 @@ class OutpatientPrescription(Event):
                 presentation=template_item.presentation,
                 usage_instructions=template_item.usage_instructions,
                 quantity=template_item.quantity,
-                order=template_item.order
+                order=template_item.order,
             )
             prescription_item.save()
 
@@ -91,39 +95,27 @@ class PrescriptionItem(models.Model):
     Individual prescription item with copied drug data.
     Each item represents a medication prescribed in an OutpatientPrescription.
     """
-    
+
     prescription = models.ForeignKey(
         OutpatientPrescription,
         on_delete=models.CASCADE,
-        related_name='items',
-        verbose_name="Receita"
+        related_name="items",
+        verbose_name="Receita",
     )
-    drug_name = models.CharField(
-        max_length=200,
-        verbose_name="Nome do Medicamento"
-    )
-    presentation = models.CharField(
-        max_length=300,
-        verbose_name="Apresentação"
-    )
-    usage_instructions = models.TextField(
-        verbose_name="Instruções de Uso"
-    )
-    quantity = models.CharField(
-        max_length=100,
-        verbose_name="Quantidade"
-    )
+    drug_name = models.CharField(max_length=200, verbose_name="Nome do Medicamento")
+    presentation = models.CharField(max_length=300, verbose_name="Apresentação")
+    usage_instructions = models.TextField(verbose_name="Instruções de Uso")
+    quantity = models.CharField(max_length=100, verbose_name="Quantidade")
     order = models.PositiveIntegerField(
-        verbose_name="Ordem",
-        help_text="Ordem de exibição do item na receita"
+        verbose_name="Ordem", help_text="Ordem de exibição do item na receita"
     )
     source_template = models.ForeignKey(
-        'drugtemplates.DrugTemplate',
+        "drugtemplates.DrugTemplate",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         verbose_name="Template Origem",
-        help_text="Template de medicamento usado como base para este item"
+        help_text="Template de medicamento usado como base para este item",
     )
 
     def copy_from_drug_template(self, drug_template):
@@ -140,14 +132,15 @@ class PrescriptionItem(models.Model):
         """Override save to increment template usage count when template is used."""
         # Check if this is a new item with a source template
         is_new = self.pk is None
-        
+
         if is_new and self.source_template:
             # Increment the usage count of the source template
             from django.db.models import F
+
             self.source_template.__class__.objects.filter(
                 pk=self.source_template.pk
-            ).update(usage_count=F('usage_count') + 1)
-        
+            ).update(usage_count=F("usage_count") + 1)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -157,4 +150,4 @@ class PrescriptionItem(models.Model):
     class Meta:
         verbose_name = "Item da Receita"
         verbose_name_plural = "Itens da Receita"
-        ordering = ['order']
+        ordering = ["order"]

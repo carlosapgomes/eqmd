@@ -9,7 +9,6 @@
     // Configuration
     const CONFIG = {
         templateSelectClass: 'drug-template-select',
-        prescriptionTemplateItemSelectClass: 'prescription-template-item-select',
         autocompleteClass: 'autocomplete-input',
         autocompleteContainerClass: 'autocomplete-container',
         suggestionClass: 'autocomplete-suggestions',
@@ -28,12 +27,10 @@
      */
     function initializeDrugTemplateIntegration() {
         initializeTemplateSelects();
-        initializePrescriptionTemplateItemSelects();
+        initializePrescriptionTemplateSelect();
         initializeAutocomplete();
         initializeDrugNameAutocomplete();
         loadTemplateData();
-        
-        console.log('Drug template integration initialized');
     }
     
 
@@ -41,38 +38,88 @@
      * Initialize autocomplete for drug name fields
      */
     function initializeDrugNameAutocomplete() {
-        // Add autocomplete to existing drug name fields
+        // Add autocomplete to existing drug name fields (skip template fields with __prefix__)
         const drugNameFields = document.querySelectorAll('input[name$="-drug_name"], input[name="drug_name"]');
         
-        drugNameFields.forEach(field => {
+        drugNameFields.forEach((field, index) => {
+            // Skip template fields with __prefix__ placeholder
+            if (field.name && field.name.includes('__prefix__')) {
+                return;
+            }
+            
             setupDrugNameAutocomplete(field);
         });
         
         // Monitor for new drug name fields (when adding prescription items)
+        let isSettingUpAutocomplete = false; // Flag to prevent infinite loops
+        let processedFields = new Set(); // Track processed fields to prevent duplicates
+        
         const observer = new MutationObserver(mutations => {
+            // Skip if we're currently setting up autocomplete (prevents infinite loops)
+            if (isSettingUpAutocomplete) {
+                return;
+            }
+            
+            // Collect all new fields first
+            const allNewFields = [];
+            
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType === Node.ELEMENT_NODE) {
                         const newDrugNameFields = node.querySelectorAll('input[name$="-drug_name"], input[name="drug_name"]');
-                        newDrugNameFields.forEach(field => {
-                            setupDrugNameAutocomplete(field);
+                        
+                        // Filter out template fields and already processed fields
+                        const realNewFields = Array.from(newDrugNameFields).filter(field => {
+                            const fieldKey = field.name || field.id;
+                            return fieldKey && 
+                                   !fieldKey.includes('__prefix__') && 
+                                   !processedFields.has(fieldKey);
                         });
                         
-                        // Initialize new template selects
+                        allNewFields.push(...realNewFields);
+                    }
+                });
+            });
+            
+            // Process new fields if any
+            if (allNewFields.length > 0) {
+                // Set flag to prevent recursive calls
+                isSettingUpAutocomplete = true;
+                
+                // Mark fields as processed immediately
+                allNewFields.forEach(field => {
+                    const fieldKey = field.name || field.id;
+                    processedFields.add(fieldKey);
+                });
+                
+                // Add delay to ensure DOM is stable and prevent infinite triggering
+                setTimeout(() => {
+                    try {
+                        allNewFields.forEach((field, index) => {
+                            // Force setup for new fields, even if they appear to have autocomplete
+                            // (they might be cloned from template with broken containers)
+                            setupDrugNameAutocompleteForced(field);
+                        });
+                    } catch (error) {
+                        console.error('Error setting up autocomplete for new fields:', error);
+                    } finally {
+                        // Always reset flag, even if there's an error
+                        setTimeout(() => {
+                            isSettingUpAutocomplete = false;
+                        }, 50); // Additional delay before allowing new processing
+                    }
+                }, 50); // Longer delay to ensure DOM stability
+            }
+            
+            // Handle other new elements without triggering autocomplete setup
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE && !isSettingUpAutocomplete) {
+                        // Initialize new template selects (search enhancement removed - using autocomplete)
                         const newTemplateSelects = node.querySelectorAll(`.${CONFIG.templateSelectClass}`);
                         newTemplateSelects.forEach(select => {
                             select.addEventListener('change', handleTemplateSelection);
-                            enhanceSelectWithSearch(select);
                         });
-                        
-                        // Initialize new prescription template item selects
-                        const newPrescriptionTemplateSelects = node.querySelectorAll(`.${CONFIG.prescriptionTemplateItemSelectClass}`);
-                        newPrescriptionTemplateSelects.forEach(select => {
-                            select.addEventListener('change', handlePrescriptionTemplateItemSelection);
-                            enhanceSelectWithSearch(select);
-                        });
-                        
-                        // Manual entry toggles removed - autocomplete is now always available
                     }
                 });
             });
@@ -92,43 +139,100 @@
             return; // Already enabled
         }
         
-        field.setAttribute('data-autocomplete-enabled', 'true');
-        field.classList.add(CONFIG.autocompleteClass);
-        
-        // Create autocomplete container
-        const container = document.createElement('div');
-        container.className = CONFIG.autocompleteContainerClass + ' position-relative';
-        
-        // Create suggestions container
-        const suggestionsContainer = document.createElement('div');
-        suggestionsContainer.className = CONFIG.suggestionClass + ' position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-sm';
-        suggestionsContainer.style.display = 'none';
-        suggestionsContainer.style.zIndex = '1000';
-        suggestionsContainer.style.maxHeight = '200px';
-        suggestionsContainer.style.overflowY = 'auto';
-        
-        // Wrap field in container
-        field.parentNode.insertBefore(container, field);
-        container.appendChild(field);
-        container.appendChild(suggestionsContainer);
-        
-        // Setup autocomplete behavior
-        setupAutocomplete(field);
+        _setupDrugNameAutocompleteInternal(field);
     }
 
     /**
-     * Initialize prescription template item select dropdowns
+     * Force setup autocomplete for a drug name field (ignores existing setup)
      */
-    function initializePrescriptionTemplateItemSelects() {
-        const templateItemSelects = document.querySelectorAll(`.${CONFIG.prescriptionTemplateItemSelectClass}`);
+    function setupDrugNameAutocompleteForced(field) {
+        // Check if field is still valid and attached to DOM
+        if (!field || !field.parentNode || !document.contains(field)) {
+            return;
+        }
         
-        templateItemSelects.forEach(select => {
-            select.addEventListener('change', handlePrescriptionTemplateItemSelection);
+        // Remove any existing autocomplete setup first
+        if (field.hasAttribute('data-autocomplete-enabled')) {
+            field.removeAttribute('data-autocomplete-enabled');
+            field.classList.remove(CONFIG.autocompleteClass);
             
-            // Enhance with search functionality if needed
-            enhanceSelectWithSearch(select);
-        });
+            // Remove existing autocomplete container if it exists
+            const existingContainer = field.closest(`.${CONFIG.autocompleteContainerClass}`);
+            if (existingContainer && existingContainer.parentNode && existingContainer !== field.parentNode) {
+                try {
+                    // Move field out of container before removing container
+                    existingContainer.parentNode.insertBefore(field, existingContainer);
+                    existingContainer.remove();
+                } catch (error) {
+                    console.error('Error removing existing autocomplete container:', error);
+                }
+            }
+        }
+        
+        // Double-check field is still valid after cleanup
+        if (!field.parentNode || !document.contains(field)) {
+            return;
+        }
+        
+        _setupDrugNameAutocompleteInternal(field);
     }
+
+    /**
+     * Internal function to setup autocomplete (used by both regular and forced setup)
+     */
+    function _setupDrugNameAutocompleteInternal(field) {
+        try {
+            // Final validation
+            if (!field || !field.parentNode || !document.contains(field)) {
+                return;
+            }
+            
+            // Check if already in an autocomplete container
+            const existingContainer = field.closest(`.${CONFIG.autocompleteContainerClass}`);
+            if (existingContainer) {
+                field.setAttribute('data-autocomplete-enabled', 'true');
+                field.classList.add(CONFIG.autocompleteClass);
+                setupAutocomplete(field);
+                return;
+            }
+            
+            field.setAttribute('data-autocomplete-enabled', 'true');
+            field.classList.add(CONFIG.autocompleteClass);
+            
+            // Create autocomplete container
+            const container = document.createElement('div');
+            container.className = CONFIG.autocompleteContainerClass + ' position-relative';
+            
+            // Create suggestions container
+            const suggestionsContainer = document.createElement('div');
+            suggestionsContainer.className = CONFIG.suggestionClass + ' position-absolute w-100 border border-top-0 rounded-bottom shadow-sm';
+            suggestionsContainer.style.display = 'none';
+            suggestionsContainer.style.zIndex = '1000';
+            suggestionsContainer.style.maxHeight = '200px';
+            suggestionsContainer.style.overflowY = 'auto';
+            
+            // Store parent and next sibling for safe insertion
+            const parent = field.parentNode;
+            const nextSibling = field.nextSibling;
+            
+            // Wrap field in container
+            parent.insertBefore(container, nextSibling);
+            container.appendChild(field);
+            container.appendChild(suggestionsContainer);
+            
+            // Setup autocomplete behavior
+            setupAutocomplete(field);
+            
+        } catch (error) {
+            console.error('Error in internal autocomplete setup:', error);
+            // Try to cleanup on error
+            if (field && field.hasAttribute) {
+                field.removeAttribute('data-autocomplete-enabled');
+                field.classList.remove(CONFIG.autocompleteClass);
+            }
+        }
+    }
+
 
     // Manual entry toggles removed - autocomplete is now always available on drug name fields
 
@@ -140,31 +244,20 @@
         
         templateSelects.forEach(select => {
             select.addEventListener('change', handleTemplateSelection);
-            
-            // Enhance with search functionality if needed
-            enhanceSelectWithSearch(select);
         });
     }
 
     /**
-     * Handle prescription template item selection and populate form fields
+     * Initialize prescription template select dropdown
      */
-    function handlePrescriptionTemplateItemSelection(event) {
-        const select = event.target;
-        const selectedOption = select.selectedOptions[0];
+    function initializePrescriptionTemplateSelect() {
+        const prescriptionTemplateSelect = document.getElementById('prescription-template-select');
         
-        if (!selectedOption || !selectedOption.value) {
-            return;
-        }
-
-        const templateData = extractPrescriptionTemplateItemData(selectedOption);
-        if (templateData) {
-            populateFormFields(select, templateData);
-            showTemplateAppliedNotification(`${templateData.templateName}: ${templateData.drugName}`);
-            
-            // Manual entry logic removed - autocomplete is always available
+        if (prescriptionTemplateSelect) {
+            prescriptionTemplateSelect.addEventListener('change', handlePrescriptionTemplateSelection);
         }
     }
+
 
     // Manual entry toggle function removed - no longer needed
 
@@ -187,19 +280,41 @@
     }
 
     /**
-     * Extract prescription template item data from select option
+     * Handle prescription template selection and populate all medication forms
      */
-    function extractPrescriptionTemplateItemData(option) {
-        return {
-            id: option.value,
-            drugName: option.dataset.drugName || '',
-            name: option.dataset.drugName || '', // For compatibility with existing code
-            presentation: option.dataset.presentation || '',
-            quantity: option.dataset.quantity || '',
-            usageInstructions: option.dataset.usageInstructions || '',
-            templateName: option.dataset.templateName || ''
-        };
+    function handlePrescriptionTemplateSelection(event) {
+        const select = event.target;
+        const templateId = select.value;
+        
+        if (!templateId) {
+            return;
+        }
+
+        // Show loading state
+        select.disabled = true;
+        const originalText = select.options[select.selectedIndex].textContent;
+        select.options[select.selectedIndex].textContent = 'Carregando...';
+
+        // Fetch template data
+        fetchPrescriptionTemplateData(templateId)
+            .then(templateData => {
+                applyPrescriptionTemplate(templateData);
+                showTemplateAppliedNotification(`Template "${templateData.name}" aplicado com ${templateData.items.length} medicamentos`);
+                
+                // Reset select to empty option
+                select.selectedIndex = 0;
+            })
+            .catch(error => {
+                console.error('Error applying prescription template:', error);
+                showErrorNotification('Erro ao aplicar template de prescrição');
+            })
+            .finally(() => {
+                // Restore original state
+                select.disabled = false;
+                select.options[select.selectedIndex].textContent = originalText;
+            });
     }
+
 
     /**
      * Extract template data from select option
@@ -304,10 +419,16 @@
      */
     function setupAutocomplete(input) {
         const container = input.closest(`.${CONFIG.autocompleteContainerClass}`);
-        if (!container) return;
+        if (!container) {
+            console.error('No autocomplete container found for input:', input.name || input.id);
+            return;
+        }
 
         const suggestionsContainer = container.querySelector(`.${CONFIG.suggestionClass}`);
-        if (!suggestionsContainer) return;
+        if (!suggestionsContainer) {
+            console.error('No suggestions container found for input:', input.name || input.id);
+            return;
+        }
 
         let debounceTimer;
 
@@ -392,7 +513,9 @@
      */
     async function fetchAutocompleteSuggestions(query) {
         try {
-            const response = await fetch(`/prescriptions/ajax/drug-templates/search/?q=${encodeURIComponent(query)}&limit=10`);
+            const url = `/prescriptions/ajax/drug-templates/search/?q=${encodeURIComponent(query)}&limit=10`;
+            
+            const response = await fetch(url);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -412,7 +535,7 @@
                 display_text: template.display_text,
                 creator: template.creator,
                 is_public: template.is_public,
-                type: 'template'
+                type: template.type // Only 'drug_template' now
             }));
             
         } catch (error) {
@@ -485,9 +608,18 @@
         element.style.cursor = 'pointer';
         
         const leftContent = document.createElement('div');
+        
+        // Build the content based on suggestion type
+        let nameDisplay = suggestion.name;
+        let presentationDisplay = suggestion.presentation;
+        let typeIndicator = '';
+        
+        typeIndicator = '<small class="text-success"><i class="bi bi-capsule"></i> Template Individual</small><br>';
+        
         leftContent.innerHTML = `
-            <div class="suggestion-name fw-bold">${suggestion.name}</div>
-            <div class="suggestion-presentation text-muted small">${suggestion.presentation}</div>
+            ${typeIndicator}
+            <div class="suggestion-name fw-bold">${nameDisplay}</div>
+            <div class="suggestion-presentation text-muted small">${presentationDisplay}</div>
         `;
         
         const rightContent = document.createElement('div');
@@ -528,7 +660,7 @@
             input.value = suggestion.name;
             
             // If this is a template suggestion, populate related fields
-            if (suggestion.type === 'template') {
+            if (suggestion.type === 'drug_template') {
                 // Validate and sanitize template data
                 const templateData = validateTemplateData({
                     id: suggestion.id,
@@ -544,7 +676,7 @@
                 populateFormFields(input, templateData);
                 
                 // Show success notification
-                showTemplateAppliedNotification(suggestion.name);
+                showTemplateAppliedNotification(`Template individual aplicado: ${suggestion.name}`);
             }
 
             const suggestionContainer = input.closest(`.${CONFIG.autocompleteContainerClass}`)?.querySelector(`.${CONFIG.suggestionClass}`);
@@ -675,29 +807,9 @@
     }
 
     /**
-     * Enhance select with search functionality
+     * Enhance select with search functionality (REMOVED - causing duplicate inputs)
+     * Now using unified autocomplete approach instead of separate dropdown search
      */
-    function enhanceSelectWithSearch(select) {
-        // Add search input above select for large lists
-        if (select.options.length > 10) {
-            // Check if search input already exists
-            const existingSearchInput = select.parentNode.querySelector('input[type="text"][placeholder="Buscar template..."]');
-            if (existingSearchInput) {
-                return; // Search input already exists, don't add another
-            }
-            
-            const searchInput = document.createElement('input');
-            searchInput.type = 'text';
-            searchInput.className = 'form-control mb-2';
-            searchInput.placeholder = 'Buscar template...';
-            
-            searchInput.addEventListener('input', (e) => {
-                filterSelectOptions(select, e.target.value);
-            });
-            
-            select.parentNode.insertBefore(searchInput, select);
-        }
-    }
 
     /**
      * Filter select options based on search query
@@ -714,6 +826,283 @@
             const text = option.textContent.toLowerCase();
             option.style.display = text.includes(lowerQuery) ? '' : 'none';
         });
+    }
+
+    /**
+     * Fetch prescription template data from server
+     */
+    async function fetchPrescriptionTemplateData(templateId) {
+        try {
+            const url = `/prescriptions/ajax/prescription-template/${templateId}/`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error fetching prescription template data:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Apply prescription template to form (populate all medication items)
+     */
+    function applyPrescriptionTemplate(templateData) {
+        try {
+            console.log('Applying prescription template:', templateData);
+            
+            const container = document.getElementById('prescription-items-container');
+            if (!container) {
+                throw new Error('Prescription items container not found');
+            }
+
+            // Add new items for each template item (no clearing, just add)
+            console.log('Adding', templateData.items.length, 'items from template');
+            templateData.items.forEach((item, index) => {
+                console.log(`Adding item ${index + 1}:`, item);
+                const newForm = addNewPrescriptionItem();
+                if (newForm) {
+                    console.log('New form created:', newForm);
+                    console.log('Initial form display style:', newForm.style.display);
+                    console.log('Form classes:', newForm.className);
+                    
+                    // Force form to be visible - remove any display: none
+                    newForm.style.display = '';
+                    console.log('After forcing visible, display style:', newForm.style.display);
+                    
+                    // Add a small delay to ensure the form is fully rendered, then populate
+                    setTimeout(() => {
+                        // Double-check visibility after timeout
+                        console.log('Before populating, display style:', newForm.style.display);
+                        if (newForm.style.display === 'none') {
+                            console.warn('Form was hidden again! Forcing visible again');
+                            newForm.style.display = '';
+                        }
+                        
+                        populatePrescriptionItemForm(newForm, item);
+                        
+                        // Final check after population
+                        console.log('After populating, display style:', newForm.style.display);
+                    }, 100 * (index + 1)); // Stagger the delays more
+                } else {
+                    console.error('Failed to create new form for item', index);
+                }
+            });
+
+            // Update form management data and remove empty forms (with delay to ensure all forms are populated)
+            setTimeout(() => {
+                removeEmptyDrugFormsAfterTemplate();
+                updateFormsetManagement();
+            }, 1000);
+
+        } catch (error) {
+            console.error('Error applying prescription template:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Remove empty drug forms after template application (forms with empty drug_name field)
+     */
+    function removeEmptyDrugFormsAfterTemplate() {
+        console.log('Removing empty drug forms after template application...');
+        
+        const allForms = document.querySelectorAll('.prescription-item-form');
+        let removedCount = 0;
+        
+        allForms.forEach(form => {
+            // Skip the template form (used for creating new forms)
+            const formIndex = form.getAttribute('data-form-index');
+            if (formIndex === '__prefix__') {
+                console.log('Skipping template form with __prefix__');
+                return;
+            }
+            
+            // Skip already hidden forms
+            if (form.style.display === 'none') {
+                return;
+            }
+            
+            const drugNameField = form.querySelector('input[name$="-drug_name"], input[name="drug_name"]');
+            
+            if (drugNameField && (!drugNameField.value || drugNameField.value.trim() === '')) {
+                console.log('Found empty drug form after template, removing:', form);
+                
+                const deleteCheckbox = form.querySelector('input[name$="-DELETE"]');
+                if (deleteCheckbox) {
+                    // This is an existing form with a DELETE checkbox - mark for deletion
+                    deleteCheckbox.checked = true;
+                    form.style.display = 'none';
+                } else {
+                    // This is a new form without DELETE checkbox - remove entirely
+                    form.remove();
+                }
+                removedCount++;
+            }
+        });
+        
+        console.log(`Removed ${removedCount} empty drug forms after template`);
+        
+        // Update form numbering after removal
+        if (removedCount > 0) {
+            updateFormNumbering();
+        }
+    }
+
+    /**
+     * Remove empty drug forms (forms with empty drug_name field) - for manual use
+     */
+    function removeEmptyDrugForms() {
+        console.log('Manually removing empty drug forms...');
+        
+        const allForms = document.querySelectorAll('.prescription-item-form:not([style*="display: none"])');
+        let removedCount = 0;
+        
+        allForms.forEach(form => {
+            const drugNameField = form.querySelector('input[name$="-drug_name"], input[name="drug_name"]');
+            
+            if (drugNameField && (!drugNameField.value || drugNameField.value.trim() === '')) {
+                console.log('Found empty drug form, removing:', form);
+                
+                const deleteCheckbox = form.querySelector('input[name$="-DELETE"]');
+                if (deleteCheckbox) {
+                    // This is an existing form with a DELETE checkbox - mark for deletion
+                    deleteCheckbox.checked = true;
+                    form.style.display = 'none';
+                } else {
+                    // This is a new form without DELETE checkbox - remove entirely
+                    form.remove();
+                }
+                removedCount++;
+            }
+        });
+        
+        console.log(`Manually removed ${removedCount} empty drug forms`);
+        
+        // Update form numbering after removal
+        if (removedCount > 0) {
+            updateFormNumbering();
+        }
+    }
+
+    /**
+     * Update form numbering for all visible forms
+     */
+    function updateFormNumbering() {
+        const container = document.getElementById('prescription-items-container');
+        if (!container) return;
+        
+        const visibleForms = container.querySelectorAll('.prescription-item-form:not([style*="display: none"])');
+        
+        visibleForms.forEach((form, index) => {
+            // Update form title
+            const formTitle = form.querySelector('h6');
+            if (formTitle) {
+                formTitle.innerHTML = `<i class="bi bi-pill me-1"></i>Medicamento ${index + 1}`;
+            }
+            
+            // Update order field
+            const orderInput = form.querySelector('input[name$="-order"]');
+            if (orderInput) {
+                orderInput.value = index + 1;
+            }
+        });
+        
+        console.log(`Updated numbering for ${visibleForms.length} forms`);
+    }
+
+    /**
+     * Clear all existing prescription items
+     */
+    function clearAllPrescriptionItems() {
+        const existingItems = document.querySelectorAll('.prescription-item-form');
+        existingItems.forEach(item => {
+            const deleteCheckbox = item.querySelector('input[name$="-DELETE"]');
+            if (deleteCheckbox) {
+                // This is an existing form with a DELETE checkbox - mark for deletion
+                deleteCheckbox.checked = true;
+                item.style.display = 'none';
+            } else {
+                // This is a new form without DELETE checkbox - remove entirely
+                item.remove();
+            }
+        });
+    }
+
+    /**
+     * Add new prescription item form
+     */
+    function addNewPrescriptionItem() {
+        console.log('addNewPrescriptionItem called');
+        console.log('window.PrescriptionForms:', window.PrescriptionForms);
+        
+        // Use existing add item functionality if available
+        if (window.PrescriptionForms && typeof window.PrescriptionForms.addItem === 'function') {
+            console.log('Using PrescriptionForms.addItem');
+            // Create a synthetic event
+            const syntheticEvent = { preventDefault: () => {} };
+            const newForm = window.PrescriptionForms.addItem(syntheticEvent);
+            console.log('PrescriptionForms.addItem returned:', newForm);
+            return newForm;
+        } else {
+            console.log('Fallback: using add button click');
+            // Fallback: trigger the add item button
+            const addButton = document.getElementById('add-item-btn');
+            if (addButton) {
+                console.log('Clicking add button');
+                addButton.click();
+                // Return the newly added form (assume it's the last one)
+                const forms = document.querySelectorAll('.prescription-item-form:not([style*="display: none"])');
+                console.log('Found', forms.length, 'forms after button click');
+                return forms[forms.length - 1];
+            } else {
+                console.error('Add button not found');
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Populate a single prescription item form with template data
+     */
+    function populatePrescriptionItemForm(form, itemData) {
+        const fields = {
+            drugName: form.querySelector('input[name$="-drug_name"], input[name="drug_name"]'),
+            presentation: form.querySelector('input[name$="-presentation"], input[name="presentation"]'),
+            quantity: form.querySelector('input[name$="-quantity"], input[name="quantity"]'),
+            usageInstructions: form.querySelector('textarea[name$="-usage_instructions"], textarea[name="usage_instructions"]'),
+            order: form.querySelector('input[name$="-order"], input[name="order"]')
+        };
+
+        // Populate fields with data
+        if (fields.drugName) fields.drugName.value = itemData.drug_name || '';
+        if (fields.presentation) fields.presentation.value = itemData.presentation || '';
+        if (fields.quantity) fields.quantity.value = itemData.quantity || '';
+        if (fields.usageInstructions) fields.usageInstructions.value = itemData.usage_instructions || '';
+        if (fields.order) fields.order.value = itemData.order || 0;
+    }
+
+    /**
+     * Update formset management form data
+     */
+    function updateFormsetManagement() {
+        const managementForm = document.querySelector('input[name="items-TOTAL_FORMS"]');
+        if (managementForm) {
+            const visibleForms = document.querySelectorAll('.prescription-item-form:not([style*="display: none"])').length;
+            managementForm.value = visibleForms;
+            console.log('Updated TOTAL_FORMS to:', visibleForms);
+        } else {
+            console.warn('TOTAL_FORMS input not found');
+        }
     }
 
     /**
@@ -737,6 +1126,30 @@
             setTimeout(() => {
                 notification.remove();
             }, 3000);
+        }
+    }
+
+    /**
+     * Show error notification
+     */
+    function showErrorNotification(message) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-danger template-notification';
+        notification.innerHTML = `
+            <i class="bi bi-exclamation-triangle"></i>
+            ${message}
+        `;
+        
+        // Insert notification
+        const form = document.querySelector('.prescription-item-form, form');
+        if (form) {
+            form.insertBefore(notification, form.firstChild);
+            
+            // Remove notification after delay
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
         }
     }
 
@@ -860,6 +1273,7 @@
     window.DrugTemplateIntegration = {
         initialize: initializeDrugTemplateIntegration,
         populateFromTemplate: populateFormFields,
+        removeEmptyForms: removeEmptyDrugForms,
         cache: cache
     };
 

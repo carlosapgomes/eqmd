@@ -15,5 +15,5 @@ urlpatterns = [
     # AJAX endpoints
     path('ajax/drug-template/<uuid:template_id>/', views.get_drug_template_data, name='get_drug_template_data'),
     path('ajax/drug-templates/search/', views.search_drug_templates, name='search_drug_templates'),
-    path('ajax/prescription-template/<int:template_id>/', views.get_prescription_template_data, name='get_prescription_template_data'),
+    path('ajax/prescription-template/<uuid:template_id>/', views.get_prescription_template_data, name='get_prescription_template_data'),
 ]

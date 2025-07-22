@@ -161,6 +161,7 @@
     }
 
     console.log(`Added prescription item form ${formIndex - 1}`);
+    return newForm; // Return the newly created form
   }
 
   /**

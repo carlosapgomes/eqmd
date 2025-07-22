@@ -16,7 +16,13 @@ class OutpatientPrescriptionForm(EventForm):
 
     class Meta:
         model = OutpatientPrescription
-        fields = ["patient", "event_datetime", "prescription_date", "instructions", "status"]
+        fields = [
+            "patient",
+            "event_datetime",
+            "prescription_date",
+            "instructions",
+            "status",
+        ]
         widgets = {
             "event_datetime": forms.DateTimeInput(
                 attrs={"type": "datetime-local", "class": "form-control"},
@@ -60,14 +66,18 @@ class OutpatientPrescriptionForm(EventForm):
             self.fields["event_datetime"].initial = utc_now.strftime("%Y-%m-%dT%H:%M")
             self.fields["prescription_date"].initial = utc_now.strftime("%Y-%m-%d")
             # Set default status to draft for new instances
-            self.fields["status"].initial = 'draft'
+            self.fields["status"].initial = "draft"
         else:
             # Format existing instance datetime for HTML5 input
-            dt = self.instance.event_datetime.astimezone(timezone.get_default_timezone())
+            dt = self.instance.event_datetime.astimezone(
+                timezone.get_default_timezone()
+            )
             self.fields["event_datetime"].initial = dt.strftime("%Y-%m-%dT%H:%M")
             # Format existing prescription_date for HTML5 input
             if self.instance.prescription_date:
-                self.fields["prescription_date"].initial = self.instance.prescription_date.strftime("%Y-%m-%d")
+                self.fields[
+                    "prescription_date"
+                ].initial = self.instance.prescription_date.strftime("%Y-%m-%d")
 
         # Configure field labels and help texts
         self.fields["patient"].label = "Paciente"
@@ -77,18 +87,18 @@ class OutpatientPrescriptionForm(EventForm):
         self.fields["status"].label = "Status"
 
         # Set help texts
-        self.fields[
-            "instructions"
-        ].help_text = "Instruções gerais que se aplicam a toda a receita"
-        
+        # self.fields[
+        #     "instructions"
+        # ].help_text = "Instruções gerais que se aplicam a toda a receita"
+
         # Make instructions field not required
         self.fields["instructions"].required = False
-        self.fields[
-            "event_datetime"
-        ].help_text = "Data e hora em que a receita está sendo emitida"
-        self.fields[
-            "prescription_date"
-        ].help_text = "Data da receita para fins administrativos"
+        # self.fields[
+        #     "event_datetime"
+        # ].help_text = "Data e hora em que a receita está sendo emitida"
+        # self.fields[
+        #     "prescription_date"
+        # ].help_text = "Data da receita para fins administrativos"
 
     def save(self, commit=True):
         """Save the prescription with the current user as creator."""
@@ -96,6 +106,7 @@ class OutpatientPrescriptionForm(EventForm):
 
         # Set description from event type choices
         from apps.events.models import Event
+
         prescription.description = Event.EVENT_TYPE_CHOICES[
             Event.OUTPT_PRESCRIPTION_EVENT
         ][1]
@@ -241,4 +252,3 @@ class PrescriptionItemFormSetHelper:
             "empty_form": formset.empty_form,
             "can_delete": formset.can_delete,
         }
-

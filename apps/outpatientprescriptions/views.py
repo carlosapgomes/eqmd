@@ -232,20 +232,15 @@ class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMix
         formset_data = PrescriptionItemFormSetHelper.prepare_formset_data(formset)
         context.update(formset_data)
         
-        # Add prescription template items (complete templates with quantities)
-        context['prescription_template_items'] = PrescriptionTemplateItem.objects.filter(
-            Q(template__creator=self.request.user) | Q(template__is_public=True)
-        ).select_related('template').order_by('template__name', 'order', 'drug_name')
-        
         # Add drug templates for manual entry/autocomplete functionality
         context['drug_templates'] = DrugTemplate.objects.filter(
             Q(creator=self.request.user) | Q(is_public=True)
         ).order_by('name')
         
-        # Add prescription templates from sample content
-        context['prescription_templates'] = SampleContent.objects.filter(
-            event_type=Event.OUTPT_PRESCRIPTION_EVENT
-        ).order_by('title')
+        # Add prescription templates (multi-drug templates)
+        context['prescription_templates'] = PrescriptionTemplate.objects.filter(
+            Q(creator=self.request.user) | Q(is_public=True)
+        ).prefetch_related('items').order_by('name')
         
         # Add available patients for selection if no patient specified
         if not patient:
@@ -330,7 +325,8 @@ def get_drug_template_data(request, template_id):
 @login_required
 def search_drug_templates(request):
     """
-    AJAX view to search drug templates by name for autocomplete functionality.
+    AJAX view to search both drug templates and prescription template items for autocomplete functionality.
+    Returns unified results including individual drug templates and complete prescription items.
     """
     query = request.GET.get('q', '').strip()
     limit = min(int(request.GET.get('limit', 10)), 50)  # Max 50 results
@@ -339,15 +335,16 @@ def search_drug_templates(request):
         return JsonResponse({'results': []})
     
     try:
-        # Filter templates by user access and search query
-        templates = DrugTemplate.objects.filter(
+        results = []
+        
+        # Search individual drug templates only
+        drug_templates = DrugTemplate.objects.filter(
             Q(creator=request.user) | Q(is_public=True)
         ).filter(
             Q(name__icontains=query) | Q(presentation__icontains=query)
         ).select_related('creator').order_by('name')[:limit]
         
-        results = []
-        for template in templates:
+        for template in drug_templates:
             results.append({
                 'id': str(template.id),
                 'name': template.name,
@@ -356,7 +353,11 @@ def search_drug_templates(request):
                 'display_text': f"{template.name} - {template.presentation}",
                 'creator': template.creator.get_full_name() if template.creator else 'Sistema',
                 'is_public': template.is_public,
+                'type': 'drug_template'
             })
+        
+        # Sort results by name for better UX
+        results.sort(key=lambda x: x['name'].lower())
         
         return JsonResponse({
             'results': results,
@@ -472,10 +473,10 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
             Q(creator=self.request.user) | Q(is_public=True)
         ).order_by('name')
         
-        # Add prescription templates from sample content
-        context['prescription_templates'] = SampleContent.objects.filter(
-            event_type=Event.OUTPT_PRESCRIPTION_EVENT
-        ).order_by('title')
+        # Add prescription templates (multi-drug templates)
+        context['prescription_templates'] = PrescriptionTemplate.objects.filter(
+            Q(creator=self.request.user) | Q(is_public=True)
+        ).prefetch_related('items').order_by('name')
         
         # Add permission information
         context['can_edit'] = can_edit_event(self.request.user, self.object)
@@ -629,20 +630,37 @@ class OutpatientPrescriptionDeleteView(LoginRequiredMixin, PermissionRequiredMix
 @login_required 
 def get_prescription_template_data(request, template_id):
     """
-    AJAX view to get prescription template data by ID.
+    AJAX view to get prescription template data by ID from PrescriptionTemplate model.
     """
     try:
-        template = get_object_or_404(SampleContent, id=template_id, event_type=Event.OUTPT_PRESCRIPTION_EVENT)
+        template = get_object_or_404(PrescriptionTemplate, id=template_id)
+        
+        # Check if user has access to this template
+        if not template.is_public and template.creator != request.user:
+            return JsonResponse({'error': 'Acesso negado'}, status=403)
+        
+        # Get all template items
+        items = template.items.all().order_by('order', 'drug_name')
         
         data = {
             'id': str(template.id),
-            'title': template.title,
-            'content': template.content,
+            'name': template.name,
+            'items': [
+                {
+                    'id': str(item.id),
+                    'drug_name': item.drug_name,
+                    'presentation': item.presentation,
+                    'quantity': item.quantity,
+                    'usage_instructions': item.usage_instructions,
+                    'order': item.order
+                }
+                for item in items
+            ]
         }
         
         return JsonResponse(data)
         
-    except SampleContent.DoesNotExist:
+    except PrescriptionTemplate.DoesNotExist:
         return JsonResponse({'error': 'Template não encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'error': 'Erro interno'}, status=500)
