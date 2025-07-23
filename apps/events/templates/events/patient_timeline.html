@@ -990,6 +990,8 @@
 {% block page_specific_scripts %}
 <!-- Load mediafiles bundles for timeline functionality -->
 <script src="{% static 'mediafiles-bundle.js' %}"></script>
+<!-- PDF Download functionality for prescription event cards -->
+<script src="{% static 'js/pdf-download.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize mediafiles functionality for timeline

@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     "apps.sample_content",  # Sample content app
     "apps.drugtemplates",  # Drug templates app
     "apps.outpatientprescriptions",  # Outpatient prescriptions app
+    "apps.pdfgenerator",  # PDF generator app
     # django-allauth
     "allauth",
     "allauth.account",
@@ -322,11 +323,29 @@ DJANGO_DRF_FILEPOND_FIELD_NAME = 'file'
 # Hospital Configuration
 HOSPITAL_CONFIG = {
     'name': os.getenv('HOSPITAL_NAME', 'Medical Center'),
-    'address': os.getenv('HOSPITAL_ADDRESS', ''),
-    'phone': os.getenv('HOSPITAL_PHONE', ''),
-    'email': os.getenv('HOSPITAL_EMAIL', ''),
+    'address': os.getenv('HOSPITAL_ADDRESS', '123 Medical Street, Medical City'),
+    'phone': os.getenv('HOSPITAL_PHONE', '+1 (555) 123-4567'),
+    'email': os.getenv('HOSPITAL_EMAIL', 'info@medicalcenter.com'),
     'website': os.getenv('HOSPITAL_WEBSITE', ''),
-    'logo_path': os.getenv('HOSPITAL_LOGO_PATH', 'static/images/default-logo.png'),
+    'logo_path': os.getenv('HOSPITAL_LOGO_PATH', 'static/images/hospital-logo.png'),
     'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
+}
+
+# PDF Generation Settings
+PDF_CONFIG = {
+    'page_size': 'A4',
+    'orientation': 'portrait',
+    'margins': {
+        'top': 2.5,    # cm
+        'bottom': 3.0, # cm  
+        'left': 2.0,   # cm
+        'right': 2.0   # cm
+    },
+    'max_content_length': 50000,  # characters
+    'fonts': {
+        'default': 'Times-Roman',
+        'bold': 'Times-Bold',
+        'italic': 'Times-Italic'
+    }
 }
 

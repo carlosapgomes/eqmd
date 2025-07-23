@@ -82,6 +82,11 @@ module.exports = {
           from: "node_modules/@popperjs/core/dist/umd/popper.min.js",
           to: "js/popper.min.js",
         },
+        // PDF download functionality
+        {
+          from: "assets/js/pdf-download.js",
+          to: "js/pdf-download.js",
+        },
         // Add these new patterns to copy your assets
         {
           from: "assets/images",

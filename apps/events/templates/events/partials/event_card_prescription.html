@@ -73,6 +73,24 @@ Extends the base event card and shows prescription summary with medications
         <span class="visually-hidden">Imprimir</span>
     </a>
     
+    <!-- PDF Button -->
+    <button type="button"
+            class="btn btn-outline-danger btn-sm pdf-download-btn"
+            data-pdf-url="{% url 'outpatientprescriptions:outpatientprescription_pdf' event.pk %}"
+            data-filename="receita-{{ event.patient.name|slugify }}-{{ event.prescription_date|date:'d-m-Y' }}.pdf"
+            aria-label="Gerar PDF da receita"
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Gerar PDF">
+        <span class="pdf-btn-content">
+            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+            <span class="visually-hidden">PDF</span>
+        </span>
+        <span class="pdf-btn-spinner d-none">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </span>
+    </button>
+    
     <!-- Edit Button -->
     {% if event_data.can_edit %}
         <a href="{{ event.get_edit_url }}" 

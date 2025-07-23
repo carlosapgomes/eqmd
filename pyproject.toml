@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "beautifulsoup4>=4.13.4",
     "django>=5.2.1",
     "django-allauth>=0.57.0",
     "django-drf-filepond>=0.5.0",
@@ -12,8 +13,10 @@ dependencies = [
     "django-storages>=1.14.6",
     "django-taggit>=6.1.0",
     "ffmpeg-python>=0.2.0",
+    "markdown>=3.8.2",
     "pillow>=11.2.1",
     "pytz>=2025.2",
+    "reportlab>=4.4.2",
 ]
 
 [dependency-groups]

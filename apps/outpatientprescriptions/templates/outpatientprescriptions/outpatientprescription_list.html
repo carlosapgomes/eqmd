@@ -225,6 +225,20 @@
                 >
                   <i class="bi bi-eye"></i>
                 </a>
+                <button
+                  type="button"
+                  class="btn btn-outline-danger pdf-download-btn"
+                  data-pdf-url="{% url 'outpatientprescriptions:outpatientprescription_pdf' prescription.pk %}"
+                  data-filename="receita-{{ prescription.patient.name|slugify }}-{{ prescription.prescription_date|date:'d-m-Y' }}.pdf"
+                  title="Gerar PDF"
+                >
+                  <span class="pdf-btn-content">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                  </span>
+                  <span class="pdf-btn-spinner d-none">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  </span>
+                </button>
                 {% if perms.events.change_event and prescription.can_edit %}
                 <a
                   href="{{ prescription.get_edit_url }}"
@@ -339,6 +353,9 @@
     text-overflow: ellipsis;
   }
 </style>
+
+<!-- PDF Download functionality -->
+<script src="{% static 'js/pdf-download.js' %}"></script>
 
 <script>
 // Add form attribute to the main filter form

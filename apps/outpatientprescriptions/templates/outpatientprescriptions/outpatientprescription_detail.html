@@ -26,6 +26,16 @@
         <i class="bi bi-printer me-1"></i>
         Imprimir
       </a>
+      <button type="button" class="btn btn-primary pdf-download-btn" data-pdf-url="{% url 'outpatientprescriptions:outpatientprescription_pdf' prescription.pk %}" data-filename="receita-{{ prescription.patient.name|slugify }}-{{ prescription.prescription_date|date:'d-m-Y' }}.pdf">
+        <span class="pdf-btn-content">
+          <i class="bi bi-file-earmark-pdf me-1"></i>
+          PDF
+        </span>
+        <span class="pdf-btn-spinner d-none">
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          Gerando...
+        </span>
+      </button>
       {% if can_edit and perms.events.change_event %}
       <a href="{{ prescription.get_edit_url }}" class="btn btn-outline-primary">
         <i class="bi bi-pencil me-1"></i>
@@ -357,7 +367,10 @@
 </style>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
+<!-- PDF Download functionality -->
+<script src="{% static 'js/pdf-download.js' %}"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Print functionality

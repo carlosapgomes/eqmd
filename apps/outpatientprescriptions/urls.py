@@ -11,6 +11,7 @@ urlpatterns = [
     path('<uuid:pk>/edit/', views.OutpatientPrescriptionUpdateView.as_view(), name='outpatientprescription_update'),
     path('<uuid:pk>/delete/', views.OutpatientPrescriptionDeleteView.as_view(), name='outpatientprescription_delete'),
     path('<uuid:pk>/print/', views.OutpatientPrescriptionPrintView.as_view(), name='outpatientprescription_print'),
+    path('<uuid:pk>/pdf/', views.OutpatientPrescriptionPDFView.as_view(), name='outpatientprescription_pdf'),
     
     # AJAX endpoints
     path('ajax/drug-template/<uuid:template_id>/', views.get_drug_template_data, name='get_drug_template_data'),

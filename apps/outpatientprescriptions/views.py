@@ -15,9 +15,10 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
+import logging
 
 from .models import OutpatientPrescription, PrescriptionItem
 from .forms.prescription_forms import OutpatientPrescriptionForm, PrescriptionItemFormSet, PrescriptionItemFormSetHelper
@@ -664,3 +665,107 @@ def get_prescription_template_data(request, template_id):
         return JsonResponse({'error': 'Template não encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'error': 'Erro interno'}, status=500)
+
+
+class OutpatientPrescriptionPDFView(LoginRequiredMixin, DetailView):
+    """
+    PDF generation view for OutpatientPrescription instances using the centralized PDF generator.
+    """
+    
+    model = OutpatientPrescription
+    
+    def get_queryset(self):
+        """Filter queryset to ensure proper permissions and optimized queries."""
+        return (
+            OutpatientPrescription.objects
+            .select_related("patient", "created_by", "updated_by")
+            .prefetch_related("items")
+        )
+    
+    def get_object(self, queryset=None):
+        """Get object and check patient access permissions."""
+        obj = super().get_object(queryset)
+        
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "You don't have permission to access this patient's prescriptions"
+            )
+        
+        return obj
+    
+    def get(self, request, *args, **kwargs):
+        """Generate and return PDF for the prescription."""
+        try:
+            # Import PDF generator services
+            from apps.pdfgenerator.services.pdf_generator import HospitalLetterheadGenerator
+            
+            # Get prescription object
+            prescription = self.get_object()
+            
+            # Initialize PDF generator
+            pdf_generator = HospitalLetterheadGenerator()
+            
+            # Prepare patient data
+            patient_data = {
+                'name': prescription.patient.name,
+                'fiscal_number': prescription.patient.fiscal_number or '—',
+                'birth_date': prescription.patient.birthday.strftime('%d/%m/%Y') if prescription.patient.birthday else '—',
+                'health_card_number': prescription.patient.healthcard_number or '—',
+            }
+            
+            # Prepare doctor info
+            doctor_info = {
+                'name': prescription.created_by.get_full_name() or prescription.created_by.username,
+                'profession': getattr(prescription.created_by, 'profession', 'Médico'),
+            }
+            
+            # Get prescription items
+            items = []
+            for item in prescription.items.order_by('order'):
+                items.append({
+                    'drug_name': item.drug_name,
+                    'presentation': item.presentation,
+                    'usage_instructions': item.usage_instructions,
+                    'quantity': item.quantity,
+                })
+            
+            # Prepare prescription data
+            prescription_data = {
+                'prescription_date': prescription.prescription_date.strftime('%d/%m/%Y'),
+                'instructions': prescription.instructions,
+                'status': prescription.get_status_display(),
+            }
+            
+            # Generate prescription PDF
+            pdf_buffer = pdf_generator.create_prescription_pdf(
+                prescription_data=prescription_data,
+                items=items,
+                patient_data=patient_data,
+                doctor_info=doctor_info
+            )
+            
+            # Create response
+            response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
+            
+            # Generate filename
+            safe_name = "".join(c for c in prescription.patient.name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            date_str = prescription.prescription_date.strftime('%Y%m%d')
+            filename = f"Receita_Medica_{safe_name}_{date_str}.pdf"
+            
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            # Log PDF generation
+            logging.getLogger(__name__).info(
+                f"Prescription PDF generated for {prescription.patient.name} by {request.user.username}"
+            )
+            
+            return response
+            
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Prescription PDF generation error: {str(e)}", exc_info=True)
+            messages.error(request, f"Erro ao gerar PDF: {str(e)}")
+            # Redirect back to the prescription detail view
+            from django.urls import reverse
+            return HttpResponse(f"Erro ao gerar PDF: {str(e)}", status=500)

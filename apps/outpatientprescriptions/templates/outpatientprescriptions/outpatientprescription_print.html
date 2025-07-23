@@ -1,308 +1,16 @@
+{% load static %}
+{% load hospital_tags %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Receita Médica - {{ prescription.patient.name }} - {{ prescription.prescription_date|date:"d/m/Y" }}</title>
+    <link rel="stylesheet" href="{% static 'outpatientprescriptions/css/prescription_print.css' %}">
     <style>
-        @media print {
-            @page {
-                margin: 1.5cm 1cm 1cm 1cm;
-                size: A4 portrait;
-            }
-            
-            @page :first {
-                margin-top: 1cm;
-            }
-            
-            .no-print {
-                display: none !important;
-            }
-            
-            .header {
-                background: none !important;
-                border: 2px solid #000 !important;
-                page-break-inside: avoid;
-            }
-            
-            .patient-info {
-                page-break-inside: avoid;
-                page-break-after: avoid;
-            }
-            
-            .prescription-content {
-                page-break-inside: avoid;
-                orphans: 3;
-                widows: 3;
-            }
-            
-            .prescription-item {
-                page-break-inside: avoid;
-                background: none !important;
-                border: 1px solid #000 !important;
-            }
-            
-            .signature-section {
-                page-break-inside: avoid;
-                margin-top: 2cm;
-            }
-            
-            .usage-instructions {
-                background: none !important;
-                border-left: 2px solid #000 !important;
-            }
-            
-            .quantity {
-                background: none !important;
-                border: 1px solid #000 !important;
-            }
-            
-            .hospital-details {
-                color: #000 !important;
-            }
-            
-            .document-title, .hospital-name {
-                color: #000 !important;
-            }
-            
-            .drug-name {
-                color: #000 !important;
-            }
-            
-            .item-order {
-                color: #000 !important;
-            }
-        }
-        
-        body {
-            font-family: 'Times New Roman', serif;
-            font-size: 12px;
-            line-height: 1.4;
-            margin: 0;
-            padding: 20px;
-            color: #000;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 20px;
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 5px 5px 0 0;
-        }
-        
-        .hospital-name {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #2c3e50;
-            letter-spacing: 0.5px;
-        }
-        
-        .hospital-details {
-            font-size: 11px;
-            color: #6c757d;
-            margin-bottom: 15px;
-            line-height: 1.3;
-        }
-        
-        .document-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 15px 0;
-            color: #2c3e50;
-            letter-spacing: 1px;
-        }
-        
-        .doctor-info {
-            margin-top: 15px;
-            font-size: 12px;
-            background: white;
-            padding: 10px;
-            border-radius: 3px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .patient-info {
-            display: table;
-            width: 100%;
-            margin-bottom: 20px;
-            border: 1px solid #000;
-        }
-        
-        .patient-info-row {
-            display: table-row;
-        }
-        
-        .patient-info-cell {
-            display: table-cell;
-            padding: 8px;
-            border-right: 1px solid #000;
-            vertical-align: top;
-        }
-        
-        .patient-info-cell:last-child {
-            border-right: none;
-        }
-        
-        .patient-info-label {
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-        
-        .prescription-content {
-            margin-bottom: 30px;
-        }
-        
-        .prescription-header {
-            font-weight: bold;
-            margin-bottom: 15px;
-            font-size: 14px;
-            text-align: center;
-        }
-        
-        .prescription-items {
-            margin-bottom: 25px;
-            border: 2px solid #2c3e50;
-            border-radius: 8px;
-            background: white;
-        }
-        
-        .prescription-item {
-            margin: 0;
-            padding: 18px;
-            border-bottom: 1px solid #e9ecef;
-            background-color: white;
-            page-break-inside: avoid;
-        }
-        
-        .prescription-item:last-child {
-            border-bottom: none;
-        }
-        
-        .prescription-item:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        
-        .item-order {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #2c3e50;
-            display: inline-block;
-            min-width: 30px;
-        }
-        
-        .drug-name {
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 6px;
-            color: #1a1a1a;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        
-        .drug-presentation {
-            font-style: italic;
-            margin-bottom: 8px;
-            color: #495057;
-            font-size: 12px;
-        }
-        
-        .usage-instructions {
-            margin-bottom: 8px;
-            line-height: 1.4;
-            padding: 6px 0;
-            border-left: 3px solid #007bff;
-            padding-left: 12px;
-            background: #f0f8ff;
-            margin-left: -6px;
-            padding-right: 6px;
-        }
-        
-        .quantity {
-            font-weight: bold;
-            background: #e8f4f8;
-            padding: 4px 8px;
-            border-radius: 3px;
-            display: inline-block;
-            font-size: 11px;
-        }
-        
-        .instructions-section {
-            margin-bottom: 20px;
-        }
-        
-        .instructions-header {
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 13px;
-        }
-        
-        .instructions-text {
-            text-align: justify;
-            min-height: 50px;
-            border: 1px solid #000;
-            padding: 10px;
-            white-space: pre-wrap;
-        }
-        
-        .signature-section {
-            margin-top: 50px;
-            display: table;
-            width: 100%;
-        }
-        
-        .signature-cell {
-            display: table-cell;
-            width: 50%;
-            text-align: center;
-            vertical-align: bottom;
-            padding: 0 20px;
-        }
-        
-        .signature-line {
-            border-top: 1px solid #000;
-            margin-bottom: 5px;
-            height: 50px;
-        }
-        
-        .signature-info {
-            font-size: 10px;
-        }
-        
-        .print-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .print-button:hover {
-            background: #0056b3;
-        }
-        
-        .footer {
-            margin-top: 30px;
-            text-align: center;
-            font-size: 10px;
-            border-top: 1px solid #000;
-            padding-top: 10px;
-        }
-        
-        .rx-symbol {
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            margin: 20px 0;
+        /* Page-specific customizations */
+        .prescription-page-items {
+            min-height: 400px;
         }
     </style>
 </head>
@@ -312,27 +20,17 @@
     </button>
     
     <div class="header">
-        <div class="hospital-name">
-            {% if prescription.patient.current_hospital %}
-                {{ prescription.patient.current_hospital.name }}
-            {% else %}
-                EquipeMed - Sistema de Gestão Hospitalar
+        <div class="hospital-branding">
+            {% hospital_logo as logo_url %}
+            {% if logo_url %}
+                <img src="{{ logo_url }}" alt="Logo do Hospital" class="hospital-logo">
             {% endif %}
-        </div>
-        <div class="hospital-details">
-            {% if prescription.patient.current_hospital %}
-                {{ prescription.patient.current_hospital.address|default:"Endereço não informado" }}<br>
-                Telefone: {{ prescription.patient.current_hospital.phone|default:"(XX) XXXX-XXXX" }}
-            {% else %}
-                Sistema Integrado de Gestão Hospitalar<br>
-                Prescrições Médicas Eletrônicas
-            {% endif %}
-        </div>
-        <div class="document-title">RECEITA MÉDICA</div>
-        <div class="doctor-info">
-            <strong>Dr(a). {{ prescription.created_by.get_full_name|default:prescription.created_by.username }}</strong><br>
-            {{ prescription.created_by.profession|default:"Médico" }}<br>
-            CRM: _______________
+            <div>
+                <div class="hospital-name">{% hospital_name %}</div>
+                <div class="hospital-details">
+                    {% hospital_address %} | {% hospital_phone %} | {% hospital_email %}
+                </div>
+            </div>
         </div>
     </div>
     
@@ -367,15 +65,31 @@
         </div>
     </div>
     
-    <div class="rx-symbol">℞</div>
-    
     <div class="prescription-content">
-        <div class="prescription-header">PRESCRIÇÃO</div>
+        
+        {% comment "Pagination logic for prescription items" %}
+        {% regroup prescription_items|slice:":8" by forloop.counter0|floordiv:8 as pages %}
+        {% endcomment %}
         
         <div class="prescription-items">
             {% for item in prescription_items %}
+            {% comment "Start new page every 8 items for better pagination" %}
+            {% endcomment %}
+            {% if forloop.counter0|divisibleby:8 and not forloop.first %}
+                </div>
+                
+                <div class="page-break"></div>
+                
+                <div class="continuation-header">
+                    <strong>{{ prescription.patient.name }}</strong> - Continuação da Receita Médica<br>
+                    Data: {{ prescription.prescription_date|date:"d/m/Y" }} - Dr(a). {{ prescription.created_by.get_full_name|default:prescription.created_by.username }}
+                </div>
+                
+                <div class="prescription-items">
+            {% endif %}
+            
             <div class="prescription-item">
-                <div class="item-order">{{ item.order }}.</div>
+                <div class="item-order">{{ forloop.counter }}.</div>
                 <div class="drug-name">{{ item.drug_name }}</div>
                 {% if item.presentation %}
                 <div class="drug-presentation">{{ item.presentation }}</div>
@@ -402,31 +116,32 @@
         {% endif %}
     </div>
     
-    <div class="signature-section">
-        <div class="signature-cell">
-            <div class="signature-line"></div>
-            <div class="signature-info">
-                <strong>{{ prescription.created_by.get_full_name|default:prescription.created_by.username }}</strong><br>
-                {{ prescription.created_by.profession|default:"Médico" }}<br>
-                CRM: _______________
-            </div>
+    <!-- Page signature that will appear on every page -->
+    <div class="page-signature">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div><strong>Data:</strong> ____/____/________</div>
+            <div><strong>Local:</strong> _____________________________</div>
         </div>
-        <div class="signature-cell">
-            <div class="signature-line"></div>
-            <div class="signature-info">
-                Data: {{ prescription.prescription_date|date:"d/m/Y" }}<br>
-                Assinatura e Carimbo
+        <div style="text-align: center; margin-top: 10px;">
+            <div>_________________________________________________</div>
+            <div style="margin-top: 5px;">
+                <strong>{{ prescription.created_by.get_full_name|default:prescription.created_by.username }}</strong><br>
+                {{ prescription.created_by.profession|default:"Médico" }} - CRM: _______________<br>
+                <strong>Assinatura e Carimbo</strong>
             </div>
         </div>
     </div>
     
-    <div class="footer">
-        <div>Receita gerada em {{ prescription.created_at|date:"d/m/Y à\s H:i" }}</div>
-        {% if prescription.updated_at != prescription.created_at %}
-        <div>Última atualização: {{ prescription.updated_at|date:"d/m/Y à\s H:i" }} por {{ prescription.updated_by.get_full_name|default:prescription.updated_by.username }}</div>
-        {% endif %}
+    <div class="page-footer">
+        <div class="hospital-footer-info">
+            {% hospital_name %} - {% hospital_address %}<br>
+            Tel: {% hospital_phone %} | Email: {% hospital_email %}
+        </div>
         <div style="margin-top: 5px; font-size: 9px;">
             Esta é uma receita médica válida conforme regulamentação vigente.
+        </div>
+        <div class="sistema-credit">
+            criado por EquipeMed
         </div>
     </div>
     
