@@ -719,6 +719,7 @@ class OutpatientPrescriptionPDFView(LoginRequiredMixin, DetailView):
             doctor_info = {
                 'name': prescription.created_by.get_full_name() or prescription.created_by.username,
                 'profession': getattr(prescription.created_by, 'profession', 'Médico'),
+                'registration_number': getattr(prescription.created_by, 'professional_registration_number', ''),
             }
             
             # Get prescription items
