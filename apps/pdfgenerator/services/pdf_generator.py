@@ -21,6 +21,7 @@ from reportlab.platypus import (
     Frame,
     KeepTogether,
 )
+from reportlab.platypus.flowables import Flowable
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
@@ -32,12 +33,33 @@ from django.conf import settings
 from django.contrib.staticfiles.finders import find
 
 
+class LastPageSignature(Flowable):
+    """Custom flowable that only renders on the last page"""
+
+    def __init__(self, doctor_info, styles):
+        self.doctor_info = doctor_info
+        self.styles = styles
+        self.width = 0
+        self.height = 120  # Approximate height needed for signature section
+
+    def draw(self):
+        """Draw the full signature section"""
+        # This will be called when the flowable is rendered
+        # The signature content will be handled by _create_signature_section
+        pass
+
+    def wrap(self, availWidth, availHeight):
+        """Return the space needed by this flowable"""
+        return (self.width, self.height)
+
+
 class NumberedCanvas(canvas.Canvas):
     """Custom canvas class for page numbering and headers/footers"""
 
     def __init__(self, *args, **kwargs):
         self.hospital_config = kwargs.pop("hospital_config", {})
         self.patient_data = kwargs.pop("patient_data", {})
+        self.doctor_info = kwargs.pop("doctor_info", {})
         canvas.Canvas.__init__(self, *args, **kwargs)
         self._saved_page_states = []
         self.page_count = 0
@@ -51,9 +73,17 @@ class NumberedCanvas(canvas.Canvas):
         num_pages = len(self._saved_page_states)
         for page_num, state in enumerate(self._saved_page_states):
             self.__dict__.update(state)
-            self.draw_page_number(page_num + 1, num_pages)
+            current_page = page_num + 1
+            is_last_page = current_page == num_pages
+
+            self.draw_page_number(current_page, num_pages)
             self.draw_header()
             self.draw_footer()
+
+            # Add small signature area on non-final pages (if more than 1 page total)
+            if not is_last_page and num_pages > 1:
+                self.draw_page_signature()
+
             canvas.Canvas.showPage(self)
         canvas.Canvas.save(self)
 
@@ -116,6 +146,38 @@ class NumberedCanvas(canvas.Canvas):
         self.setStrokeColor(grey)
         self.setLineWidth(0.5)
         self.line(2 * cm, 2.5 * cm, A4[0] - 2 * cm, 2.5 * cm)
+
+    def draw_page_signature(self):
+        """Draw small signature area on non-final pages"""
+        # Get doctor info for signature
+        doctor_name = (
+            self.doctor_info.get("name", "Médico Responsável")
+            if self.doctor_info
+            else "Médico Responsável"
+        )
+        registration_number = (
+            self.doctor_info.get("registration_number", "") if self.doctor_info else ""
+        )
+
+        # Format CRM field
+        crm_field = registration_number if registration_number else "___________"
+
+        # Position: bottom right corner, above page number
+        x_pos = A4[0] - 7 * cm  # 7cm from right edge
+        # y_pos = 1.8 * cm  # Just above page number
+        y_pos = 2.5 * cm  # Just above page number
+
+        # Signature text inside box
+        self.setFont("Times-Roman", 8)
+        self.setFillColor(black)
+        self.drawString(x_pos + 2.5 * cm, y_pos + 0.5 * cm, f"{doctor_name}")
+        self.drawString(x_pos + 2.0 * cm, y_pos + 0.2 * cm, f"CRM: {crm_field}")
+
+        # Signature line
+        self.setLineWidth(0.3)
+        self.line(
+            x_pos + 1.8 * cm, y_pos + 0.8 * cm, x_pos + 4.8 * cm, y_pos + 0.8 * cm
+        )
 
     def _get_logo_path(self):
         """Get the path to the hospital logo"""
@@ -301,7 +363,7 @@ class HospitalLetterheadGenerator:
         registration_number = (
             doctor_info.get("registration_number", "") if doctor_info else ""
         )
-        
+
         # Format CRM field - show registration number if available, otherwise show blank line
         crm_field = registration_number if registration_number else "_______________"
 
@@ -382,7 +444,7 @@ class HospitalLetterheadGenerator:
         # Main content
         story.extend(content_elements)
 
-        # Signature section
+        # Signature section - always add to story, but small signatures handled by canvas
         story.extend(self._create_signature_section(doctor_info))
 
         # Build PDF with custom canvas for headers/footers
@@ -391,6 +453,7 @@ class HospitalLetterheadGenerator:
                 filename,
                 hospital_config=self.hospital_config,
                 patient_data=patient_data,
+                doctor_info=doctor_info,
                 **kwargs,
             )
 
@@ -443,9 +506,11 @@ class HospitalLetterheadGenerator:
                     item_content.append(f"<b>Quantidade:</b> {item['quantity']}")
 
                 # Wrap each drug item in KeepTogether to prevent page splits
-                drug_paragraph = Paragraph("<br/>".join(item_content), self.styles["MedicalContent"])
+                drug_paragraph = Paragraph(
+                    "<br/>".join(item_content), self.styles["MedicalContent"]
+                )
                 drug_spacer = Spacer(1, 8)
-                
+
                 # Keep drug info together on same page
                 content.append(KeepTogether([drug_paragraph, drug_spacer]))
 
@@ -460,7 +525,7 @@ class HospitalLetterheadGenerator:
                 Spacer(1, 6),
                 Paragraph(
                     prescription_data["instructions"], self.styles["MedicalContent"]
-                )
+                ),
             ]
             content.append(KeepTogether(instructions_content))
 
