@@ -1,0 +1,54 @@
+{% load static %}
+{% load humanize %}
+
+<div class="event-card pdf-form-event" data-event-id="{{ event.id }}">
+  <div class="event-header">
+    <div class="event-icon">
+      <i class="bi bi-file-earmark-pdf text-danger"></i>
+    </div>
+    <div class="event-info">
+      <h6 class="event-title">{{ event.form_template.name }}</h6>
+      <small class="event-meta">
+        Por {{ event.created_by.get_full_name|default:event.created_by.email }} em {{ event.event_datetime|date:"d/m/Y H:i" }}
+      </small>
+    </div>
+    <div class="event-actions">
+      <a
+        href="{% url 'pdf_forms:submission_detail' event.id %}"
+        class="btn btn-sm btn-outline-primary"
+        title="Ver detalhes"
+      >
+        <i class="bi bi-eye"></i>
+      </a>
+      <a
+        href="{% url 'pdf_forms:pdf_download' event.id %}"
+        class="btn btn-sm btn-outline-success"
+        title="Baixar PDF"
+      >
+        <i class="bi bi-download"></i>
+      </a>
+    </div>
+  </div>
+
+  <div class="event-content">
+    {% if event.description %}
+    <p class="mb-2">{{ event.description }}</p>
+    {% endif %}
+
+    <div class="pdf-info">
+      <small class="text-muted">
+        <i class="bi bi-file-earmark me-1"></i>
+        {{ event.original_filename }} ({{ event.file_size|filesizeformat }})
+      </small>
+    </div>
+
+    {% if event.form_data %}
+    <div class="mt-2">
+      <small class="text-muted">
+        <i class="bi bi-list-check me-1"></i>
+        {{ event.form_data|length }} campo{{ event.form_data|length|pluralize:"s" }} preenchido{{ event.form_data|length|pluralize:"s" }}
+      </small>
+    </div>
+    {% endif %}
+  </div>
+</div>

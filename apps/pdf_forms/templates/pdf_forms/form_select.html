@@ -1,0 +1,64 @@
+{% extends "pdf_forms/base.html" %}
+{% load static %}
+
+{% block page_title %}Selecionar Formulário PDF - {{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Patient header -->
+      <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-file-earmark-pdf me-2"></i>
+            Formulários PDF - {{ patient.name }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-0">
+            Selecione o formulário PDF que deseja preencher para este paciente.
+          </p>
+        </div>
+      </div>
+
+      <!-- Form templates -->
+      {% if form_templates %}
+      <div class="row">
+        {% for template in form_templates %}
+        <div class="col-md-6 col-lg-4 mb-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                {{ template.name }}
+              </h6>
+              {% if template.description %}
+              <p class="card-text text-muted small">
+                {{ template.description }}
+              </p>
+              {% endif %}
+            </div>
+            <div class="card-footer">
+              <a
+                href="{% url 'pdf_forms:form_fill' template.id patient.id %}"
+                class="btn btn-primary btn-sm"
+              >
+                <i class="bi bi-pencil me-1"></i>
+                Preencher Formulário
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        Nenhum formulário PDF disponível no momento.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

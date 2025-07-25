@@ -16,6 +16,7 @@ class Event(models.Model):
     REPORT_EVENT = 8
     PHOTO_SERIES_EVENT = 9
     VIDEO_CLIP_EVENT = 10
+    PDF_FORM_EVENT = 11
 
     EVENT_TYPE_CHOICES = (
         (HISTORY_AND_PHYSICAL_EVENT, "Anamnese e Exame Físico"),
@@ -29,6 +30,7 @@ class Event(models.Model):
         (REPORT_EVENT, "Relatório"),
         (PHOTO_SERIES_EVENT, "Série de Fotos"),
         (VIDEO_CLIP_EVENT, "Vídeo Curto"),
+        (PDF_FORM_EVENT, "Formulário PDF"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

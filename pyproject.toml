@@ -15,6 +15,8 @@ dependencies = [
     "ffmpeg-python>=0.2.0",
     "markdown>=3.8.2",
     "pillow>=11.2.1",
+    "pypdf>=5.8.0",
+    "pypdf2>=3.0.1",
     "pytz>=2025.2",
     "reportlab>=4.4.2",
 ]

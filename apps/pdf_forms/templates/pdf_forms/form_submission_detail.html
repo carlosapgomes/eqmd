@@ -1,0 +1,118 @@
+{% extends "pdf_forms/base.html" %}
+{% load static %}
+
+{% block page_title %}{{ submission.form_template.name }} - {{ submission.patient.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header -->
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-file-earmark-check me-2"></i>
+            {{ submission.form_template.name }} - Completo
+          </h5>
+          <small>Paciente: {{ submission.patient.name }}</small>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Paciente:</strong> {{ submission.patient.name }}</p>
+              <p class="mb-1"><strong>Formulário:</strong> {{ submission.form_template.name }}</p>
+              <p class="mb-1"><strong>Data:</strong> {{ submission.event_datetime|date:"d/m/Y H:i" }}</p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>Responsável:</strong> {{ submission.created_by.get_full_name|default:submission.created_by.email }}</p>
+              <p class="mb-1"><strong>Arquivo:</strong> {{ submission.original_filename }}</p>
+              <p class="mb-1"><strong>Tamanho:</strong> {{ submission.file_size|filesizeformat }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="d-flex gap-2">
+            <a href="{% url 'pdf_forms:pdf_download' submission.id %}" class="btn btn-success">
+              <i class="bi bi-download me-1"></i>
+              Baixar PDF
+            </a>
+            <a href="{% url 'patients:detail' submission.patient.id %}" class="btn btn-primary">
+              <i class="bi bi-arrow-left me-1"></i>
+              Voltar ao Paciente
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Data -->
+      {% if submission.form_data %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6 class="mb-0">
+            <i class="bi bi-list-check me-2"></i>
+            Dados do Formulário
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            {% for field_name, value in submission.form_data.items %}
+            {% with field_config=submission.form_template.form_fields|get_item:field_name %}
+            {% if field_config %}
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">{{ field_config.label|default:field_name|title }}:</label>
+              <div class="border p-2 rounded bg-light">
+                {% if field_config.type == 'boolean' %}
+                  {% if value %}
+                    <span class="badge bg-success">Sim</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Não</span>
+                  {% endif %}
+                {% elif field_config.type == 'choice' %}
+                  {{ value|default:"-" }}
+                {% elif field_config.type == 'date' %}
+                  {{ value|date:"d/m/Y"|default:"-" }}
+                {% elif field_config.type == 'textarea' %}
+                  <pre class="mb-0">{{ value|default:"-" }}</pre>
+                {% else %}
+                  {{ value|default:"-" }}
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- PDF Preview -->
+      {% if submission.generated_pdf %}
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">
+            <i class="bi bi-file-earmark-pdf me-2"></i>
+            Visualização do PDF
+          </h6>
+        </div>
+        <div class="card-body text-center">
+          <p class="text-muted">
+            <i class="bi bi-file-earmark-pdf fs-1 text-danger"></i><br>
+            <strong>{{ submission.original_filename }}</strong><br>
+            Arquivo PDF gerado com sucesso
+          </p>
+          <a href="{% url 'pdf_forms:pdf_download' submission.id %}" class="btn btn-success">
+            <i class="bi bi-download me-1"></i>
+            Baixar PDF
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

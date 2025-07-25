@@ -1,0 +1,89 @@
+.pdf-form-event {
+    border-left: 3px solid #dc3545;
+}
+
+.pdf-form-event .event-icon i {
+    font-size: 1.2rem;
+}
+
+.pdf-form {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-field-help {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.form-field-required {
+    color: #dc3545;
+}
+
+.pdf-preview-container {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 2rem;
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.pdf-icon-large {
+    font-size: 3rem;
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.form-template-card {
+    transition: transform 0.2s;
+}
+
+.form-template-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-template-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.field-preview {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.field-preview strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #495057;
+}
+
+.field-preview pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.875rem;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+@media print {
+    .btn, .event-actions {
+        display: none;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa !important;
+        color: #212529 !important;
+    }
+}

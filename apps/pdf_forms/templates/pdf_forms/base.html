@@ -1,0 +1,12 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block extra_head %}
+{{ block.super }}
+<link href="{% static 'pdf_forms/css/pdf_forms.css' %}" rel="stylesheet" />
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'pdf_forms/js/pdf_forms.js' %}"></script>
+{% endblock %}

@@ -31,6 +31,7 @@ uv add package-name
 # Sample data
 uv run python manage.py create_sample_tags
 uv run python manage.py create_sample_content
+uv run python manage.py create_sample_pdf_forms
 ```
 
 ## Project Architecture
@@ -46,6 +47,7 @@ uv run python manage.py create_sample_content
 - **dailynotes**: Daily evolution notes extending Event model
 - **sample_content**: Template content management for various event types
 - **mediafiles**: Secure media file management for medical images and videos
+- **pdf_forms**: Hospital-specific PDF form overlay functionality with dynamic form generation
 
 ### Key Features
 
@@ -536,6 +538,95 @@ Each page loads only required bundles:
 - **Performance targets**: <20% JavaScript parse time, <200KB total per page
 - **Error tracking**: Bundle loading failures, initialization errors
 - **Optimization**: Regular bundle analysis and code splitting review
+
+### PDF Forms App
+
+**Hospital-specific PDF form overlay functionality with dynamic form generation**
+
+- Models: PDFFormTemplate, PDFFormSubmission extending Event model
+- Dynamic form generation from JSON field configuration with coordinate-based positioning
+- Integration with Event system for timeline display and audit trail
+- Hospital-specific form templates with secure file handling and UUID-based storage
+- Permission-based access control with patient access validation
+- URL structure: `/pdf-forms/select/<patient_id>/`, `/pdf-forms/fill/<template_id>/<patient_id>/`
+
+#### Key Features
+
+- **Manual Field Configuration**: Coordinate-based positioning using centimeter measurements for precise PDF overlay
+- **Dynamic Forms**: Generate Django forms from PDF template field mappings with support for text, choice, boolean, date, and textarea fields
+- **PDF Overlay**: Fill PDF forms with submitted data using ReportLab and PyPDF2 for professional document generation
+- **Event Integration**: PDF submissions appear in patient timeline with download and view capabilities
+- **Hospital Configuration**: Enable/disable per hospital installation with environment variable control
+- **Security**: UUID-based file storage, comprehensive permission checks, file validation, and secure serving
+- **Universal PDF Support**: Works with any PDF format including scanned documents and legacy hospital forms
+
+#### Field Configuration Structure
+
+The system uses JSON-based field configuration with precise coordinate positioning:
+
+```json
+{
+  "patient_name": {
+    "type": "text",
+    "label": "Nome do Paciente",
+    "x": 4.5,           // cm from left edge
+    "y": 8.5,           // cm from top edge  
+    "width": 12.0,      // cm width
+    "height": 0.7,      // cm height
+    "font_size": 12,
+    "required": true,
+    "max_length": 200
+  },
+  "blood_type": {
+    "type": "choice",
+    "label": "Tipo Sanguíneo", 
+    "x": 4.5,
+    "y": 10.0,
+    "width": 3.0,
+    "height": 0.7,
+    "choices": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+    "required": true
+  }
+}
+```
+
+#### Usage Examples
+
+```bash
+# Enable PDF forms for hospital
+export HOSPITAL_PDF_FORMS_ENABLED=true
+
+# Management commands
+uv run python manage.py create_sample_pdf_forms
+
+# Dependencies
+uv add reportlab PyPDF2
+
+# Testing
+uv run python manage.py test apps.pdf_forms.tests
+```
+
+#### Implementation Benefits
+
+- **Reliability**: Works with any PDF format - scanned, image-based, or digitally created
+- **Precision**: Exact positioning using centimeter coordinates for predictable results  
+- **Hospital-Friendly**: Perfect for legacy hospital forms that are often scanned documents
+- **User Control**: Complete control over field positioning, formatting, and appearance
+- **No Dependency Issues**: Doesn't rely on PDF form field detection or specific PDF structures
+- **Professional Output**: ReportLab integration provides professional-grade PDF generation
+
+#### Configuration
+
+```python
+# config/settings.py - PDF Forms Configuration
+PDF_FORMS_CONFIG = {
+    'enabled': os.getenv('HOSPITAL_PDF_FORMS_ENABLED', 'false').lower() == 'true',
+    'templates_path': os.getenv('HOSPITAL_PDF_FORMS_PATH', ''),
+    'max_file_size': int(os.getenv('PDF_FORMS_MAX_FILE_SIZE', 10 * 1024 * 1024)),  # 10MB
+    'allowed_extensions': ['.pdf'],
+    'require_form_validation': os.getenv('PDF_FORMS_REQUIRE_VALIDATION', 'true').lower() == 'true',
+}
+```
 
 ## Permission System
 

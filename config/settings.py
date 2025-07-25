@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "apps.dailynotes",  # Daily notes app
     "apps.simplenotes",  # Simple notes app
     "apps.mediafiles",  # Media files app
+    "apps.pdf_forms",  # PDF forms app
     "apps.historyandphysicals",  # History and Physical examination app
     "apps.sample_content",  # Sample content app
     "apps.drugtemplates",  # Drug templates app
@@ -330,6 +331,23 @@ HOSPITAL_CONFIG = {
     'logo_path': os.getenv('HOSPITAL_LOGO_PATH', 'static/images/hospital-logo.png'),
     'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
 }
+
+# PDF Forms Configuration
+PDF_FORMS_CONFIG = {
+    'enabled': os.getenv('HOSPITAL_PDF_FORMS_ENABLED', 'false').lower() == 'true',
+    'templates_path': os.getenv('HOSPITAL_PDF_FORMS_PATH', ''),
+    'max_file_size': int(os.getenv('PDF_FORMS_MAX_FILE_SIZE', 10 * 1024 * 1024)),  # 10MB
+    'allowed_extensions': ['.pdf'],
+    'require_form_validation': os.getenv('PDF_FORMS_REQUIRE_VALIDATION', 'true').lower() == 'true',
+}
+
+# File upload settings for PDF forms
+if PDF_FORMS_CONFIG['enabled']:
+    # Ensure media directories exist
+    PDF_FORMS_MEDIA_ROOT = MEDIA_ROOT / 'pdf_forms'
+    PDF_FORMS_MEDIA_ROOT.mkdir(exist_ok=True)
+    (PDF_FORMS_MEDIA_ROOT / 'templates').mkdir(exist_ok=True)
+    (PDF_FORMS_MEDIA_ROOT / 'completed').mkdir(exist_ok=True)
 
 # PDF Generation Settings
 PDF_CONFIG = {

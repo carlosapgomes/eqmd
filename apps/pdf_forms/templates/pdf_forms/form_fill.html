@@ -1,0 +1,79 @@
+{% extends "pdf_forms/base.html" %}
+{% load static %}
+
+{% block page_title %}{{ form_template.name }} - {{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header -->
+      <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-file-earmark-pdf me-2"></i>
+            {{ form_template.name }}
+          </h5>
+          <small>Paciente: {{ patient.name }}</small>
+        </div>
+        {% if form_template.description %}
+        <div class="card-body">
+          <p class="mb-0">{{ form_template.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Form -->
+      <div class="card">
+        <div class="card-body">
+          <form method="post" class="pdf-form">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row">
+              {% for field in form %}
+              <div class="col-md-6 mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label">
+                  {{ field.label }}
+                  {% if field.field.required %}
+                  <span class="text-danger">*</span>
+                  {% endif %}
+                </label>
+
+                {{ field }}
+                
+                {% if field.help_text %}
+                <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
+                
+                {% if field.errors %}
+                <div class="invalid-feedback d-block">{{ field.errors }}</div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a
+                href="{% url 'pdf_forms:form_select' patient.id %}"
+                class="btn btn-secondary"
+              >
+                <i class="bi bi-arrow-left me-1"></i>
+                Voltar
+              </a>
+
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-file-earmark-pdf me-1"></i>
+                Gerar PDF
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

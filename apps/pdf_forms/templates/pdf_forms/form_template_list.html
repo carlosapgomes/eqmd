@@ -1,0 +1,145 @@
+{% extends "pdf_forms/base.html" %}
+{% load static %}
+
+{% block page_title %}Formulários PDF Disponíveis{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header -->
+      <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-file-earmark-pdf me-2"></i>
+            Formulários PDF Disponíveis
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-0">
+            Lista de todos os formulários PDF configurados para este hospital.
+          </p>
+        </div>
+      </div>
+
+      <!-- Form templates -->
+      {% if form_templates %}
+      <div class="row">
+        {% for template in form_templates %}
+        <div class="col-md-6 col-lg-4 mb-4">
+          <div class="card h-100">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                {{ template.name }}
+              </h6>
+              {% if template.description %}
+              <p class="card-text text-muted">
+                {{ template.description }}
+              </p>
+              {% endif %}
+              
+              <div class="small text-muted mt-3">
+                <div class="d-flex justify-content-between">
+                  <span>
+                    <i class="bi bi-person me-1"></i>
+                    {{ template.created_by.get_full_name|default:template.created_by.email }}
+                  </span>
+                  <span>
+                    <i class="bi bi-calendar me-1"></i>
+                    {{ template.created_at|date:"d/m/Y" }}
+                  </span>
+                </div>
+                {% if template.form_fields %}
+                <div class="mt-2">
+                  <i class="bi bi-list-check me-1"></i>
+                  {{ template.form_fields|length }} campo{{ template.form_fields|length|pluralize:"s" }} configurado{{ template.form_fields|length|pluralize:"s" }}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            
+            <div class="card-footer">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group" role="group">
+                  {% if template.pdf_file %}
+                  <a href="{{ template.pdf_file.url }}" target="_blank" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-eye me-1"></i>
+                    Ver PDF
+                  </a>
+                  {% endif %}
+                </div>
+                
+                <div class="badge bg-{{ template.is_active|yesno:'success,secondary' }}">
+                  {% if template.is_active %}
+                    <i class="bi bi-check-circle me-1"></i>Ativo
+                  {% else %}
+                    <i class="bi bi-x-circle me-1"></i>Inativo
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Pagination -->
+      {% if is_paginated %}
+      <nav aria-label="Navegação da lista de formulários">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page=1">
+              <i class="bi bi-chevron-double-left"></i>
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+          </li>
+          {% endif %}
+
+          {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+          </li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          </li>
+          {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+              <i class="bi bi-chevron-double-right"></i>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+
+      {% else %}
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        Nenhum formulário PDF está configurado no momento.
+        <br>
+        <small class="text-muted">
+          Contate o administrador do sistema para configurar formulários PDF específicos do hospital.
+        </small>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

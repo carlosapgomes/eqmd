@@ -55,6 +55,7 @@ urlpatterns = [
         include("apps.outpatientprescriptions.urls", namespace="outpatientprescriptions"),
     ),
     path("pdf/", include("apps.pdfgenerator.urls", namespace="pdfgenerator")),
+    path("pdf-forms/", include("apps.pdf_forms.urls", namespace="pdf_forms")),
 ]
 
 # Serve media and static files during development
