@@ -396,6 +396,22 @@
                             
                             <li><hr class="dropdown-divider"></li>
                             
+                            <!-- PDF Forms Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>
+                                Formulários PDF
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'pdf_forms:form_select' patient.pk %}">
+                                        <i class="bi bi-file-earmark-pdf me-2 text-danger" aria-hidden="true"></i>
+                                        Formulário PDF
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
                             <!-- Reports Section -->
                             <li><h6 class="dropdown-header">
                                 <i class="bi bi-file-text me-1" aria-hidden="true"></i>
@@ -540,6 +556,22 @@
                                     <a class="dropdown-item" href="{% url 'mediafiles:videoclip_create' patient.pk %}">
                                         <i class="bi bi-play-circle me-2 text-primary" aria-hidden="true"></i>
                                         Vídeo Curto
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- PDF Forms Section -->
+                            <li><h6 class="dropdown-header">
+                                <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>
+                                Formulários PDF
+                            </h6></li>
+                            {% if perms.events.add_event %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'pdf_forms:form_select' patient.pk %}">
+                                        <i class="bi bi-file-earmark-pdf me-2 text-danger" aria-hidden="true"></i>
+                                        Formulário PDF
                                     </a>
                                 </li>
                             {% endif %}

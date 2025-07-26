@@ -42,16 +42,19 @@ class DynamicFormGenerator:
         # Create form class dynamically
         form_class_name = f"{pdf_template.name.replace(' ', '')}Form"
 
+        # Create the form class
+        form_class = type(form_class_name, (forms.Form,), form_fields)
+
         # Add custom validation method
         def clean(self):
-            cleaned_data = super().clean()
+            cleaned_data = super(forms.Form, self).clean()
             # Add custom validation logic here
             return cleaned_data
 
-        form_fields['clean'] = clean
+        # Bind the clean method to the form class
+        form_class.clean = clean
 
-        # Create the form class
-        return type(form_class_name, (forms.Form,), form_fields)
+        return form_class
 
     def _create_django_field(self, field_name, config):
         """

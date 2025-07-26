@@ -600,7 +600,12 @@ export HOSPITAL_PDF_FORMS_ENABLED=true
 uv run python manage.py create_sample_pdf_forms
 
 # Dependencies
-uv add reportlab PyPDF2
+uv add reportlab PyPDF2 pdf2image
+
+# System Dependencies (for PDF preview)
+# Ubuntu/Debian: sudo apt install poppler-utils
+# macOS: brew install poppler  
+# Windows: Download from https://blog.alivate.com.au/poppler-windows/
 
 # Testing
 uv run python manage.py test apps.pdf_forms.tests
@@ -614,6 +619,78 @@ uv run python manage.py test apps.pdf_forms.tests
 - **User Control**: Complete control over field positioning, formatting, and appearance
 - **No Dependency Issues**: Doesn't rely on PDF form field detection or specific PDF structures
 - **Professional Output**: ReportLab integration provides professional-grade PDF generation
+
+#### Visual Field Configuration Interface
+
+**NEW: Drag-and-drop visual PDF field configurator for admin users**
+
+- **Visual PDF Preview**: PDF-to-image conversion with interactive overlay editing
+- **Drag-and-Drop Fields**: Click to add fields, drag to position, real-time coordinate calculation
+- **Property Panels**: User-friendly forms for field configuration (type, label, validation)
+- **Automatic JSON Generation**: Converts visual layout to coordinate-based JSON configuration
+- **Field Management**: Add, edit, delete, duplicate fields with visual feedback
+- **Grid System**: Optional grid snapping and alignment helpers for precise positioning
+
+**Access**: Admin → PDF Form Templates → Select template → "Configure Fields" button
+
+**Requirements**: 
+```bash
+uv add pdf2image  # For PDF-to-image conversion
+
+# System requirement for PDF preview:
+# Ubuntu/Debian: sudo apt install poppler-utils
+# macOS: brew install poppler
+# Windows: Download from https://blog.alivate.com.au/poppler-windows/
+```
+
+**Features**:
+- **Intuitive Interface**: No manual coordinate entry required
+- **Real-time Preview**: See field positioning immediately (requires Poppler)
+- **Fallback JSON Editor**: Manual JSON editor when PDF preview is unavailable
+- **Field Types**: Support for text, textarea, number, date, choice, boolean, email fields  
+- **Validation**: Real-time field validation and conflict detection
+- **Import/Export**: Load and export field configurations as JSON
+- **Responsive Design**: Works on desktop and tablet devices
+- **Professional UI**: Integrated with Django admin design system
+
+#### System Dependencies
+
+**Poppler (Required for PDF Preview)**
+
+The visual field configurator requires Poppler to convert PDF pages to images for the drag-and-drop interface.
+
+**Installation by Platform:**
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install poppler-utils
+
+# CentOS/RHEL/Fedora
+sudo yum install poppler-utils
+# or (newer versions)
+sudo dnf install poppler-utils
+
+# macOS
+brew install poppler
+
+# Windows
+# Download from: https://blog.alivate.com.au/poppler-windows/
+# Extract to C:\Program Files\poppler
+# Add C:\Program Files\poppler\bin to PATH
+```
+
+**Verification:**
+```bash
+# Test poppler installation
+pdftoppm -h
+# Should display help information if properly installed
+```
+
+**Fallback Behavior:**
+- **With Poppler**: Full visual drag-and-drop interface with PDF preview
+- **Without Poppler**: Automatic fallback to manual JSON editor with validation
+- **No Loss of Functionality**: All field configuration features available through JSON editor
 
 #### Configuration
 

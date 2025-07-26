@@ -7,9 +7,55 @@ This checklist ensures proper deployment of the PDF Forms app in production envi
 ## Pre-Deployment Requirements
 
 ### 1. Dependencies Installation
+
+#### Python Dependencies
 - [ ] **ReportLab installed**: `uv add reportlab`
 - [ ] **PyPDF2 installed**: `uv add pypdf2` (or `uv add pypdf` as alternative)
+- [ ] **PDF2Image installed**: `uv add pdf2image` (for visual field configurator)
 - [ ] **Dependencies verified**: Check `uv lock` for PDF processing libraries
+
+#### System Dependencies
+- [ ] **Poppler installed**: Required for PDF preview in visual field configurator
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install poppler-utils
+```
+
+**CentOS/RHEL/Fedora:**
+```bash
+# CentOS/RHEL 7
+sudo yum install poppler-utils
+
+# CentOS/RHEL 8+ or Fedora
+sudo dnf install poppler-utils
+```
+
+**macOS:**
+```bash
+# Using Homebrew
+brew install poppler
+
+# Using MacPorts
+sudo port install poppler
+```
+
+**Windows:**
+1. Download Poppler for Windows from: https://blog.alivate.com.au/poppler-windows/
+2. Extract to `C:\Program Files\poppler`
+3. Add `C:\Program Files\poppler\bin` to system PATH
+4. Restart command prompt/PowerShell
+
+**Docker Environments:**
+```dockerfile
+# Add to Dockerfile
+RUN apt-get update && apt-get install -y poppler-utils
+```
+
+- [ ] **Poppler verification**: Test installation with `pdftoppm -h`
+- [ ] **Path verification**: Ensure poppler binaries are in system PATH
+- [ ] **Permissions verified**: Web server user can execute poppler commands
 
 ### 2. Media Directories Setup
 - [ ] **Base media directory exists**: Verify `MEDIA_ROOT` directory permissions
@@ -125,6 +171,10 @@ if PDF_FORMS_CONFIG['enabled']:
 - [ ] **PDF generation**: Verify PDF overlay creation works correctly
 - [ ] **Timeline integration**: Check PDF submissions appear in patient timeline
 - [ ] **Download/view**: Test PDF download and viewing functionality
+- [ ] **Visual configurator**: Test drag-and-drop field configuration interface
+- [ ] **PDF preview**: Verify PDF-to-image conversion works correctly
+- [ ] **Field management**: Test add, edit, delete field operations
+- [ ] **JSON generation**: Verify visual interface generates correct coordinate JSON
 
 ### 14. Test Suite Execution
 - [ ] **Unit tests pass**: `uv run python manage.py test apps.pdf_forms.tests`
@@ -200,10 +250,56 @@ export HOSPITAL_PDF_FORMS_ENABLED=false
 
 ### Common Issues and Solutions
 
-1. **PDF generation fails**: Check ReportLab installation and dependencies
-2. **Files not accessible**: Verify media directory permissions
-3. **Forms not displaying**: Check template configuration and static files
-4. **Permission errors**: Verify user has patient access permissions
+### PDF Forms Specific Issues
+
+1. **PDF preview not loading - "Poppler not found"**
+   - **Cause**: Poppler not installed or not in PATH
+   - **Solution**: Install poppler-utils for your platform (see dependencies section)
+   - **Verification**: Run `pdftoppm -h` in terminal
+   - **Alternative**: Use manual JSON editor (automatic fallback)
+
+2. **PDF preview fails - "Unable to get page count"**
+   - **Cause**: Poppler installed but not accessible to web server
+   - **Solution**: Ensure web server user has execute permissions for poppler
+   - **Docker**: Add `RUN apt-get install -y poppler-utils` to Dockerfile
+   - **Alternative**: Manual JSON editor provides full functionality
+
+3. **Visual configurator loads but no PDF shown**
+   - **Cause**: PDF file corrupted or unsupported format
+   - **Solution**: Re-upload PDF file, ensure valid PDF format
+   - **Verification**: Try opening PDF in browser or PDF viewer
+   - **Alternative**: Configure fields using JSON editor
+
+4. **"Permission denied" when accessing PDF preview**
+   - **Cause**: Web server user lacks file system permissions
+   - **Solution**: Check media directory permissions and ownership
+   - **Command**: `chmod 755 media/pdf_forms/` and `chown www-data:www-data media/pdf_forms/`
+
+### General Issues
+
+5. **PDF generation fails**: Check ReportLab installation and dependencies
+6. **Files not accessible**: Verify media directory permissions
+7. **Forms not displaying**: Check template configuration and static files
+8. **Permission errors**: Verify user has patient access permissions
+
+### Poppler Troubleshooting Commands
+
+```bash
+# Check if poppler is installed
+which pdftoppm
+which pdfinfo
+
+# Test poppler with a sample PDF
+pdftoppm -png -f 1 -l 1 sample.pdf test
+
+# Check poppler version
+pdftoppm -v
+
+# Test from Python (in Django shell)
+python manage.py shell
+>>> from pdf2image import convert_from_path
+>>> convert_from_path('path/to/sample.pdf', first_page=1, last_page=1)
+```
 
 ## Success Criteria
 

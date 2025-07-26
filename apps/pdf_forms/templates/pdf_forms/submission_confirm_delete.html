@@ -1,0 +1,305 @@
+{% extends "pdf_forms/base.html" %}
+{% load static %}
+
+{% block page_title %}Excluir Formulário PDF - {{ submission.patient.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .danger-zone {
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+  }
+  
+  .danger-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 2rem;
+  }
+  
+  .patient-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  .form-data-preview {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+</style>
+{% endblock %}
+
+{% block app_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=submission.patient.id %}">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline do Paciente
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'pdf_forms:submission_detail' pk=submission.pk %}">
+        {{ submission.form_template.name }} - {{ submission.event_datetime|date:"d/m/Y H:i" }}
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Excluir</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+    Confirmar Exclusão
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'pdf_forms:submission_detail' pk=submission.pk %}" class="btn btn-outline-secondary me-2">
+      <i class="bi bi-eye me-1"></i>
+      Ver Detalhes
+    </a>
+    <a href="{% url 'apps.patients:patient_events_timeline' patient_id=submission.patient.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Timeline do Paciente
+    </a>
+  </div>
+</div>
+
+<!-- Warning Section -->
+<div class="danger-zone mb-4">
+  <div class="row align-items-center">
+    <div class="col-auto">
+      <div class="danger-icon bg-danger text-white rounded-circle d-flex align-items-center justify-content-center">
+        <i class="bi bi-exclamation-triangle"></i>
+      </div>
+    </div>
+    <div class="col">
+      <h4 class="text-danger mb-2">Atenção: Ação Irreversível</h4>
+      <p class="mb-0">
+        Você está prestes a excluir permanentemente este formulário PDF preenchido. 
+        <strong>Esta ação não pode ser desfeita</strong> e todos os dados serão perdidos.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- PDF Form Details to be Deleted -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-file-earmark-pdf me-2"></i>
+      Formulário PDF que será excluído
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <!-- Patient Information -->
+      <div class="col-md-6">
+        <h6 class="text-muted mb-3">Informações do Paciente</h6>
+        <div class="d-flex align-items-center mb-3">
+          <div class="patient-avatar bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+            {{ submission.patient.name|first|upper }}
+          </div>
+          <div>
+            <div class="fw-medium">{{ submission.patient.name }}</div>
+            <small class="text-muted">{{ submission.patient.birthday|date:"d/m/Y" }}</small>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Form Information -->
+      <div class="col-md-6">
+        <h6 class="text-muted mb-3">Informações do Formulário</h6>
+        <dl class="row">
+          <dt class="col-sm-5">Formulário:</dt>
+          <dd class="col-sm-7">{{ submission.form_template.name }}</dd>
+          
+          <dt class="col-sm-5">Data/Hora:</dt>
+          <dd class="col-sm-7">{{ submission.event_datetime|date:"d/m/Y H:i" }}</dd>
+          
+          <dt class="col-sm-5">Criado por:</dt>
+          <dd class="col-sm-7">
+            {{ submission.created_by.get_full_name|default:submission.created_by.username }}
+          </dd>
+          
+          <dt class="col-sm-5">Arquivo PDF:</dt>
+          <dd class="col-sm-7">{{ submission.original_filename }}</dd>
+          
+          <dt class="col-sm-5">Tamanho:</dt>
+          <dd class="col-sm-7">{{ submission.file_size|filesizeformat }}</dd>
+        </dl>
+      </div>
+    </div>
+    
+    <!-- Description -->
+    <div class="mt-3">
+      <h6 class="text-muted mb-2">Descrição</h6>
+      <p class="mb-3">{{ submission.description }}</p>
+    </div>
+    
+    <!-- Form Data Preview -->
+    {% if submission.form_data %}
+    <div class="mt-3">
+      <h6 class="text-muted mb-2">Dados do Formulário</h6>
+      <div class="form-data-preview">
+        <div class="row">
+          {% for field_name, value in submission.form_data.items %}
+          <div class="col-md-6 mb-2">
+            <strong>{{ field_name|title }}:</strong>
+            {% if value == True %}
+              <span class="badge bg-success">Sim</span>
+            {% elif value == False %}
+              <span class="badge bg-secondary">Não</span>
+            {% elif value %}
+              {{ value }}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Confirmation Form -->
+<div class="card shadow-sm">
+  <div class="card-header bg-danger text-white">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-trash me-2"></i>
+      Confirmar Exclusão
+    </h5>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="alert alert-warning" role="alert">
+        <h6 class="alert-heading">
+          <i class="bi bi-info-circle me-2"></i>
+          Antes de continuar, confirme:
+        </h6>
+        <ul class="mb-0">
+          <li>Você tem certeza de que deseja excluir este formulário PDF?</li>
+          <li>Você entende que esta ação é irreversível?</li>
+          <li>Você verificou se não há informações importantes que precisam ser preservadas?</li>
+          <li>O arquivo PDF gerado também será excluído permanentemente?</li>
+        </ul>
+      </div>
+      
+      <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+        <label class="form-check-label" for="confirmDelete">
+          <strong>Sim, eu entendo que esta ação é irreversível e desejo excluir este formulário PDF permanentemente.</strong>
+        </label>
+        <div class="invalid-feedback">
+          Você deve confirmar que entende as consequências desta ação.
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+            <i class="bi bi-trash me-1"></i>
+            Sim, Excluir Permanentemente
+          </button>
+        </div>
+        <div>
+          <a href="{% url 'pdf_forms:submission_detail' pk=submission.pk %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+          <a href="{% url 'pdf_forms:pdf_download' submission_id=submission.pk %}" class="btn btn-success">
+            <i class="bi bi-download me-1"></i>
+            Baixar antes de excluir
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Additional Information -->
+<div class="card shadow-sm mt-4">
+  <div class="card-header bg-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-info-circle me-2"></i>
+      Informações Importantes
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <h6>O que acontece quando você exclui:</h6>
+        <ul class="list-unstyled">
+          <li><i class="bi bi-x-circle text-danger me-2"></i>O formulário é removido permanentemente</li>
+          <li><i class="bi bi-x-circle text-danger me-2"></i>O arquivo PDF gerado é excluído</li>
+          <li><i class="bi bi-x-circle text-danger me-2"></i>Todos os dados preenchidos são perdidos</li>
+          <li><i class="bi bi-x-circle text-danger me-2"></i>Não é possível recuperar os dados</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h6>Alternativas à exclusão:</h6>
+        <ul class="list-unstyled">
+          <li><i class="bi bi-download text-primary me-2"></i>Baixar o PDF para backup</li>
+          <li><i class="bi bi-file-earmark-plus text-info me-2"></i>Criar um novo formulário</li>
+          <li><i class="bi bi-archive text-warning me-2"></i>Arquivar para referência futura</li>
+          <li><i class="bi bi-printer text-success me-2"></i>Imprimir uma cópia física</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteButton = document.getElementById('deleteButton');
+    
+    // Enable/disable delete button based on checkbox
+    confirmCheckbox.addEventListener('change', function() {
+      deleteButton.disabled = !this.checked;
+      
+      if (this.checked) {
+        deleteButton.classList.remove('btn-secondary');
+        deleteButton.classList.add('btn-danger');
+      } else {
+        deleteButton.classList.remove('btn-danger');
+        deleteButton.classList.add('btn-secondary');
+      }
+    });
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(event) {
+      if (!confirmCheckbox.checked) {
+        event.preventDefault();
+        event.stopPropagation();
+        confirmCheckbox.classList.add('is-invalid');
+      } else {
+        // Double confirmation
+        const confirmed = confirm(
+          'ÚLTIMA CONFIRMAÇÃO: Tem certeza absoluta de que deseja excluir este formulário PDF? ' +
+          'Esta ação NÃO PODE ser desfeita e o arquivo PDF será perdido permanentemente.'
+        );
+        
+        if (!confirmed) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

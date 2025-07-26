@@ -13,5 +13,6 @@ urlpatterns = [
 
     # Submissions
     path('submission/<uuid:pk>/', views.PDFFormSubmissionDetailView.as_view(), name='submission_detail'),
+    path('submission/<uuid:pk>/delete/', views.PDFFormSubmissionDeleteView.as_view(), name='submission_delete'),
     path('download/<uuid:submission_id>/', views.PDFFormDownloadView.as_view(), name='pdf_download'),
 ]

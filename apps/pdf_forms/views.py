@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
-from django.views.generic import ListView, DetailView, FormView, View
+from django.views.generic import ListView, DetailView, FormView, View, DeleteView
 from django.http import HttpResponse, Http404, FileResponse
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
@@ -9,7 +9,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from io import BytesIO
 
 from apps.core.permissions.decorators import patient_access_required
-from apps.core.permissions.utils import can_access_patient
+from apps.core.permissions.utils import can_access_patient, can_delete_event
 from .models import PDFFormTemplate, PDFFormSubmission
 from .services.form_generator import DynamicFormGenerator
 from .services.pdf_overlay import PDFFormOverlay
@@ -102,9 +102,11 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         """Process form submission and generate PDF."""
+        print(f"DEBUG: form_valid called with data: {form.cleaned_data}")
         try:
             # Sanitize form data for security
             sanitized_data = PDFFormSecurity.sanitize_form_data(form.cleaned_data)
+            print(f"DEBUG: sanitized_data: {sanitized_data}")
 
             # Create PDF overlay service
             pdf_service = PDFFormOverlay()
@@ -127,6 +129,7 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
                 form_template=self.form_template,
                 patient=self.patient,
                 created_by=self.request.user,
+                updated_by=self.request.user,
                 event_datetime=timezone.now(),
                 description=f"Formulário PDF: {self.form_template.name}",
                 form_data=sanitized_data,
@@ -180,6 +183,11 @@ class PDFFormSubmissionDetailView(LoginRequiredMixin, DetailView):
 
         return submission
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_delete_submission'] = can_delete_event(self.request.user, self.object)
+        return context
+
 
 class PDFFormDownloadView(LoginRequiredMixin, View):
     """Download generated PDF file."""
@@ -208,3 +216,49 @@ class PDFFormDownloadView(LoginRequiredMixin, View):
             raise PermissionDenied(f"Security validation failed: {str(e)}")
         except IOError:
             raise Http404("PDF file not found on disk")
+
+
+class PDFFormSubmissionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """Delete view for PDF form submissions with permission checking."""
+
+    model = PDFFormSubmission
+    template_name = 'pdf_forms/submission_confirm_delete.html'
+    context_object_name = 'submission'
+    permission_required = 'events.delete_event'
+
+    def get_success_url(self):
+        """Redirect to patient timeline after successful deletion."""
+        return reverse_lazy(
+            'apps.patients:patient_events_timeline',
+            kwargs={'patient_id': self.object.patient.pk}
+        )
+
+    def get_object(self, queryset=None):
+        """Get object and check patient access and delete permissions."""
+        obj = super().get_object(queryset)
+
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            raise PermissionDenied(
+                "You don't have permission to access this patient's PDF forms"
+            )
+
+        # Check if user can delete this event
+        if not can_delete_event(self.request.user, obj):
+            raise PermissionDenied(
+                "You don't have permission to delete this PDF form submission"
+            )
+
+        return obj
+
+    def get_queryset(self):
+        """Optimize queryset with related objects."""
+        return PDFFormSubmission.objects.select_related('patient', 'created_by', 'form_template')
+
+    def delete(self, request, *args, **kwargs):
+        """Handle successful deletion."""
+        submission = self.get_object()
+        patient_name = submission.patient.name
+        form_name = submission.form_template.name
+        messages.success(request, f"Formulário '{form_name}' para {patient_name} excluído com sucesso.")
+        return super().delete(request, *args, **kwargs)

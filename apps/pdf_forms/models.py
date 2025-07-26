@@ -170,6 +170,12 @@ class PDFFormSubmission(Event):
         from django.urls import reverse
         return reverse('pdf_forms:submission_detail', kwargs={'pk': self.pk})
 
+    def get_edit_url(self):
+        """Return the edit URL for this PDF form submission."""
+        from django.urls import reverse
+        # PDF submissions are read-only, so edit URL points to detail view
+        return reverse('pdf_forms:submission_detail', kwargs={'pk': self.pk})
+
     class Meta:
         verbose_name = "Submissão de Formulário PDF"
         verbose_name_plural = "Submissões de Formulários PDF"

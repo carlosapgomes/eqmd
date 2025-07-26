@@ -3,7 +3,22 @@
 
 {% block page_title %}Selecionar Formulário PDF - {{ patient.name }}{% endblock %}
 
-{% block content %}
+{% block app_content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.id %}">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline do Paciente
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      Formulários PDF - {{ patient.name }}
+    </li>
+  </ol>
+</nav>
+
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
@@ -16,9 +31,15 @@
           </h5>
         </div>
         <div class="card-body">
-          <p class="mb-0">
-            Selecione o formulário PDF que deseja preencher para este paciente.
-          </p>
+          <div class="d-flex justify-content-between align-items-center">
+            <p class="mb-0">
+              Selecione o formulário PDF que deseja preencher para este paciente.
+            </p>
+            <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.id %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-arrow-left me-1"></i>
+              Voltar
+            </a>
+          </div>
         </div>
       </div>
 

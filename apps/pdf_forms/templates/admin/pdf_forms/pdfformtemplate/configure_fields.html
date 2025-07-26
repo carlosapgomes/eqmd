@@ -1,0 +1,1215 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+.pdf-configurator {
+    display: flex;
+    height: calc(100vh - 120px);
+    gap: 20px;
+}
+
+.pdf-preview-container {
+    flex: 1;
+    border: 1px solid #ddd;
+    background: #f9f9f9;
+    position: relative;
+    overflow: auto;
+}
+
+.pdf-canvas-container {
+    position: relative;
+    display: inline-block;
+    margin: 20px;
+}
+
+.pdf-canvas {
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background: white;
+    cursor: crosshair;
+}
+
+.field-overlay {
+    position: absolute;
+    border: 2px solid #007cba;
+    background: rgba(0, 124, 186, 0.1);
+    cursor: move;
+    min-width: 20px;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #007cba;
+    font-weight: bold;
+}
+
+.field-overlay .resize-handle {
+    position: absolute;
+    background: #007cba;
+    cursor: nw-resize;
+}
+
+.field-overlay .resize-handle.right {
+    right: -3px;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: e-resize;
+}
+
+.field-overlay .resize-handle.bottom {
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 6px;
+    cursor: s-resize;
+}
+
+.field-overlay .resize-handle.corner {
+    right: -3px;
+    bottom: -3px;
+    width: 6px;
+    height: 6px;
+    cursor: nw-resize;
+}
+
+.field-overlay:hover {
+    background: rgba(0, 124, 186, 0.2);
+    border-color: #005177;
+}
+
+.field-overlay.selected {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.field-overlay .field-label {
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.properties-panel {
+    width: 350px;
+    border: 1px solid #ddd;
+    background: white;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.btn-primary {
+    background-color: #007cba;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.toolbar {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.field-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.field-item {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.field-item:hover {
+    background: #f8f9fa;
+}
+
+.field-item.selected {
+    background: #e3f2fd;
+    border-left: 3px solid #007cba;
+}
+
+.field-item .field-name {
+    font-weight: bold;
+    color: #333;
+}
+
+.field-item .field-type {
+    font-size: 11px;
+    color: #666;
+    background: #f1f3f4;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.coordinate-display {
+    font-size: 11px;
+    color: #666;
+    margin-top: 10px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.choices-list {
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+.choice-item {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.choice-item input {
+    flex: 1;
+    margin-right: 5px;
+}
+
+.choice-item button {
+    padding: 5px 8px;
+    font-size: 11px;
+}
+
+.zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.zoom-controls button {
+    background: none;
+    border: none;
+    padding: 5px 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.zoom-controls button:hover {
+    background: #f0f0f0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="toolbar">
+    <button class="btn btn-primary" id="add-field-btn">Add Field</button>
+    <button class="btn btn-success" id="save-fields-btn">Save Configuration</button>
+    <button class="btn btn-secondary" onclick="window.history.back()">Back to Template</button>
+    
+    <div style="float: right;">
+        <label>
+            <input type="checkbox" id="show-grid" checked> Show Grid
+        </label>
+        <label style="margin-left: 15px;">
+            <input type="checkbox" id="snap-to-grid" checked> Snap to Grid
+        </label>
+    </div>
+</div>
+
+<div id="error-container"></div>
+<div id="success-container"></div>
+
+<div class="pdf-configurator">
+    <div class="pdf-preview-container">
+        <div id="loading-message" class="loading">
+            Loading PDF preview...
+        </div>
+        <div class="pdf-canvas-container" id="pdf-container" style="display: none;">
+            <canvas class="pdf-canvas" id="pdf-canvas"></canvas>
+            <div class="zoom-controls">
+                <button id="zoom-in">+</button>
+                <button id="zoom-out">-</button>
+                <button id="zoom-fit">Fit</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="properties-panel">
+        <h3>Fields</h3>
+        <div class="field-list" id="field-list">
+            <div style="padding: 20px; text-align: center; color: #666;">
+                No fields configured
+            </div>
+        </div>
+        
+        <div id="manual-json-editor" style="display: none; margin-top: 20px;">
+            <h3>Manual JSON Editor</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                Edit field configuration directly in JSON format. Each field requires: type, label, x, y, width, height (in cm).
+            </p>
+            <textarea id="json-editor" style="width: 100%; height: 200px; font-family: monospace; font-size: 12px;">
+{
+  "example_field": {
+    "type": "text",
+    "label": "Example Field",
+    "x": 2.0,
+    "y": 3.0, 
+    "width": 6.0,
+    "height": 0.7,
+    "font_size": 12,
+    "required": true
+  }
+}
+            </textarea>
+            <div style="margin-top: 10px;">
+                <button class="btn btn-success" onclick="loadFromJSON()">
+                    <i class="bi bi-upload"></i> Load from JSON
+                </button>
+                <button class="btn btn-secondary" onclick="exportToJSON()">
+                    <i class="bi bi-download"></i> Export Current Fields
+                </button>
+            </div>
+        </div>
+        
+        <div id="field-properties" style="display: none;">
+            <h3>Field Properties</h3>
+            <form id="field-form">
+                <div class="form-group">
+                    <label for="field-name">Field Name</label>
+                    <input type="text" id="field-name" name="name" placeholder="e.g., patient_name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="field-label">Label</label>
+                    <input type="text" id="field-label" name="label" placeholder="e.g., Patient Name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="field-type">Type</label>
+                    <select id="field-type" name="type">
+                        {% for field_type in field_types %}
+                        <option value="{{ field_type.value }}">{{ field_type.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="field-required" name="required"> Required
+                    </label>
+                </div>
+                
+                <div class="form-group" id="max-length-group">
+                    <label for="field-max-length">Max Length</label>
+                    <input type="number" id="field-max-length" name="max_length" min="1">
+                </div>
+                
+                <div class="form-group" id="choices-group" style="display: none;">
+                    <label>Choices</label>
+                    <div class="choices-list" id="choices-list"></div>
+                    <button type="button" class="btn btn-secondary" id="add-choice-btn">Add Choice</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="field-font-size">Font Size</label>
+                    <input type="number" id="field-font-size" name="font_size" value="12" min="6" max="72">
+                    <small style="color: #666;">Tip: Height auto-adjusts to font size</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="field-width">Width (cm)</label>
+                    <input type="number" id="field-width" name="width" step="0.1" min="0.5">
+                </div>
+                
+                <div class="form-group">
+                    <label for="field-height">Height (cm)</label>
+                    <input type="number" id="field-height" name="height" step="0.1" min="0.3">
+                    <small style="color: #666;">Or resize by dragging field edges</small>
+                </div>
+                
+                <div class="coordinate-display">
+                    <div>Position: <span id="position-display">0, 0</span> cm</div>
+                    <div>Size: <span id="size-display">0 × 0</span> cm</div>
+                </div>
+                
+                <button type="button" class="btn btn-danger" id="delete-field-btn">Delete Field</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let pdfCanvas = null;
+let ctx = null;
+let pdfImage = null;
+let pdfScale = 1;
+let fields = {};
+let selectedField = null;
+let isDragging = false;
+let isResizing = false;
+let resizeType = null; // 'right', 'bottom', 'corner'
+let dragOffset = { x: 0, y: 0 };
+let gridSize = 10; // pixels
+let cmToPx = 1; // Will be calculated based on PDF size
+
+// Initialize the configurator
+document.addEventListener('DOMContentLoaded', function() {
+    pdfCanvas = document.getElementById('pdf-canvas');
+    ctx = pdfCanvas.getContext('2d');
+    
+    // Load existing fields
+    loadExistingFields();
+    
+    // Load PDF preview
+    loadPDFPreview();
+    
+    // Setup event listeners
+    setupEventListeners();
+});
+
+function loadExistingFields() {
+    try {
+        const existingFields = {{ current_fields_json|safe }};
+        if (existingFields && typeof existingFields === 'object' && Object.keys(existingFields).length > 0) {
+            fields = existingFields;
+            updateFieldList();
+        }
+    } catch (error) {
+        console.warn('Error loading existing fields:', error);
+        fields = {};
+    }
+}
+
+function loadPDFPreview() {
+    const templateId = '{{ template.id }}';
+    const apiUrl = `../api/pdf-preview/`;
+    
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayPDFPreview(data);
+            } else {
+                showPDFPreviewError(data);
+            }
+        })
+        .catch(error => {
+            showError('Error loading PDF: ' + error.message);
+            showManualJSONEditor();
+        });
+}
+
+function showPDFPreviewError(data) {
+    const loadingMessage = document.getElementById('loading-message');
+    
+    let errorHtml = `
+        <div class="error-message" style="margin: 20px; padding: 20px;">
+            <h3><i class="bi bi-exclamation-triangle"></i> PDF Preview Not Available</h3>
+            <p><strong>Error:</strong> ${data.error}</p>
+    `;
+    
+    if (data.solution) {
+        errorHtml += `
+            <div style="margin-top: 15px;">
+                <strong>Solution:</strong>
+                <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; white-space: pre-line;">${data.solution}</pre>
+            </div>
+        `;
+    }
+    
+    if (data.alternative) {
+        errorHtml += `
+            <div style="margin-top: 15px;">
+                <strong>Alternative:</strong> ${data.alternative}
+            </div>
+        `;
+    }
+    
+    errorHtml += `
+            <div style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="showManualJSONEditor()">
+                    <i class="bi bi-code"></i> Use Manual JSON Editor
+                </button>
+                <button class="btn btn-secondary" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise"></i> Retry Preview
+                </button>
+            </div>
+        </div>
+    `;
+    
+    loadingMessage.innerHTML = errorHtml;
+    
+    // Also show manual JSON editor as fallback
+    showManualJSONEditor();
+}
+
+function displayPDFPreview(data) {
+    const img = new Image();
+    img.onload = function() {
+        pdfImage = img;
+        
+        // Calculate scale to fit in container
+        const container = document.querySelector('.pdf-preview-container');
+        const maxWidth = container.clientWidth - 60;
+        const maxHeight = container.clientHeight - 60;
+        
+        pdfScale = Math.min(
+            maxWidth / img.width,
+            maxHeight / img.height,
+            1 // Don't scale up
+        );
+        
+        // Set canvas size
+        pdfCanvas.width = img.width * pdfScale;
+        pdfCanvas.height = img.height * pdfScale;
+        
+        // Calculate cm to px conversion (assuming 150 DPI)
+        cmToPx = (150 / 2.54) * pdfScale; // 150 DPI converted to pixels per cm
+        
+        // Draw PDF
+        drawPDF();
+        
+        // Show canvas container
+        document.getElementById('loading-message').style.display = 'none';
+        document.getElementById('pdf-container').style.display = 'block';
+        
+        // Draw existing fields
+        drawFields();
+    };
+    
+    img.src = data.image;
+}
+
+function drawPDF() {
+    ctx.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
+    
+    if (pdfImage) {
+        ctx.drawImage(pdfImage, 0, 0, pdfCanvas.width, pdfCanvas.height);
+        
+        // Draw grid if enabled
+        if (document.getElementById('show-grid').checked) {
+            drawGrid();
+        }
+    }
+}
+
+function drawGrid() {
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 0.5;
+    
+    // Draw vertical lines
+    for (let x = 0; x <= pdfCanvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, pdfCanvas.height);
+        ctx.stroke();
+    }
+    
+    // Draw horizontal lines
+    for (let y = 0; y <= pdfCanvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(pdfCanvas.width, y);
+        ctx.stroke();
+    }
+}
+
+function drawFields() {
+    // Clear existing field overlays
+    document.querySelectorAll('.field-overlay').forEach(el => el.remove());
+    
+    // Draw each field
+    Object.entries(fields).forEach(([fieldName, fieldConfig]) => {
+        drawField(fieldName, fieldConfig);
+    });
+}
+
+function drawField(fieldName, fieldConfig) {
+    const overlay = document.createElement('div');
+    overlay.className = 'field-overlay';
+    overlay.setAttribute('data-field', fieldName);
+    
+    // Convert cm to pixels
+    const x = fieldConfig.x * cmToPx;
+    const y = fieldConfig.y * cmToPx;
+    const width = fieldConfig.width * cmToPx;
+    const height = fieldConfig.height * cmToPx;
+    
+    overlay.style.left = x + 'px';
+    overlay.style.top = y + 'px';
+    overlay.style.width = width + 'px';
+    overlay.style.height = height + 'px';
+    
+    overlay.innerHTML = `
+        <span class="field-label">${fieldConfig.label || fieldName}</span>
+        <div class="resize-handle right"></div>
+        <div class="resize-handle bottom"></div>
+        <div class="resize-handle corner"></div>
+    `;
+    
+    // Add event listeners
+    overlay.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectField(fieldName);
+    });
+    
+    overlay.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('resize-handle')) {
+            startResizing(e, fieldName);
+        } else {
+            startDragging(e, fieldName);
+        }
+    });
+    
+    document.getElementById('pdf-container').appendChild(overlay);
+}
+
+function setupEventListeners() {
+    // Canvas click to add new field
+    pdfCanvas.addEventListener('click', (e) => {
+        if (!selectedField) {
+            const rect = pdfCanvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / cmToPx;
+            const y = (e.clientY - rect.top) / cmToPx;
+            
+            // Create new field
+            createNewField(x, y);
+        }
+    });
+    
+    // Add field button
+    document.getElementById('add-field-btn').addEventListener('click', () => {
+        createNewField(2, 2); // Default position
+    });
+    
+    // Save fields button
+    document.getElementById('save-fields-btn').addEventListener('click', saveFields);
+    
+    // Field form changes
+    document.getElementById('field-form').addEventListener('input', updateSelectedField);
+    document.getElementById('field-type').addEventListener('change', handleFieldTypeChange);
+    
+    // Delete field button
+    document.getElementById('delete-field-btn').addEventListener('click', deleteSelectedField);
+    
+    // Grid toggles
+    document.getElementById('show-grid').addEventListener('change', () => {
+        drawPDF();
+        drawFields();
+    });
+    
+    // Zoom controls
+    document.getElementById('zoom-in').addEventListener('click', () => zoomPDF(1.2));
+    document.getElementById('zoom-out').addEventListener('click', () => zoomPDF(0.8));
+    document.getElementById('zoom-fit').addEventListener('click', fitPDF);
+    
+    // Mouse events for dragging
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    // Choices management
+    document.getElementById('add-choice-btn').addEventListener('click', addChoice);
+}
+
+function createNewField(x, y) {
+    let fieldName = `field_${Object.keys(fields).length + 1}`;
+    
+    // Ensure unique name
+    while (fields[fieldName]) {
+        fieldName = `field_${Object.keys(fields).length + Math.floor(Math.random() * 1000)}`;
+    }
+    
+    const fieldConfig = {
+        type: 'text',
+        label: fieldName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        x: Math.round(x * 10) / 10, // Round to 1 decimal place
+        y: Math.round(y * 10) / 10,
+        width: 4.0,
+        height: 0.7,
+        font_size: 12,
+        required: false
+    };
+    
+    fields[fieldName] = fieldConfig;
+    drawFields();
+    updateFieldList();
+    selectField(fieldName);
+}
+
+function selectField(fieldName) {
+    selectedField = fieldName;
+    
+    // Update visual selection
+    document.querySelectorAll('.field-overlay').forEach(el => {
+        el.classList.remove('selected');
+    });
+    document.querySelectorAll('.field-item').forEach(el => {
+        el.classList.remove('selected');
+    });
+    
+    const overlay = document.querySelector(`[data-field="${fieldName}"]`);
+    if (overlay) {
+        overlay.classList.add('selected');
+    }
+    
+    const listItem = document.querySelector(`[data-field-name="${fieldName}"]`);
+    if (listItem) {
+        listItem.classList.add('selected');
+    }
+    
+    // Load field properties
+    loadFieldProperties(fieldName);
+    
+    // Show properties panel
+    document.getElementById('field-properties').style.display = 'block';
+}
+
+function loadFieldProperties(fieldName) {
+    const fieldConfig = fields[fieldName];
+    
+    document.getElementById('field-name').value = fieldName;
+    document.getElementById('field-label').value = fieldConfig.label || '';
+    document.getElementById('field-type').value = fieldConfig.type || 'text';
+    document.getElementById('field-required').checked = fieldConfig.required || false;
+    document.getElementById('field-max-length').value = fieldConfig.max_length || '';
+    document.getElementById('field-font-size').value = fieldConfig.font_size || 12;
+    document.getElementById('field-width').value = fieldConfig.width || 4.0;
+    document.getElementById('field-height').value = fieldConfig.height || 0.7;
+    
+    // Update position and size display
+    document.getElementById('position-display').textContent = `${fieldConfig.x}, ${fieldConfig.y}`;
+    document.getElementById('size-display').textContent = `${fieldConfig.width} × ${fieldConfig.height}`;
+    
+    // Handle field type specific options
+    handleFieldTypeChange();
+    
+    // Load choices for choice fields
+    if (fieldConfig.type === 'choice' && fieldConfig.choices) {
+        loadChoices(fieldConfig.choices);
+    }
+}
+
+function updateSelectedField() {
+    if (!selectedField) return;
+    
+    const fieldConfig = fields[selectedField];
+    
+    // Get form values
+    const newName = document.getElementById('field-name').value;
+    const label = document.getElementById('field-label').value;
+    const type = document.getElementById('field-type').value;
+    const required = document.getElementById('field-required').checked;
+    const maxLength = document.getElementById('field-max-length').value;
+    const fontSize = document.getElementById('field-font-size').value;
+    const width = document.getElementById('field-width').value;
+    const height = document.getElementById('field-height').value;
+    
+    // Handle field rename
+    if (newName !== selectedField && newName && !fields[newName]) {
+        fields[newName] = fieldConfig;
+        delete fields[selectedField];
+        selectedField = newName;
+    }
+    
+    // Update field configuration
+    fieldConfig.label = label;
+    fieldConfig.type = type;
+    fieldConfig.required = required;
+    fieldConfig.font_size = parseInt(fontSize) || 12;
+    
+    // Update dimensions
+    if (width) {
+        fieldConfig.width = parseFloat(width);
+    }
+    if (height) {
+        fieldConfig.height = parseFloat(height);
+    }
+    
+    // Auto-adjust height based on font size for text fields
+    if (['text', 'number', 'date', 'email'].includes(type)) {
+        const fontSizeNum = parseInt(fontSize) || 12;
+        const autoHeight = Math.max(0.3, (fontSizeNum * 0.06) + 0.2); // Font size in cm + padding
+        if (!height || Math.abs(fieldConfig.height - autoHeight) > 0.1) {
+            fieldConfig.height = Math.round(autoHeight * 10) / 10;
+            document.getElementById('field-height').value = fieldConfig.height;
+        }
+    }
+    
+    if (maxLength) {
+        fieldConfig.max_length = parseInt(maxLength);
+    } else {
+        delete fieldConfig.max_length;
+    }
+    
+    // Update choices for choice fields
+    if (type === 'choice') {
+        fieldConfig.choices = getChoicesFromForm();
+    } else {
+        delete fieldConfig.choices;
+    }
+    
+    // Update displays
+    document.getElementById('position-display').textContent = `${fieldConfig.x}, ${fieldConfig.y}`;
+    document.getElementById('size-display').textContent = `${fieldConfig.width} × ${fieldConfig.height}`;
+    
+    // Redraw fields and update list
+    drawFields();
+    updateFieldList();
+}
+
+function handleFieldTypeChange() {
+    const fieldType = document.getElementById('field-type').value;
+    
+    // Show/hide max length
+    const maxLengthGroup = document.getElementById('max-length-group');
+    maxLengthGroup.style.display = ['text', 'textarea', 'email'].includes(fieldType) ? 'block' : 'none';
+    
+    // Show/hide choices
+    const choicesGroup = document.getElementById('choices-group');
+    choicesGroup.style.display = fieldType === 'choice' ? 'block' : 'none';
+    
+    if (fieldType === 'choice' && selectedField) {
+        const fieldConfig = fields[selectedField];
+        if (!fieldConfig.choices) {
+            fieldConfig.choices = ['Option 1', 'Option 2'];
+            loadChoices(fieldConfig.choices);
+        }
+    }
+}
+
+function loadChoices(choices) {
+    const choicesList = document.getElementById('choices-list');
+    choicesList.innerHTML = '';
+    
+    choices.forEach((choice, index) => {
+        addChoiceElement(choice, index);
+    });
+}
+
+function addChoice() {
+    const choicesList = document.getElementById('choices-list');
+    const index = choicesList.children.length;
+    addChoiceElement(`Option ${index + 1}`, index);
+    updateSelectedField();
+}
+
+function addChoiceElement(value, index) {
+    const choicesList = document.getElementById('choices-list');
+    const choiceDiv = document.createElement('div');
+    choiceDiv.className = 'choice-item';
+    
+    choiceDiv.innerHTML = `
+        <input type="text" value="${value}" onchange="updateSelectedField()">
+        <button type="button" class="btn btn-danger" onclick="removeChoice(this)">×</button>
+    `;
+    
+    choicesList.appendChild(choiceDiv);
+}
+
+function removeChoice(button) {
+    button.parentElement.remove();
+    updateSelectedField();
+}
+
+function getChoicesFromForm() {
+    const choiceInputs = document.querySelectorAll('#choices-list input');
+    const choices = [];
+    choiceInputs.forEach(input => {
+        if (input.value.trim()) {
+            choices.push(input.value.trim());
+        }
+    });
+    return choices;
+}
+
+function updateFieldList() {
+    const fieldList = document.getElementById('field-list');
+    
+    if (Object.keys(fields).length === 0) {
+        fieldList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No fields configured</div>';
+        return;
+    }
+    
+    fieldList.innerHTML = '';
+    
+    Object.entries(fields).forEach(([fieldName, fieldConfig]) => {
+        const fieldItem = document.createElement('div');
+        fieldItem.className = 'field-item';
+        fieldItem.setAttribute('data-field-name', fieldName);
+        
+        fieldItem.innerHTML = `
+            <div>
+                <div class="field-name">${fieldConfig.label || fieldName}</div>
+                <div style="font-size: 11px; color: #999;">${fieldName}</div>
+            </div>
+            <div class="field-type">${fieldConfig.type}</div>
+        `;
+        
+        fieldItem.addEventListener('click', () => selectField(fieldName));
+        fieldList.appendChild(fieldItem);
+    });
+}
+
+function deleteSelectedField() {
+    if (!selectedField) return;
+    
+    if (confirm(`Delete field "${selectedField}"?`)) {
+        delete fields[selectedField];
+        selectedField = null;
+        
+        drawFields();
+        updateFieldList();
+        document.getElementById('field-properties').style.display = 'none';
+    }
+}
+
+function startDragging(e, fieldName) {
+    e.preventDefault();
+    isDragging = true;
+    selectedField = fieldName;
+    
+    const overlay = e.target.closest('.field-overlay');
+    const rect = overlay.getBoundingClientRect();
+    const canvasRect = pdfCanvas.getBoundingClientRect();
+    
+    dragOffset.x = e.clientX - rect.left;
+    dragOffset.y = e.clientY - rect.top;
+    
+    selectField(fieldName);
+}
+
+function startResizing(e, fieldName) {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizing = true;
+    selectedField = fieldName;
+    
+    // Determine resize type based on handle class
+    if (e.target.classList.contains('right')) {
+        resizeType = 'right';
+    } else if (e.target.classList.contains('bottom')) {
+        resizeType = 'bottom';
+    } else if (e.target.classList.contains('corner')) {
+        resizeType = 'corner';
+    }
+    
+    selectField(fieldName);
+}
+
+function handleMouseMove(e) {
+    if ((!isDragging && !isResizing) || !selectedField) return;
+    
+    const canvasRect = pdfCanvas.getBoundingClientRect();
+    const fieldConfig = fields[selectedField];
+    
+    if (isDragging) {
+        // Handle dragging (moving the field)
+        const x = (e.clientX - canvasRect.left - dragOffset.x) / cmToPx;
+        const y = (e.clientY - canvasRect.top - dragOffset.y) / cmToPx;
+        
+        // Snap to grid if enabled
+        if (document.getElementById('snap-to-grid').checked) {
+            const gridCm = 0.1; // 0.1 cm grid (1mm precision)
+            fieldConfig.x = Math.round(x / gridCm) * gridCm;
+            fieldConfig.y = Math.round(y / gridCm) * gridCm;
+        } else {
+            fieldConfig.x = Math.round(x * 10) / 10;
+            fieldConfig.y = Math.round(y * 10) / 10;
+        }
+        
+        // Update position display
+        document.getElementById('position-display').textContent = `${fieldConfig.x}, ${fieldConfig.y}`;
+        
+    } else if (isResizing) {
+        // Handle resizing
+        const mouseX = (e.clientX - canvasRect.left) / cmToPx;
+        const mouseY = (e.clientY - canvasRect.top) / cmToPx;
+        
+        if (resizeType === 'right' || resizeType === 'corner') {
+            let newWidth = mouseX - fieldConfig.x;
+            if (document.getElementById('snap-to-grid').checked) {
+                const gridCm = 0.1;
+                newWidth = Math.round(newWidth / gridCm) * gridCm;
+            } else {
+                newWidth = Math.round(newWidth * 10) / 10;
+            }
+            fieldConfig.width = Math.max(0.5, newWidth); // Minimum width 0.5cm
+        }
+        
+        if (resizeType === 'bottom' || resizeType === 'corner') {
+            let newHeight = mouseY - fieldConfig.y;
+            if (document.getElementById('snap-to-grid').checked) {
+                const gridCm = 0.1;
+                newHeight = Math.round(newHeight / gridCm) * gridCm;
+            } else {
+                newHeight = Math.round(newHeight * 10) / 10;
+            }
+            fieldConfig.height = Math.max(0.3, newHeight); // Minimum height 0.3cm
+        }
+        
+        // Update size display
+        document.getElementById('size-display').textContent = `${fieldConfig.width} × ${fieldConfig.height}`;
+    }
+    
+    drawFields();
+}
+
+function handleMouseUp(e) {
+    isDragging = false;
+    isResizing = false;
+    resizeType = null;
+}
+
+function zoomPDF(factor) {
+    pdfScale *= factor;
+    
+    if (pdfImage) {
+        pdfCanvas.width = pdfImage.width * pdfScale;
+        pdfCanvas.height = pdfImage.height * pdfScale;
+        cmToPx = (150 / 2.54) * pdfScale;
+        
+        drawPDF();
+        drawFields();
+    }
+}
+
+function fitPDF() {
+    if (!pdfImage) return;
+    
+    const container = document.querySelector('.pdf-preview-container');
+    const maxWidth = container.clientWidth - 60;
+    const maxHeight = container.clientHeight - 60;
+    
+    pdfScale = Math.min(
+        maxWidth / pdfImage.width,
+        maxHeight / pdfImage.height,
+        1
+    );
+    
+    pdfCanvas.width = pdfImage.width * pdfScale;
+    pdfCanvas.height = pdfImage.height * pdfScale;
+    cmToPx = (150 / 2.54) * pdfScale;
+    
+    drawPDF();
+    drawFields();
+}
+
+function saveFields() {
+    const templateId = '{{ template.id }}';
+    const apiUrl = `../api/save-fields/`;
+    
+    // Show loading state
+    const saveBtn = document.getElementById('save-fields-btn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            fields: fields
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess(data.message);
+        } else {
+            showError(data.error);
+        }
+    })
+    .catch(error => {
+        showError('Error saving fields: ' + error.message);
+    })
+    .finally(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
+    });
+}
+
+function showError(message) {
+    const container = document.getElementById('error-container');
+    container.innerHTML = `<div class="error-message">${message}</div>`;
+    setTimeout(() => {
+        container.innerHTML = '';
+    }, 5000);
+}
+
+function showSuccess(message) {
+    const container = document.getElementById('success-container');
+    container.innerHTML = `<div class="success-message">${message}</div>`;
+    setTimeout(() => {
+        container.innerHTML = '';
+    }, 3000);
+}
+
+function showManualJSONEditor() {
+    const manualEditor = document.getElementById('manual-json-editor');
+    manualEditor.style.display = 'block';
+    
+    // Load current fields into the JSON editor
+    const jsonEditor = document.getElementById('json-editor');
+    if (Object.keys(fields).length > 0) {
+        jsonEditor.value = JSON.stringify(fields, null, 2);
+    }
+}
+
+function loadFromJSON() {
+    const jsonEditor = document.getElementById('json-editor');
+    
+    try {
+        const parsedFields = JSON.parse(jsonEditor.value);
+        
+        // Validate the structure
+        for (const [fieldName, fieldConfig] of Object.entries(parsedFields)) {
+            if (!fieldConfig.type || !fieldConfig.label || 
+                typeof fieldConfig.x !== 'number' || typeof fieldConfig.y !== 'number' ||
+                typeof fieldConfig.width !== 'number' || typeof fieldConfig.height !== 'number') {
+                throw new Error(`Field "${fieldName}" is missing required properties (type, label, x, y, width, height)`);
+            }
+        }
+        
+        // Load the fields
+        fields = parsedFields;
+        updateFieldList();
+        
+        // Try to draw fields if PDF is available
+        if (pdfCanvas) {
+            drawFields();
+        }
+        
+        showSuccess('Fields loaded successfully from JSON!');
+        
+    } catch (error) {
+        showError('Invalid JSON format: ' + error.message);
+    }
+}
+
+function exportToJSON() {
+    const jsonEditor = document.getElementById('json-editor');
+    jsonEditor.value = JSON.stringify(fields, null, 2);
+    
+    // Select the text for easy copying
+    jsonEditor.select();
+    jsonEditor.setSelectionRange(0, 99999); // For mobile devices
+    
+    // Try to copy to clipboard
+    try {
+        document.execCommand('copy');
+        showSuccess('JSON copied to clipboard!');
+    } catch (error) {
+        showSuccess('JSON exported to editor. You can copy it manually.');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+{% endblock %}
