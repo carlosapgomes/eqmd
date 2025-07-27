@@ -78,6 +78,9 @@ uv run python manage.py createsuperuser
 # Create permission groups
 uv run python manage.py setup_groups
 
+# Create sample wards
+uv run python manage.py create_sample_wards
+
 # Create sample tags (optional)
 uv run python manage.py create_sample_tags
 
@@ -116,6 +119,7 @@ uv run python manage.py migrate
 ```bash
 uv run python manage.py createsuperuser
 uv run python manage.py setup_groups
+uv run python manage.py create_sample_wards
 uv run python manage.py create_sample_tags
 ```
 
@@ -195,7 +199,7 @@ After completing a database reset, verify:
 
 - [ ] Development server starts without errors: `uv run python manage.py runserver`
 - [ ] Admin interface loads: `http://localhost:8000/admin/`
-- [ ] Can create test patients, events, daily notes, drug templates, and prescriptions
+- [ ] Can create test wards, patients, events, daily notes, drug templates, and prescriptions
 - [ ] Permissions system works correctly
 - [ ] Hospital context middleware functions properly
 - [ ] Drug templates and prescription functionality works

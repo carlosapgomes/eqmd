@@ -1,0 +1,264 @@
+{% extends "patients/patient_base.html" %}
+{% block title %}{% if form.instance.pk %}Editar{% else %}Adicionar{% endif %} Ala{% endblock %}
+{% block patient_content %}
+<div class="row">
+  <div class="col-12">
+    <!-- Header with Back Button -->
+    <div class="d-flex align-items-center mb-4">
+      <a href="{% if form.instance.pk %}{% url 'apps.patients:ward_detail' pk=form.instance.pk %}{% else %}{% url 'apps.patients:ward_list' %}{% endif %}" class="btn btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+      </a>
+      <div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-1">
+            <li class="breadcrumb-item">
+              <a href="{% url 'apps.patients:ward_list' %}" class="text-medical-teal text-decoration-none">
+                <i class="bi bi-diagram-3 me-1"></i>Alas
+              </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+              {% if form.instance.pk %}Editar {{ form.instance.abbreviation }}{% else %}Nova Ala{% endif %}
+            </li>
+          </ol>
+        </nav>
+        <h1 class="h3 text-medical-dark-gray mb-0">
+          <i class="bi bi-diagram-3 me-2 text-medical-primary"></i>
+          {% if form.instance.pk %}Editar Ala{% else %}Nova Ala{% endif %}
+        </h1>
+      </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-info-circle me-2 text-medical-primary"></i>
+              Informações da Ala
+            </h5>
+          </div>
+          <div class="card-body">
+            <form method="post" class="form-medical">
+              {% csrf_token %}
+              
+              <!-- Basic Information -->
+              <div class="row">
+                <div class="col-md-8 mb-3">
+                  <label for="{{ form.name.id_for_label }}" class="form-label">
+                    {{ form.name.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.name }}
+                  {% if form.name.help_text %}
+                    <div class="form-text">{{ form.name.help_text }}</div>
+                  {% endif %}
+                  {% if form.name.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.name.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="{{ form.abbreviation.id_for_label }}" class="form-label">
+                    {{ form.abbreviation.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.abbreviation }}
+                  {% if form.abbreviation.help_text %}
+                    <div class="form-text">{{ form.abbreviation.help_text }}</div>
+                  {% endif %}
+                  {% if form.abbreviation.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.abbreviation.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div class="row">
+                <div class="col-12 mb-3">
+                  <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                  {{ form.description }}
+                  {% if form.description.help_text %}
+                    <div class="form-text">{{ form.description.help_text }}</div>
+                  {% endif %}
+                  {% if form.description.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.description.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Location Information -->
+              <hr class="my-4">
+              <h6 class="text-medical-dark-gray mb-3">
+                <i class="bi bi-geo-alt me-2"></i>
+                Localização
+              </h6>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.floor.id_for_label }}" class="form-label">{{ form.floor.label }}</label>
+                  {{ form.floor }}
+                  {% if form.floor.help_text %}
+                    <div class="form-text">{{ form.floor.help_text }}</div>
+                  {% endif %}
+                  {% if form.floor.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.floor.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.capacity_estimate.id_for_label }}" class="form-label">{{ form.capacity_estimate.label }}</label>
+                  {{ form.capacity_estimate }}
+                  {% if form.capacity_estimate.help_text %}
+                    <div class="form-text">{{ form.capacity_estimate.help_text }}</div>
+                  {% endif %}
+                  {% if form.capacity_estimate.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.capacity_estimate.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Status -->
+              <hr class="my-4">
+              <h6 class="text-medical-dark-gray mb-3">
+                <i class="bi bi-toggle-on me-2"></i>
+                Status
+              </h6>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <div class="form-check">
+                    {{ form.is_active }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                      {{ form.is_active.label }}
+                    </label>
+                  </div>
+                  {% if form.is_active.help_text %}
+                    <div class="form-text">{{ form.is_active.help_text }}</div>
+                  {% endif %}
+                  {% if form.is_active.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.is_active.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <hr class="my-4">
+              <div class="d-flex justify-content-between">
+                <a href="{% if form.instance.pk %}{% url 'apps.patients:ward_detail' pk=form.instance.pk %}{% else %}{% url 'apps.patients:ward_list' %}{% endif %}" class="btn btn-outline-secondary">
+                  <i class="bi bi-x-circle me-2"></i>
+                  Cancelar
+                </a>
+                <button type="submit" class="btn btn-medical-primary">
+                  <i class="bi bi-check-circle me-2"></i>
+                  {% if form.instance.pk %}Salvar Alterações{% else %}Criar Ala{% endif %}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Help Card -->
+      <div class="col-lg-4">
+        <div class="card card-medical">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-question-circle me-2 text-medical-primary"></i>
+              Ajuda
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Campos Obrigatórios</h6>
+              <p class="text-medical-gray mb-0">Os campos marcados com <span class="text-danger">*</span> são obrigatórios.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Nome da Ala</h6>
+              <p class="text-medical-gray mb-0">Digite o nome completo da ala (ex: "Unidade de Terapia Intensiva").</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Sigla</h6>
+              <p class="text-medical-gray mb-0">Sigla curta para identificação rápida (ex: "UTI", "PS", "CC").</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Descrição</h6>
+              <p class="text-medical-gray mb-0">Descrição detalhada das especialidades e características da ala.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Andar</h6>
+              <p class="text-medical-gray mb-0">Localização física da ala no hospital (ex: "2º Andar", "Térreo").</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Capacidade Estimada</h6>
+              <p class="text-medical-gray mb-0">Número estimado de leitos ou pacientes que a ala pode acomodar.</p>
+            </div>
+            
+            <div class="mb-0">
+              <h6 class="text-medical-dark-gray">Status Ativo</h6>
+              <p class="text-medical-gray mb-0">Alas ativas aparecem nas listas de seleção e podem receber pacientes.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Examples Card -->
+        {% if not form.instance.pk %}
+        <div class="card card-medical mt-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-lightbulb me-2 text-medical-primary"></i>
+              Exemplos
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">UTI</h6>
+              <p class="text-medical-gray mb-0">
+                <strong>Nome:</strong> Unidade de Terapia Intensiva<br>
+                <strong>Sigla:</strong> UTI<br>
+                <strong>Andar:</strong> 3º Andar
+              </p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Pronto Socorro</h6>
+              <p class="text-medical-gray mb-0">
+                <strong>Nome:</strong> Pronto Socorro<br>
+                <strong>Sigla:</strong> PS<br>
+                <strong>Andar:</strong> Térreo
+              </p>
+            </div>
+            
+            <div class="mb-0">
+              <h6 class="text-medical-dark-gray">Clínica Médica</h6>
+              <p class="text-medical-gray mb-0">
+                <strong>Nome:</strong> Clínica Médica<br>
+                <strong>Sigla:</strong> CM<br>
+                <strong>Andar:</strong> 2º Andar
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

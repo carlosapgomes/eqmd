@@ -1,8 +1,11 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from ..models import Patient, PatientHospitalRecord, AllowedTag
-from ..forms import PatientForm, PatientHospitalRecordForm, PatientHospitalRecordNestedForm
-from apps.hospitals.models import Hospital
+from ..models import Patient, AllowedTag, Ward
+from ..forms import (
+    PatientForm, AdmitPatientForm, DischargePatientForm,
+    EmergencyAdmissionForm, TransferPatientForm, DeclareDeathForm, 
+    SetOutpatientForm
+)
 
 User = get_user_model()
 
@@ -15,12 +18,18 @@ class PatientFormTests(TestCase):
             email='test@example.com',
             password='testpassword'
         )
+        cls.ward = Ward.objects.create(
+            name='Test Ward',
+            abbreviation='TW',
+            created_by=cls.user,
+            updated_by=cls.user
+        )
 
     def test_patient_form_valid(self):
+        """Test that patient form is valid without status field"""
         form = PatientForm({
             'name': 'Test Patient',
             'birthday': '1990-01-01',
-            'status': Patient.Status.OUTPATIENT,
         })
         self.assertTrue(form.is_valid())
 
@@ -28,18 +37,17 @@ class PatientFormTests(TestCase):
         # Missing required field (name)
         form = PatientForm({
             'birthday': '1990-01-01',
-            'status': Patient.Status.OUTPATIENT,
         })
         self.assertFalse(form.is_valid())
         self.assertIn('name', form.errors)
 
-    def test_patient_form_has_hospital_record_form(self):
+    def test_patient_form_excludes_status_field(self):
+        """Test that status field is excluded from patient form"""
         form = PatientForm()
-        self.assertIsNotNone(form.hospital_record_form)
-        self.assertIsInstance(form.hospital_record_form, PatientHospitalRecordNestedForm)
+        self.assertNotIn('status', form.fields)
 
 
-class HospitalRecordFormTests(TestCase):
+class StatusChangeFormTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
@@ -47,224 +55,105 @@ class HospitalRecordFormTests(TestCase):
             email='test@example.com',
             password='testpassword'
         )
-
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
+        cls.ward = Ward.objects.create(
+            name='Test Ward',
+            abbreviation='TW',
             created_by=cls.user,
             updated_by=cls.user
         )
 
-        cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=cls.user,
-            updated_by=cls.user
-        )
-
-    def test_hospital_record_form_valid(self):
-        form = PatientHospitalRecordForm({
-            'patient': self.patient.id,
-            'hospital': self.hospital.id,
-            'record_number': 'REC123',
-            'first_admission_date': '2023-01-01',
+    def test_admit_patient_form_valid(self):
+        """Test admit patient form validation"""
+        form = AdmitPatientForm({
+            'ward': self.ward.id,
+            'bed': 'A101',
+            'reason': 'Patient needs inpatient care',
         })
         self.assertTrue(form.is_valid())
 
-    def test_hospital_record_form_invalid(self):
-        # Missing required field (patient)
-        form = PatientHospitalRecordForm({
-            'record_number': 'REC123',
-            'first_admission_date': '2023-01-01',
+    def test_admit_patient_form_requires_ward(self):
+        """Test that ward is required for admission"""
+        form = AdmitPatientForm({
+            'bed': 'A101',
+            'reason': 'Patient needs inpatient care',
         })
         self.assertFalse(form.is_valid())
-        self.assertIn('patient', form.errors)
+        self.assertIn('ward', form.errors)
 
-
-class PatientFormWithHospitalRecordTests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword'
-        )
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
-
-    def test_patient_form_with_hospital_record_data(self):
-        """Test patient form with hospital record data"""
-        hospital_record_data = {
-            'hospital_record-hospital': str(self.hospital.id),
-            'hospital_record-record_number': 'REC123',
-            'hospital_record-first_admission_date': '2023-01-01',
-        }
-        
-        form = PatientForm(
-            data={
-                'name': 'Test Patient',
-                'birthday': '1990-01-01',
-                'status': Patient.Status.INPATIENT,
-                'current_hospital': self.hospital.id,
-            },
-            hospital_record_data=hospital_record_data
-        )
-        
-        self.assertTrue(form.is_valid())
-        self.assertIsNotNone(form.hospital_record_form)
-        self.assertTrue(form.hospital_record_form.has_changed())
-
-    def test_patient_form_hospital_record_validation(self):
-        """Test hospital record validation within patient form"""
-        hospital_record_data = {
-            'hospital': str(self.hospital.id),
-            # Missing required record_number
-        }
-        
-        form = PatientForm(
-            data={
-                'name': 'Test Patient',
-                'birthday': '1990-01-01',
-                'status': Patient.Status.INPATIENT,
-                'current_hospital': self.hospital.id,
-            },
-            hospital_record_data=hospital_record_data
-        )
-        
-        # Form should still be valid as hospital record fields are optional
+    def test_discharge_patient_form_valid(self):
+        """Test discharge patient form validation"""
+        form = DischargePatientForm({
+            'discharge_reason': 'Patient recovered fully',
+            'reason': 'Medical discharge',
+        })
         self.assertTrue(form.is_valid())
 
-    def test_patient_form_save_with_hospital_record(self):
-        """Test saving patient with hospital record"""
-        hospital_record_data = {
-            'hospital_record-hospital': str(self.hospital.id),
-            'hospital_record-record_number': 'REC123',
-            'hospital_record-first_admission_date': '2023-01-01',
-        }
-        
-        form = PatientForm(
-            data={
-                'name': 'Test Patient',
-                'birthday': '1990-01-01',
-                'status': Patient.Status.INPATIENT,
-                'current_hospital': self.hospital.id,
-            },
-            hospital_record_data=hospital_record_data
-        )
-        
+    def test_discharge_patient_form_requires_discharge_reason(self):
+        """Test that discharge reason is required"""
+        form = DischargePatientForm({
+            'reason': 'Medical discharge',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('discharge_reason', form.errors)
+
+    def test_emergency_admission_form_valid(self):
+        """Test emergency admission form validation"""
+        form = EmergencyAdmissionForm({
+            'ward': self.ward.id,
+            'bed': 'ER-01',
+            'reason': 'Emergency situation',
+        })
         self.assertTrue(form.is_valid())
-        # Set required user fields
-        form.instance.created_by = self.user
-        form.instance.updated_by = self.user
-        form.current_user = self.user
-        patient = form.save()
-        
-        # Check that hospital record was created
-        self.assertTrue(
-            PatientHospitalRecord.objects.filter(
-                patient=patient,
-                hospital=self.hospital,
-                record_number='REC123'
-            ).exists()
-        )
 
-    def test_nested_hospital_record_form(self):
-        """Test the nested hospital record form"""
-        form = PatientHospitalRecordNestedForm(
-            data={
-                'hospital': self.hospital.id,
-                'record_number': 'REC456',
-                'first_admission_date': '2023-02-01',
-            },
-            prefix='hospital_record'
-        )
-        
+    def test_emergency_admission_form_ward_optional(self):
+        """Test that ward is optional for emergency admission"""
+        form = EmergencyAdmissionForm({
+            'bed': 'ER-01',
+            'reason': 'Emergency situation',
+        })
         self.assertTrue(form.is_valid())
-        # All fields should be optional in nested form
-        for field in form.fields.values():
-            self.assertFalse(field.required)
 
+    def test_transfer_patient_form_valid(self):
+        """Test transfer patient form validation"""
+        form = TransferPatientForm({
+            'destination': 'Another Hospital',
+            'reason': 'Specialized care required',
+        })
+        self.assertTrue(form.is_valid())
 
-class HospitalRecordAPITests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword',
-            profession_type=0  # MEDICAL_DOCTOR
-        )
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
-        # Associate user with hospital
-        cls.user.hospitals.add(cls.hospital)
-        
-        cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.INPATIENT,
-            current_hospital=cls.hospital,
-            created_by=cls.user,
-            updated_by=cls.user
-        )
+    def test_transfer_patient_form_requires_destination(self):
+        """Test that destination is required for transfer"""
+        form = TransferPatientForm({
+            'reason': 'Specialized care required',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('destination', form.errors)
 
-    def setUp(self):
-        self.client.login(username='testuser', password='testpassword')
+    def test_declare_death_form_valid(self):
+        """Test declare death form validation"""
+        form = DeclareDeathForm({
+            'death_time': '2023-01-01T10:00:00',
+            'reason': 'Heart failure',
+        })
+        self.assertTrue(form.is_valid())
 
-    def test_patient_hospital_records_api(self):
-        """Test API endpoint for getting patient hospital records"""
-        # Create a hospital record
-        record = PatientHospitalRecord.objects.create(
-            patient=self.patient,
-            hospital=self.hospital,
-            record_number='REC123',
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        response = self.client.get(f'/patients/api/{self.patient.id}/hospital-records/')
-        self.assertEqual(response.status_code, 200)
-        
-        data = response.json()
-        self.assertEqual(data['count'], 1)
-        self.assertEqual(len(data['records']), 1)
-        self.assertEqual(data['records'][0]['record_number'], 'REC123')
-        self.assertEqual(data['records'][0]['hospital']['name'], 'Test Hospital')
+    def test_declare_death_form_requires_fields(self):
+        """Test that death time and reason are required"""
+        form = DeclareDeathForm({})
+        self.assertFalse(form.is_valid())
+        self.assertIn('death_time', form.errors)
+        self.assertIn('reason', form.errors)
 
-    def test_hospital_record_by_hospital_api_exists(self):
-        """Test API endpoint for getting specific hospital record"""
-        # Create a hospital record
-        record = PatientHospitalRecord.objects.create(
-            patient=self.patient,
-            hospital=self.hospital,
-            record_number='REC456',
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        response = self.client.get(
-            f'/patients/api/hospital-record/{self.hospital.id}/?patient_id={self.patient.id}'
-        )
-        self.assertEqual(response.status_code, 200)
-        
-        data = response.json()
-        self.assertTrue(data['exists'])
-        self.assertEqual(data['record']['record_number'], 'REC456')
+    def test_set_outpatient_form_valid(self):
+        """Test set outpatient form validation"""
+        form = SetOutpatientForm({
+            'follow_up_date': '2023-02-01',
+            'follow_up_notes': 'Return in 2 weeks',
+            'reason': 'Stable for outpatient care',
+        })
+        self.assertTrue(form.is_valid())
 
-    def test_hospital_record_by_hospital_api_not_exists(self):
-        """Test API endpoint when hospital record doesn't exist"""
-        response = self.client.get(
-            f'/patients/api/hospital-record/{self.hospital.id}/?patient_id={self.patient.id}'
-        )
-        self.assertEqual(response.status_code, 200)
-        
-        data = response.json()
-        self.assertFalse(data['exists'])
-        self.assertIsNone(data['record'])
-
+    def test_set_outpatient_form_all_fields_optional(self):
+        """Test that all fields are optional for outpatient status"""
+        form = SetOutpatientForm({})
+        self.assertTrue(form.is_valid())

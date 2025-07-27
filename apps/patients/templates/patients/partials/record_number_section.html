@@ -1,0 +1,109 @@
+{% load patient_tags %}
+
+<!-- Record Number Display Section -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-id-card"></i>
+            Número do Prontuário
+        </h5>
+        {% if perms.patients.change_patient %}
+        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#updateRecordNumberModal">
+            <i class="fas fa-edit"></i>
+            Alterar
+        </button>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if patient.current_record_number_obj %}
+            <div class="alert alert-info">
+                <h6 class="alert-heading">
+                    <i class="fas fa-id-card"></i>
+                    Número Atual: <strong>{{ patient.current_record_number_obj.record_number }}</strong>
+                </h6>
+                <small class="text-muted">
+                    Definido em: {{ patient.current_record_number_obj.effective_date|date:"d/m/Y H:i" }}
+                    {% if patient.current_record_number_obj.change_reason %}
+                        <br>Motivo: {{ patient.current_record_number_obj.change_reason }}
+                    {% endif %}
+                </small>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Nenhum número de prontuário definido
+            </div>
+        {% endif %}
+        
+        {% if patient.record_numbers.count > 1 %}
+        <details class="mt-3">
+            <summary class="cursor-pointer">
+                <i class="fas fa-history"></i>
+                Ver histórico de números ({{ patient.record_numbers.count }}) 
+            </summary>
+            <div class="mt-2">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Data</th>
+                                <th>Motivo</th>
+                                <th>Usuário</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in patient.record_numbers.all %}
+                            <tr {% if record.is_current %}class="table-info"{% endif %}>
+                                <td>
+                                    <code>{{ record.record_number }}</code>
+                                    {% if record.is_current %}
+                                        <span class="badge bg-primary">Atual</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ record.effective_date|date:"d/m/Y H:i" }}</td>
+                                <td>{{ record.change_reason|default:"-"|truncatechars:30 }}</td>
+                                <td>{{ record.created_by.get_full_name|default:record.created_by.username }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </details>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Update Record Number Modal -->
+{% if perms.patients.change_patient %}
+<div class="modal fade" id="updateRecordNumberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'patients:quick_record_number_update' patient.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Alterar Número do Prontuário</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="record_number" class="form-label">Novo Número</label>
+                        <input type="text" class="form-control" name="record_number" required
+                               placeholder="Ex: REC001, 123456, etc." maxlength="50">
+                    </div>
+                    <div class="mb-3">
+                        <label for="change_reason" class="form-label">Motivo da Alteração</label>
+                        <textarea class="form-control" name="change_reason" rows="2"
+                                  placeholder="Descreva o motivo da alteração do número..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alteração</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}

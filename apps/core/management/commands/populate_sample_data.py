@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import random
 from faker import Faker
 
-from apps.patients.models import Patient, AllowedTag, Tag
+from apps.patients.models import Patient, AllowedTag, Tag, PatientRecordNumber, PatientAdmission, Ward
 from apps.dailynotes.models import DailyNote
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
@@ -39,6 +39,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('DRY RUN MODE - No data will be created'))
 
         self.create_users()
+        self.create_sample_wards()
         self.create_tags()
         self.create_patients()
         self.create_daily_notes()
@@ -69,9 +70,15 @@ class Command(BaseCommand):
         Tag.objects.filter(created_by__username__startswith='sample_').delete()
         AllowedTag.objects.filter(created_by__username__startswith='sample_').delete()
 
-        # Clear patients (now safe since events and tags are deleted)
+        # Clear patient admissions and record numbers before patients
+        PatientAdmission.objects.filter(created_by__username__startswith='sample_').delete()
+        PatientRecordNumber.objects.filter(created_by__username__startswith='sample_').delete()
+
+        # Clear patients (now safe since events, tags, admissions and record numbers are deleted)
         Patient.objects.filter(created_by__username__startswith='sample_').delete()
 
+        # Clear wards
+        Ward.objects.filter(created_by__username__startswith='sample_').delete()
 
         # Clear users last (now safe since all dependent objects are deleted)
         User.objects.filter(username__startswith='sample_').delete()
@@ -122,6 +129,83 @@ class Command(BaseCommand):
             self.users.append(user)
             profession_name = user.get_profession_type_display()
             self.stdout.write(f'  Created {profession_name}: {user.email}')
+
+    def create_sample_wards(self):
+        self.stdout.write('Creating sample wards...')
+        
+        admin_user = self.users[0] if self.users and not self.dry_run else None
+        
+        wards_data = [
+            {
+                "name": "Unidade de Terapia Intensiva",
+                "abbreviation": "UTI",
+                "description": "Unidade de cuidados intensivos para pacientes críticos",
+                "floor": "3º Andar",
+                "capacity_estimate": 12,
+            },
+            {
+                "name": "Pronto Socorro",
+                "abbreviation": "PS",
+                "description": "Atendimento de emergência e urgência",
+                "floor": "Térreo",
+                "capacity_estimate": 8,
+            },
+            {
+                "name": "Clínica Médica",
+                "abbreviation": "CM",
+                "description": "Internação clínica geral",
+                "floor": "2º Andar",
+                "capacity_estimate": 20,
+            },
+            {
+                "name": "Clínica Cirúrgica",
+                "abbreviation": "CC",
+                "description": "Internação de pacientes cirúrgicos",
+                "floor": "2º Andar",
+                "capacity_estimate": 15,
+            },
+            {
+                "name": "Pediatria",
+                "abbreviation": "PED",
+                "description": "Atendimento pediátrico",
+                "floor": "1º Andar",
+                "capacity_estimate": 10,
+            },
+            {
+                "name": "Maternidade",
+                "abbreviation": "MAT",
+                "description": "Atendimento obstétrico e neonatal",
+                "floor": "1º Andar",
+                "capacity_estimate": 12,
+            },
+        ]
+
+        self.wards = []
+        created_count = 0
+        
+        for ward_data in wards_data:
+            if self.dry_run:
+                self.stdout.write(f'Would create ward: {ward_data["name"]}')
+                continue
+                
+            ward, created = Ward.objects.get_or_create(
+                abbreviation=ward_data["abbreviation"],
+                defaults={
+                    **ward_data,
+                    "created_by": admin_user,
+                    "updated_by": admin_user,
+                },
+            )
+            if created:
+                created_count += 1
+                self.stdout.write(f'  Created ward: {ward}')
+            else:
+                self.stdout.write(f'  Ward already exists: {ward}')
+            
+            self.wards.append(ward)
+
+        if not self.dry_run:
+            self.stdout.write(f'Created {created_count} sample wards')
 
     def create_tags(self):
         self.stdout.write('Creating sample tags...')
@@ -183,12 +267,10 @@ class Command(BaseCommand):
         last_name = fake.last_name()
         name = f'{first_name} {last_name}'
         
-        # Determine status
-        if is_inpatient:
-            status = random.choice([Patient.Status.INPATIENT, Patient.Status.EMERGENCY])
-        else:
-            status = random.choice([Patient.Status.OUTPATIENT, Patient.Status.DISCHARGED])
+        # Generate record number
+        record_number = f'PRN{random.randint(100000, 999999)}'
         
+        # Create patient first
         patient = Patient.objects.create(
             name=name,
             birthday=fake.date_of_birth(minimum_age=18, maximum_age=90),
@@ -200,13 +282,51 @@ class Command(BaseCommand):
             city=fake.city(),
             state=fake.state_abbr(),
             zip_code=fake.postcode(),
-            status=status,
-            bed=f'Leito {random.randint(1, 50)}' if is_inpatient else '',
-            last_admission_date=fake.date_between(start_date='-30d', end_date='today') if is_inpatient else None,
+            status=Patient.Status.OUTPATIENT,  # Start as outpatient, will be updated if needed
+            current_record_number=record_number,
             created_by=creator,
             updated_by=creator,
         )
         
+        # Create patient record number entry
+        PatientRecordNumber.objects.create(
+            patient=patient,
+            record_number=record_number,
+            is_current=True,
+            change_reason='Registro inicial do paciente',
+            effective_date=timezone.now(),
+            created_by=creator,
+            updated_by=creator,
+        )
+        
+        # Handle admission if patient should be inpatient
+        if is_inpatient:
+            admission_datetime = fake.date_time_between(start_date='-30d', end_date='now', tzinfo=timezone.get_current_timezone())
+            admission_type = random.choice([PatientAdmission.AdmissionType.EMERGENCY, PatientAdmission.AdmissionType.SCHEDULED])
+            bed = f'Leito {random.randint(1, 50)}'
+            
+            # Create admission record
+            admission = PatientAdmission.objects.create(
+                patient=patient,
+                admission_datetime=admission_datetime,
+                admission_type=admission_type,
+                initial_bed=bed,
+                admission_diagnosis=self.get_random_admission_diagnosis(),
+                is_active=True,
+                created_by=creator,
+                updated_by=creator,
+            )
+            
+            # Update patient status and fields
+            patient.status = Patient.Status.INPATIENT
+            patient.current_admission_id = admission.id
+            patient.bed = bed
+            patient.last_admission_date = admission_datetime.date()
+            patient.total_admissions_count = 1
+            patient.save(update_fields=[
+                'status', 'current_admission_id', 'bed', 'last_admission_date', 
+                'total_admissions_count', 'updated_at'
+            ])
         
         # Assign random tags
         if self.allowed_tags:
@@ -223,6 +343,27 @@ class Command(BaseCommand):
                 patient.tags.add(tag)
         
         return patient
+    
+    def get_random_admission_diagnosis(self):
+        """Generate random admission diagnoses."""
+        diagnoses = [
+            "Pneumonia adquirida na comunidade",
+            "Insuficiência cardíaca congestiva",
+            "Diabetes mellitus descompensada",
+            "Hipertensão arterial sistêmica",
+            "Infecção do trato urinário",
+            "Gastroenterite aguda",
+            "Bronquite aguda",
+            "Crise hipertensiva",
+            "Síndrome coronariana aguda",
+            "Acidente vascular cerebral",
+            "Fratura de fêmur",
+            "Apendicite aguda",
+            "Colecistite aguda",
+            "Pancreatite aguda",
+            "Insuficiência renal aguda"
+        ]
+        return random.choice(diagnoses)
 
     def create_daily_notes(self):
         self.stdout.write('Creating daily notes...')
@@ -656,9 +797,13 @@ class Command(BaseCommand):
         
         self.stdout.write('')
         self.stdout.write(f'Created {len(self.patients)} patients (single-hospital configuration)')
+        self.stdout.write(f'Created {PatientRecordNumber.objects.filter(created_by__username__startswith="sample_").count()} patient record numbers')
+        self.stdout.write(f'Created {PatientAdmission.objects.filter(created_by__username__startswith="sample_").count()} patient admissions')
         self.stdout.write(f'Hospital info configured via environment variables')
         self.stdout.write(f'Created {DailyNote.objects.count()} daily notes')
         self.stdout.write(f'Created {len(self.allowed_tags)} sample tags')
+        if hasattr(self, 'wards'):
+            self.stdout.write(f'Created {len(self.wards)} hospital wards')
 
         # Add statistics for new data types
         if hasattr(self, 'drug_templates'):

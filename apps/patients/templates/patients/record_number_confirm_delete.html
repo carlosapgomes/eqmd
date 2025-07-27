@@ -1,0 +1,62 @@
+{% extends "base_app.html" %} {% load hospital_tags %} {% block title %}Excluir
+Número de Prontuário - {% hospital_name %}{% endblock %} {% block app_content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-6 mx-auto">
+      <div class="card">
+        <div class="card-header bg-danger text-white">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-trash"></i>
+            Confirmar Exclusão
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+          </div>
+
+          <p>Tem certeza que deseja excluir o número de prontuário abaixo?</p>
+
+          <div class="card bg-light">
+            <div class="card-body">
+              <h6>Paciente: {{ patient.name }}</h6>
+              <p class="mb-1">
+                <strong>Número:</strong>
+                <span class="badge bg-primary">{{ object.record_number }}</span>
+                {% if object.is_current %}<span class="badge bg-success"
+                  >Atual</span
+                >{% endif %}
+              </p>
+              <p class="mb-1">
+                <strong>Vigente desde:</strong> {{
+                object.effective_date|date:"d/m/Y H:i" }}
+              </p>
+              {% if object.change_reason %}
+              <p class="mb-0">
+                <strong>Motivo:</strong> {{ object.change_reason }}
+              </p>
+              {% endif %}
+            </div>
+          </div>
+
+          <form method="post" class="mt-3">
+            {% csrf_token %}
+            <div class="d-flex justify-content-end gap-2">
+              <a
+                href="{% url 'patients:patient_detail' patient.pk %}"
+                class="btn btn-secondary"
+              >
+                <i class="fas fa-times"></i> Cancelar
+              </a>
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Excluir
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

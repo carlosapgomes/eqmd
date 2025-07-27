@@ -1,0 +1,44 @@
+{% extends "events/partials/event_card_base.html" %}
+{% load hospital_tags %}
+
+{% block event_content %}
+<div class="d-flex justify-content-between align-items-start">
+    <div class="flex-grow-1">
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-muted mb-1">Alta Hospitalar</h6>
+                <p class="mb-1">
+                    <strong>Tipo:</strong> 
+                    <span class="badge bg-info">{{ event.discharge_type }}</span>
+                </p>
+                {% if event.final_bed %}
+                <p class="mb-1">
+                    <strong>Leito:</strong> {{ event.final_bed }}
+                </p>
+                {% endif %}
+                {% if event.stay_duration_days %}
+                <p class="mb-1">
+                    <strong>Duração:</strong> {{ event.stay_duration_days }} dias
+                </p>
+                {% endif %}
+            </div>
+            {% if event.discharge_diagnosis %}
+            <div class="col-md-6">
+                <h6 class="text-muted mb-1">Diagnóstico de Alta</h6>
+                <p class="mb-0 text-muted">{{ event.discharge_diagnosis|truncatewords:20 }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block event_actions %}
+{% if perms.patients.change_patientadmission %}
+    <a href="{% url 'patients:admission_update' event.admission.pk %}" 
+       class="btn btn-outline-secondary btn-sm" title="Editar">
+        <i class="fas fa-edit"></i>
+    </a>
+{% endif %}
+{{ block.super }}
+{% endblock %}

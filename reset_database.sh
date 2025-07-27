@@ -267,10 +267,10 @@ initialize_data() {
 
   if [[ "$DRY_RUN" == true ]]; then
     print_status "[DRY RUN] Would set up permission groups..."
+    print_status "[DRY RUN] Would create sample wards..."
     print_status "[DRY RUN] Would create sample tags..."
     print_status "[DRY RUN] Would populate comprehensive sample data..."
     print_status "[DRY RUN] This includes: hospital, medical staff, patients, daily notes, drug templates, prescription templates, and outpatient prescriptions"
-    print_status "[DRY RUN] Would assign users to hospitals..."
     print_success "[DRY RUN] Application data would be initialized successfully"
     return 0
   fi
@@ -280,6 +280,14 @@ initialize_data() {
     print_success "Permission groups created successfully"
   else
     print_error "Failed to create permission groups"
+    exit 1
+  fi
+
+  print_status "Creating sample wards..."
+  if uv run python manage.py create_sample_wards; then
+    print_success "Sample wards created successfully"
+  else
+    print_error "Failed to create sample wards"
     exit 1
   fi
 
@@ -300,13 +308,13 @@ initialize_data() {
     exit 1
   fi
 
-  print_status "Assigning users to hospitals..."
-  if uv run python manage.py assign_users_to_hospitals --action=assign_all; then
-    print_success "Users assigned to hospitals successfully"
-  else
-    print_error "Failed to assign users to hospitals"
-    exit 1
-  fi
+  # print_status "Assigning users to hospitals..."
+  # if uv run python manage.py assign_users_to_hospitals --action=assign_all; then
+  #   print_success "Users assigned to hospitals successfully"
+  # else
+  #   print_error "Failed to assign users to hospitals"
+  #   exit 1
+  # fi
 }
 
 # Function to display completion message
@@ -336,6 +344,7 @@ display_completion() {
   echo ""
   print_status "Available sample data:"
   echo "  • Multiple hospitals with wards"
+  echo "  • Hospital wards (UTI, PS, CM, CC, PED, MAT)"
   echo "  • Medical staff with different profession types"
   echo "  • Patients with various admission statuses"
   echo "  • Daily notes and medical events"

@@ -1,0 +1,97 @@
+{% load patients_tags %}
+
+<!-- Patient Record Tracking Sidebar Widget -->
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h6 class="mb-0">
+            <i class="fas fa-chart-line"></i>
+            Acompanhamento
+        </h6>
+    </div>
+    <div class="card-body p-2">
+        <ul class="list-unstyled mb-0">
+            <li class="mb-2">
+                <small class="text-muted">Prontuário:</small>
+                <br>
+                {% if patient.current_record_number %}
+                    <strong class="text-primary">{{ patient.current_record_number.record_number }}</strong>
+                {% else %}
+                    <span class="text-muted">Não definido</span>
+                {% endif %}
+            </li>
+            <li class="mb-2">
+                <small class="text-muted">Status:</small>
+                <br>
+                <span class="badge {% patient_status_badge_color patient.status %}">{{ patient.get_status_display }}</span>
+            </li>
+            <li class="mb-2">
+                <small class="text-muted">Internação:</small>
+                <br>
+                {% if patient.is_currently_admitted %}
+                    <span class="text-success">Sim - {{ patient.current_admission.current_bed|default:patient.current_admission.initial_bed }}</span>
+                {% else %}
+                    <span class="text-muted">Não</span>
+                {% endif %}
+            </li>
+            <li class="mb-2">
+                <small class="text-muted">Total Admissões:</small>
+                <br>
+                <strong>{{ patient.admissions.count }}</strong>
+            </li>
+        </ul
+    </div
+</div>
+
+<!-- Recent Admissions Widget -->
+{% if patient.admissions.exists %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h6 class="mb-0">
+            <i class="fas fa-clock"></i>
+            Últimas Admissões
+        </h6>
+    </div>
+    <div class="card-body p-2"
+        <div class="timeline">
+            {% for admission in patient.admissions.all|slice:":3" %}
+            <div class="timeline-item">
+                <div class="timeline-marker {% if not admission.discharge_datetime %}bg-success{% else %}bg-secondary{% endif %}"></div>
+                <div class="timeline-content">
+                    <small class="text-muted">{{ admission.admission_datetime|date:"d/m/Y" }}</small>
+                    <br>
+                    <strong class="d-block">{{ admission.get_admission_type_display }}</strong>
+                    {% if admission.initial_bed %}
+                        <small class="text-muted">Leito: {{ admission.initial_bed }}</small>
+                    {% endif %}
+                    {% if not admission.discharge_datetime %}
+                        <span class="badge bg-success">Atual</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Record Number History Widget -->
+{% if patient.record_numbers.count > 1 %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h6 class="mb-0">
+            <i class="fas fa-history"></i>
+            Histórico de Prontuários
+        </h6>
+    </div>
+    <div class="card-body p-2">
+        <ul class="list-unstyled mb-0">
+            {% for record in patient.record_numbers.all|slice:":3" %}
+            <li class="mb-2">
+                <code class="d-block">{{ record.record_number }}</code>
+                <small class="text-muted">{{ record.effective_date|date:"d/m/Y" }}</small>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}

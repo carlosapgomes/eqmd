@@ -8,6 +8,8 @@ from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import Mock
 
+from apps.patients.models import Patient
+
 from apps.core.permissions.utils import (
     can_access_patient,
     can_edit_event,
@@ -204,3 +206,52 @@ class SimplifiedPermissionUtilsTestCase(TestCase):
             
         for user in [self.nurse, self.physiotherapist, self.student]:
             self.assertFalse(can_change_patient_personal_data(user, self.inpatient))
+
+    def test_deceased_patient_permission_rules(self):
+        """Test permission rules specific to deceased patients"""
+        from apps.core.permissions.constants import DECEASED
+        
+        # Create a deceased patient
+        deceased_patient = Patient.objects.create(
+            name="Deceased Patient",
+            birthday="1950-01-01",
+            status=DECEASED,
+            created_by=self.doctor,
+            updated_by=self.doctor
+        )
+        
+        # All users can still access deceased patients
+        for user in [self.doctor, self.resident, self.nurse, self.physiotherapist, self.student]:
+            self.assertTrue(can_access_patient(user, deceased_patient))
+        
+        # Only doctors/residents can declare death (change TO deceased)
+        for user in [self.doctor, self.resident]:
+            self.assertTrue(can_change_patient_status(user, self.inpatient, DECEASED))
+        
+        for user in [self.nurse, self.physiotherapist, self.student]:
+            self.assertFalse(can_change_patient_status(user, self.inpatient, DECEASED))
+        
+        # Only admin/superuser can change status FROM deceased
+        for user in [self.doctor, self.resident, self.nurse, self.physiotherapist, self.student]:
+            self.assertFalse(can_change_patient_status(user, deceased_patient, 1))  # Any other status
+        
+        # Create admin user to test admin-only changes
+        admin_user = get_user_model().objects.create_user(
+            username="admin", 
+            email="admin@test.com",
+            profession_type=0,  # Doctor
+            is_staff=True
+        )
+        
+        # Admin can change deceased patient status
+        self.assertTrue(can_change_patient_status(admin_user, deceased_patient, 1))
+        
+        # Superuser can change deceased patient status
+        super_user = get_user_model().objects.create_user(
+            username="super", 
+            email="super@test.com",
+            profession_type=0,  # Doctor
+            is_superuser=True
+        )
+        
+        self.assertTrue(can_change_patient_status(super_user, deceased_patient, 1))

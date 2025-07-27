@@ -9,8 +9,8 @@
       <h1 class="h3 text-medical-dark-gray">
         <i class="bi bi-person-lines-fill me-2 text-medical-primary"></i>
         Pacientes
-        {% if patient_list %}
-          <span class="badge bg-medical-teal ms-2">{{ patient_list|length }}</span>
+        {% if patients %}
+          <span class="badge bg-medical-teal ms-2">{{ patients|length }}</span>
         {% endif %}
       </h1>
       <a href="{% url 'apps.patients:patient_create' %}" class="btn btn-medical-primary">
@@ -89,7 +89,8 @@
       </div>
     </div>
     
-    {% if patient_list %}
+    
+    {% if patients %}
       <div class="card shadow-sm">
         <div class="card-body">
           <div class="table-responsive">
@@ -99,12 +100,13 @@
                   <th>Nome</th>
                   <th>Data de Nascimento</th>
                   <th>Status</th>
+                  <th>Ala</th>
                   <th>Tags</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {% for patient in patient_list %}
+                {% for patient in patients %}
                 <tr>
                   <td>
                     <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}" class="text-decoration-none">
@@ -114,6 +116,14 @@
                   <td>{{ patient.birthday|date:"d/m/Y" }}</td>
                   <td>
                     {{ patient.status|patient_status_badge }}
+                  </td>
+                  <td>
+                    {% if patient.ward %}
+                      <span class="badge bg-secondary">{{ patient.ward.abbreviation }}</span>
+                      <small class="text-muted">{{ patient.ward.name }}</small>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
                   </td>
                   <td>
                     {% for tag in patient.tags.all %}

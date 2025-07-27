@@ -17,6 +17,7 @@ def patient_status_badge(status):
         Patient.Status.EMERGENCY: 'bg-danger',        # 3 - Emergência
         Patient.Status.DISCHARGED: 'bg-secondary',    # 4 - Alta
         Patient.Status.TRANSFERRED: 'bg-warning',     # 5 - Transferido
+        Patient.Status.DECEASED: 'bg-dark',           # 6 - Óbito
     }
 
     status_labels = dict(Patient.Status.choices)
@@ -33,3 +34,56 @@ def patient_tags(patient):
     Usage: {% patient_tags patient %}
     """
     return {'tags': patient.tags.all()}
+
+
+@register.filter
+def can_change_status(user, patient):
+    """Check if user can change patient status"""
+    from apps.core.permissions.utils import can_change_patient_status
+    return can_change_patient_status(user, patient, None)
+
+
+@register.simple_tag
+def available_status_actions(user, patient):
+    """Get list of available status change actions for user/patient"""
+    from apps.core.permissions.utils import can_change_patient_status
+    
+    actions = []
+    current_status = patient.status
+    
+    # Define possible transitions with their display information
+    possible_transitions = [
+        (Patient.Status.INPATIENT, 'Internar', 'hospital', 'btn-success'),
+        (Patient.Status.EMERGENCY, 'Emergência', 'exclamation-triangle', 'btn-danger'),
+        (Patient.Status.DISCHARGED, 'Dar Alta', 'door-open', 'btn-info'),
+        (Patient.Status.TRANSFERRED, 'Transferir', 'arrow-left-right', 'btn-primary'),
+        (Patient.Status.OUTPATIENT, 'Ambulatorial', 'person-check', 'btn-secondary'),
+        (Patient.Status.DECEASED, 'Declarar Óbito', 'heart-pulse', 'btn-dark'),
+    ]
+    
+    # Check each possible status change
+    for status_value, action_label, icon, btn_class in possible_transitions:
+        if status_value != current_status:
+            if can_change_patient_status(user, patient, status_value):
+                actions.append({
+                    'status': status_value,
+                    'label': action_label,
+                    'icon': icon,
+                    'btn_class': btn_class,
+                    'action_name': _get_action_name(current_status, status_value)
+                })
+    
+    return actions
+
+
+def _get_action_name(current_status, target_status):
+    """Generate action name for status transition"""
+    action_names = {
+        Patient.Status.INPATIENT: 'admit_patient',
+        Patient.Status.EMERGENCY: 'emergency_admission',
+        Patient.Status.DISCHARGED: 'discharge_patient',
+        Patient.Status.TRANSFERRED: 'transfer_patient',
+        Patient.Status.OUTPATIENT: 'set_outpatient',
+        Patient.Status.DECEASED: 'declare_death',
+    }
+    return action_names.get(target_status, 'change_status')

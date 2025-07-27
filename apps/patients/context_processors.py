@@ -1,4 +1,4 @@
-from .models import Patient
+from .models import Patient, Ward
 
 def patient_stats(request):
     """
@@ -39,6 +39,30 @@ def recent_patients(request):
         recent_patients = Patient.objects.all().order_by('-created_at')[:5]
         return {
             'recent_patients': recent_patients,
+        }
+    except:
+        # Return empty dict if database isn't set up yet
+        return {}
+
+def ward_stats(request):
+    """Add ward statistics to template context"""
+    if not request.user.is_authenticated:
+        return {}
+    
+    try:
+        wards = Ward.objects.filter(is_active=True)
+        ward_stats = []
+        
+        for ward in wards:
+            ward_stats.append({
+                "ward": ward,
+                "patient_count": ward.get_current_patients_count(),
+                "beds_in_use": len(ward.get_available_beds_list()),
+            })
+        
+        return {
+            "ward_statistics": ward_stats,
+            "total_active_wards": wards.count(),
         }
     except:
         # Return empty dict if database isn't set up yet

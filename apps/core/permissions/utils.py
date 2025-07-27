@@ -17,6 +17,7 @@ from .constants import (
     STUDENT,
     OUTPATIENT,
     DISCHARGED,
+    DECEASED,
     EVENT_EDIT_TIME_LIMIT,
 )
 
@@ -82,9 +83,11 @@ def can_change_patient_status(user: Any, patient: Any, new_status: str) -> bool:
     """
     Check if a user can change a patient's status.
     
-    Simplified Rules:
-    - Doctors/Residents: Can change any patient status (including discharge)
-    - Others: Cannot discharge patients
+    Rules:
+    - If patient is currently deceased: Only admin/superuser can change status
+    - Changing TO deceased: Doctors/Residents can declare death
+    - Discharge: Doctors/Residents only
+    - Other status changes: All authenticated users
     
     Args:
         user: The user requesting the change
@@ -100,18 +103,23 @@ def can_change_patient_status(user: Any, patient: Any, new_status: str) -> bool:
     if not getattr(user, 'is_authenticated', False):
         return False
     
+    # If patient is currently deceased, only admin/superuser can change status
+    current_status = getattr(patient, 'status', None)
+    if current_status == DECEASED:
+        return getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False)
+    
     # Get user profession type
     profession_type = getattr(user, 'profession_type', None)
     
-    # Doctors and residents can change any status including discharge
-    if profession_type in [0, 1]:  # MEDICAL_DOCTOR, RESIDENT
-        return True
+    # Changing TO deceased: Only doctors/residents can declare death
+    if new_status == DECEASED:
+        return profession_type in [0, 1]  # MEDICAL_DOCTOR, RESIDENT
     
-    # Others cannot discharge patients
+    # Discharge: Only doctors/residents
     if new_status == DISCHARGED:
-        return False
+        return profession_type in [0, 1]  # MEDICAL_DOCTOR, RESIDENT
     
-    # All other status changes are allowed for non-doctors
+    # All other status changes are allowed for authenticated users
     return True
 
 

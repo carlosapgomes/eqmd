@@ -894,6 +894,9 @@
                                 Prescription events (event_type=7) get the specialized template with medication summary
                                 PhotoSeries events (event_type=9) get the specialized template with photo series display
                                 VideoClip events (event_type=10) get the specialized template with video player
+                                RecordNumberChange events (event_type=12) get the specialized template with record number display
+                                Admission events (event_type=13) get the specialized template with admission details
+                                Discharge events (event_type=14) get the specialized template with discharge details
                                 All other events use the default template
                                 {% endcomment %}
                                 {% if event.event_type == 0 %}
@@ -910,6 +913,12 @@
                                     {% include "events/partials/event_card_photoseries.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 10 %}
                                     {% include "events/partials/event_card_videoclip.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 12 %}
+                                    {% include "events/partials/event_card_record_change.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 13 %}
+                                    {% include "events/partials/event_card_admission.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 14 %}
+                                    {% include "events/partials/event_card_discharge.html" with event=event event_data=event_data %}
                                 {% else %}
                                     {% include "events/partials/event_card_default.html" with event=event event_data=event_data %}
                                 {% endif %}

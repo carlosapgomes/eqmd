@@ -17,6 +17,14 @@ class Event(models.Model):
     PHOTO_SERIES_EVENT = 9
     VIDEO_CLIP_EVENT = 10
     PDF_FORM_EVENT = 11
+    RECORD_NUMBER_CHANGE_EVENT = 12  # NEW
+    ADMISSION_EVENT = 13             # NEW
+    DISCHARGE_EVENT = 14             # NEW
+    STATUS_CHANGE_EVENT = 15         # NEW
+    EMERGENCY_ADMISSION_EVENT = 16   # NEW
+    TRANSFER_EVENT = 17              # NEW
+    DEATH_DECLARATION_EVENT = 18     # NEW
+    OUTPATIENT_STATUS_EVENT = 19     # NEW
 
     EVENT_TYPE_CHOICES = (
         (HISTORY_AND_PHYSICAL_EVENT, "Anamnese e Exame Físico"),
@@ -31,6 +39,14 @@ class Event(models.Model):
         (PHOTO_SERIES_EVENT, "Série de Fotos"),
         (VIDEO_CLIP_EVENT, "Vídeo Curto"),
         (PDF_FORM_EVENT, "Formulário PDF"),
+        (RECORD_NUMBER_CHANGE_EVENT, "Alteração de Prontuário"),  # NEW
+        (ADMISSION_EVENT, "Admissão Hospitalar"),                 # NEW
+        (DISCHARGE_EVENT, "Alta Hospitalar"),                     # NEW
+        (STATUS_CHANGE_EVENT, "Alteração de Status"),             # NEW
+        (EMERGENCY_ADMISSION_EVENT, "Admissão de Emergência"),    # NEW
+        (TRANSFER_EVENT, "Transferência"),                        # NEW
+        (DEATH_DECLARATION_EVENT, "Declaração de Óbito"),         # NEW
+        (OUTPATIENT_STATUS_EVENT, "Status Ambulatorial"),         # NEW
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -91,6 +107,15 @@ class Event(models.Model):
             8: "bg-medical-teal",  # Report
             9: "bg-info",  # Photo Series
             10: "bg-primary",  # Video Clip
+            11: "bg-secondary",  # PDF Form
+            12: "bg-warning",  # Record Number Change
+            13: "bg-success",  # Admission
+            14: "bg-info",  # Discharge
+            15: "bg-secondary",  # Status Change
+            16: "bg-danger",  # Emergency Admission
+            17: "bg-primary",  # Transfer
+            18: "bg-dark",  # Death Declaration
+            19: "bg-light",  # Outpatient Status
         }
         return badge_classes.get(self.event_type, "bg-secondary")
 
@@ -108,6 +133,15 @@ class Event(models.Model):
             8: "bi-file-text",  # Report
             9: "bi-images",  # Photo Series
             10: "bi-play-circle",  # Video Clip
+            11: "bi-file-pdf",  # PDF Form
+            12: "bi-hash",  # Record Number Change
+            13: "bi-hospital",  # Admission
+            14: "bi-door-open",  # Discharge
+            15: "bi-arrow-repeat",  # Status Change
+            16: "bi-exclamation-triangle",  # Emergency Admission
+            17: "bi-arrow-left-right",  # Transfer
+            18: "bi-heart-pulse",  # Death Declaration
+            19: "bi-person-check",  # Outpatient Status
         }
         return icon_classes.get(self.event_type, "bi-file-text")
 
@@ -125,6 +159,15 @@ class Event(models.Model):
             8: "Relatório",  # Relatório (already short)
             9: "Fotos",  # Série de Fotos
             10: "Vídeo",  # Vídeo Curto
+            11: "PDF",  # Formulário PDF
+            12: "Prontuário",  # Alteração de Prontuário
+            13: "Admissão",  # Admissão Hospitalar
+            14: "Alta",  # Alta Hospitalar
+            15: "Status",  # Alteração de Status
+            16: "Emergência",  # Admissão de Emergência
+            17: "Transferência",  # Transferência
+            18: "Óbito",  # Declaração de Óbito
+            19: "Ambulatorial",  # Status Ambulatorial
         }
         return short_display_map.get(self.event_type, self.get_event_type_display())
 
@@ -185,3 +228,267 @@ class Event(models.Model):
                 name="event_pt_type_dt_idx",
             ),
         ]
+
+
+class RecordNumberChangeEvent(Event):
+    """Event for tracking record number changes in patient timeline"""
+    
+    record_change = models.OneToOneField(
+        'patients.PatientRecordNumber',
+        on_delete=models.CASCADE,
+        related_name='timeline_event',
+        verbose_name="Alteração de Prontuário"
+    )
+    
+    # Denormalized fields for performance and display
+    old_record_number = models.CharField(
+        max_length=50, 
+        blank=True,
+        verbose_name="Número Anterior",
+        help_text="Número de prontuário anterior"
+    )
+    new_record_number = models.CharField(
+        max_length=50,
+        verbose_name="Novo Número",
+        help_text="Novo número de prontuário"
+    )
+    change_reason = models.TextField(
+        blank=True,
+        verbose_name="Motivo da Alteração",
+        help_text="Razão para a mudança do número"
+    )
+    
+    class Meta:
+        verbose_name = "Evento de Alteração de Prontuário"
+        verbose_name_plural = "Eventos de Alteração de Prontuário"
+    
+    def save(self, *args, **kwargs):
+        """Override save to set event_type and sync with record_change"""
+        self.event_type = self.RECORD_NUMBER_CHANGE_EVENT
+        
+        # Sync data from related PatientRecordNumber if available
+        if self.record_change_id:
+            record = self.record_change
+            self.new_record_number = record.record_number
+            self.old_record_number = record.previous_record_number
+            self.change_reason = record.change_reason
+            self.patient = record.patient
+            self.event_datetime = record.effective_date
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        if self.old_record_number:
+            return f"Alteração de prontuário: {self.old_record_number} → {self.new_record_number}"
+        return f"Novo prontuário: {self.new_record_number}"
+    
+    def get_absolute_url(self):
+        """Return URL to view record number change details"""
+        from django.urls import reverse
+        return reverse('patients:api_patient_record_numbers', kwargs={'patient_id': self.patient.pk})
+    
+    def get_edit_url(self):
+        """Return URL to edit record number change"""
+        from django.urls import reverse
+        return reverse('patients:record_number_update', kwargs={'pk': self.record_change.pk})
+
+
+class AdmissionEvent(Event):
+    """Event for tracking patient admissions in timeline"""
+    
+    admission = models.OneToOneField(
+        'patients.PatientAdmission',
+        on_delete=models.CASCADE,
+        related_name='timeline_event',
+        verbose_name="Internação"
+    )
+    
+    # Denormalized fields for performance and display
+    admission_type = models.CharField(
+        max_length=20,
+        verbose_name="Tipo de Admissão",
+        help_text="Tipo da admissão hospitalar"
+    )
+    initial_bed = models.CharField(
+        max_length=20, 
+        blank=True,
+        verbose_name="Leito Inicial",
+        help_text="Leito/quarto inicial"
+    )
+    admission_diagnosis = models.TextField(
+        blank=True,
+        verbose_name="Diagnóstico de Admissão",
+        help_text="Diagnóstico principal na admissão"
+    )
+    
+    class Meta:
+        verbose_name = "Evento de Admissão"
+        verbose_name_plural = "Eventos de Admissão"
+    
+    def save(self, *args, **kwargs):
+        """Override save to set event_type and sync with admission"""
+        self.event_type = self.ADMISSION_EVENT
+        
+        # Sync data from related PatientAdmission if available
+        if self.admission_id:
+            admission = self.admission
+            self.admission_type = admission.get_admission_type_display()
+            self.initial_bed = admission.initial_bed
+            self.admission_diagnosis = admission.admission_diagnosis
+            self.patient = admission.patient
+            self.event_datetime = admission.admission_datetime
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Admissão - {self.admission_type}"
+    
+    def get_absolute_url(self):
+        """Return URL to view admission details"""
+        from django.urls import reverse
+        return reverse('patients:api_admission_detail', kwargs={'admission_id': self.admission.pk})
+    
+    def get_edit_url(self):
+        """Return URL to edit admission"""
+        from django.urls import reverse
+        return reverse('patients:admission_update', kwargs={'pk': self.admission.pk})
+
+
+class DischargeEvent(Event):
+    """Event for tracking patient discharges in timeline"""
+    
+    admission = models.OneToOneField(
+        'patients.PatientAdmission',
+        on_delete=models.CASCADE,
+        related_name='discharge_timeline_event',
+        verbose_name="Internação"
+    )
+    
+    # Denormalized fields for performance and display
+    discharge_type = models.CharField(
+        max_length=20,
+        verbose_name="Tipo de Alta",
+        help_text="Tipo da alta hospitalar"
+    )
+    final_bed = models.CharField(
+        max_length=20, 
+        blank=True,
+        verbose_name="Leito Final",
+        help_text="Último leito/quarto"
+    )
+    discharge_diagnosis = models.TextField(
+        blank=True,
+        verbose_name="Diagnóstico de Alta",
+        help_text="Diagnóstico principal na alta"
+    )
+    stay_duration_days = models.IntegerField(
+        null=True, 
+        blank=True,
+        verbose_name="Duração da Internação (dias)",
+        help_text="Duração total em dias"
+    )
+    
+    class Meta:
+        verbose_name = "Evento de Alta"
+        verbose_name_plural = "Eventos de Alta"
+    
+    def save(self, *args, **kwargs):
+        """Override save to set event_type and sync with admission"""
+        self.event_type = self.DISCHARGE_EVENT
+        
+        # Sync data from related PatientAdmission if available
+        if self.admission_id:
+            admission = self.admission
+            self.discharge_type = admission.get_discharge_type_display()
+            self.final_bed = admission.final_bed
+            self.discharge_diagnosis = admission.discharge_diagnosis
+            self.stay_duration_days = admission.stay_duration_days
+            self.patient = admission.patient
+            self.event_datetime = admission.discharge_datetime
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        duration_text = f" ({self.stay_duration_days}d)" if self.stay_duration_days else ""
+        return f"Alta - {self.discharge_type}{duration_text}"
+    
+    def get_absolute_url(self):
+        """Return URL to view discharge details"""
+        from django.urls import reverse
+        return reverse('patients:api_admission_detail', kwargs={'admission_id': self.admission.pk})
+    
+    def get_edit_url(self):
+        """Return URL to edit discharge"""
+        from django.urls import reverse
+        return reverse('patients:discharge_patient', kwargs={'pk': self.admission.pk})
+
+
+class StatusChangeEvent(Event):
+    """Event for tracking patient status changes in timeline"""
+    
+    previous_status = models.PositiveSmallIntegerField(
+        choices=None,  # Will be set in __init__
+        verbose_name="Status Anterior"
+    )
+    new_status = models.PositiveSmallIntegerField(
+        choices=None,  # Will be set in __init__
+        verbose_name="Novo Status"
+    )
+    reason = models.TextField(
+        blank=True,
+        verbose_name="Motivo da Alteração"
+    )
+    
+    # Optional fields for specific status changes
+    ward = models.ForeignKey(
+        'patients.Ward',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name="Ala"
+    )
+    bed = models.CharField(
+        max_length=20, blank=True,
+        verbose_name="Leito"
+    )
+    discharge_reason = models.TextField(
+        blank=True,
+        verbose_name="Motivo da Alta"
+    )
+    death_time = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Hora do Óbito"
+    )
+    
+    class Meta:
+        verbose_name = "Evento de Alteração de Status"
+        verbose_name_plural = "Eventos de Alteração de Status"
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Import here to avoid circular import
+        from apps.patients.models import Patient
+        # Set choices dynamically to avoid circular import
+        self._meta.get_field('previous_status').choices = Patient.Status.choices
+        self._meta.get_field('new_status').choices = Patient.Status.choices
+    
+    def save(self, *args, **kwargs):
+        """Override save to set event_type"""
+        self.event_type = self.STATUS_CHANGE_EVENT
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        from apps.patients.models import Patient
+        status_dict = dict(Patient.Status.choices)
+        prev_label = status_dict.get(self.previous_status, "Desconhecido")
+        new_label = status_dict.get(self.new_status, "Desconhecido")
+        return f"Status: {prev_label} → {new_label}"
+    
+    def get_absolute_url(self):
+        """Return URL to view status change details"""
+        from django.urls import reverse
+        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+    
+    def get_edit_url(self):
+        """Return URL to edit status change"""
+        from django.urls import reverse
+        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})

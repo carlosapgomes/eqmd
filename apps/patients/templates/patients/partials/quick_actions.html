@@ -1,0 +1,156 @@
+{% load patients_tags %}
+
+<!-- Quick Actions Widget -->
+<div class="card mb-3">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+            <i class="fas fa-bolt"></i>
+            Ações Rápidas
+        </h6>
+    </div>
+    <div class="card-body p-2">
+        <div class="row g-2">
+            <!-- Record Number Actions -->
+            <div class="col-6 col-md-3">
+                {% if perms.patients.change_patient %}
+                <a href="{% url 'patients:record_number_create' patient.uuid %}" 
+                   class="btn btn-sm btn-outline-primary w-100"
+                   title="Adicionar/Alterar Número do Prontuário">
+                    <i class="fas fa-id-card"></i>
+                    <br>
+                    <small>Prontuário</small>
+                </a>
+                {% endif %}
+            </div>
+            
+            <!-- Admission Actions -->
+            <div class="col-6 col-md-3">
+                {% if not patient.is_currently_admitted and perms.patients.add_patient %}
+                <a href="{% url 'patients:admit' patient.uuid %}" 
+                   class="btn btn-sm btn-outline-success w-100"
+                   title="Internar Paciente">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <br>
+                    <small>Internar</small>
+                </a>
+                {% elif patient.is_currently_admitted and perms.patients.change_patient %}
+                <a href="{% url 'patients:discharge' patient.current_admission.uuid %}" 
+                   class="btn btn-sm btn-outline-danger w-100"
+                   title="Dar Alta ao Paciente">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <br>
+                    <small>Alta</small>
+                </a>
+                {% endif %}
+            </div>
+            
+            <!-- Bed Update Actions -->
+            <div class="col-6 col-md-3">
+                {% if patient.is_currently_admitted and perms.patients.change_patient %}
+                <button type="button" 
+                        class="btn btn-sm btn-outline-warning w-100"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#updateBedModal"
+                        title="Atualizar Leito">
+                    <i class="fas fa-bed"></i>
+                    <br>
+                    <small>Leito</small>
+                </button>
+                {% else %}
+                <button type="button" 
+                        class="btn btn-sm btn-outline-secondary w-100 disabled"
+                        title="Leito indisponível">
+                    <i class="fas fa-bed"></i>
+                    <br>
+                    <small>Leito</small>
+                </button>
+                {% endif %}
+            </div>
+            
+            <!-- Patient Status Actions -->
+            <div class="col-6 col-md-3">
+                <a href="{% url 'patients:update' patient.uuid %}" 
+                   class="btn btn-sm btn-outline-info w-100"
+                   title="Editar Dados do Paciente">
+                    <i class="fas fa-user-edit"></i>
+                    <br>
+                    <small>Editar</small>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Bed Modal -->
+{% if patient.is_currently_admitted and perms.patients.change_patient %}
+<div class="modal fade" id="updateBedModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'patients:update_bed' patient.uuid %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Atualizar Leito</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="bed" class="form-label">Novo Leito</label>
+                        <input type="text" class="form-control" name="bed" required
+                               value="{{ patient.current_admission.current_bed|default:patient.current_admission.initial_bed }}"
+                               placeholder="Ex: A101, UTI-02, etc." maxlength="20">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Atualizar Leito</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Patient Status Dashboard Widget -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-id-card fa-2x text-primary mb-2"></i>
+                <h6 class="card-title">Prontuário</h6>
+                {% if patient.current_record_number %}
+                    <p class="card-text">
+                        <code>{{ patient.current_record_number.record_number }}</code>
+                    </p>
+                {% else %}
+                    <p class="card-text text-muted">Não definido</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if patient.is_currently_admitted %}
+                    <i class="fas fa-bed fa-2x text-success mb-2"></i>
+                    <h6 class="card-title">Internado</h6>
+                    <p class="card-text">{{ patient.current_admission.current_bed|default:patient.current_admission.initial_bed }}</p>
+                {% else %}
+                    <i class="fas fa-home fa-2x text-warning mb-2"></i>
+                    <h6 class="card-title">{{ patient.get_status_display }}</h6>
+                    <p class="card-text">Não internado</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-calendar-alt fa-2x text-info mb-2"></i>
+                <h6 class="card-title">Admissões</h6>
+                <p class="card-text">{{ patient.admissions.count }} total</p>
+            </div>
+        </div>
+    </div>
+</div>

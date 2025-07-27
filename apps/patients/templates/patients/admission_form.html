@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        Editar Admissão - {{ patient.name }}
+    {% else %}
+        Internar Paciente - {{ patient.name }}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'patients:index' %}">Pacientes</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'patients:detail' patient.uuid %}">{{ patient.name }}</a></li>
+            <li class="breadcrumb-item active">Internação</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-hospital-user"></i>
+                        {% if form.instance.pk %}
+                            Editar Admissão
+                        {% else %}
+                            Internar Paciente
+                        {% endif %}
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Paciente:</strong> {{ patient.name }}
+                        <br>
+                        <strong>Status:</strong> <span class="badge {% patient_status_badge_color patient.status %}">{{ patient.get_status_display }}</span>
+                    </div>
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.admission_datetime.id_for_label }}" class="form-label">{{ form.admission_datetime.label }}</label>
+                                    {{ form.admission_datetime }}
+                                    {% if form.admission_datetime.errors %}
+                                        <div class="text-danger small">{{ form.admission_datetime.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.admission_type.id_for_label }}" class="form-label">{{ form.admission_type.label }}</label>
+                                    {{ form.admission_type }}
+                                    {% if form.admission_type.errors %}
+                                        <div class="text-danger small">{{ form.admission_type.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.initial_bed.id_for_label }}" class="form-label">{{ form.initial_bed.label }}</label>
+                                    {{ form.initial_bed }}
+                                    {% if form.initial_bed.errors %}
+                                        <div class="text-danger small">{{ form.initial_bed.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.admission_diagnosis.id_for_label }}" class="form-label">{{ form.admission_diagnosis.label }}</label>
+                            {{ form.admission_diagnosis }}
+                            {% if form.admission_diagnosis.errors %}
+                                <div class="text-danger small">{{ form.admission_diagnosis.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'patients:detail' patient.uuid %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i>
+                                Voltar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-sign-in-alt"></i>
+                                {% if form.instance.pk %}
+                                    Atualizar Admissão
+                                {% else %}
+                                    Internar Paciente
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-resize textarea
+    const textarea = document.querySelector('textarea[name="admission_diagnosis"]');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    }
+    
+    // Validate admission datetime
+    const datetimeInput = document.querySelector('input[name="admission_datetime"]');
+    if (datetimeInput) {
+        const now = new Date().toISOString().slice(0, 16);
+        datetimeInput.setAttribute('max', now);
+    }
+});
+</script>
+{% endblock %}

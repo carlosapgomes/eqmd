@@ -24,6 +24,10 @@
         </h1>
       </div>
       <div class="btn-group" role="group">
+        <a href="{% url 'apps.patients:patient_events_timeline' patient.pk %}" class="btn btn-outline-success">
+          <i class="bi bi-clock-history me-2"></i>
+          Timeline
+        </a>
         <a href="{% url 'apps.patients:patient_update' patient.pk %}" class="btn btn-medical-outline-primary">
           <i class="bi bi-pencil me-2"></i>
           Editar
@@ -135,6 +139,21 @@
                 </p>
               </div>
               <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Ala</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  {% if patient.ward %}
+                    <i class="bi bi-diagram-3 me-2"></i>
+                    <span class="badge bg-secondary me-1">{{ patient.ward.abbreviation }}</span>
+                    {{ patient.ward.name }}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
                 <label class="form-label text-medical-gray">Leito</label>
                 <p class="form-control-plaintext text-medical-dark-gray">
                   {% if patient.bed %}
@@ -143,6 +162,14 @@
                     <span class="text-muted">-</span>
                   {% endif %}
                 </p>
+              </div>
+              <div class="col-md-6 mb-3">
+                {% if patient.ward and patient.ward.floor %}
+                  <label class="form-label text-medical-gray">Andar</label>
+                  <p class="form-control-plaintext text-medical-dark-gray">
+                    <i class="bi bi-building me-2"></i>{{ patient.ward.floor }}
+                  </p>
+                {% endif %}
               </div>
             </div>
 
@@ -176,75 +203,13 @@
       </div>
     </div>
 
+    <!-- Record Tracking Sections -->
+    {% include 'patients/partials/record_number_section.html' %}
+    {% include 'patients/partials/admission_section.html' %}
+
+
     <!-- Related Data Sections -->
     <div class="row">
-      <!-- Hospital Records Section -->
-      <div class="col-lg-8 mb-4">
-        <div class="card card-medical">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">
-              <i class="bi bi-file-medical me-2 text-medical-primary"></i>
-              Registros Hospitalares
-            </h5>
-            <a href="{% url 'apps.patients:hospital_record_create' patient_id=patient.pk %}" class="btn btn-medical-outline-primary btn-sm">
-              <i class="bi bi-plus me-2"></i>
-              Adicionar Registro
-            </a>
-          </div>
-          <div class="card-body">
-            {% if patient.hospital_records.all %}
-            <div class="table-responsive">
-              <table class="table table-hover">
-                <thead class="table-light">
-                  <tr>
-                    <th>Hospital</th>
-                    <th>Número do Prontuário</th>
-                    <th>Primeira Internação</th>
-                    <th>Última Internação</th>
-                    <th>Última Alta</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for record in patient.hospital_records.all %}
-                  <tr>
-                    <td>{{ record.hospital.short_name }}</td>
-                    <td>{{ record.record_number }}</td>
-                    <td>{{ record.first_admission_date|date:"d/m/Y"|default:"-" }}</td>
-                    <td>{{ record.last_admission_date|date:"d/m/Y"|default:"-" }}</td>
-                    <td>{{ record.last_discharge_date|date:"d/m/Y"|default:"-" }}</td>
-                    <td>
-                      <div class="btn-group btn-group-sm" role="group">
-                        <a href="{% url 'apps.patients:hospital_record_update' record.pk %}" class="btn btn-outline-secondary" title="Editar">
-                          <i class="bi bi-pencil"></i>
-                        </a>
-                        <a href="{% url 'apps.patients:hospital_record_delete' record.pk %}" class="btn btn-outline-danger" title="Excluir">
-                          <i class="bi bi-trash"></i>
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-            {% else %}
-            <div class="text-center py-4">
-              <i class="bi bi-file-medical display-4 text-muted mb-3"></i>
-              <h6 class="text-medical-dark-gray">Nenhum Registro Hospitalar</h6>
-              <p class="text-medical-gray mb-3">
-                Este paciente ainda não possui registros hospitalares cadastrados.
-              </p>
-              <a href="{% url 'apps.patients:hospital_record_create' patient_id=patient.pk %}" class="btn btn-medical-primary">
-                <i class="bi bi-plus me-2"></i>
-                Adicionar Primeiro Registro
-              </a>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
       <!-- Metadata Card -->
       <div class="col-lg-4 mb-4">
         <div class="card card-medical">
@@ -302,68 +267,7 @@
       </div>
     </div>
 
-    <!-- Quick Actions & Recent Events -->
-    <div class="row">
-      <div class="col-md-6">
-        <div class="card card-medical">
-          <div class="card-header bg-medical-teal text-white d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">
-              <i class="bi bi-lightning-charge me-2"></i>
-              Ações Rápidas
-            </h5>
-            <a href="{% url 'patients:patient_events_timeline' patient.pk %}" 
-               class="btn btn-sm btn-outline-light">
-              <i class="bi bi-clock-history me-1"></i>
-              Timeline Completa
-            </a>
-          </div>
-          <div class="card-body">
-            <!-- Quick Action Buttons -->
-            <div class="row g-2 mb-3">
-              <div class="col-6">
-                <a href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}" 
-                   class="btn btn-medical-success btn-sm w-100">
-                  <i class="bi bi-journal-text d-block fs-4 mb-1"></i>
-                  <small>Nova Evolução</small>
-                </a>
-              </div>
-              <div class="col-6">
-                <a href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}" 
-                   class="btn btn-medical-warning btn-sm w-100">
-                  <i class="bi bi-clipboard2-data d-block fs-4 mb-1"></i>
-                  <small>Novo Exame</small>
-                </a>
-              </div>
-              <div class="col-6">
-                <a href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}" 
-                   class="btn btn-medical-info btn-sm w-100">
-                  <i class="bi bi-camera d-block fs-4 mb-1"></i>
-                  <small>Adicionar Foto</small>
-                </a>
-              </div>
-              <div class="col-6">
-                <a href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}" 
-                   class="btn btn-medical-danger btn-sm w-100">
-                  <i class="bi bi-scissors d-block fs-4 mb-1"></i>
-                  <small>Procedimento</small>
-                </a>
-              </div>
-            </div>
-
-            <!-- Recent Events Widget -->
-            <div class="border-top pt-3">
-              <h6 class="text-medical-primary mb-2">
-                <i class="bi bi-clock me-1"></i>
-                Eventos Recentes
-              </h6>
-              <div id="recent-events-widget">
-                {% include 'events/widgets/recent_events.html' with patient=patient limit=3 %}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
+
 {% endblock %}

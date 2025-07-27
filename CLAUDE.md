@@ -30,6 +30,7 @@ uv add package-name
 
 # Sample data
 uv run python manage.py create_sample_tags
+uv run python manage.py create_sample_wards
 uv run python manage.py create_sample_content
 uv run python manage.py create_sample_pdf_forms
 ```
@@ -66,7 +67,7 @@ uv run python manage.py create_sample_pdf_forms
 
 - Patient models: Patient, AllowedTag, Tag
 - Search by name, ID, fiscal/health card numbers
-- Status tracking: inpatient, outpatient, emergency, discharged, transferred
+- Status tracking: inpatient, outpatient, emergency, discharged, transferred, deceased
 - Color-coded tagging system with web admin interface
 - Dashboard widgets: patient stats, recent patients
 - Template tags: `patient_status_badge`, `patient_tags`
@@ -74,8 +75,10 @@ uv run python manage.py create_sample_pdf_forms
 
 #### Patient Status Management
 
-- **Status Types**: inpatient, outpatient, emergency, discharged, transferred
+- **Status Types**: inpatient, outpatient, emergency, discharged, transferred, deceased
 - **Role-Based Access**: Different access levels based on user profession and patient status
+- **Death Declaration**: Only doctors/residents can declare death (change to deceased status)
+- **Admin Override**: Only admin/superuser can change deceased patients (for data corrections)
 - **Simple Validation**: Basic status validation without complex assignment logic
 - **Universal Access**: All medical staff can access all patients regardless of status
 
@@ -721,40 +724,44 @@ Located in `apps/core/permissions/`:
 
 **Doctors:**
 - Full access to all patients regardless of status
-- Can discharge patients
+- Can discharge patients and declare death
 - Can edit patient personal data
 - Can create and edit all types of events
 
 **Residents:**
 - Full access to all patients
-- Can discharge patients
+- Can discharge patients and declare death
 - Can edit patient personal data
 - Can create and edit all types of events
 
 **Nurses:**
 - Access to all patients
-- Limited status changes (cannot discharge)
+- Limited status changes (cannot discharge or declare death)
 - Cannot edit patient personal data
 - Can create daily notes and basic events
 
 **Physiotherapists:**
 - Full access to all patients
-- Cannot discharge patients
+- Cannot discharge patients or declare death
 - Cannot edit patient personal data
 - Can create and edit all types of events
 
 **Students:**
 - Full access to all patients
 - Cannot edit patient personal data
-- Cannot discharge patients
+- Cannot discharge patients or declare death
 - Can create basic events and daily notes
+
+**Admin/Superuser Special Rules:**
+- Can change status of deceased patients (for data corrections)
+- Full override of all permission restrictions
 
 ### Key Functions
 
 ```python
 can_access_patient(user, patient)           # Always True (all roles can access all patients)
 can_edit_event(user, event)                 # Time-limited editing (24h)
-can_change_patient_status(user, patient, status)  # Doctors/residents only for discharge
+can_change_patient_status(user, patient, status)  # Doctors/residents only for discharge/death; admin override for deceased
 can_change_patient_personal_data(user, patient)   # Doctors/residents only
 get_user_accessible_patients(user)          # Returns all patients for all roles
 ```

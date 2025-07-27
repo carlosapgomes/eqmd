@@ -72,9 +72,9 @@ Parameters expected:
             {% block event_metadata %}
             <small class="text-muted">
                 <i class="bi bi-person me-1" aria-hidden="true"></i>
-                <span aria-label="Criado por">{{ event.created_by.get_full_name }}</span>
+                <span aria-label="Criado por">{{ event.updated_by.get_full_name }}</span>
                 {% if event.created_by.profession %}
-                    <span aria-label="Profissão">({{ event.created_by.profession }})</span>
+                    <span aria-label="Profissão">({{ event.updated_by.profession }})</span>
                 {% endif %}
             </small>
             {% if event.updated_at != event.created_at %}

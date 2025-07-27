@@ -1,0 +1,8 @@
+{% if ward %}
+<span class="badge bg-secondary me-1" title="{{ ward.name }}">
+  {{ ward.abbreviation }}
+</span>
+<span class="text-muted">{{ ward.name }}</span>
+{% else %}
+<span class="text-muted">-</span>
+{% endif %}

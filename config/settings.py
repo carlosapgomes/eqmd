@@ -124,6 +124,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.patients.context_processors.patient_stats",
                 "apps.patients.context_processors.recent_patients",
+                "apps.patients.context_processors.ward_stats",
             ],
         },
     },
