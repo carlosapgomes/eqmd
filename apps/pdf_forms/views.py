@@ -39,6 +39,10 @@ class PDFFormTemplateListView(LoginRequiredMixin, ListView):
         return PDFFormTemplate.objects.filter(
             is_active=True,
             hospital_specific=True  # Only hospital-specific forms
+        ).exclude(
+            form_fields__isnull=True  # Exclude templates without any configuration
+        ).exclude(
+            form_fields__exact={}  # Exclude templates with empty configuration
         ).order_by('name')
 
 
@@ -53,10 +57,14 @@ class PDFFormSelectView(LoginRequiredMixin, View):
         # Use security permission check
         check_pdf_form_access(request.user, patient)
 
-        # Get available forms
+        # Get available forms (only configured ones)
         form_templates = PDFFormTemplate.objects.filter(
             is_active=True,
             hospital_specific=True
+        ).exclude(
+            form_fields__isnull=True  # Exclude templates without any configuration
+        ).exclude(
+            form_fields__exact={}  # Exclude templates with empty configuration
         ).order_by('name')
 
         context = {

@@ -12,18 +12,20 @@ from .services.field_mapping import PatientFieldMapper
 
 @admin.register(PDFFormTemplate)
 class PDFFormTemplateAdmin(admin.ModelAdmin):
-    list_display = ['name', 'hospital_specific', 'is_active', 'created_at', 'pdf_preview', 'configure_fields']
+    list_display = ['name', 'configuration_status_display', 'hospital_specific', 'is_active', 'created_at', 'pdf_preview', 'configure_fields']
     list_filter = ['hospital_specific', 'is_active', 'created_at']
     search_fields = ['name', 'description']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'description', 'pdf_file')
+            'fields': ('name', 'description', 'pdf_file'),
+            'description': 'Upload a PDF file and provide basic information. You can save the template and configure fields using the visual configurator later.'
         }),
         ('Field Configuration', {
             'fields': ('form_fields',),
-            'description': 'Configure field positions using x,y coordinates in centimeters or use the visual configurator'
+            'description': 'Optional: Manually configure field positions using JSON, or leave empty and use the visual configurator after saving.',
+            'classes': ('collapse',)
         }),
         ('Settings', {
             'fields': ('hospital_specific', 'is_active')
@@ -203,13 +205,27 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
         return "No PDF"
     pdf_preview.short_description = "PDF Preview"
     
+    def configuration_status_display(self, obj):
+        """Display configuration status with styling."""
+        status = obj.configuration_status
+        if status == "Sem PDF":
+            return format_html('<span style="color: red;">📄 {}</span>', status)
+        elif status == "Não configurado":
+            return format_html('<span style="color: orange;">⚠️ {}</span>', status)
+        else:
+            return format_html('<span style="color: green;">✅ {}</span>', status)
+    configuration_status_display.short_description = "Status"
+    
     def configure_fields(self, obj):
         """Link to visual field configurator."""
         if obj.pk and obj.pdf_file:
             url = reverse('admin:pdf_forms_pdfformtemplate_configure_fields', args=[obj.pk])
-            return format_html('<a href="{}" class="button">Configure Fields</a>', url)
+            if obj.is_configured:
+                return format_html('<a href="{}" class="button">Editar Campos</a>', url)
+            else:
+                return format_html('<a href="{}" class="button" style="background-color: #ffc107; color: #000;">Configurar Campos</a>', url)
         return "Upload PDF first"
-    configure_fields.short_description = "Visual Config"
+    configure_fields.short_description = "Configuração"
     
     def save_model(self, request, obj, form, change):
         if not change:

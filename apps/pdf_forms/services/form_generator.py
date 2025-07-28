@@ -34,8 +34,15 @@ class DynamicFormGenerator:
             type: Django form class
         """
         form_fields = {}
-        field_config = pdf_template.form_fields
+        field_config = pdf_template.form_fields or {}
         initial_values = {}
+        
+        # Check if template is configured
+        if not field_config:
+            raise ValidationError(
+                f"Template '{pdf_template.name}' is not configured. "
+                "Please configure the field positions first using the admin interface."
+            )
 
         for field_name, config in field_config.items():
             django_field = self._create_django_field(field_name, config)

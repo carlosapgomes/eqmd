@@ -333,6 +333,15 @@
 <div id="error-container"></div>
 <div id="success-container"></div>
 
+{% if not template.is_configured %}
+<div class="alert alert-info" style="margin: 15px 0; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196f3; color: #0d47a1;">
+    <strong>🎯 Getting Started:</strong> This template doesn't have field configuration yet. 
+    <br>• <strong>Option 1:</strong> Click "Add Field" and drag-and-drop on the PDF preview below
+    <br>• <strong>Option 2:</strong> Use the "Manual JSON Editor" if PDF preview is not available
+    <br>• Remember to click "Save Configuration" when finished!
+</div>
+{% endif %}
+
 <div class="pdf-configurator">
     <div class="pdf-preview-container">
         <div id="loading-message" class="loading">

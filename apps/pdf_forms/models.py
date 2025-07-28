@@ -35,6 +35,7 @@ class PDFFormTemplate(models.Model):
     # Form configuration with coordinate-based positioning
     form_fields = models.JSONField(
         default=dict,
+        blank=True,
         help_text="JSON configuration with field positions and properties",
         verbose_name="Configuração dos Campos"
     )
@@ -87,6 +88,7 @@ class PDFFormTemplate(models.Model):
                 raise
         
         # Validate form fields configuration (only if not empty)
+        # Allow empty form_fields to enable saving templates before configuration
         if self.form_fields and len(self.form_fields) > 0:
             PDFFormSecurity.validate_field_configuration(self.form_fields)
 
@@ -96,6 +98,22 @@ class PDFFormTemplate(models.Model):
         if not hasattr(self, '_skip_validation'):
             self.full_clean()
         super().save(*args, **kwargs)
+
+    @property
+    def is_configured(self):
+        """Check if the template has field configuration."""
+        return bool(self.form_fields and len(self.form_fields) > 0)
+    
+    @property 
+    def configuration_status(self):
+        """Get human-readable configuration status."""
+        if not self.pdf_file:
+            return "Sem PDF"
+        elif not self.is_configured:
+            return "Não configurado"
+        else:
+            field_count = len(self.form_fields)
+            return f"Configurado ({field_count} campo{'s' if field_count != 1 else ''})"
 
     def __str__(self):
         return self.name
