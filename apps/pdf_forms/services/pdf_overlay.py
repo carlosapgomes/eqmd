@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.http import HttpResponse
 from django.utils import timezone
 
 try:
@@ -40,6 +41,9 @@ class PDFFormOverlay:
             raise ImportError(
                 "reportlab library is required for PDF overlay generation"
             )
+        
+        # Cache for template information to improve performance
+        self._template_cache = {}
 
     def fill_form(
         self, template_path, form_data, field_config=None, output_filename=None
@@ -47,6 +51,124 @@ class PDFFormOverlay:
         """
         Fill PDF form fields with submitted data using coordinate-based overlay.
 
+        Args:
+            template_path (str): Path to blank PDF form template
+            form_data (dict): Form data to fill
+            field_config (dict): Field configuration with coordinates
+            output_filename (str): Optional output filename
+
+        Returns:
+            HttpResponse: Filled PDF as streaming HTTP response
+        """
+        return self.generate_pdf_response(template_path, form_data, field_config, output_filename)
+
+    def generate_pdf_response(self, template_path, form_data, field_config, filename=None):
+        """
+        Generate PDF and return as HttpResponse for direct download.
+        
+        Args:
+            template_path (str): Path to blank PDF form template
+            form_data (dict): Form data to fill
+            field_config (dict): Field configuration with coordinates
+            filename (str): Optional output filename
+            
+        Returns:
+            HttpResponse: Streaming PDF response with proper headers
+        """
+        if not os.path.exists(template_path):
+            raise FileNotFoundError(f"PDF template not found: {template_path}")
+
+        if not field_config:
+            raise ValueError(
+                "Field configuration is required for coordinate-based overlay"
+            )
+
+        try:
+            # Get cached template information or read from file
+            template_info = self._get_template_info(template_path)
+            page_width = template_info['page_width']
+            page_height = template_info['page_height']
+
+            # Create overlay PDF with form data
+            overlay_buffer = self._create_overlay_pdf(
+                form_data, field_config, page_width, page_height
+            )
+
+            # Merge overlay with original PDF
+            filled_pdf_buffer = self._merge_pdfs(template_path, overlay_buffer)
+
+            # Generate output filename if not provided
+            if not filename:
+                timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"filled_form_{timestamp}.pdf"
+
+            # Create HTTP response with PDF content
+            response = HttpResponse(
+                filled_pdf_buffer.getvalue(),
+                content_type='application/pdf'
+            )
+            
+            # Set proper headers for download
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response['Content-Length'] = len(filled_pdf_buffer.getvalue())
+            
+            # Ensure proper cleanup of buffers
+            filled_pdf_buffer.close()
+            overlay_buffer.close()
+            
+            return response
+
+        except Exception as e:
+            raise Exception(f"Error generating PDF response: {str(e)}")
+
+    def _get_template_info(self, template_path):
+        """
+        Get cached template information or read from file.
+        
+        Args:
+            template_path (str): Path to PDF template
+            
+        Returns:
+            dict: Template information with page dimensions
+        """
+        # Check cache first
+        template_mtime = os.path.getmtime(template_path)
+        cache_key = f"{template_path}:{template_mtime}"
+        
+        if cache_key in self._template_cache:
+            return self._template_cache[cache_key]
+        
+        # Read template and cache information
+        reader = PdfReader(template_path)
+        if not reader.pages:
+            raise ValueError("PDF template has no pages")
+
+        # Get first page dimensions (assuming single page form)
+        first_page = reader.pages[0]
+        mediabox = first_page.mediabox
+        page_width = float(mediabox.width)
+        page_height = float(mediabox.height)
+        
+        template_info = {
+            'page_width': page_width,
+            'page_height': page_height,
+        }
+        
+        # Cache the information
+        self._template_cache[cache_key] = template_info
+        
+        # Limit cache size to prevent memory issues
+        if len(self._template_cache) > 10:
+            # Remove oldest entries
+            oldest_key = next(iter(self._template_cache))
+            del self._template_cache[oldest_key]
+        
+        return template_info
+
+    def fill_form_legacy(self, template_path, form_data, field_config=None, output_filename=None):
+        """
+        Legacy method that returns ContentFile for backward compatibility.
+        
         Args:
             template_path (str): Path to blank PDF form template
             form_data (dict): Form data to fill
@@ -65,16 +187,10 @@ class PDFFormOverlay:
             )
 
         try:
-            # Read the original PDF to get page size information
-            reader = PdfReader(template_path)
-            if not reader.pages:
-                raise ValueError("PDF template has no pages")
-
-            # Get first page dimensions (assuming single page form)
-            first_page = reader.pages[0]
-            mediabox = first_page.mediabox
-            page_width = float(mediabox.width)
-            page_height = float(mediabox.height)
+            # Get cached template information or read from file
+            template_info = self._get_template_info(template_path)
+            page_width = template_info['page_width']
+            page_height = template_info['page_height']
 
             # Create overlay PDF with form data
             overlay_buffer = self._create_overlay_pdf(
@@ -89,8 +205,14 @@ class PDFFormOverlay:
                 timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
                 output_filename = f"filled_form_{timestamp}.pdf"
 
-            # Return as ContentFile
-            return ContentFile(filled_pdf_buffer.getvalue(), name=output_filename)
+            # Return as ContentFile for legacy compatibility
+            content_file = ContentFile(filled_pdf_buffer.getvalue(), name=output_filename)
+            
+            # Cleanup buffers
+            filled_pdf_buffer.close()
+            overlay_buffer.close()
+            
+            return content_file
 
         except Exception as e:
             raise Exception(f"Error filling PDF form: {str(e)}")

@@ -131,7 +131,7 @@ class PDFFormTemplate(models.Model):
 class PDFFormSubmission(Event):
     """
     PDF Form submissions extending Event model for timeline integration.
-    Stores submitted data and generated PDF.
+    Stores submitted form data. PDFs are generated on-demand during downloads.
     """
 
     form_template = models.ForeignKey(
@@ -147,10 +147,6 @@ class PDFFormSubmission(Event):
         # Sanitize form data
         if self.form_data:
             self.form_data = PDFFormSecurity.sanitize_form_data(self.form_data)
-        
-        # Validate generated PDF if present
-        if self.generated_pdf and hasattr(self.generated_pdf, 'path'):
-            PDFFormSecurity.validate_file_path(self.generated_pdf.path)
 
     def save(self, *args, **kwargs):
         # Automatically set the event type for PDF forms
@@ -166,20 +162,6 @@ class PDFFormSubmission(Event):
         verbose_name="Dados do Formulário"
     )
 
-    # Generated PDF file
-    generated_pdf = models.FileField(
-        upload_to='pdf_forms/completed/%Y/%m/',
-        verbose_name="PDF Gerado"
-    )
-
-    # File metadata
-    original_filename = models.CharField(
-        max_length=255,
-        verbose_name="Nome Original do Arquivo"
-    )
-    file_size = models.PositiveIntegerField(
-        verbose_name="Tamanho do Arquivo (bytes)"
-    )
 
     def __str__(self):
         return f"{self.form_template.name} - {self.patient}"

@@ -35,7 +35,18 @@ def check_pdf_form_template_management(user):
 def check_pdf_download_access(user, submission):
     """Check if user can download a PDF form submission."""
     # User must have access to the patient
-    return check_pdf_form_access(user, submission.patient)
+    if not check_pdf_form_access(user, submission.patient):
+        return False
+    
+    # Validate that form_data exists and is valid for PDF generation
+    if not submission.form_data:
+        raise PermissionDenied("Cannot generate PDF: form data is missing")
+    
+    # Ensure form data is properly structured
+    if not isinstance(submission.form_data, dict):
+        raise PermissionDenied("Cannot generate PDF: invalid form data structure")
+    
+    return True
 
 
 def can_edit_pdf_submission(user, submission):

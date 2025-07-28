@@ -40,8 +40,7 @@
             </div>
             <div class="col-md-6">
               <p class="mb-1"><strong>Responsável:</strong> {{ submission.created_by.get_full_name|default:submission.created_by.email }}</p>
-              <p class="mb-1"><strong>Arquivo:</strong> {{ submission.original_filename }}</p>
-              <p class="mb-1"><strong>Tamanho:</strong> {{ submission.file_size|filesizeformat }}</p>
+              <p class="mb-1"><strong>Status:</strong> <span class="badge bg-success">Dados Salvos</span></p>
             </div>
           </div>
         </div>
@@ -51,9 +50,13 @@
       <div class="card mb-4">
         <div class="card-body">
           <div class="d-flex gap-2">
-            <a href="{% url 'pdf_forms:pdf_download' submission.id %}" class="btn btn-success">
+            <a href="{% url 'pdf_forms:pdf_download' submission.id %}" class="btn btn-success" id="download-pdf-btn">
               <i class="bi bi-download me-1"></i>
-              Baixar PDF
+              <span class="btn-text">Gerar e Baixar PDF</span>
+              <span class="btn-loading d-none">
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Gerando...
+              </span>
             </a>
             {% if perms.events.delete_event and can_delete_submission %}
             <a href="{% url 'pdf_forms:submission_delete' pk=submission.pk %}" class="btn btn-outline-danger">
@@ -101,29 +104,66 @@
       </div>
       {% endif %}
 
-      <!-- PDF Preview -->
-      {% if submission.generated_pdf %}
+      <!-- PDF Generation Info -->
       <div class="card">
         <div class="card-header">
           <h6 class="mb-0">
             <i class="bi bi-file-earmark-pdf me-2"></i>
-            Visualização do PDF
+            Download do PDF
           </h6>
         </div>
         <div class="card-body text-center">
           <p class="text-muted">
-            <i class="bi bi-file-earmark-pdf fs-1 text-danger"></i><br>
-            <strong>{{ submission.original_filename }}</strong><br>
-            Arquivo PDF gerado com sucesso
+            <i class="bi bi-file-earmark-pdf fs-1 text-success"></i><br>
+            <strong>{{ submission.form_template.name }}</strong><br>
+            PDF será gerado automaticamente no download
           </p>
-          <a href="{% url 'pdf_forms:pdf_download' submission.id %}" class="btn btn-success">
+          <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            <div>
+              O PDF é gerado em tempo real com os dados salvos. 
+              O download pode levar alguns segundos.
+            </div>
+          </div>
+          <a href="{% url 'pdf_forms:pdf_download' submission.id %}" class="btn btn-success btn-lg" id="main-download-btn">
             <i class="bi bi-download me-1"></i>
-            Baixar PDF
+            <span class="btn-text">Gerar e Baixar PDF</span>
+            <span class="btn-loading d-none">
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              Gerando...
+            </span>
           </a>
         </div>
       </div>
-      {% endif %}
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadBtns = document.querySelectorAll('#download-pdf-btn, #main-download-btn');
+    
+    downloadBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const btnText = this.querySelector('.btn-text');
+            const btnLoading = this.querySelector('.btn-loading');
+            
+            if (btnText && btnLoading) {
+                btnText.classList.add('d-none');
+                btnLoading.classList.remove('d-none');
+                this.disabled = true;
+                
+                // Re-enable button after a reasonable time for PDF generation
+                setTimeout(() => {
+                    btnText.classList.remove('d-none');
+                    btnLoading.classList.add('d-none');
+                    this.disabled = false;
+                }, 5000);
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

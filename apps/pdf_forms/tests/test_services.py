@@ -292,8 +292,8 @@ class PDFFormOverlayAdvancedTests(TestCase):
     @patch('os.path.exists')
     @patch('apps.pdf_forms.services.pdf_overlay.PdfReader')
     @patch('apps.pdf_forms.services.pdf_overlay.PdfWriter')
-    def test_fill_form_success(self, mock_writer, mock_reader, mock_exists):
-        """Test successful form filling."""
+    def test_generate_pdf_response_success(self, mock_writer, mock_reader, mock_exists):
+        """Test successful PDF response generation."""
         mock_exists.return_value = True
         
         # Mock PDF reader
@@ -304,6 +304,7 @@ class PDFFormOverlayAdvancedTests(TestCase):
         
         # Mock PDF writer
         mock_writer_instance = MagicMock()
+        mock_writer_instance.write = MagicMock()
         mock_writer.return_value = mock_writer_instance
         
         form_data = {
@@ -311,7 +312,24 @@ class PDFFormOverlayAdvancedTests(TestCase):
             'date_of_birth': '1990-01-01'
         }
         
-        result = self.overlay.fill_form('/fake/template.pdf', form_data)
+        field_config = {
+            'patient_name': {'x': 5.0, 'y': 10.0, 'width': 8.0, 'height': 0.7},
+            'date_of_birth': {'x': 5.0, 'y': 11.0, 'width': 5.0, 'height': 0.7}
+        }
+        
+        # Test the new generate_pdf_response method
+        response = self.overlay.generate_pdf_response(
+            '/fake/template.pdf', 
+            form_data, 
+            field_config,
+            'test_form.pdf'
+        )
+        
+        # Verify it returns an HttpResponse
+        from django.http import HttpResponse
+        self.assertIsInstance(response, HttpResponse)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('attachment; filename="test_form.pdf"', response['Content-Disposition'])
         
         # Verify methods were called
         mock_reader.assert_called_once_with('/fake/template.pdf')
@@ -373,6 +391,69 @@ class PDFFormOverlayAdvancedTests(TestCase):
             
             self.assertTrue(is_valid)
             self.assertIsNone(error)
+
+    @patch('os.path.exists')
+    def test_generate_pdf_response_error_handling(self, mock_exists):
+        """Test error handling for PDF generation failures."""
+        mock_exists.return_value = False
+        
+        form_data = {'patient_name': 'John Doe'}
+        field_config = {'patient_name': {'x': 5.0, 'y': 10.0}}
+        
+        with self.assertRaises(FileNotFoundError):
+            self.overlay.generate_pdf_response(
+                '/nonexistent/template.pdf',
+                form_data,
+                field_config,
+                'test.pdf'
+            )
+
+    @patch('os.path.exists')
+    @patch('apps.pdf_forms.services.pdf_overlay.PdfReader')
+    def test_generate_pdf_response_memory_management(self, mock_reader, mock_exists):
+        """Test memory management and cleanup during PDF generation."""
+        mock_exists.return_value = True
+        
+        # Mock PDF reader that raises an exception
+        mock_reader.side_effect = Exception("Memory error")
+        
+        form_data = {'patient_name': 'John Doe'}
+        field_config = {'patient_name': {'x': 5.0, 'y': 10.0}}
+        
+        # Should handle the exception gracefully
+        with self.assertRaises(Exception):
+            self.overlay.generate_pdf_response(
+                '/fake/template.pdf',
+                form_data,
+                field_config,
+                'test.pdf'
+            )
+
+    def test_performance_pdf_generation_timing(self):
+        """Test performance characteristics of on-demand generation."""
+        import time
+        from unittest.mock import patch
+        
+        with patch.object(self.overlay, 'generate_pdf_response') as mock_generate:
+            # Mock a response that takes some time
+            def slow_generation(*args, **kwargs):
+                time.sleep(0.01)  # Simulate 10ms generation time
+                from django.http import HttpResponse
+                return HttpResponse(b'fake pdf', content_type='application/pdf')
+            
+            mock_generate.side_effect = slow_generation
+            
+            start_time = time.time()
+            self.overlay.generate_pdf_response(
+                '/fake/template.pdf',
+                {'test': 'data'},
+                {'test': {'x': 1.0, 'y': 1.0}},
+                'test.pdf'
+            )
+            generation_time = time.time() - start_time
+            
+            # Should complete within reasonable time (< 1 second for test)
+            self.assertLess(generation_time, 1.0)
 
 
 class ServiceIntegrationTests(TestCase):

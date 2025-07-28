@@ -236,10 +236,10 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(PDFFormSubmission)
 class PDFFormSubmissionAdmin(admin.ModelAdmin):
-    list_display = ['form_template', 'patient', 'created_by', 'event_datetime', 'file_size_display']
+    list_display = ['form_template', 'patient', 'created_by', 'event_datetime', 'form_data_preview']
     list_filter = ['form_template', 'event_datetime', 'created_by']
     search_fields = ['form_template__name', 'patient__name', 'description']
-    readonly_fields = ['created_at', 'updated_at', 'event_type', 'file_size', 'original_filename']
+    readonly_fields = ['created_at', 'updated_at', 'event_type']
     
     fieldsets = (
         ('Event Information', {
@@ -247,10 +247,7 @@ class PDFFormSubmissionAdmin(admin.ModelAdmin):
         }),
         ('Form Data', {
             'fields': ('form_data',),
-            'classes': ('collapse',)
-        }),
-        ('Generated PDF', {
-            'fields': ('generated_pdf', 'original_filename', 'file_size')
+            'description': 'JSON data containing form field values. PDFs are generated on-demand from this data.'
         }),
         ('Audit', {
             'fields': ('created_by', 'created_at', 'updated_at'),
@@ -258,14 +255,26 @@ class PDFFormSubmissionAdmin(admin.ModelAdmin):
         })
     )
     
-    def file_size_display(self, obj):
-        if obj.file_size:
-            # Convert bytes to human readable format
-            if obj.file_size < 1024:
-                return f"{obj.file_size} bytes"
-            elif obj.file_size < 1024 * 1024:
-                return f"{obj.file_size / 1024:.1f} KB"
-            else:
-                return f"{obj.file_size / (1024 * 1024):.1f} MB"
-        return "Unknown"
-    file_size_display.short_description = "File Size"
+    def form_data_preview(self, obj):
+        """Display a preview of the form data."""
+        if not obj.form_data:
+            return format_html('<span style="color: #666;">No data</span>')
+        
+        # Get field count and show a preview of field names
+        field_count = len(obj.form_data)
+        if field_count == 0:
+            return format_html('<span style="color: #666;">Empty</span>')
+        
+        # Show first few field names as preview
+        field_names = list(obj.form_data.keys())[:3]
+        preview_text = ', '.join(field_names)
+        if len(obj.form_data) > 3:
+            preview_text += f' (+{len(obj.form_data) - 3} more)'
+        
+        return format_html(
+            '<span title="{}"><strong>{} fields:</strong> {}</span>',
+            ', '.join(obj.form_data.keys()),
+            field_count,
+            preview_text
+        )
+    form_data_preview.short_description = "Form Data"

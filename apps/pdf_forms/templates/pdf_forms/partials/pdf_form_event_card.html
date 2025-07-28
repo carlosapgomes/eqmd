@@ -22,8 +22,9 @@
       </a>
       <a
         href="{% url 'pdf_forms:pdf_download' event.id %}"
-        class="btn btn-sm btn-outline-success"
-        title="Baixar PDF"
+        class="btn btn-sm btn-outline-success pdf-download-btn"
+        title="Gerar e Baixar PDF"
+        data-event-id="{{ event.id }}"
       >
         <i class="bi bi-download"></i>
       </a>
@@ -37,8 +38,8 @@
 
     <div class="pdf-info">
       <small class="text-muted">
-        <i class="bi bi-file-earmark me-1"></i>
-        {{ event.original_filename }} ({{ event.file_size|filesizeformat }})
+        <i class="bi bi-file-earmark-pdf me-1"></i>
+        {{ event.form_template.name }} - Formulário PDF
       </small>
     </div>
 

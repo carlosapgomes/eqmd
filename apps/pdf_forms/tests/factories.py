@@ -2,7 +2,6 @@ import factory
 from factory.django import DjangoModelFactory
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.core.files.base import ContentFile
 from apps.pdf_forms.models import PDFFormTemplate, PDFFormSubmission
 from apps.patients.models import Patient
 from apps.events.models import Event
@@ -28,13 +27,8 @@ class PDFFormTemplateFactory(DjangoModelFactory):
     name = factory.Sequence(lambda n: f'Form Template {n}')
     description = factory.Faker('text', max_nb_chars=200)
     
-    # Create a mock PDF file
-    pdf_file = factory.LazyAttribute(
-        lambda obj: ContentFile(
-            b'%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n192\n%%EOF',
-            name=f'template_{obj.name.replace(" ", "_").lower()}.pdf'
-        )
-    )
+    # PDF template file path (points to actual template files in tests)
+    pdf_file = factory.Sequence(lambda n: f'/fake/path/to/template_{n}.pdf')
     
     form_fields = factory.LazyAttribute(lambda obj: {
         'patient_name': {
@@ -96,16 +90,8 @@ class PDFFormSubmissionFactory(DjangoModelFactory):
     form_data = factory.LazyAttribute(lambda obj: {
         'patient_name': obj.patient.name,
         'date_of_birth': obj.patient.birthday.strftime('%Y-%m-%d') if obj.patient.birthday else '',
-        'clinical_notes': 'Sample clinical notes for testing'
+        'clinical_notes': 'Sample clinical notes for testing',
+        'blood_type': 'O+',
+        'urgent': False,
+        'additional_notes': 'Generated test data for PDF form submission'
     })
-    
-    # Create a mock generated PDF file
-    generated_pdf = factory.LazyAttribute(
-        lambda obj: ContentFile(
-            b'%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n192\n%%EOF',
-            name=f"completed_{obj.form_template.name.replace(' ', '_').lower()}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        )
-    )
-    
-    original_filename = factory.LazyAttribute(lambda obj: f"{obj.form_template.name.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf")
-    file_size = factory.Faker('random_int', min=1024, max=1024*1024)  # 1KB to 1MB

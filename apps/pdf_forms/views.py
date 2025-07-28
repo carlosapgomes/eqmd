@@ -123,30 +123,12 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
         return context
 
     def form_valid(self, form):
-        """Process form submission and generate PDF."""
-        print(f"DEBUG: form_valid called with data: {form.cleaned_data}")
+        """Process form submission and save data only."""
         try:
             # Sanitize form data for security
             sanitized_data = PDFFormSecurity.sanitize_form_data(form.cleaned_data)
-            print(f"DEBUG: sanitized_data: {sanitized_data}")
 
-            # Create PDF overlay service
-            pdf_service = PDFFormOverlay()
-
-            # Fill PDF form using coordinate-based overlay
-            filled_pdf = pdf_service.fill_form(
-                template_path=self.form_template.pdf_file.path,
-                form_data=sanitized_data,
-                field_config=self.form_template.form_fields
-            )
-
-            # Generate secure filename
-            secure_filename = PDFFormSecurity.generate_secure_filename(
-                f"{self.form_template.name}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                prefix="pdf_form_"
-            )
-
-            # Create submission record
+            # Create submission record with form data only
             submission = PDFFormSubmission(
                 form_template=self.form_template,
                 patient=self.patient,
@@ -155,18 +137,7 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
                 event_datetime=timezone.now(),
                 description=f"Formulário PDF: {self.form_template.name}",
                 form_data=sanitized_data,
-                original_filename=secure_filename,
             )
-
-            # Save the filled PDF
-            submission.generated_pdf.save(
-                secure_filename,
-                filled_pdf,
-                save=False
-            )
-
-            # Update file size
-            submission.file_size = submission.generated_pdf.size
             submission.save()
 
             messages.success(
@@ -212,7 +183,7 @@ class PDFFormSubmissionDetailView(LoginRequiredMixin, DetailView):
 
 
 class PDFFormDownloadView(LoginRequiredMixin, View):
-    """Download generated PDF file."""
+    """Generate and download PDF from form data on-the-fly."""
 
     def get(self, request, submission_id):
         submission = get_object_or_404(PDFFormSubmission, id=submission_id)
@@ -220,24 +191,48 @@ class PDFFormDownloadView(LoginRequiredMixin, View):
         # Check permissions using security module
         check_pdf_download_access(request.user, submission)
 
-        if not submission.generated_pdf:
-            raise Http404("Generated PDF file not found")
+        # Validate that form_data exists
+        if not submission.form_data:
+            raise Http404("Form data not found for PDF generation")
+
+        # Validate that form template and PDF file exist
+        if not submission.form_template or not submission.form_template.pdf_file:
+            raise Http404("PDF template not found")
 
         try:
-            # Validate file path for security
-            PDFFormSecurity.validate_file_path(submission.generated_pdf.path)
-            
-            response = FileResponse(
-                submission.generated_pdf.open('rb'),
-                content_type='application/pdf',
-                as_attachment=True,
-                filename=submission.original_filename
+            # Validate template file path for security
+            PDFFormSecurity.validate_file_path(submission.form_template.pdf_file.path)
+
+            # Create PDF overlay service
+            pdf_service = PDFFormOverlay()
+
+            # Generate secure filename
+            timestamp = submission.event_datetime.strftime('%Y%m%d_%H%M%S')
+            secure_filename = PDFFormSecurity.generate_secure_filename(
+                f"{submission.form_template.name}_{timestamp}.pdf",
+                prefix="pdf_form_"
             )
+
+            # Generate PDF response directly from form data
+            response = pdf_service.generate_pdf_response(
+                template_path=submission.form_template.pdf_file.path,
+                form_data=submission.form_data,
+                field_config=submission.form_template.form_fields,
+                filename=secure_filename
+            )
+
             return response
+
         except ValidationError as e:
             raise PermissionDenied(f"Security validation failed: {str(e)}")
-        except IOError:
-            raise Http404("PDF file not found on disk")
+        except FileNotFoundError as e:
+            raise Http404(f"Template file not found: {str(e)}")
+        except Exception as e:
+            # Log the error for debugging while showing generic message to user
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"PDF generation failed for submission {submission_id}: {str(e)}")
+            raise Http404("Erro ao gerar PDF. Tente novamente ou contacte o suporte.")
 
 
 class PDFFormSubmissionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):

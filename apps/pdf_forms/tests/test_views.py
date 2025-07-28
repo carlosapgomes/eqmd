@@ -214,24 +214,19 @@ class PDFFormFillViewTests(TestCase):
         with self.assertRaises(PermissionDenied):
             self.client.get(url)
 
-    @patch('apps.pdf_forms.services.pdf_overlay.PDFFormOverlay.fill_form')
     @patch('apps.pdf_forms.services.form_generator.DynamicFormGenerator.generate_form_class')
-    def test_form_fill_view_post_success(self, mock_generate_form, mock_fill_form):
-        """Test successful form submission."""
+    def test_form_fill_view_post_success(self, mock_generate_form):
+        """Test successful form submission with data-only approach."""
         # Mock form class
         mock_form_class = MagicMock()
         mock_form_instance = MagicMock()
+        mock_form_instance.is_valid.return_value = True
         mock_form_instance.cleaned_data = {
             'patient_name': self.patient.name,
             'clinical_notes': 'Test notes'
         }
         mock_form_class.return_value = mock_form_instance
         mock_generate_form.return_value = mock_form_class
-        
-        # Mock PDF generation
-        mock_pdf_content = MagicMock()
-        mock_pdf_content.read.return_value = b'fake pdf content'
-        mock_fill_form.return_value = mock_pdf_content
         
         url = reverse('pdf_forms:form_fill', kwargs={
             'template_id': self.template.id,
@@ -249,12 +244,15 @@ class PDFFormFillViewTests(TestCase):
         # Should redirect to submission detail after success
         self.assertEqual(response.status_code, 302)
         
-        # Check that submission was created
+        # Check that submission was created with form_data only
         submission = PDFFormSubmission.objects.filter(
             form_template=self.template,
             patient=self.patient
         ).first()
         self.assertIsNotNone(submission)
+        self.assertEqual(submission.form_data, mock_form_instance.cleaned_data)
+        # No generated PDF file should be stored
+        self.assertFalse(hasattr(submission, 'generated_pdf') and submission.generated_pdf)
 
 
 class PDFFormSubmissionDetailViewTests(TestCase):
@@ -350,22 +348,82 @@ class PDFFormDownloadViewTests(TestCase):
         with self.assertRaises(PermissionDenied):
             self.client.get(url)
 
-    def test_pdf_download_view_no_file(self):
-        """Test PDF download when no file is attached."""
-        # Create submission without generated_pdf
-        submission = PDFFormSubmission.objects.create(
-            form_template=self.template,
-            patient=self.patient,
-            created_by=self.user,
-            form_data={'test': 'data'},
-            original_filename='test.pdf',
-            file_size=1024
+    @patch('apps.pdf_forms.services.pdf_overlay.PDFFormOverlay.generate_pdf_response')
+    def test_pdf_download_view_generates_pdf_on_demand(self, mock_generate_pdf):
+        """Test PDF download generates PDF on-demand from form data."""
+        from django.http import HttpResponse
+        
+        # Mock PDF generation response
+        mock_response = HttpResponse(
+            b'fake pdf content',
+            content_type='application/pdf'
         )
+        mock_response['Content-Disposition'] = 'attachment; filename="test_form.pdf"'
+        mock_generate_pdf.return_value = mock_response
         
-        url = reverse('pdf_forms:pdf_download', kwargs={'submission_id': submission.id})
+        url = reverse('pdf_forms:pdf_download', kwargs={'submission_id': self.submission.id})
+        response = self.client.get(url)
         
-        with self.assertRaises(Http404):
-            self.client.get(url)
+        # Should return the generated PDF response
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('attachment', response['Content-Disposition'])
+        
+        # Verify PDF generation was called with correct parameters
+        mock_generate_pdf.assert_called_once()
+        call_args = mock_generate_pdf.call_args
+        self.assertEqual(call_args[1]['form_data'], self.submission.form_data)
+        self.assertEqual(call_args[1]['field_config'], self.submission.form_template.form_fields)
+
+    @patch('apps.pdf_forms.services.pdf_overlay.PDFFormOverlay.generate_pdf_response')
+    def test_pdf_download_view_generation_error(self, mock_generate_pdf):
+        """Test PDF download when generation fails."""
+        # Mock PDF generation failure
+        mock_generate_pdf.side_effect = Exception("PDF generation failed")
+        
+        url = reverse('pdf_forms:pdf_download', kwargs={'submission_id': self.submission.id})
+        
+        # Should handle the error gracefully (404 or 500 depending on implementation)
+        response = self.client.get(url)
+        self.assertIn(response.status_code, [404, 500])
+
+    @patch('apps.pdf_forms.services.pdf_overlay.PDFFormOverlay.generate_pdf_response')
+    def test_pdf_download_view_corrupted_form_data(self, mock_generate_pdf):
+        """Test PDF download with corrupted form data."""
+        # Create submission with invalid form data
+        self.submission.form_data = {'invalid': None, 'corrupted': {'nested': {'too': 'deep'}}}
+        self.submission.save()
+        
+        url = reverse('pdf_forms:pdf_download', kwargs={'submission_id': self.submission.id})
+        
+        # Should attempt generation even with corrupted data
+        mock_generate_pdf.return_value = HttpResponse(b'pdf', content_type='application/pdf')
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        mock_generate_pdf.assert_called_once()
+
+    @patch('apps.pdf_forms.services.pdf_overlay.PDFFormOverlay.generate_pdf_response')
+    def test_pdf_download_view_streaming_headers(self, mock_generate_pdf):
+        """Test that proper streaming headers are set for PDF download."""
+        from django.http import HttpResponse
+        
+        mock_response = HttpResponse(
+            b'fake pdf content streaming',
+            content_type='application/pdf'
+        )
+        mock_response['Content-Disposition'] = 'attachment; filename="streamed_form.pdf"'
+        mock_response['Content-Length'] = str(len(b'fake pdf content streaming'))
+        mock_generate_pdf.return_value = mock_response
+        
+        url = reverse('pdf_forms:pdf_download', kwargs={'submission_id': self.submission.id})
+        response = self.client.get(url)
+        
+        # Verify streaming response headers
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('attachment', response['Content-Disposition'])
+        self.assertIn('Content-Length', response)
+        self.assertEqual(response.status_code, 200)
 
 
 class PDFFormViewIntegrationTests(TestCase):

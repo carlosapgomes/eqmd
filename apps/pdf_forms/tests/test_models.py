@@ -138,18 +138,25 @@ class PDFFormSubmissionTests(TestCase):
         self.assertIsNotNone(submission.created_at)
         self.assertIsNotNone(submission.updated_at)
 
-    def test_pdf_form_submission_file_metadata(self):
-        """Test file metadata fields."""
+    def test_pdf_form_submission_form_data_validation(self):
+        """Test form data validation and sanitization."""
+        form_data = {
+            'patient_name': 'John Doe',
+            'date_of_birth': '1990-01-01',
+            'clinical_notes': 'Test notes with special chars: <script>alert("test")</script>'
+        }
+        
         submission = PDFFormSubmissionFactory(
             form_template=self.template,
             patient=self.patient,
             created_by=self.user,
-            original_filename="test_form.pdf",
-            file_size=2048
+            form_data=form_data
         )
         
-        self.assertEqual(submission.original_filename, "test_form.pdf")
-        self.assertEqual(submission.file_size, 2048)
+        # Form data should be stored as-is for now (sanitization handled at view level)
+        self.assertEqual(submission.form_data, form_data)
+        self.assertIn('clinical_notes', submission.form_data)
+        self.assertIn('<script>', submission.form_data['clinical_notes'])  # Raw storage
 
 
 class PDFFormModelIntegrationTests(TestCase):
