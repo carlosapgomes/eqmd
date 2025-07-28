@@ -1,9 +1,138 @@
 """
 Field mapping utilities for PDF forms.
-Provides helpers for converting between different field representations.
+Provides helpers for converting between different field representations and patient field mappings.
 """
 
 from django.core.exceptions import ValidationError
+from django.apps import apps
+
+
+class PatientFieldMapper:
+    """
+    Utilities for mapping PDF form fields to patient model fields.
+    """
+
+    # Available patient fields with their types and labels
+    PATIENT_FIELD_MAPPINGS = {
+        'name': {'type': 'text', 'label': 'Nome do Paciente'},
+        'birthday': {'type': 'date', 'label': 'Data de Nascimento'},
+        'healthcard_number': {'type': 'text', 'label': 'Número do Cartão de Saúde'},
+        'id_number': {'type': 'text', 'label': 'Número de Identidade'},
+        'fiscal_number': {'type': 'text', 'label': 'Número Fiscal'},
+        'phone': {'type': 'text', 'label': 'Telefone'},
+        'address': {'type': 'text', 'label': 'Endereço'},
+        'city': {'type': 'text', 'label': 'Cidade'},
+        'state': {'type': 'text', 'label': 'Estado/Província'},
+        'zip_code': {'type': 'text', 'label': 'Código Postal'},
+        'current_record_number': {'type': 'text', 'label': 'Número do Prontuário'},
+        'bed': {'type': 'text', 'label': 'Leito/Cama'},
+        'ward.name': {'type': 'text', 'label': 'Nome da Ala'},
+        'ward.abbreviation': {'type': 'text', 'label': 'Sigla da Ala'},
+        'ward.floor': {'type': 'text', 'label': 'Andar da Ala'},
+        'last_admission_date': {'type': 'date', 'label': 'Data da Última Admissão'},
+        'last_discharge_date': {'type': 'date', 'label': 'Data da Última Alta'},
+        'status': {'type': 'choice', 'label': 'Status do Paciente'},
+        'total_admissions_count': {'type': 'number', 'label': 'Total de Internações'},
+        'total_inpatient_days': {'type': 'number', 'label': 'Total de Dias Internado'},
+    }
+
+    @classmethod
+    def get_available_patient_fields(cls):
+        """
+        Get list of available patient fields for mapping.
+        
+        Returns:
+            dict: Available patient fields with types and labels
+        """
+        return cls.PATIENT_FIELD_MAPPINGS.copy()
+
+    @classmethod
+    def validate_patient_field_mapping(cls, field_name, patient_field_path):
+        """
+        Validate that a patient field mapping is valid.
+        
+        Args:
+            field_name (str): Name of the form field
+            patient_field_path (str): Dot-notation path to patient field
+            
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        if not patient_field_path:
+            return True, None  # No mapping is valid
+            
+        if patient_field_path not in cls.PATIENT_FIELD_MAPPINGS:
+            available_fields = ', '.join(cls.PATIENT_FIELD_MAPPINGS.keys())
+            return False, f"Invalid patient field '{patient_field_path}'. Available fields: {available_fields}"
+            
+        return True, None
+
+    @classmethod
+    def get_patient_field_value(cls, patient, field_path):
+        """
+        Get value from patient object using dot notation.
+        
+        Args:
+            patient: Patient object
+            field_path (str): Dot-notation path to field (e.g., 'ward.name')
+            
+        Returns:
+            Any: Field value or None if not found
+        """
+        if not patient or not field_path:
+            return None
+            
+        try:
+            # Split the path and traverse the object
+            parts = field_path.split('.')
+            current_obj = patient
+            
+            for part in parts:
+                if hasattr(current_obj, part):
+                    current_obj = getattr(current_obj, part)
+                    if current_obj is None:
+                        return None
+                else:
+                    return None
+                    
+            return current_obj
+        except (AttributeError, TypeError):
+            return None
+
+    @classmethod
+    def get_field_type_compatibility(cls, form_field_type, patient_field_path):
+        """
+        Check if form field type is compatible with patient field type.
+        
+        Args:
+            form_field_type (str): Type of the form field
+            patient_field_path (str): Patient field path
+            
+        Returns:
+            bool: True if compatible, False otherwise
+        """
+        if not patient_field_path or patient_field_path not in cls.PATIENT_FIELD_MAPPINGS:
+            return True  # No mapping or invalid mapping is always "compatible"
+            
+        patient_field_info = cls.PATIENT_FIELD_MAPPINGS[patient_field_path]
+        patient_field_type = patient_field_info['type']
+        
+        # Define compatibility rules
+        compatibility_matrix = {
+            'text': ['text', 'choice', 'number'],  # Text can accept most types as strings
+            'textarea': ['text', 'choice'],
+            'email': ['text'],
+            'number': ['number', 'text'],
+            'decimal': ['number', 'text'],
+            'date': ['date', 'text'],
+            'datetime': ['date', 'text'],
+            'boolean': ['text', 'choice'],
+            'choice': ['text', 'choice', 'number'],
+            'multiple_choice': ['text', 'choice'],
+        }
+        
+        compatible_types = compatibility_matrix.get(form_field_type, [])
+        return patient_field_type in compatible_types
 
 
 class FieldMappingUtils:
@@ -79,6 +208,19 @@ class FieldMappingUtils:
                     errors.append(f"Field '{field_name}' choices must be a list")
                 elif not config['choices']:
                     errors.append(f"Field '{field_name}' choices cannot be empty")
+
+            # Validate patient field mapping if present
+            if 'patient_field_mapping' in config:
+                patient_field_path = config['patient_field_mapping']
+                is_valid, error_msg = PatientFieldMapper.validate_patient_field_mapping(field_name, patient_field_path)
+                if not is_valid:
+                    errors.append(f"Field '{field_name}' has invalid patient field mapping: {error_msg}")
+                
+                # Check field type compatibility
+                if patient_field_path and not PatientFieldMapper.get_field_type_compatibility(field_type, patient_field_path):
+                    patient_info = PatientFieldMapper.PATIENT_FIELD_MAPPINGS.get(patient_field_path, {})
+                    patient_type = patient_info.get('type', 'unknown')
+                    errors.append(f"Field '{field_name}' type '{field_type}' is not compatible with patient field type '{patient_type}'")
 
         return len(errors) == 0, errors
 

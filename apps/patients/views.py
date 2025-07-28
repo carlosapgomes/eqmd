@@ -153,6 +153,7 @@ class PatientDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
 class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Patient
     form_class = PatientForm
+    template_name = 'patients/patient_create.html'
     permission_required = 'patients.add_patient'
 
     def get_form_kwargs(self):
@@ -164,7 +165,7 @@ class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
     def get_context_data(self, **kwargs):
         """Add simple context without hospital record forms"""
         context = super().get_context_data(**kwargs)
-        # No hospital record context needed
+        context['title'] = 'Criar Novo Paciente'
         return context
 
     def get_success_url(self):
@@ -187,18 +188,22 @@ class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
 class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Patient
     form_class = PatientForm
+    template_name = 'patients/patient_update.html'
     permission_required = 'patients.change_patient'
 
     def get_form_kwargs(self):
         """Pass form kwargs without hospital record data"""
         kwargs = super().get_form_kwargs()
-        # No hospital record data processing needed
+        # Remove initial_record_number for update form
+        if 'initial' in kwargs:
+            kwargs['initial'] = kwargs['initial'].copy()
+            kwargs['initial'].pop('initial_record_number', None)
         return kwargs
 
     def get_context_data(self, **kwargs):
         """Add simple context without hospital record forms"""
         context = super().get_context_data(**kwargs)
-        # No hospital record context needed
+        context['title'] = f'Editar Paciente: {self.object.name}'
         return context
 
     def get_success_url(self):
@@ -209,11 +214,9 @@ class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
         # Store user for tag creation
         form.current_user = self.request.user
         
-        response = super().form_valid(form)
-        
-        # Add simple success message
         messages.success(self.request, f"Patient {form.instance.name} updated successfully.")
         
+        response = super().form_valid(form)
         return response
 
 

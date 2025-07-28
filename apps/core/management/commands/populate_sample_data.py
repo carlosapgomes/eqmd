@@ -334,11 +334,13 @@ class Command(BaseCommand):
             selected_allowed_tags = random.sample(self.allowed_tags, min(num_tags, len(self.allowed_tags)))
             
             for allowed_tag in selected_allowed_tags:
-                tag = Tag.objects.create(
+                tag, created = Tag.objects.get_or_create(
                     allowed_tag=allowed_tag,
-                    notes=f'Tag aplicada ao paciente {patient.name}',
-                    created_by=creator,
-                    updated_by=creator,
+                    defaults={
+                        'notes': f'Tag aplicada ao paciente {patient.name}',
+                        'created_by': creator,
+                        'updated_by': creator,
+                    }
                 )
                 patient.tags.add(tag)
         

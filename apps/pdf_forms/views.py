@@ -90,7 +90,21 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
     def get_form_class(self):
         """Generate form class dynamically based on PDF template."""
         generator = DynamicFormGenerator()
-        return generator.generate_form_class(self.form_template)
+        return generator.generate_form_class(self.form_template, self.patient)
+
+    def get_form_kwargs(self):
+        """Add initial values from patient data to form kwargs."""
+        kwargs = super().get_form_kwargs()
+        
+        # Get the form class to access patient initial values
+        form_class = self.get_form_class()
+        if hasattr(form_class, '_patient_initial_values'):
+            # Merge patient initial values with any existing initial values
+            initial = kwargs.get('initial', {})
+            initial.update(form_class._patient_initial_values)
+            kwargs['initial'] = initial
+            
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

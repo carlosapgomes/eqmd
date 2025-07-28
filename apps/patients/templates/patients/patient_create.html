@@ -1,0 +1,505 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Criar Novo Paciente{% endblock %}
+
+{% block app_content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb breadcrumb-medical">
+            <li class="breadcrumb-item"><a href="{% url 'patients:patient_list' %}" class="text-decoration-none text-medical-muted">Pacientes</a></li>
+            <li class="breadcrumb-item active text-medical-deep-blue" aria-current="page">Criar Novo Paciente</li>
+        </ol>
+    </nav>
+
+    <!-- Medical Page Header -->
+    <div class="page-header-medical mb-4">
+        <h1 class="text-medical-deep-blue mb-2">
+            <i class="bi bi-person-plus-fill me-2"></i>
+            Criar Novo Paciente
+        </h1>
+        <p class="text-medical-muted mb-0">
+            Registre um novo paciente no sistema hospitalar com todas as informações essenciais
+        </p>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Basic Information Section -->
+                <div class="form-section mb-4">
+                    <div class="form-section-title">
+                        <i class="bi bi-person-fill"></i>
+                        <span>Informações Básicas</span>
+                    </div>
+                    <p class="text-muted small mb-3">Dados pessoais essenciais do paciente</p>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person-fill me-1 text-medical-deep-blue"></i>
+                                    Nome Completo <span class="text-danger">*</span>
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.birthday.id_for_label }}" class="form-label">
+                                    <i class="bi bi-calendar-date me-1 text-medical-deep-blue"></i>
+                                    Data de Nascimento <span class="text-danger">*</span>
+                                </label>
+                                {{ form.birthday }}
+                                {% if form.birthday.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.birthday.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents & Identification Section -->
+                <div class="form-section mb-4">
+                    <div class="form-section-title">
+                        <i class="bi bi-card-checklist"></i>
+                        <span>Documentos & Identificação</span>
+                    </div>
+                    <p class="text-muted small mb-3">Documentos oficiais para identificação do paciente</p>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.id_number.id_for_label }}" class="form-label">
+                                    <i class="bi bi-card-text me-1 text-medical-deep-blue"></i>
+                                    RG
+                                </label>
+                                {{ form.id_number }}
+                                {% if form.id_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.id_number.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.fiscal_number.id_for_label }}" class="form-label">
+                                    <i class="bi bi-credit-card-2-front me-1 text-medical-deep-blue"></i>
+                                    CPF
+                                </label>
+                                {{ form.fiscal_number }}
+                                {% if form.fiscal_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.fiscal_number.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.healthcard_number.id_for_label }}" class="form-label">
+                                    <i class="bi bi-heart-pulse me-1 text-medical-deep-blue"></i>
+                                    Cartão de Saúde
+                                </label>
+                                {{ form.healthcard_number }}
+                                {% if form.healthcard_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.healthcard_number.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information Section -->
+                <div class="form-section mb-4">
+                    <div class="form-section-title">
+                        <i class="bi bi-telephone"></i>
+                        <span>Informações de Contato</span>
+                    </div>
+                    <p class="text-muted small mb-3">Informações para contato e localização</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                    <i class="bi bi-telephone me-1 text-medical-deep-blue"></i>
+                                    Telefone
+                                </label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.phone.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.zip_code.id_for_label }}" class="form-label">
+                                    <i class="bi bi-geo-alt me-1 text-medical-deep-blue"></i>
+                                    CEP
+                                </label>
+                                {{ form.zip_code }}
+                                {% if form.zip_code.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.zip_code.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.address.id_for_label }}" class="form-label">
+                            <i class="bi bi-house me-1 text-medical-deep-blue"></i>
+                            Endereço
+                        </label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.address.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="{{ form.city.id_for_label }}" class="form-label">
+                                    <i class="bi bi-building me-1 text-medical-deep-blue"></i>
+                                    Cidade
+                                </label>
+                                {{ form.city }}
+                                {% if form.city.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.city.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.state.id_for_label }}" class="form-label">
+                                    <i class="bi bi-map me-1 text-medical-deep-blue"></i>
+                                    Estado
+                                </label>
+                                {{ form.state }}
+                                {% if form.state.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.state.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hospital Status Section -->
+                <div class="form-section mb-4">
+                    <div class="form-section-title">
+                        <i class="bi bi-hospital"></i>
+                        <span>Status Hospitalar</span>
+                    </div>
+                    <p class="text-muted small mb-3">Informações sobre a localização atual no hospital</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.ward.id_for_label }}" class="form-label">
+                                    <i class="bi bi-building me-1 text-medical-deep-blue"></i>
+                                    Ala Hospitalar
+                                </label>
+                                {{ form.ward }}
+                                {% if form.ward.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.ward.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.bed.id_for_label }}" class="form-label">
+                                    <i class="bi bi-bed me-1 text-medical-deep-blue"></i>
+                                    Leito
+                                </label>
+                                {{ form.bed }}
+                                {% if form.bed.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.bed.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tags Section -->
+                <div class="form-section mb-4">
+                    <div class="form-section-title">
+                        <i class="bi bi-tags"></i>
+                        <span>Categorização</span>
+                    </div>
+                    <p class="text-muted small mb-3">Tags para categorização e organização do paciente</p>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label for="{{ form.tag_selection.id_for_label }}" class="form-label">
+                                    <i class="bi bi-tag me-1 text-medical-deep-blue"></i>
+                                    Tags
+                                </label>
+                                <div class="tag-selection-grid">
+                                    {% for tag in form.tag_selection %}
+                                        <div class="form-check form-check-inline">
+                                            {{ tag.tag }}
+                                            <label class="form-check-label" for="{{ tag.id_for_label }}">
+                                                {{ tag.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.tag_selection.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.tag_selection.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Record Number Section (Create Only) -->
+                <div class="form-section mb-4">
+                    <div class="form-section-title">
+                        <i class="bi bi-file-earmark-medical"></i>
+                        <span>Prontuário</span>
+                    </div>
+                    <p class="text-muted small mb-3">Número inicial do prontuário (pode ser alterado posteriormente)</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.initial_record_number.id_for_label }}" class="form-label">
+                                    <i class="bi bi-file-earmark-text me-1 text-medical-deep-blue"></i>
+                                    Número do Prontuário
+                                </label>
+                                {{ form.initial_record_number }}
+                                {% if form.initial_record_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.initial_record_number.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'patients:patient_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-medical-primary">
+                                <i class="bi bi-person-plus me-1"></i>
+                                Criar Paciente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Medical Theme CSS */
+:root {
+    --medical-deep-blue: #1e40af;
+    --medical-muted: #6b7280;
+    --medical-light-gray: #f8f9fa;
+    --medical-border: #e5e7eb;
+}
+
+.page-header-medical {
+    border-bottom: 2px solid var(--medical-border);
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+}
+
+.page-header-medical h1 {
+    font-weight: 600;
+    color: var(--medical-deep-blue);
+}
+
+.breadcrumb-medical {
+    background: transparent;
+    padding: 0;
+    margin-bottom: 1.5rem;
+}
+
+.breadcrumb-medical .breadcrumb-item + .breadcrumb-item::before {
+    color: var(--medical-muted);
+}
+
+.form-section {
+    background-color: var(--medical-light-gray);
+    border-left: 4px solid var(--medical-deep-blue);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.375rem;
+}
+
+.form-section-title {
+    color: var(--medical-deep-blue);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+}
+
+.form-section-title i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.form-control-medical {
+    border-color: var(--medical-border);
+    transition: all 0.2s ease-in-out;
+}
+
+.form-control-medical:focus {
+    border-color: var(--medical-deep-blue);
+    box-shadow: 0 0 0 0.2rem rgba(30, 64, 175, 0.25);
+}
+
+.form-select-medical {
+    border-color: var(--medical-border);
+    transition: all 0.2s ease-in-out;
+}
+
+.form-select-medical:focus {
+    border-color: var(--medical-deep-blue);
+    box-shadow: 0 0 0 0.2rem rgba(30, 64, 175, 0.25);
+}
+
+.btn-medical-primary {
+    background-color: var(--medical-deep-blue);
+    border-color: var(--medical-deep-blue);
+    color: white;
+}
+
+.btn-medical-primary:hover {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.tag-selection-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag-selection-grid .form-check {
+    margin-right: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.text-medical-deep-blue {
+    color: var(--medical-deep-blue) !important;
+}
+
+.text-medical-muted {
+    color: var(--medical-muted) !important;
+}
+</style>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// CEP auto-complete functionality
+function formatCEP(cep) {
+    cep = cep.replace(/\D/g, '');
+    if (cep.length === 8) {
+        return cep.replace(/(\d{5})(\d{3})/, '$1-$2');
+    }
+    return cep;
+}
+
+function formatCPF(cpf) {
+    cpf = cpf.replace(/\D/g, '');
+    if (cpf.length === 11) {
+        return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    return cpf;
+}
+
+function formatPhone(phone) {
+    phone = phone.replace(/\D/g, '');
+    if (phone.length === 11) {
+        return phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    } else if (phone.length === 10) {
+        return phone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+    return phone;
+}
+
+// Add input formatting
+window.addEventListener('DOMContentLoaded', function() {
+    const cepInput = document.querySelector('input[name="zip_code"]');
+    const cpfInput = document.querySelector('input[name="fiscal_number"]');
+    const phoneInput = document.querySelector('input[name="phone"]');
+    
+    if (cepInput) {
+        cepInput.addEventListener('input', function(e) {
+            e.target.value = formatCEP(e.target.value);
+        });
+    }
+    
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function(e) {
+            e.target.value = formatCPF(e.target.value);
+        });
+    }
+    
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            e.target.value = formatPhone(e.target.value);
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -5,6 +5,16 @@ from .models import Patient, AllowedTag, Tag, PatientRecordNumber, PatientAdmiss
 from .validators import validate_record_number_format
 
 
+class FormSection:
+    """Helper class for organizing form fields into medical sections"""
+    
+    def __init__(self, title, icon, fields, description=None):
+        self.title = title
+        self.icon = icon
+        self.fields = fields
+        self.description = description
+
+
 class TagCreationForm(forms.Form):
     """Form for creating tags from allowed tags"""
     allowed_tags = forms.ModelMultipleChoiceField(
@@ -48,12 +58,86 @@ class PatientForm(forms.ModelForm):
                   'phone', 'address', 'city', 'state', 'zip_code', 
                   'ward', 'bed']
         widgets = {
-            'birthday': forms.DateInput(attrs={'type': 'date'}),
-            'ward': forms.Select(attrs={'class': 'form-select'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Nome completo do paciente',
+                'aria-label': 'Nome do Paciente',
+                'maxlength': '200'
+            }),
+            'birthday': forms.DateInput(attrs={
+                'class': 'form-control form-control-medical',
+                'type': 'date',
+                'aria-label': 'Data de Nascimento'
+            }, format='%Y-%m-%d'),
+            'id_number': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'RG ou documento de identidade',
+                'aria-label': 'Documento de Identidade'
+            }),
+            'fiscal_number': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'CPF (xxx.xxx.xxx-xx)',
+                'aria-label': 'CPF',
+                'pattern': '[0-9]{3}\\.?[0-9]{3}\\.?[0-9]{3}-?[0-9]{2}',
+                'maxlength': '14'
+            }),
+            'healthcard_number': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Número da carteirinha do plano de saúde',
+                'aria-label': 'Cartão de Saúde'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': '(00) 00000-0000',
+                'aria-label': 'Telefone de Contato',
+                'type': 'tel'
+            }),
+            'address': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Endereço completo',
+                'aria-label': 'Endereço'
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Cidade',
+                'aria-label': 'Cidade'
+            }),
+            'state': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Estado (UF)',
+                'aria-label': 'Estado',
+                'maxlength': '2'
+            }),
+            'zip_code': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': '00000-000',
+                'aria-label': 'CEP',
+                'pattern': '[0-9]{5}-?[0-9]{3}',
+                'maxlength': '9'
+            }),
+            'ward': forms.Select(attrs={
+                'class': 'form-select form-select-medical',
+                'aria-label': 'Ala Hospitalar'
+            }),
+            'bed': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Número do leito',
+                'aria-label': 'Leito'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Set input formats for birthday field
+        self.fields['birthday'].input_formats = [
+            '%Y-%m-%d',  # HTML5 date format
+            '%d/%m/%Y',  # Brazilian date format
+        ]
+        
+        # Format existing birthday for HTML5 input
+        if self.instance and self.instance.pk and self.instance.birthday:
+            self.fields['birthday'].initial = self.instance.birthday.strftime('%Y-%m-%d')
         
         # Set initial values for tag selection if editing existing patient
         if self.instance and self.instance.pk:
@@ -61,10 +145,70 @@ class PatientForm(forms.ModelForm):
                 tag.allowed_tag for tag in self.instance.tags.all()
             ]
         
-        # Add CSS classes for styling
-        self.fields['bed'].widget.attrs.update({
-            'class': 'form-control bed-field'
+        # Update tag selection widget for medical theme
+        self.fields['tag_selection'].widget.attrs.update({
+            'class': 'form-check-input medical-checkbox'
         })
+        
+        # Update record number widget for medical theme
+        self.fields['initial_record_number'].widget.attrs.update({
+            'class': 'form-control form-control-medical',
+            'placeholder': 'Ex: REC001, 123456, etc.',
+            'aria-label': 'Número do Prontuário Inicial'
+        })
+
+    def get_form_sections(self):
+        """Return form fields organized into medical sections"""
+        return [
+            FormSection(
+                title="Informações Básicas",
+                icon="bi-person-fill",
+                fields=[
+                    ('name', self['name']),
+                    ('birthday', self['birthday']),
+                ],
+                description="Dados pessoais essenciais do paciente"
+            ),
+            FormSection(
+                title="Documentos & Identificação",
+                icon="bi-card-checklist",
+                fields=[
+                    ('id_number', self['id_number']),
+                    ('fiscal_number', self['fiscal_number']),
+                    ('healthcard_number', self['healthcard_number']),
+                ],
+                description="Documentos oficiais para identificação do paciente"
+            ),
+            FormSection(
+                title="Informações de Contato",
+                icon="bi-telephone",
+                fields=[
+                    ('phone', self['phone']),
+                    ('address', self['address']),
+                    ('city', self['city']),
+                    ('state', self['state']),
+                    ('zip_code', self['zip_code']),
+                ],
+                description="Informações para contato e localização"
+            ),
+            FormSection(
+                title="Status Hospitalar",
+                icon="bi-hospital",
+                fields=[
+                    ('ward', self['ward']),
+                    ('bed', self['bed']),
+                ],
+                description="Informações sobre a localização atual no hospital"
+            ),
+            FormSection(
+                title="Categorização",
+                icon="bi-tags",
+                fields=[
+                    ('tag_selection', self['tag_selection']),
+                ],
+                description="Tags para categorização e organização do paciente"
+            ),
+        ]
 
     def clean(self):
         """Custom validation for patient data"""

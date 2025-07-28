@@ -88,6 +88,31 @@
     background: rgba(231, 76, 60, 0.1);
 }
 
+.field-overlay.has-patient-mapping {
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.field-overlay.has-patient-mapping .field-label::after {
+    content: " 👤";
+    font-size: 8px;
+}
+
+.field-item.has-patient-mapping {
+    border-left: 3px solid #28a745;
+}
+
+.field-item.has-patient-mapping .field-type {
+    background: #d4edda;
+    color: #155724;
+}
+
+.patient-mapping-indicator {
+    font-size: 10px;
+    color: #28a745;
+    font-weight: bold;
+}
+
 .field-overlay .field-label {
     pointer-events: none;
     white-space: nowrap;
@@ -400,6 +425,16 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="field-patient-mapping">Patient Field Auto-Population</label>
+                    <select id="field-patient-mapping" name="patient_field_mapping">
+                        {% for option in patient_field_options %}
+                        <option value="{{ option.value }}" data-type="{{ option.type }}">{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <small style="color: #666;">Automatically populate this field with patient data when form is opened</small>
+                </div>
+                
+                <div class="form-group">
                     <label for="field-font-size">Font Size</label>
                     <input type="number" id="field-font-size" name="font_size" value="12" min="6" max="72">
                     <small style="color: #666;">Tip: Height auto-adjusts to font size</small>
@@ -619,6 +654,11 @@ function drawField(fieldName, fieldConfig) {
     overlay.className = 'field-overlay';
     overlay.setAttribute('data-field', fieldName);
     
+    // Add patient mapping visual indicator
+    if (fieldConfig.patient_field_mapping) {
+        overlay.classList.add('has-patient-mapping');
+    }
+    
     // Convert cm to pixels
     const x = fieldConfig.x * cmToPx;
     const y = fieldConfig.y * cmToPx;
@@ -765,6 +805,7 @@ function loadFieldProperties(fieldName) {
     document.getElementById('field-font-size').value = fieldConfig.font_size || 12;
     document.getElementById('field-width').value = fieldConfig.width || 4.0;
     document.getElementById('field-height').value = fieldConfig.height || 0.7;
+    document.getElementById('field-patient-mapping').value = fieldConfig.patient_field_mapping || '';
     
     // Update position and size display
     document.getElementById('position-display').textContent = `${fieldConfig.x}, ${fieldConfig.y}`;
@@ -793,6 +834,7 @@ function updateSelectedField() {
     const fontSize = document.getElementById('field-font-size').value;
     const width = document.getElementById('field-width').value;
     const height = document.getElementById('field-height').value;
+    const patientMapping = document.getElementById('field-patient-mapping').value;
     
     // Handle field rename
     if (newName !== selectedField && newName && !fields[newName]) {
@@ -806,6 +848,13 @@ function updateSelectedField() {
     fieldConfig.type = type;
     fieldConfig.required = required;
     fieldConfig.font_size = parseInt(fontSize) || 12;
+    
+    // Update patient field mapping
+    if (patientMapping) {
+        fieldConfig.patient_field_mapping = patientMapping;
+    } else {
+        delete fieldConfig.patient_field_mapping;
+    }
     
     // Update dimensions
     if (width) {
@@ -927,10 +976,22 @@ function updateFieldList() {
         fieldItem.className = 'field-item';
         fieldItem.setAttribute('data-field-name', fieldName);
         
+        // Add patient mapping indicator class
+        if (fieldConfig.patient_field_mapping) {
+            fieldItem.classList.add('has-patient-mapping');
+        }
+        
+        // Build patient mapping display
+        let patientMappingDisplay = '';
+        if (fieldConfig.patient_field_mapping) {
+            patientMappingDisplay = `<div class="patient-mapping-indicator">📋 Auto: ${fieldConfig.patient_field_mapping}</div>`;
+        }
+        
         fieldItem.innerHTML = `
             <div>
                 <div class="field-name">${fieldConfig.label || fieldName}</div>
                 <div style="font-size: 11px; color: #999;">${fieldName}</div>
+                ${patientMappingDisplay}
             </div>
             <div class="field-type">${fieldConfig.type}</div>
         `;

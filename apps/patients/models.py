@@ -77,6 +77,12 @@ class Tag(models.Model):
     class Meta:
         verbose_name = "Tag"
         verbose_name_plural = "Tags"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['allowed_tag'],
+                name='unique_tag_per_allowed_tag'
+            )
+        ]
 
     def __str__(self):
         return f"{self.allowed_tag.name}"

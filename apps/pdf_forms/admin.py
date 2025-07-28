@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError, PermissionDenied
 import json
 from .models import PDFFormTemplate, PDFFormSubmission
+from .services.field_mapping import PatientFieldMapper
 
 
 @admin.register(PDFFormTemplate)
@@ -63,6 +64,18 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
         if not self.has_change_permission(request, template):
             raise PermissionDenied("You don't have permission to configure fields for this template")
         
+        # Get available patient fields for mapping
+        patient_fields = PatientFieldMapper.get_available_patient_fields()
+        patient_field_options = [
+            {'value': '', 'label': '-- No Auto-Population --'}
+        ]
+        for field_path, field_info in patient_fields.items():
+            patient_field_options.append({
+                'value': field_path,
+                'label': f"{field_info['label']} ({field_path})",
+                'type': field_info['type']
+            })
+
         context = {
             'template': template,
             'title': f'Configure Fields: {template.name}',
@@ -79,6 +92,7 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
                 {'value': 'boolean', 'label': 'Checkbox'},
                 {'value': 'email', 'label': 'Email'},
             ],
+            'patient_field_options': patient_field_options,
             'current_fields_json': json.dumps(template.form_fields or {}),
             'admin_media_prefix': '/static/admin/',
         }
@@ -176,34 +190,12 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
         if not isinstance(fields_config, dict):
             raise ValidationError("Fields configuration must be a dictionary")
         
-        required_field_props = ['type', 'label', 'x', 'y', 'width', 'height']
-        valid_field_types = ['text', 'textarea', 'number', 'date', 'choice', 'boolean', 'email']
+        # Use the more comprehensive validation from field mapping utils
+        from .services.field_mapping import FieldMappingUtils
+        is_valid, errors = FieldMappingUtils.validate_field_config(fields_config)
         
-        for field_name, field_config in fields_config.items():
-            if not isinstance(field_config, dict):
-                raise ValidationError(f"Field '{field_name}' configuration must be a dictionary")
-            
-            # Check required properties
-            for prop in required_field_props:
-                if prop not in field_config:
-                    raise ValidationError(f"Field '{field_name}' missing required property: {prop}")
-            
-            # Validate field type
-            if field_config['type'] not in valid_field_types:
-                raise ValidationError(f"Field '{field_name}' has invalid type: {field_config['type']}")
-            
-            # Validate numeric properties
-            numeric_props = ['x', 'y', 'width', 'height']
-            for prop in numeric_props:
-                try:
-                    float(field_config[prop])
-                except (ValueError, TypeError):
-                    raise ValidationError(f"Field '{field_name}' property '{prop}' must be numeric")
-            
-            # Validate choices for choice fields
-            if field_config['type'] == 'choice':
-                if 'choices' not in field_config or not isinstance(field_config['choices'], list):
-                    raise ValidationError(f"Choice field '{field_name}' must have a 'choices' list")
+        if not is_valid:
+            raise ValidationError('; '.join(errors))
     
     def pdf_preview(self, obj):
         if obj.pdf_file:
