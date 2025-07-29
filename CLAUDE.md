@@ -16,10 +16,50 @@ uv run python manage.py makemigrations
 uv run python manage.py createsuperuser
 
 # Testing
-uv run pytest                                      # All tests with coverage
-uv run pytest --no-cov                           # Without coverage
-uv run python manage.py test apps.patients.tests # Recommended for patients/events/dailynotes/sample_content apps
+
+## Test Running Options
+
+### Option 1: pytest (Recommended for most cases)
+```bash
+# All tests with coverage (requires DJANGO_SETTINGS_MODULE)
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest
+
+# All tests without coverage
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest --no-cov
+
+# Specific app tests with coverage
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/
+
+# Single test file
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/test_models.py
+
+# Single test method
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/test_models.py::PDFFormTemplateTests::test_str_method
+```
+
+### Option 2: Django test runner (Use for specific apps)
+```bash
+# For apps that work better with Django's test runner
+uv run python manage.py test apps.patients.tests
 uv run python manage.py test apps.core.tests.test_permissions
+
+# For specific test files
+uv run python manage.py test apps.pdf_forms.tests.test_models
+```
+
+### Option 3: pytest with coverage reports
+```bash
+# Generate HTML coverage report (opens in browser)
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest --cov=apps --cov-report=html
+
+# Coverage for specific app with terminal output
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/ --cov=apps.pdf_forms --cov-report=term-missing
+```
+
+## Which to Use?
+- **Use pytest** for most testing (faster, better features, coverage)
+- **Use Django test runner** for specific apps that have import issues
+- **Set DJANGO_SETTINGS_MODULE** when using pytest to avoid configuration errors
 
 # Frontend
 npm install && npm run build

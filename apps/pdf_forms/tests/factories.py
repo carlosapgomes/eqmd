@@ -3,7 +3,7 @@ from factory.django import DjangoModelFactory
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from apps.pdf_forms.models import PDFFormTemplate, PDFFormSubmission
-from apps.patients.models import Patient
+from apps.patients.models import Patient, Ward
 from apps.events.models import Event
 
 User = get_user_model()
@@ -20,6 +20,56 @@ class UserFactory(DjangoModelFactory):
     is_active = True
 
 
+class SuperUserFactory(DjangoModelFactory):
+    class Meta:
+        model = User
+
+    email = factory.Sequence(lambda n: f'superuser{n}@example.com')
+    username = factory.Sequence(lambda n: f'superuser{n}')
+    first_name = factory.Faker('first_name')
+    last_name = factory.Faker('last_name')
+    is_active = True
+    is_superuser = True
+    is_staff = True
+
+
+class DoctorFactory(DjangoModelFactory):
+    class Meta:
+        model = User
+
+    email = factory.Sequence(lambda n: f'doctor{n}@example.com')
+    username = factory.Sequence(lambda n: f'doctor{n}')
+    first_name = factory.Faker('first_name')
+    last_name = factory.Faker('last_name')
+    is_active = True
+    profession_type = User.MEDICAL_DOCTOR
+
+
+class NurseFactory(DjangoModelFactory):
+    class Meta:
+        model = User
+
+    email = factory.Sequence(lambda n: f'nurse{n}@example.com')
+    username = factory.Sequence(lambda n: f'nurse{n}')
+    first_name = factory.Faker('first_name')
+    last_name = factory.Faker('last_name')
+    is_active = True
+    profession_type = User.NURSE
+
+
+class WardFactory(DjangoModelFactory):
+    class Meta:
+        model = Ward
+
+    name = factory.Sequence(lambda n: f'Ward {n}')
+    abbreviation = factory.Sequence(lambda n: f'W{n}')
+    description = factory.Faker('text', max_nb_chars=200)
+    floor = factory.Sequence(lambda n: f'{n % 10 + 1}')
+    capacity_estimate = factory.Sequence(lambda n: n % 50 + 10)
+    is_active = True
+    created_by = factory.SubFactory(UserFactory)
+
+
 class PDFFormTemplateFactory(DjangoModelFactory):
     class Meta:
         model = PDFFormTemplate
@@ -27,8 +77,11 @@ class PDFFormTemplateFactory(DjangoModelFactory):
     name = factory.Sequence(lambda n: f'Form Template {n}')
     description = factory.Faker('text', max_nb_chars=200)
     
-    # PDF template file path (points to actual template files in tests)
-    pdf_file = factory.Sequence(lambda n: f'/fake/path/to/template_{n}.pdf')
+    # PDF template file - use SimpleUploadedFile for tests to avoid path issues
+    pdf_file = factory.django.FileField(
+        filename=factory.Sequence(lambda n: f'template_{n}.pdf'),
+        data=b'%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n'
+    )
     
     form_fields = factory.LazyAttribute(lambda obj: {
         'patient_name': {
@@ -83,6 +136,7 @@ class PDFFormSubmissionFactory(DjangoModelFactory):
     form_template = factory.SubFactory(PDFFormTemplateFactory)
     patient = factory.SubFactory(PatientFactory)
     created_by = factory.SubFactory(UserFactory)
+    updated_by = factory.SubFactory(UserFactory)
     event_datetime = factory.LazyFunction(timezone.now)
     event_type = Event.PDF_FORM_EVENT
     description = factory.LazyAttribute(lambda obj: f"Formulário PDF: {obj.form_template.name}")
