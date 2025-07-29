@@ -257,12 +257,25 @@ class Command(BaseCommand):
             
         creator = random.choice(self.users)
         
-        # Generate realistic patient data
-        gender = random.choice(['M', 'F'])
-        if gender == 'M':
+        # Generate realistic patient data with realistic gender distribution
+        # Realistic hospital demographics: ~48% male, ~48% female, ~2% other, ~2% not informed
+        gender_weights = [
+            (Patient.GenderChoices.MALE, 48),
+            (Patient.GenderChoices.FEMALE, 48),
+            (Patient.GenderChoices.OTHER, 2),
+            (Patient.GenderChoices.NOT_INFORMED, 2)
+        ]
+        
+        # Use weighted random selection for more realistic distribution
+        choices, weights = zip(*gender_weights)
+        gender = random.choices(choices, weights=weights)[0]
+        if gender == Patient.GenderChoices.MALE:
             first_name = fake.first_name_male()
-        else:
+        elif gender == Patient.GenderChoices.FEMALE:
             first_name = fake.first_name_female()
+        else:
+            # For OTHER and NOT_INFORMED, use a random name
+            first_name = fake.first_name()
         
         last_name = fake.last_name()
         name = f'{first_name} {last_name}'
@@ -274,6 +287,7 @@ class Command(BaseCommand):
         patient = Patient.objects.create(
             name=name,
             birthday=fake.date_of_birth(minimum_age=18, maximum_age=90),
+            gender=gender,
             healthcard_number=f'SUS{random.randint(100000000, 999999999)}',
             id_number=fake.rg(),
             fiscal_number=fake.cpf(),

@@ -108,6 +108,7 @@ class PatientModelTest(TestCase):
         
         self.assertIn('name', patient_fields)
         self.assertIn('birthday', patient_fields)
+        self.assertIn('gender', patient_fields)
         self.assertIn('status', patient_fields)
         self.assertIn('created_by', patient_fields)
         self.assertIn('updated_by', patient_fields)
@@ -174,3 +175,77 @@ class PatientModelTest(TestCase):
         for field_name in hospital_fields:
             self.assertNotIn(field_name, patient_field_names, 
                            f"Hospital field '{field_name}' should not exist in simplified model")
+
+    def test_patient_gender_choices(self):
+        """Test that all patient gender choices are available"""
+        # Test that gender choices exist and are correct
+        gender_choices = [choice[0] for choice in Patient.GenderChoices.choices]
+        
+        self.assertIn(Patient.GenderChoices.MALE, gender_choices)
+        self.assertIn(Patient.GenderChoices.FEMALE, gender_choices)
+        self.assertIn(Patient.GenderChoices.OTHER, gender_choices)
+        self.assertIn(Patient.GenderChoices.NOT_INFORMED, gender_choices)
+        
+        # Test Portuguese labels
+        gender_labels = dict(Patient.GenderChoices.choices)
+        self.assertEqual(gender_labels[Patient.GenderChoices.MALE], 'Masculino')
+        self.assertEqual(gender_labels[Patient.GenderChoices.FEMALE], 'Feminino')
+        self.assertEqual(gender_labels[Patient.GenderChoices.OTHER], 'Outro')
+        self.assertEqual(gender_labels[Patient.GenderChoices.NOT_INFORMED], 'Não Informado')
+
+    def test_patient_gender_default_value(self):
+        """Test that patient gender field has correct default value"""
+        # Create patient without specifying gender
+        patient = Patient.objects.create(
+            name='Default Gender Test',
+            birthday='1990-01-01',
+            status=Patient.Status.OUTPATIENT,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
+        # Should default to NOT_INFORMED
+        self.assertEqual(patient.gender, Patient.GenderChoices.NOT_INFORMED)
+
+    def test_patient_gender_field_validation(self):
+        """Test patient gender field validation"""
+        # Test valid gender values
+        valid_genders = [
+            Patient.GenderChoices.MALE,
+            Patient.GenderChoices.FEMALE,
+            Patient.GenderChoices.OTHER,
+            Patient.GenderChoices.NOT_INFORMED
+        ]
+        
+        for gender in valid_genders:
+            patient = Patient.objects.create(
+                name=f'Gender Test {gender}',
+                birthday='1990-01-01',
+                gender=gender,
+                status=Patient.Status.OUTPATIENT,
+                created_by=self.user,
+                updated_by=self.user
+            )
+            self.assertEqual(patient.gender, gender)
+
+    def test_patient_gender_in_existing_patients(self):
+        """Test that existing test patients have default gender value"""
+        # All test patients created in setUpTestData should have default gender
+        self.assertEqual(self.inpatient.gender, Patient.GenderChoices.NOT_INFORMED)
+        self.assertEqual(self.outpatient.gender, Patient.GenderChoices.NOT_INFORMED)
+        self.assertEqual(self.emergency_patient.gender, Patient.GenderChoices.NOT_INFORMED)
+        self.assertEqual(self.discharged_patient.gender, Patient.GenderChoices.NOT_INFORMED)
+
+    def test_patient_gender_change(self):
+        """Test that patient gender can be changed"""
+        # Change gender and save
+        original_gender = self.inpatient.gender
+        new_gender = Patient.GenderChoices.MALE
+        
+        self.inpatient.gender = new_gender
+        self.inpatient.save()
+        
+        # Refresh from database
+        self.inpatient.refresh_from_db()
+        self.assertEqual(self.inpatient.gender, new_gender)
+        self.assertNotEqual(self.inpatient.gender, original_gender)

@@ -67,6 +67,16 @@
             
             <div class="row">
               <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Sexo</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <i class="bi bi-person me-2"></i>
+                  {{ patient.get_gender_display }}
+                </p>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
                 <label class="form-label text-medical-gray">Telefone</label>
                 <p class="form-control-plaintext text-medical-dark-gray">
                   {% if patient.phone %}

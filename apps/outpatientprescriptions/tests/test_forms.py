@@ -4,7 +4,6 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from apps.patients.models import Patient
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
-from apps.hospitals.models import Hospital
 from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
 from apps.outpatientprescriptions.forms.prescription_forms import (
     OutpatientPrescriptionForm,
@@ -29,11 +28,6 @@ class OutpatientPrescriptionFormTest(TestCase):
             profession_type=0  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
 
         cls.patient = Patient.objects.create(
             name='Test Patient',

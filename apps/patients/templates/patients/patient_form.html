@@ -77,6 +77,21 @@
                 </div>
               </div>
 
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.gender.id_for_label }}" class="form-label">{{ form.gender.label }}</label>
+                  {{ form.gender }}
+                  {% if form.gender.help_text %}
+                    <div class="form-text">{{ form.gender.help_text }}</div>
+                  {% endif %}
+                  {% if form.gender.errors %}
+                    <div class="invalid-feedback d-block">
+                      {{ form.gender.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
               <!-- Document Information -->
               <hr class="my-4">
               <h6 class="text-medical-dark-gray mb-3">
@@ -311,6 +326,11 @@
             <div class="mb-3">
               <h6 class="text-medical-dark-gray">Data de Nascimento</h6>
               <p class="text-medical-gray mb-0">Use o formato DD/MM/AAAA ou o seletor de data.</p>
+            </div>
+            
+            <div class="mb-3">
+              <h6 class="text-medical-dark-gray">Sexo</h6>
+              <p class="text-medical-gray mb-0">Selecione o sexo do paciente.</p>
             </div>
             
             <div class="mb-3">

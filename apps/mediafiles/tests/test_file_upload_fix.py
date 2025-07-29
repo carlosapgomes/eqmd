@@ -14,7 +14,7 @@ from PIL import Image
 
 from apps.mediafiles.models import MediaFile, Photo
 from apps.patients.models import Patient
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.accounts.models import EqmdCustomUser
 
 

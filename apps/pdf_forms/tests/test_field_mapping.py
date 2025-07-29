@@ -22,12 +22,17 @@ class PatientFieldMapperTests(TestCase):
         self.assertIn('name', fields)
         self.assertIn('birthday', fields)
         self.assertIn('healthcard_number', fields)
+        self.assertIn('gender', fields)
         self.assertIn('ward.name', fields)
         
         # Check structure of field data
         name_field = fields['name']
         self.assertEqual(name_field['type'], 'text')
         self.assertEqual(name_field['label'], 'Nome do Paciente')
+        
+        gender_field = fields['gender']
+        self.assertEqual(gender_field['type'], 'choice')
+        self.assertEqual(gender_field['label'], 'Sexo')
         
         ward_field = fields['ward.name']
         self.assertEqual(ward_field['type'], 'text')
@@ -36,7 +41,7 @@ class PatientFieldMapperTests(TestCase):
     def test_validate_patient_field_mapping_valid(self):
         """Test validation of valid patient field mappings."""
         # Test valid field paths
-        valid_fields = ['name', 'birthday', 'ward.name', 'healthcard_number']
+        valid_fields = ['name', 'birthday', 'gender', 'ward.name', 'healthcard_number']
         
         for field_path in valid_fields:
             is_valid, error = PatientFieldMapper.validate_patient_field_mapping('test_field', field_path)

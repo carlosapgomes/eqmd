@@ -595,9 +595,21 @@ class Patient(models.Model):
         TRANSFERRED = 5, "Transferido"
         DECEASED = 6, "Óbito"
 
+    class GenderChoices(models.TextChoices):
+        MALE = 'M', 'Masculino'
+        FEMALE = 'F', 'Feminino'
+        OTHER = 'O', 'Outro'
+        NOT_INFORMED = 'N', 'Não Informado'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, verbose_name="Nome Completo")
     birthday = models.DateField(verbose_name="Data de Nascimento")
+    gender = models.CharField(
+        max_length=1,
+        choices=GenderChoices.choices,
+        default=GenderChoices.NOT_INFORMED,
+        verbose_name="Sexo"
+    )
     healthcard_number = models.CharField(
         max_length=30, blank=True, verbose_name="Número do Cartão de Saúde"
     )

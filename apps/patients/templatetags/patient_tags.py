@@ -87,3 +87,53 @@ def _get_action_name(current_status, target_status):
         Patient.Status.DECEASED: 'declare_death',
     }
     return action_names.get(target_status, 'change_status')
+
+
+@register.filter
+def patient_gender_badge(gender):
+    """
+    Returns a Bootstrap badge with appropriate color for patient gender.
+
+    Usage: {{ patient.gender|patient_gender_badge }}
+    """
+    gender_classes = {
+        Patient.GenderChoices.MALE: 'bg-primary',        # M - Masculino
+        Patient.GenderChoices.FEMALE: 'bg-danger',       # F - Feminino  
+        Patient.GenderChoices.OTHER: 'bg-success',       # O - Outro
+        Patient.GenderChoices.NOT_INFORMED: 'bg-secondary', # N - Não Informado
+    }
+
+    gender_labels = dict(Patient.GenderChoices.choices)
+    gender_class = gender_classes.get(gender, 'bg-secondary')
+    gender_label = gender_labels.get(gender, 'Não Informado')
+
+    return mark_safe(f'<span class="badge {gender_class}">{gender_label}</span>')
+
+
+@register.filter
+def patient_gender_icon(gender):
+    """
+    Returns a Bootstrap icon for patient gender.
+
+    Usage: {{ patient.gender|patient_gender_icon }}
+    """
+    gender_icons = {
+        Patient.GenderChoices.MALE: 'person-standing',
+        Patient.GenderChoices.FEMALE: 'person-standing-dress',
+        Patient.GenderChoices.OTHER: 'person',
+        Patient.GenderChoices.NOT_INFORMED: 'question-circle',
+    }
+
+    icon_class = gender_icons.get(gender, 'question-circle')
+    return mark_safe(f'<i class="bi bi-{icon_class}"></i>')
+
+
+@register.filter
+def patient_gender_display(gender):
+    """
+    Returns the display name for patient gender.
+
+    Usage: {{ patient.gender|patient_gender_display }}
+    """
+    gender_labels = dict(Patient.GenderChoices.choices)
+    return gender_labels.get(gender, 'Não Informado')

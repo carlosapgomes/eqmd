@@ -30,8 +30,19 @@ class PatientFormTests(TestCase):
         form = PatientForm({
             'name': 'Test Patient',
             'birthday': '1990-01-01',
+            'gender': Patient.GenderChoices.MALE,
         })
         self.assertTrue(form.is_valid())
+
+    def test_patient_form_requires_gender(self):
+        """Test that patient form requires gender field"""
+        form = PatientForm({
+            'name': 'Test Patient',
+            'birthday': '1990-01-01',
+        })
+        # Gender field is required in the form
+        self.assertFalse(form.is_valid())
+        self.assertIn('gender', form.errors)
 
     def test_patient_form_invalid(self):
         # Missing required field (name)
@@ -45,6 +56,51 @@ class PatientFormTests(TestCase):
         """Test that status field is excluded from patient form"""
         form = PatientForm()
         self.assertNotIn('status', form.fields)
+
+    def test_patient_form_includes_gender_field(self):
+        """Test that gender field is included in patient form"""
+        form = PatientForm()
+        self.assertIn('gender', form.fields)
+
+    def test_patient_form_gender_choices(self):
+        """Test that patient form gender field has correct choices"""
+        form = PatientForm()
+        gender_field = form.fields['gender']
+        
+        # Get choices as tuples
+        form_choices = list(gender_field.choices)
+        model_choices = list(Patient.GenderChoices.choices)
+        
+        # Should have the same choices as the model
+        self.assertEqual(form_choices, model_choices)
+
+    def test_patient_form_gender_validation(self):
+        """Test patient form validation with different gender values"""
+        # Test all valid gender choices
+        valid_genders = [
+            Patient.GenderChoices.MALE,
+            Patient.GenderChoices.FEMALE,
+            Patient.GenderChoices.OTHER,
+            Patient.GenderChoices.NOT_INFORMED
+        ]
+        
+        for gender in valid_genders:
+            form = PatientForm({
+                'name': 'Test Patient',
+                'birthday': '1990-01-01',
+                'gender': gender,
+            })
+            self.assertTrue(form.is_valid(), f"Form should be valid with gender={gender}")
+
+    def test_patient_form_invalid_gender(self):
+        """Test patient form validation with invalid gender value"""
+        form = PatientForm({
+            'name': 'Test Patient',
+            'birthday': '1990-01-01',
+            'gender': 'INVALID_CHOICE',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('gender', form.errors)
 
 
 class StatusChangeFormTests(TestCase):

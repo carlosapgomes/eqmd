@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.core.exceptions import PermissionDenied
 from apps.patients.models import Patient
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.core.permissions import can_access_patient, can_edit_event, can_delete_event
 from ..models import HistoryAndPhysical
 

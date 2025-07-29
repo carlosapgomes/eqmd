@@ -71,6 +71,13 @@ class PatientFactory(factory.django.DjangoModelFactory):
     
     name = factory.Faker('name')
     birthday = factory.Faker('date_of_birth', minimum_age=18, maximum_age=90)
+    gender = factory.LazyFunction(
+        lambda: random.choices(
+            [Patient.GenderChoices.MALE, Patient.GenderChoices.FEMALE, 
+             Patient.GenderChoices.OTHER, Patient.GenderChoices.NOT_INFORMED],
+            weights=[48, 48, 2, 2]
+        )[0]
+    )
     
     # Patient statuses from Patient model
     status = fuzzy.FuzzyChoice([1, 2, 3, 4, 5, 6])  # Various patient statuses

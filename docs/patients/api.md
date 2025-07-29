@@ -1,53 +1,74 @@
-# Patients API Documentation
+# Patients JSON API Documentation
 
 ## Available Endpoints
 
-### Patient Endpoints
+### Patient Information Endpoints
 
-- `GET /api/patients/` - List all patients
-- `POST /api/patients/` - Create a new patient
-- `GET /api/patients/{id}/` - Retrieve a specific patient
-- `PUT /api/patients/{id}/` - Update a patient
-- `DELETE /api/patients/{id}/` - Delete a patient
-
-### Hospital Record Endpoints
-
-- `GET /api/hospital-records/` - List all hospital records
-- `POST /api/hospital-records/` - Create a new hospital record
-- `GET /api/hospital-records/{id}/` - Retrieve a specific hospital record
-- `PUT /api/hospital-records/{id}/` - Update a hospital record
-- `DELETE /api/hospital-records/{id}/` - Delete a hospital record
-
-### Tag Endpoints
-
-- `GET /api/tags/` - List all tags
-- `POST /api/tags/` - Create a new tag
-- `GET /api/tags/{id}/` - Retrieve a specific tag
-- `PUT /api/tags/{id}/` - Update a tag
-- `DELETE /api/tags/{id}/` - Delete a tag
+- `GET /patients/api/search/` - Search patients with query parameters
+- `GET /patients/api/record-numbers/{patient_id}/` - Get patient record number history
+- `GET /patients/api/admissions/{patient_id}/` - Get patient admission history
+- `GET /patients/api/record-lookup/{record_number}/` - Find patient by record number
+- `GET /patients/api/admission/{admission_id}/` - Get admission details
 
 ## Authentication
 
-All API endpoints require authentication. Use token authentication by including the token in the Authorization header:
+All API endpoints require authentication. Users must be logged in through Django's session authentication.
 
-```
-Authorization: Token your-token-here
-```
+## Patient Data Fields
+
+### Core Patient Fields
+
+- `id` - UUID patient identifier
+- `name` - Patient full name
+- `gender` - Patient gender (M=Masculino, F=Feminino, O=Outro, N=Não Informado)
+- `gender_display` - Human-readable gender value
+- `current_record_number` - Current hospital record number
+- `status` - Patient status (inpatient, outpatient, emergency, discharged, transferred, deceased)
+- `is_currently_admitted` - Boolean indicating current admission status
+- `bed` - Current bed assignment (if applicable)
+- `healthcard_number` - Health card number
+- `phone` - Contact phone number
 
 ## Examples
 
-### Listing Patients
+### Patient Search
 
 ```bash
-curl -H "Authorization: Token your-token-here" http://example.com/api/patients/
+curl -b sessionid=your-session-id \
+  "http://example.com/patients/api/search/?q=John&page=1&per_page=20"
 ```
 
-### Creating a Patient
+Response includes gender information:
+```json
+{
+  "results": [
+    {
+      "id": "uuid-here",
+      "name": "John Doe",
+      "gender": "M",
+      "gender_display": "Masculino",
+      "current_record_number": "12345",
+      "status": "Inpatient"
+    }
+  ]
+}
+```
+
+### Patient Record Numbers
 
 ```bash
-curl -X POST \
-  -H "Authorization: Token your-token-here" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John Doe", "birthday": "1990-01-01", "status": 1}' \
-  http://example.com/api/patients/
+curl -b sessionid=your-session-id \
+  "http://example.com/patients/api/record-numbers/uuid-here/"
+```
+
+Response includes gender information:
+```json
+{
+  "patient_id": "uuid-here",
+  "patient_name": "John Doe",
+  "gender": "M",
+  "gender_display": "Masculino",
+  "current_record_number": "12345",
+  "records": [...]
+}
 ```

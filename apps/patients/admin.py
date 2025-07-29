@@ -135,15 +135,15 @@ class WardAdmin(admin.ModelAdmin):
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'birthday', 'status', 'ward', 'bed', 'current_record_number', 'total_admissions_count', 'is_currently_admitted', 'created_at')
-    list_filter = ('status', 'ward', 'tags')
+    list_display = ('name', 'birthday', 'gender', 'status', 'ward', 'bed', 'current_record_number', 'total_admissions_count', 'is_currently_admitted', 'created_at')
+    list_filter = ('status', 'gender', 'ward', 'tags')
     search_fields = ('name', 'id_number', 'fiscal_number', 'healthcard_number', 'current_record_number')
     readonly_fields = ('current_record_number', 'total_admissions_count', 'total_inpatient_days', 'current_admission_id', 'created_at', 'created_by', 'updated_at', 'updated_by')
     filter_horizontal = ('tags',)
     
     fieldsets = (
         ('Informações Básicas', {
-            'fields': ('name', 'birthday')
+            'fields': ('name', 'birthday', 'gender')
         }),
         ('Documentos', {
             'fields': ('healthcard_number', 'id_number', 'fiscal_number', 'phone')

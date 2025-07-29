@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from apps.patients.models import Patient
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from ..models import HistoryAndPhysical
 
 User = get_user_model()
@@ -24,19 +24,13 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
         )
         
         # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            address='123 Test St',
-            created_by=self.user,
-            updated_by=self.user
-        )
         
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=1,  # inpatient
-            current_hospital=self.hospital,
+            
             created_by=self.user,
             updated_by=self.user
         )
@@ -193,19 +187,13 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
         )
         
         # Create another hospital
-        other_hospital = Hospital.objects.create(
-            name='Other Hospital',
-            address='456 Other St',
-            created_by=other_user,
-            updated_by=other_user
-        )
         
         # Create patient in other hospital
         other_patient = Patient.objects.create(
             name='Other Patient',
             birthday='1985-01-01',
             status=1,
-            current_hospital=other_hospital,
+            
             created_by=other_user,
             updated_by=other_user
         )

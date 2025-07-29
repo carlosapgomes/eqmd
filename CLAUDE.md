@@ -108,6 +108,7 @@ uv run python manage.py create_sample_pdf_forms
 - Patient models: Patient, AllowedTag, Tag
 - Search by name, ID, fiscal/health card numbers
 - Status tracking: inpatient, outpatient, emergency, discharged, transferred, deceased
+- Gender field: Masculino, Feminino, Outro, Não Informado (default for legacy data)
 - Color-coded tagging system with web admin interface
 - Dashboard widgets: patient stats, recent patients
 - Template tags: `patient_status_badge`, `patient_tags`

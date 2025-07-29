@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from datetime import date, timedelta
 from unittest.mock import patch, Mock
 
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.patients.models import Patient
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
@@ -38,11 +38,6 @@ class OutpatientPrescriptionListViewTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user1,
-            updated_by=cls.user1
-        )
 
         cls.patient = Patient.objects.create(
             name='Test Patient',
@@ -201,11 +196,6 @@ class OutpatientPrescriptionDetailViewTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user1,
-            updated_by=cls.user1
-        )
 
         cls.patient = Patient.objects.create(
             name='Test Patient',
@@ -314,11 +304,6 @@ class OutpatientPrescriptionCreateViewTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
 
         cls.patient = Patient.objects.create(
             name='Test Patient',
@@ -512,11 +497,6 @@ class OutpatientPrescriptionUpdateViewTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user1,
-            updated_by=cls.user1
-        )
 
         cls.patient = Patient.objects.create(
             name='Test Patient',
@@ -659,11 +639,6 @@ class OutpatientPrescriptionDeleteViewTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
 
         cls.patient = Patient.objects.create(
             name='Test Patient',
@@ -769,11 +744,6 @@ class OutpatientPrescriptionPrintViewTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
 
         cls.patient = Patient.objects.create(
             name='Test Patient',
@@ -883,11 +853,6 @@ class ViewIntegrationTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
 
         cls.patient = Patient.objects.create(
             name='Test Patient',

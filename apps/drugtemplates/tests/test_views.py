@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.core.exceptions import PermissionDenied
 from django.contrib.messages import get_messages
 from django.http import Http404
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 from apps.drugtemplates.forms import DrugTemplateForm, PrescriptionTemplateForm
 

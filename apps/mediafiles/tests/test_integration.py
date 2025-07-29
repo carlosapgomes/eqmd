@@ -18,7 +18,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
 
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.patients.models import Patient
 from apps.events.models import Event
 from ..models import MediaFile, Photo, PhotoSeries, PhotoSeriesFile

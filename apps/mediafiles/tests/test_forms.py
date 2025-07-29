@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.forms import ValidationError
 
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.patients.models import Patient
 from apps.mediafiles.forms import PhotoCreateForm, PhotoUpdateForm
 from apps.mediafiles.models import Photo, MediaFile
@@ -31,24 +31,13 @@ class PhotoUploadFormTests(TestCase):
         )
 
         # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            city='Test City',
-            state='TS',
-            zip_code='12345',
-            phone='123-456-7890',
-            created_by=self.user,
-            updated_by=self.user
-        )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
+            
             created_by=self.user,
             updated_by=self.user
         )
@@ -173,24 +162,13 @@ class PhotoUpdateFormTests(TestCase):
         )
 
         # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            city='Test City',
-            state='TS',
-            zip_code='12345',
-            phone='123-456-7890',
-            created_by=self.user,
-            updated_by=self.user
-        )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
+            
             created_by=self.user,
             updated_by=self.user
         )
@@ -287,24 +265,13 @@ class PhotoSeriesUploadFormTests(TestCase):
         )
 
         # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            city='Test City',
-            state='TS',
-            zip_code='12345',
-            phone='123-456-7890',
-            created_by=self.user,
-            updated_by=self.user
-        )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
+            
             created_by=self.user,
             updated_by=self.user
         )
@@ -353,24 +320,13 @@ class VideoUploadFormTests(TestCase):
         )
 
         # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            city='Test City',
-            state='TS',
-            zip_code='12345',
-            phone='123-456-7890',
-            created_by=self.user,
-            updated_by=self.user
-        )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
+            
             created_by=self.user,
             updated_by=self.user
         )
@@ -424,24 +380,13 @@ class DateTimeFormattingTests(TestCase):
         )
 
         # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            city='Test City',
-            state='TS',
-            zip_code='12345',
-            phone='123-456-7890',
-            created_by=self.user,
-            updated_by=self.user
-        )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
+            
             created_by=self.user,
             updated_by=self.user
         )
@@ -577,24 +522,13 @@ class OriginalIssueRegressionTests(TestCase):
         )
 
         # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            city='Test City',
-            state='TS',
-            zip_code='12345',
-            phone='123-456-7890',
-            created_by=self.user,
-            updated_by=self.user
-        )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
+            
             created_by=self.user,
             updated_by=self.user
         )
@@ -725,24 +659,13 @@ class FormIntegrationTests(TestCase):
         )
 
         # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            city='Test City',
-            state='TS',
-            zip_code='12345',
-            phone='123-456-7890',
-            created_by=self.user,
-            updated_by=self.user
-        )
 
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
+            
             created_by=self.user,
             updated_by=self.user
         )

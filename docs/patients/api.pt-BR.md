@@ -1,53 +1,74 @@
-# Documentação da API de Pacientes
+# Documentação da API JSON de Pacientes
 
 ## Endpoints Disponíveis
 
-### Endpoints de Pacientes
+### Endpoints de Informações de Pacientes
 
-- `GET /api/patients/` - Lista todos os pacientes
-- `POST /api/patients/` - Cria um novo paciente
-- `GET /api/patients/{id}/` - Recupera um paciente específico
-- `PUT /api/patients/{id}/` - Atualiza um paciente
-- `DELETE /api/patients/{id}/` - Exclui um paciente
-
-### Endpoints de Registros Hospitalares
-
-- `GET /api/hospital-records/` - Lista todos os registros hospitalares
-- `POST /api/hospital-records/` - Cria um novo registro hospitalar
-- `GET /api/hospital-records/{id}/` - Recupera um registro hospitalar específico
-- `PUT /api/hospital-records/{id}/` - Atualiza um registro hospitalar
-- `DELETE /api/hospital-records/{id}/` - Exclui um registro hospitalar
-
-### Endpoints de Tags
-
-- `GET /api/tags/` - Lista todas as tags
-- `POST /api/tags/` - Cria uma nova tag
-- `GET /api/tags/{id}/` - Recupera uma tag específica
-- `PUT /api/tags/{id}/` - Atualiza uma tag
-- `DELETE /api/tags/{id}/` - Exclui uma tag
+- `GET /patients/api/search/` - Busca pacientes com parâmetros de consulta
+- `GET /patients/api/record-numbers/{patient_id}/` - Obtém histórico de números de prontuário do paciente
+- `GET /patients/api/admissions/{patient_id}/` - Obtém histórico de internações do paciente
+- `GET /patients/api/record-lookup/{record_number}/` - Encontra paciente por número de prontuário
+- `GET /patients/api/admission/{admission_id}/` - Obtém detalhes da internação
 
 ## Autenticação
 
-Todos os endpoints da API requerem autenticação. Use autenticação por token incluindo o token no cabeçalho Authorization:
+Todos os endpoints da API requerem autenticação. Os usuários devem estar logados através da autenticação de sessão do Django.
 
-```
-Authorization: Token seu-token-aqui
-```
+## Campos de Dados do Paciente
+
+### Campos Principais do Paciente
+
+- `id` - Identificador UUID do paciente
+- `name` - Nome completo do paciente
+- `gender` - Sexo do paciente (M=Masculino, F=Feminino, O=Outro, N=Não Informado)
+- `gender_display` - Valor do sexo legível para humanos
+- `current_record_number` - Número de prontuário hospitalar atual
+- `status` - Status do paciente (internado, ambulatorial, emergência, alta, transferido, óbito)
+- `is_currently_admitted` - Booleano indicando status de internação atual
+- `bed` - Atribuição de leito atual (se aplicável)
+- `healthcard_number` - Número do cartão de saúde
+- `phone` - Telefone de contato
 
 ## Exemplos
 
-### Listando Pacientes
+### Busca de Pacientes
 
 ```bash
-curl -H "Authorization: Token seu-token-aqui" http://example.com/api/patients/
+curl -b sessionid=seu-session-id \
+  "http://example.com/patients/api/search/?q=João&page=1&per_page=20"
 ```
 
-### Criando um Paciente
+Resposta inclui informações de sexo:
+```json
+{
+  "results": [
+    {
+      "id": "uuid-aqui",
+      "name": "João Silva",
+      "gender": "M",
+      "gender_display": "Masculino",
+      "current_record_number": "12345",
+      "status": "Internado"
+    }
+  ]
+}
+```
+
+### Números de Prontuário do Paciente
 
 ```bash
-curl -X POST \
-  -H "Authorization: Token seu-token-aqui" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "João Silva", "birthday": "1990-01-01", "status": 1}' \
-  http://example.com/api/patients/
+curl -b sessionid=seu-session-id \
+  "http://example.com/patients/api/record-numbers/uuid-aqui/"
+```
+
+Resposta inclui informações de sexo:
+```json
+{
+  "patient_id": "uuid-aqui",
+  "patient_name": "João Silva",
+  "gender": "M",
+  "gender_display": "Masculino",
+  "current_record_number": "12345",
+  "records": [...]
+}
 ```

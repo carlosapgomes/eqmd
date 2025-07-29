@@ -10,7 +10,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from apps.patients.models import Patient
-from apps.hospitals.models import Hospital, Ward
+# Note: Hospital model removed after single-hospital refactor, Ward
 from apps.dailynotes.models import DailyNote
 from apps.dailynotes.templatetags.dailynote_tags import recent_dailynotes_widget, dailynotes_count_today, dailynotes_count_week
 
@@ -24,10 +24,6 @@ class DailyNoteIntegrationTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         # Create hospital and ward
-        self.hospital = Hospital.objects.create(
-            name="Test Hospital",
-            address="123 Test St"
-        )
         self.ward = Ward.objects.create(
             name="Test Ward",
             hospital=self.hospital,
@@ -63,7 +59,7 @@ class DailyNoteIntegrationTestCase(TestCase):
             healthcard_number="123456789012345",
             birthday="1980-01-01",
             status=Patient.Status.INPATIENT,
-            current_hospital=self.hospital,
+            
             bed="101",
             created_by=self.doctor,
             updated_by=self.doctor
@@ -74,7 +70,7 @@ class DailyNoteIntegrationTestCase(TestCase):
             healthcard_number="987654321098765",
             birthday="1975-06-15",
             status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
+            
             created_by=self.doctor,
             updated_by=self.doctor
         )
@@ -168,17 +164,13 @@ class PatientIntegrationTests(DailyNoteIntegrationTestCase):
     def test_patient_access_permissions(self):
         """Test that users can only access patients they have permission for."""
         # Create patient in different hospital
-        other_hospital = Hospital.objects.create(
-            name="Other Hospital",
-            address="456 Other St"
-        )
         other_patient = Patient.objects.create(
             name="Other Patient",
             fiscal_number="55555555555",
             healthcard_number="555555555555555",
             birthday="1990-01-01",
             status=Patient.Status.INPATIENT,
-            current_hospital=other_hospital,
+            
             created_by=self.doctor,
             updated_by=self.doctor
         )
@@ -313,17 +305,13 @@ class ExportPrintTests(DailyNoteIntegrationTestCase):
     def test_print_permissions(self):
         """Test that print respects patient access permissions."""
         # Create patient in different hospital
-        other_hospital = Hospital.objects.create(
-            name="Other Hospital",
-            address="456 Other St"
-        )
         other_patient = Patient.objects.create(
             name="Other Patient",
             fiscal_number="55555555555",
             healthcard_number="555555555555555",
             birthday="1990-01-01",
             status=Patient.Status.INPATIENT,
-            current_hospital=other_hospital,
+            
             created_by=self.doctor,
             updated_by=self.doctor
         )

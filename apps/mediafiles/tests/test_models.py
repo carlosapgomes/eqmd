@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from apps.events.models import Event
 from apps.patients.models import Patient
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.mediafiles.models import MediaFile, Photo, PhotoSeries, PhotoSeriesFile, VideoClip
 from apps.mediafiles.utils import calculate_file_hash
 

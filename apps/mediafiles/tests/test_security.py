@@ -20,7 +20,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.patients.models import Patient
 from apps.events.models import Event
 from ..models import MediaFile, Photo, PhotoSeries, PhotoSeriesFile, VideoClip

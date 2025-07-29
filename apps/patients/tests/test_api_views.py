@@ -42,6 +42,7 @@ class PatientAPITests(TestCase):
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday=timezone.now().date() - timedelta(days=365*30),
+            gender=Patient.GenderChoices.MALE,
             created_by=self.user,
             updated_by=self.user
         )
@@ -73,6 +74,8 @@ class PatientAPITests(TestCase):
 
         self.assertEqual(data['patient_id'], str(self.patient.pk))
         self.assertEqual(data['current_record_number'], 'REC002')
+        self.assertEqual(data['gender'], Patient.GenderChoices.MALE)
+        self.assertEqual(data['gender_display'], 'Masculino')
         self.assertEqual(len(data['records']), 2)
 
         # Check current record is first
@@ -98,6 +101,8 @@ class PatientAPITests(TestCase):
         self.assertTrue(data['found'])
         self.assertEqual(data['patient']['id'], str(self.patient.pk))
         self.assertEqual(data['patient']['name'], self.patient.name)
+        self.assertEqual(data['patient']['gender'], Patient.GenderChoices.MALE)
+        self.assertEqual(data['patient']['gender_display'], 'Masculino')
 
     def test_patient_admissions_api(self):
         """Test patient admissions API endpoint"""
@@ -117,6 +122,8 @@ class PatientAPITests(TestCase):
         data = response.json()
 
         self.assertEqual(data['patient_id'], str(self.patient.pk))
+        self.assertEqual(data['gender'], Patient.GenderChoices.MALE)
+        self.assertEqual(data['gender_display'], 'Masculino')
         self.assertTrue(data['is_currently_admitted'])
         self.assertEqual(len(data['admissions']), 1)
 
@@ -150,6 +157,8 @@ class PatientAPITests(TestCase):
         data = response.json()
         self.assertEqual(len(data['results']), 1)
         self.assertEqual(data['results'][0]['current_record_number'], 'SEARCH456')
+        self.assertEqual(data['results'][0]['gender'], Patient.GenderChoices.MALE)
+        self.assertEqual(data['results'][0]['gender_display'], 'Masculino')
 
     def test_record_number_lookup_historical(self):
         """Test lookup for historical record numbers"""
@@ -171,6 +180,8 @@ class PatientAPITests(TestCase):
         self.assertTrue(data['found'])
         self.assertTrue(data['is_historical'])
         self.assertEqual(data['patient']['historical_record_number'], 'HIST001')
+        self.assertEqual(data['patient']['gender'], Patient.GenderChoices.MALE)
+        self.assertEqual(data['patient']['gender_display'], 'Masculino')
 
     def test_record_number_lookup_not_found(self):
         """Test lookup for non-existent record number"""
@@ -236,6 +247,7 @@ class PatientAPITests(TestCase):
             Patient.objects.create(
                 name=f'Test Patient {i}',
                 birthday=timezone.now().date() - timedelta(days=365*30),
+                gender=Patient.GenderChoices.FEMALE,
                 created_by=self.user,
                 updated_by=self.user
             )

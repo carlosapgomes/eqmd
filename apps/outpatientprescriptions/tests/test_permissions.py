@@ -6,7 +6,6 @@ from django.core.exceptions import PermissionDenied
 from datetime import date, timedelta
 from unittest.mock import patch, Mock
 
-from apps.hospitals.models import Hospital
 from apps.patients.models import Patient
 from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
 from apps.drugtemplates.models import DrugTemplate
@@ -67,18 +66,7 @@ class PrescriptionPermissionTestCase(TestCase):
             last_name='Brown'
         )
 
-        # Create hospitals
-        cls.hospital1 = Hospital.objects.create(
-            name='Hospital 1',
-            created_by=cls.doctor,
-            updated_by=cls.doctor
-        )
-        
-        cls.hospital2 = Hospital.objects.create(
-            name='Hospital 2',
-            created_by=cls.doctor,
-            updated_by=cls.doctor
-        )
+        # Note: Hospital entities removed after single-hospital refactor
 
         # Create patients with different statuses
         cls.outpatient = Patient.objects.create(
@@ -93,7 +81,6 @@ class PrescriptionPermissionTestCase(TestCase):
             name='Inpatient',
             birthday='1985-05-15',
             status=2,  # Inpatient
-            current_hospital=cls.hospital1,
             created_by=cls.doctor,
             updated_by=cls.doctor
         )
@@ -125,12 +112,9 @@ class PrescriptionPermissionTestCase(TestCase):
         """Set up for each test."""
         self.client = Client()
 
-    def _setup_session(self, user, hospital=None):
-        """Helper method to set up user session with hospital context."""
+    def _setup_session(self, user):
+        """Helper method to set up user session."""
         self.client.login(username=user.username, password='testpass123')
-        session = self.client.session
-        session['selected_hospital_id'] = (hospital or self.hospital1).id
-        session.save()
 
 
 class PatientAccessPermissionTest(PrescriptionPermissionTestCase):
@@ -386,49 +370,8 @@ class PrescriptionCreationPermissionTest(PrescriptionPermissionTestCase):
         self.assertIn(response.status_code, [403, 404])
 
 
-class HospitalContextPermissionTest(PrescriptionPermissionTestCase):
-    """Test hospital context permissions."""
-
-    def test_hospital_context_required(self):
-        """Test that hospital context is required for views."""
-        self.client.login(username='doctor', password='testpass123')
-        # Don't set hospital context in session
-        
-        response = self.client.get(reverse('outpatientprescriptions:outpatientprescription_list'))
-        # Should redirect to hospital selection or show error
-        self.assertIn(response.status_code, [302, 403])
-
-    def test_different_hospital_access(self):
-        """Test access control based on hospital context."""
-        # Create prescription at hospital1
-        prescription_h1 = OutpatientPrescription.objects.create(
-            event_datetime=timezone.now(),
-            description='Hospital 1 prescription',
-            instructions='H1 instructions',
-            status='draft',
-            prescription_date=date.today(),
-            patient=self.inpatient,  # Patient at hospital1
-            created_by=self.doctor,
-            updated_by=self.doctor
-        )
-
-        # Access from hospital1 context
-        self._setup_session(self.doctor, self.hospital1)
-        with patch('apps.core.permissions.utils.can_access_patient', return_value=True):
-            response = self.client.get(
-                reverse('outpatientprescriptions:outpatientprescription_detail',
-                       kwargs={'pk': prescription_h1.pk})
-            )
-            self.assertEqual(response.status_code, 200)
-
-        # Access from hospital2 context (should depend on patient access rules)
-        self._setup_session(self.doctor, self.hospital2)
-        with patch('apps.core.permissions.utils.can_access_patient', return_value=False):
-            response = self.client.get(
-                reverse('outpatientprescriptions:outpatientprescription_detail',
-                       kwargs={'pk': prescription_h1.pk})
-            )
-            self.assertEqual(response.status_code, 404)
+# NOTE: HospitalContextPermissionTest removed - hospital context functionality 
+# no longer exists after single-hospital refactor
 
 
 class DrugTemplateAccessPermissionTest(PrescriptionPermissionTestCase):

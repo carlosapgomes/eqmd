@@ -15,7 +15,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.template import Context, Template
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.patients.models import Patient
 from apps.mediafiles.models import Photo, MediaFile
 from apps.events.models import Event

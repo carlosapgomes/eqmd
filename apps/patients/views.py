@@ -603,6 +603,8 @@ class PatientRecordNumbersAPIView(LoginRequiredMixin, View):
             'patient_id': str(patient.pk),
             'patient_name': patient.name,
             'current_record_number': patient.current_record_number,
+            'gender': patient.gender,
+            'gender_display': patient.get_gender_display(),
             'records': []
         }
 
@@ -635,6 +637,8 @@ class PatientAdmissionsAPIView(LoginRequiredMixin, View):
         data = {
             'patient_id': str(patient.pk),
             'patient_name': patient.name,
+            'gender': patient.gender,
+            'gender_display': patient.get_gender_display(),
             'is_currently_admitted': patient.is_currently_admitted(),
             'current_admission_id': str(patient.current_admission_id) if patient.current_admission_id else None,
             'total_admissions': patient.total_admissions_count,
@@ -696,6 +700,8 @@ class RecordNumberLookupAPIView(LoginRequiredMixin, View):
                     'id': str(patient.pk),
                     'name': patient.name,
                     'current_record_number': patient.current_record_number,
+                    'gender': patient.gender,
+                    'gender_display': patient.get_gender_display(),
                     'status': patient.get_status_display(),
                     'is_currently_admitted': patient.is_currently_admitted(),
                     'bed': patient.bed,
@@ -718,6 +724,8 @@ class RecordNumberLookupAPIView(LoginRequiredMixin, View):
                         'name': patient.name,
                         'current_record_number': patient.current_record_number,
                         'historical_record_number': record_number,
+                        'gender': patient.gender,
+                        'gender_display': patient.get_gender_display(),
                         'status': patient.get_status_display(),
                     }
                 }
@@ -802,6 +810,8 @@ class PatientSearchAPIView(LoginRequiredMixin, View):
                 'id': str(patient.pk),
                 'name': patient.name,
                 'current_record_number': patient.current_record_number,
+                'gender': patient.gender,
+                'gender_display': patient.get_gender_display(),
                 'status': patient.get_status_display(),
                 'is_currently_admitted': patient.is_currently_admitted(),
                 'bed': patient.bed,

@@ -54,7 +54,7 @@ class PatientForm(forms.ModelForm):
     
     class Meta:
         model = Patient
-        fields = ['name', 'birthday', 'id_number', 'fiscal_number', 'healthcard_number', 
+        fields = ['name', 'birthday', 'gender', 'id_number', 'fiscal_number', 'healthcard_number', 
                   'phone', 'address', 'city', 'state', 'zip_code', 
                   'ward', 'bed']
         widgets = {
@@ -69,6 +69,10 @@ class PatientForm(forms.ModelForm):
                 'type': 'date',
                 'aria-label': 'Data de Nascimento'
             }, format='%Y-%m-%d'),
+            'gender': forms.Select(attrs={
+                'class': 'form-select form-control-medical',
+                'aria-label': 'Sexo'
+            }),
             'id_number': forms.TextInput(attrs={
                 'class': 'form-control form-control-medical',
                 'placeholder': 'RG ou documento de identidade',
@@ -166,6 +170,7 @@ class PatientForm(forms.ModelForm):
                 fields=[
                     ('name', self['name']),
                     ('birthday', self['birthday']),
+                    ('gender', self['gender']),
                 ],
                 description="Dados pessoais essenciais do paciente"
             ),

@@ -1,4 +1,5 @@
 import factory
+import random
 from factory.django import DjangoModelFactory
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -122,6 +123,13 @@ class PatientFactory(DjangoModelFactory):
 
     name = factory.Faker('name')
     birthday = factory.Faker('date_of_birth', minimum_age=18, maximum_age=90)
+    gender = factory.LazyFunction(
+        lambda: random.choices(
+            [Patient.GenderChoices.MALE, Patient.GenderChoices.FEMALE, 
+             Patient.GenderChoices.OTHER, Patient.GenderChoices.NOT_INFORMED],
+            weights=[48, 48, 2, 2]
+        )[0]
+    )
     fiscal_number = factory.Sequence(lambda n: f'{n:011d}')
     healthcard_number = factory.Sequence(lambda n: f'HC{n:09d}')
     status = Patient.Status.OUTPATIENT

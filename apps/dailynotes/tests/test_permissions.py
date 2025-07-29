@@ -17,7 +17,7 @@ from unittest.mock import Mock, patch
 
 from apps.dailynotes.models import DailyNote
 from apps.patients.models import Patient
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 # Patient status constants (using integer values from Patient.Status)
 OUTPATIENT = 1
 INPATIENT = 2

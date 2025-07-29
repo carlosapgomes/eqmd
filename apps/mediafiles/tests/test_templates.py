@@ -13,7 +13,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
 from apps.patients.models import Patient
-from apps.hospitals.models import Hospital
+# Note: Hospital model removed after single-hospital refactor
 from apps.mediafiles.models import VideoClip, MediaFile
 from apps.mediafiles.templatetags.mediafiles_tags import (
     video_player, video_thumbnail, video_duration, video_modal_trigger

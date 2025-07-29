@@ -25,6 +25,7 @@ class PatientFieldMapper:
         'state': {'type': 'text', 'label': 'Estado/Província'},
         'zip_code': {'type': 'text', 'label': 'Código Postal'},
         'current_record_number': {'type': 'text', 'label': 'Número do Prontuário'},
+        'gender': {'type': 'choice', 'label': 'Sexo'},
         'bed': {'type': 'text', 'label': 'Leito/Cama'},
         'ward.name': {'type': 'text', 'label': 'Nome da Ala'},
         'ward.abbreviation': {'type': 'text', 'label': 'Sigla da Ala'},

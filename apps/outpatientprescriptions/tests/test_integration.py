@@ -6,7 +6,6 @@ from django.db import transaction
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from apps.hospitals.models import Hospital
 from apps.patients.models import Patient
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
@@ -40,11 +39,6 @@ class OutpatientPrescriptionWorkflowTest(TestCase):
             last_name='Doe'
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Integration Test Hospital',
-            created_by=cls.doctor,
-            updated_by=cls.doctor
-        )
 
         cls.patient = Patient.objects.create(
             name='Integration Test Patient',
@@ -110,11 +104,8 @@ class OutpatientPrescriptionWorkflowTest(TestCase):
         self.client = Client()
 
     def _setup_session(self, user):
-        """Helper method to set up user session with hospital context."""
+        """Helper method to set up user session."""
         self.client.login(username=user.username, password='testpass123')
-        session = self.client.session
-        session['selected_hospital_id'] = self.hospital.id
-        session.save()
 
     def test_complete_prescription_creation_workflow(self):
         """Test complete workflow from creation to finalization."""
@@ -482,11 +473,6 @@ class PrescriptionListPerformanceTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Performance Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
 
         # Create multiple patients
         cls.patients = []
@@ -517,9 +503,6 @@ class PrescriptionListPerformanceTest(TestCase):
         """Set up for each test."""
         self.client = Client()
         self.client.login(username='perfuser', password='testpass123')
-        session = self.client.session
-        session['selected_hospital_id'] = self.hospital.id
-        session.save()
 
     def test_list_view_query_count(self):
         """Test that list view doesn't generate excessive queries."""
@@ -554,11 +537,6 @@ class PrescriptionFormValidationWorkflowTest(TestCase):
             profession=1  # Doctor
         )
 
-        cls.hospital = Hospital.objects.create(
-            name='Validation Test Hospital',
-            created_by=cls.user,
-            updated_by=cls.user
-        )
 
         cls.patient = Patient.objects.create(
             name='Validation Test Patient',
@@ -572,9 +550,6 @@ class PrescriptionFormValidationWorkflowTest(TestCase):
         """Set up for each test."""
         self.client = Client()
         self.client.login(username='validuser', password='testpass123')
-        session = self.client.session
-        session['selected_hospital_id'] = self.hospital.id
-        session.save()
 
     def test_form_validation_error_workflow(self):
         """Test complete workflow with form validation errors."""
