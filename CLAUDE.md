@@ -765,7 +765,19 @@ PDF_FORMS_CONFIG = {
 
 ## Permission System
 
-**Simple role-based access control for medical professionals**
+**Clean role-based access control with medical/administrative separation**
+
+### Role Architecture
+
+**ADMINISTRATIVE ROLES (Non-Medical Staff):**
+- **Superuser**: Full system access (IT administrators)
+- **User Managers**: User account management only (HR/Administrative staff)
+
+**MEDICAL ROLES (Clinical Staff Only):**
+- **Doctors/Residents**: Full clinical access, patient management, medical documentation
+- **Nurses**: Limited clinical access, basic patient updates, nursing notes
+- **Physiotherapists**: Clinical access, therapy documentation
+- **Students**: Read-only clinical access
 
 ### Core Framework
 
@@ -775,39 +787,69 @@ Located in `apps/core/permissions/`:
 - **utils.py**: Core permission functions (`can_access_patient`, `can_edit_event`, etc.)
 - **decorators.py**: View decorators (`@patient_access_required`, `@doctor_required`)
 
-### Permission Rules
+### Key Principle
 
-**Doctors:**
-- Full access to all patients regardless of status
+**Medical staff manage patients, administrative staff manage users.**
+No overlap between clinical and administrative permissions.
+
+### Medical Role Permissions
+
+**Doctors/Residents:**
+- Full clinical access to all patients regardless of status
 - Can discharge patients and declare death
 - Can edit patient personal data
-- Can create and edit all types of events
-
-**Residents:**
-- Full access to all patients
-- Can discharge patients and declare death
-- Can edit patient personal data
-- Can create and edit all types of events
-
-**Nurses:**
-- Access to all patients
-- Limited status changes (cannot discharge or declare death)
-- Cannot edit patient personal data
-- Can create daily notes and basic events
+- Can create and edit all types of medical events
+- Can manage prescriptions
+- Can assign/remove patient tags (instances)
+- ❌ NO user account management
+- ❌ NO Django admin access
+- ❌ NO system configuration
 
 **Physiotherapists:**
-- Full access to all patients
-- Cannot discharge patients or declare death
-- Cannot edit patient personal data
-- Can create and edit all types of events
+- Full clinical access to all patients (for therapy needs)
+- Can create medical events and therapy documentation
+- Can upload therapy-related media
+- Can fill hospital forms
+- Can assign/remove patient tags
+- ❌ NO prescriptions (not in scope)
+- ❌ NO user account management
+- ❌ NO Django admin access
+
+**Nurses:**
+- View/edit patient information (limited)
+- Can create basic medical events and nursing notes
+- Can view medical media
+- Can fill hospital forms
+- ❌ NO patient deletion
+- ❌ NO discharge patients or declare death
+- ❌ NO prescriptions
+- ❌ NO user account management
 
 **Students:**
-- Full access to all patients
-- Cannot edit patient personal data
-- Cannot discharge patients or declare death
-- Can create basic events and daily notes
+- Read-only access to patient information
+- Can view medical events and notes
+- Can create learning notes (dailynotes, simplenotes)
+- Can view medical media
+- Can fill forms for practice
+- ❌ NO patient management (add/edit/delete)
+- ❌ NO discharge patients or declare death
+- ❌ NO prescriptions
+- ❌ NO user account management
 
-**Admin/Superuser Special Rules:**
+### Administrative Role Permissions
+
+**User Managers (Administrative Staff):**
+- Can create/edit user accounts
+- Can assign users to medical roles
+- Can view user profiles
+- Can view available groups
+- ❌ NO access to patient data
+- ❌ NO access to medical events
+- ❌ NO access to clinical information
+- ❌ NO permission to modify group permissions
+
+**Superuser (IT Administrators):**
+- Full system access for technical administration
 - Can change status of deceased patients (for data corrections)
 - Full override of all permission restrictions
 

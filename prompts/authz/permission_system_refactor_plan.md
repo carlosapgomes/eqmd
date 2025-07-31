@@ -172,6 +172,65 @@ def _get_nurse_permissions(self):
         # Forms (view/fill only)
         'pdf_forms.view_*', 'pdf_forms.add_pdfformsubmission',
     ]
+
+def _get_physiotherapist_permissions(self):
+    """Clinical permissions for physiotherapy work."""
+    permissions = []
+    
+    # Full patient access (same as doctors for therapy needs)
+    permissions.extend(self._get_patient_related_permissions())
+    
+    # Full event management for therapy documentation
+    permissions.extend(self._get_event_permissions())
+    
+    # Medical documentation apps
+    permissions.extend(self._get_app_permissions('dailynotes'))
+    permissions.extend(self._get_app_permissions('historyandphysicals'))
+    permissions.extend(self._get_app_permissions('simplenotes'))
+    
+    # Media for therapy documentation
+    permissions.extend(self._get_app_permissions('mediafiles'))
+    
+    # PDF forms
+    permissions.extend(self._get_app_permissions('pdf_forms'))
+    
+    # View sample content
+    permissions.extend(self._get_view_permissions('sample_content'))
+    
+    # NO prescriptions (not in physiotherapist scope)
+    # NO user management or admin permissions
+    
+    return permissions
+
+def _get_student_permissions(self):
+    """Read-only permissions for medical students."""
+    permissions = []
+    
+    # View-only patient access
+    permissions.extend(self._get_patient_view_permissions())
+    
+    # View-only event access  
+    permissions.extend(self._get_event_view_permissions())
+    
+    # Can create basic notes for learning (with supervision)
+    permissions.extend(self._get_app_permissions('dailynotes'))
+    permissions.extend(self._get_app_permissions('simplenotes'))
+    
+    # View medical media
+    permissions.extend(self._get_view_permissions('mediafiles'))
+    
+    # View and fill forms (learning purposes)
+    permissions.extend(self._get_view_permissions('pdf_forms'))
+    permissions.append('pdf_forms.add_pdfformsubmission')
+    
+    # View sample content
+    permissions.extend(self._get_view_permissions('sample_content'))
+    
+    # NO prescriptions
+    # NO patient management (add/change/delete)
+    # NO user management or admin permissions
+    
+    return permissions
 ```
 
 #### Step 2.3: Add User Management Role
@@ -295,24 +354,59 @@ Create `apps/core/permissions/PERMISSIONS.md`:
 ## What Each Role Can Do
 
 ### Medical Doctor
-
 ✅ Add/edit/delete patients
 ✅ Create medical events and notes  
 ✅ Upload medical images/videos
 ✅ Fill hospital forms
 ✅ Manage prescriptions
+✅ Assign/remove patient tags (instances)
+❌ Create/edit user accounts
+❌ Access Django admin
+❌ Modify system settings
+❌ Create/edit tag templates (AllowedTag)
+
+### Physiotherapist
+✅ Add/edit/delete patients (for therapy needs)
+✅ Create medical events and therapy notes
+✅ Upload therapy-related media
+✅ Fill hospital forms
+✅ Assign/remove patient tags
+❌ Create prescriptions (not in scope)
 ❌ Create/edit user accounts
 ❌ Access Django admin
 ❌ Modify system settings
 
-### User Manager (Administrative)
+### Nurse
+✅ View/edit patient information (limited)
+✅ Create basic medical events
+✅ Write nursing notes
+✅ View medical media
+✅ Fill hospital forms
+❌ Delete patients
+❌ Discharge patients or declare death
+❌ Create prescriptions
+❌ Manage user accounts
 
+### Student
+✅ View patient information (read-only)
+✅ View medical events and notes
+✅ Create learning notes (dailynotes, simplenotes)
+✅ View medical media
+✅ Fill forms for practice
+❌ Add/edit/delete patients
+❌ Discharge patients or declare death
+❌ Create prescriptions
+❌ Manage user accounts
+
+### User Manager (Administrative)
 ✅ Create/edit user accounts
 ✅ Assign users to medical roles
 ✅ View user profiles
+✅ View available groups
 ❌ Access patient data
 ❌ View medical events
 ❌ Access clinical information
+❌ Modify group permissions
 ```
 
 #### Step 4.3: Validation Checklist

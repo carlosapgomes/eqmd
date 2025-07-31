@@ -5,11 +5,13 @@ This command provides tools for auditing permissions, checking consistency,
 and fixing permission issues.
 """
 
+import json
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import Group, Permission
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.utils import timezone
 
 from apps.core.permissions.constants import (
     MEDICAL_DOCTOR,
@@ -29,9 +31,15 @@ class Command(BaseCommand):
         parser.add_argument(
             '--action',
             type=str,
-            choices=['list', 'check', 'fix', 'report'],
+            choices=['list', 'check', 'fix', 'report', 'verify_medical_roles'],
             default='report',
             help='Action to perform'
+        )
+        
+        parser.add_argument(
+            '--output',
+            type=str,
+            help='Output file for JSON report (optional)'
         )
         
         parser.add_argument(
@@ -62,7 +70,9 @@ class Command(BaseCommand):
         elif action == 'fix':
             self.fix_permission_issues()
         elif action == 'report':
-            self.generate_report(options.get('user_id'))
+            self.generate_report(options.get('user_id'), options.get('output'))
+        elif action == 'verify_medical_roles':
+            self.verify_medical_roles_security()
     
     def list_permissions(self, user_id=None, group_name=None):
         """List all permissions in the system."""
@@ -195,11 +205,11 @@ class Command(BaseCommand):
         incorrect = []
         
         profession_to_group = {
-            'medical_doctor': 'Medical Doctors',
-            'resident': 'Residents',
-            'nurse': 'Nurses',
-            'physiotherapist': 'Physiotherapists',
-            'student': 'Students',
+            0: 'Medical Doctors',  # MEDICAL_DOCTOR
+            1: 'Residents',        # RESIDENT
+            2: 'Nurses',           # NURSE
+            3: 'Physiotherapists', # PHYSIOTERAPIST (note: typo in model)
+            4: 'Students',         # STUDENT
         }
         
         for user in User.objects.filter(is_active=True):
@@ -271,11 +281,11 @@ class Command(BaseCommand):
     def _fix_users_without_groups(self, users):
         """Fix users without groups by assigning them based on profession."""
         profession_to_group = {
-            'medical_doctor': 'Medical Doctors',
-            'resident': 'Residents',
-            'nurse': 'Nurses',
-            'physiotherapist': 'Physiotherapists',
-            'student': 'Students',
+            0: 'Medical Doctors',  # MEDICAL_DOCTOR
+            1: 'Residents',        # RESIDENT
+            2: 'Nurses',           # NURSE
+            3: 'Physiotherapists', # PHYSIOTERAPIST (note: typo in model)
+            4: 'Students',         # STUDENT
         }
         
         for user in users:
@@ -315,7 +325,87 @@ class Command(BaseCommand):
         
         self.check_consistency(fix_issues=True)
     
-    def generate_report(self, user_id=None):
+    def verify_medical_roles_security(self):
+        """Verify medical roles have no administrative permissions."""
+        self.stdout.write(self.style.SUCCESS('Permission System Audit - Medical Roles Security Verification'))
+        self.stdout.write('=' * 60)
+        
+        medical_groups = ['Medical Doctors', 'Residents', 'Nurses', 'Physiotherapists', 'Students']
+        issues_found = False
+        
+        for group_name in medical_groups:
+            try:
+                group = Group.objects.get(name=group_name)
+                admin_perms = self._identify_admin_permissions(group.permissions.all())
+                
+                if admin_perms:
+                    issues_found = True
+                    self.stdout.write(
+                        self.style.ERROR(f'❌ {group_name} has admin permissions:')
+                    )
+                    for perm in admin_perms:
+                        self.stdout.write(f'   - {perm}')
+                else:
+                    self.stdout.write(
+                        self.style.SUCCESS(f'✅ {group_name} has no admin permissions')
+                    )
+                    
+            except Group.DoesNotExist:
+                self.stdout.write(
+                    self.style.WARNING(f'⚠️  Group "{group_name}" does not exist')
+                )
+        
+        if issues_found:
+            self.stdout.write(self.style.ERROR('\n🚨 SECURITY VERIFICATION FAILED'))
+            self.stdout.write('Medical roles still have administrative permissions.')
+            return False
+        else:
+            self.stdout.write(self.style.SUCCESS('\n✅ SECURITY VERIFICATION PASSED'))
+            self.stdout.write('Medical roles have no administrative permissions.')
+            return True
+
+    def _identify_admin_permissions(self, permissions_queryset):
+        """Identify administrative permissions that medical staff shouldn't have."""
+        admin_permission_patterns = [
+            # User and group management
+            ('auth', 'user'),
+            ('auth', 'group'), 
+            ('auth', 'permission'),
+            
+            # User account management
+            ('accounts', None),  # Any accounts app permission
+            
+            # Django admin
+            ('admin', None),
+            
+            # Content types (system level)
+            ('contenttypes', None),
+            
+            # Sessions management
+            ('sessions', None),
+            
+            # Sites framework
+            ('sites', None),
+            
+            # Administrative tag templates
+            ('patients', 'allowedtag'),
+        ]
+        
+        admin_perms = []
+        
+        for perm in permissions_queryset.select_related('content_type'):
+            app_label = perm.content_type.app_label
+            model = perm.content_type.model
+            
+            for pattern_app, pattern_model in admin_permission_patterns:
+                if app_label == pattern_app:
+                    if pattern_model is None or model == pattern_model:
+                        admin_perms.append(f'{app_label}.{perm.codename}')
+                        break
+        
+        return admin_perms
+    
+    def generate_report(self, user_id=None, output_file=None):
         """Generate a comprehensive permission report."""
         self.stdout.write(self.style.SUCCESS('Permission System Audit - Comprehensive Report'))
         self.stdout.write('=' * 60)
@@ -341,10 +431,16 @@ class Command(BaseCommand):
         
         # Profession distribution
         self.stdout.write(f"\nProfession Distribution:")
-        professions = ['medical_doctor', 'resident', 'nurse', 'physiotherapist', 'student']
-        for profession in professions:
-            count = User.objects.filter(profession_type=profession).count()
-            self.stdout.write(f"  {profession.replace('_', ' ').title()}: {count} users")
+        professions = [
+            (0, 'Medical Doctor'),
+            (1, 'Resident'), 
+            (2, 'Nurse'),
+            (3, 'Physiotherapist'),
+            (4, 'Student')
+        ]
+        for profession_id, profession_name in professions:
+            count = User.objects.filter(profession_type=profession_id).count()
+            self.stdout.write(f"  {profession_name}: {count} users")
         
         # Users without profession
         no_profession = User.objects.filter(profession_type__isnull=True).count()
@@ -355,6 +451,64 @@ class Command(BaseCommand):
         self.stdout.write(f"\nPermission Consistency:")
         self.check_consistency(fix_issues=False)
         
+        # Security analysis for medical roles
+        self.stdout.write(f"\nSecurity Analysis:")
+        self.verify_medical_roles_security()
+        
+        # Generate JSON report if output file specified
+        if output_file:
+            self._generate_json_report(output_file)
+        
         if user_id:
             self.stdout.write(f"\nDetailed User Report:")
             self._list_user_permissions(user_id)
+
+    def _generate_json_report(self, output_file):
+        """Generate JSON report for detailed analysis."""
+        report = {
+            'audit_timestamp': timezone.now().isoformat(),
+            'groups': {},
+            'admin_permissions_by_group': {},
+            'security_issues': []
+        }
+        
+        # Analyze each group
+        for group in Group.objects.all():
+            group_perms = list(group.permissions.values_list('codename', 'content_type__app_label', 'content_type__model'))
+            report['groups'][group.name] = {
+                'permission_count': len(group_perms),
+                'permissions': [f'{app}.{codename}' for codename, app, model in group_perms],
+                'user_count': group.user_set.count()
+            }
+            
+            # Check for admin permissions
+            admin_perms = self._identify_admin_permissions(group.permissions.all())
+            if admin_perms:
+                report['admin_permissions_by_group'][group.name] = admin_perms
+                
+                # Flag security issues for medical roles
+                if group.name in ['Medical Doctors', 'Residents', 'Nurses', 'Physiotherapists', 'Students']:
+                    report['security_issues'].append({
+                        'type': 'medical_role_has_admin_permissions',
+                        'group': group.name,
+                        'admin_permissions': admin_perms,
+                        'severity': 'HIGH',
+                        'description': f'Medical role "{group.name}" has administrative permissions'
+                    })
+        
+        # Save report
+        with open(output_file, 'w') as f:
+            json.dump(report, f, indent=2)
+        
+        self.stdout.write(f'JSON report saved to: {output_file}')
+        
+        # Summary
+        self.stdout.write(f'Groups with admin permissions: {len(report["admin_permissions_by_group"])}')
+        self.stdout.write(f'Security issues found: {len(report["security_issues"])}')
+        
+        if report['security_issues']:
+            self.stdout.write(self.style.ERROR('⚠️  SECURITY ISSUES DETECTED'))
+            for issue in report['security_issues']:
+                self.stdout.write(self.style.ERROR(f'- {issue["description"]}'))
+        else:
+            self.stdout.write(self.style.SUCCESS('✅ No security issues detected'))
