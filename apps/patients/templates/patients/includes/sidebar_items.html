@@ -26,7 +26,7 @@
       <a class="collapse-item" href="{% url 'apps.patients:patient_create' %}"
         >Adicionar Paciente</a
       >
-      {% endif %} {% if perms.patients.view_allowedtag %}
+      {% endif %} {% if user.is_staff and user.is_superuser %}
       <a class="collapse-item" href="{% url 'apps.patients:tag_list' %}"
         >Gerenciar Tags</a
       >

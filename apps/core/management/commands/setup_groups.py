@@ -150,26 +150,26 @@ class Command(BaseCommand):
         return Permission.objects.all()
 
     def _get_admin_restricted_permissions(self):
-        """Get all permissions except AllowedTag creation (admin-only)."""
+        """Get all permissions except AllowedTag management (admin-only)."""
         from apps.patients.models import AllowedTag
         from django.contrib.contenttypes.models import ContentType
         
         # Get all permissions
         all_permissions = Permission.objects.all()
         
-        # Exclude add_allowedtag permission (admin-only)
+        # Exclude all AllowedTag modification permissions (admin-only)
         try:
             tag_ct = ContentType.objects.get_for_model(AllowedTag)
             restricted_permissions = all_permissions.exclude(
                 content_type=tag_ct,
-                codename='add_allowedtag'
+                codename__in=['add_allowedtag', 'change_allowedtag', 'delete_allowedtag']
             )
             return restricted_permissions
         except:
             return all_permissions
 
     def _get_patient_related_permissions(self):
-        """Get all patient-related permissions (excluding AllowedTag creation for non-admin roles)."""
+        """Get all patient-related permissions (excluding AllowedTag management for non-admin roles)."""
         permissions = []
         
         # Get patient app content types
@@ -184,11 +184,11 @@ class Command(BaseCommand):
             permissions.extend(Permission.objects.filter(content_type=patient_ct))
             permissions.extend(Permission.objects.filter(content_type=tag_instance_ct))
             
-            # Add only view, change, delete permissions for AllowedTag (no add)
-            # Tag creation should be admin-only to maintain system consistency
+            # Add only view permission for AllowedTag - all modifications should be admin-only
+            # Tag creation, editing, and deletion should be admin-only to maintain system consistency
             permissions.extend(Permission.objects.filter(
                 content_type=tag_ct,
-                codename__in=[f'view_{tag_ct.model}', f'change_{tag_ct.model}', f'delete_{tag_ct.model}']
+                codename=f'view_{tag_ct.model}'
             ))
             
         except ImportError:
@@ -197,7 +197,7 @@ class Command(BaseCommand):
         return permissions
 
     def _get_patient_view_change_permissions(self):
-        """Get view and change permissions for patients (no delete, no AllowedTag creation)."""
+        """Get view and change permissions for patients (no delete, no AllowedTag management)."""
         permissions = []
         
         try:
@@ -214,11 +214,11 @@ class Command(BaseCommand):
                     codename__in=[f'view_{ct.model}', f'change_{ct.model}', f'add_{ct.model}']
                 ))
             
-            # Add only view and change permissions for AllowedTag (no add, no delete)
-            # Tag creation should be admin-only to maintain system consistency
+            # Add only view permission for AllowedTag - all modifications should be admin-only
+            # Tag creation, editing, and deletion should be admin-only to maintain system consistency
             permissions.extend(Permission.objects.filter(
                 content_type=tag_ct,
-                codename__in=[f'view_{tag_ct.model}', f'change_{tag_ct.model}']
+                codename=f'view_{tag_ct.model}'
             ))
             
         except ImportError:

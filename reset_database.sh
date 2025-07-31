@@ -270,6 +270,7 @@ initialize_data() {
     print_status "[DRY RUN] Would create sample wards..."
     print_status "[DRY RUN] Would populate comprehensive sample data..."
     print_status "[DRY RUN] This includes: admin user, hospital, medical staff, patients, sample tags, daily notes, drug templates, prescription templates, and outpatient prescriptions"
+    print_status "[DRY RUN] Would sync user permissions to groups..."
     print_success "[DRY RUN] Application data would be initialized successfully"
     return 0
   fi
@@ -296,6 +297,14 @@ initialize_data() {
     print_success "Sample data populated successfully"
   else
     print_error "Failed to populate sample data"
+    exit 1
+  fi
+
+  print_status "Syncing user permissions to groups..."
+  if uv run python manage.py user_permissions --action=sync --all-users; then
+    print_success "User permissions synced successfully"
+  else
+    print_error "Failed to sync user permissions"
     exit 1
   fi
 

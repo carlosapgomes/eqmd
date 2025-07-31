@@ -39,6 +39,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('DRY RUN MODE - No data will be created'))
 
         self.create_users()
+        self.sync_user_permissions()
         self.create_sample_wards()
         self.create_tags()
         self.create_patients()
@@ -168,6 +169,37 @@ class Command(BaseCommand):
                 self.stdout.write(f'  User already exists: {profession_name} {user.email}')
             
             self.users.append(user)
+
+    def sync_user_permissions(self):
+        """Sync created users to their appropriate permission groups."""
+        self.stdout.write('Syncing user permissions...')
+        
+        if self.dry_run:
+            self.stdout.write('Would sync all users to appropriate permission groups based on profession')
+            return
+        
+        from django.core.management import call_command
+        from io import StringIO
+        import sys
+        
+        # Capture output from user_permissions command
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        try:
+            # Sync all users to groups based on their profession_type
+            call_command('user_permissions', action='sync', all_users=True)
+            output = captured_output.getvalue()
+            
+            # Count successful assignments from output
+            sync_count = output.count('✓ Added') + output.count('✓ already in correct group')
+            
+            self.stdout.write(f'  Synced {sync_count} users to permission groups')
+            
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'  Failed to sync user permissions: {e}'))
+        finally:
+            sys.stdout = old_stdout
 
     def create_sample_wards(self):
         self.stdout.write('Creating sample wards...')

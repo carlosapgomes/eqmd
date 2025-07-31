@@ -320,18 +320,20 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING('DRY RUN - No changes will be made'))
         
-        profession_to_group = {
-            'medical_doctor': 'Medical Doctors',
-            'resident': 'Residents',
-            'nurse': 'Nurses',
-            'physiotherapist': 'Physiotherapists',
-            'student': 'Students',
+        # Map numeric profession_type values to group names
+        # Based on EqmdCustomUser model: MEDICAL_DOCTOR=0, RESIDENT=1, NURSE=2, PHYSIOTERAPIST=3, STUDENT=4
+        profession_type_to_group = {
+            0: 'Medical Doctors',      # MEDICAL_DOCTOR
+            1: 'Residents',            # RESIDENT
+            2: 'Nurses',               # NURSE  
+            3: 'Physiotherapists',     # PHYSIOTERAPIST
+            4: 'Students',             # STUDENT
         }
         
         with transaction.atomic():
             for user in users:
-                if hasattr(user, 'profession_type') and user.profession_type:
-                    expected_group = profession_to_group.get(user.profession_type)
+                if hasattr(user, 'profession_type') and user.profession_type is not None:
+                    expected_group = profession_type_to_group.get(user.profession_type)
                     if expected_group:
                         current_groups = set(user.groups.values_list('name', flat=True))
                         
@@ -339,6 +341,8 @@ class Command(BaseCommand):
                             self._assign_group(user, expected_group, dry_run)
                         else:
                             self.stdout.write(f"✓ {user.email} already in correct group '{expected_group}'")
+                    else:
+                        self.stdout.write(f"⚠ {user.email} has unknown profession type: {user.profession_type}")
                 else:
                     self.stdout.write(f"⚠ {user.email} has no profession type set")
     
