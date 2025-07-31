@@ -66,7 +66,8 @@ class Command(BaseCommand):
         # Clear drug templates
         DrugTemplate.objects.filter(creator__username__startswith='sample_').delete()
 
-        # Clear tags (both Tag and AllowedTag instances)
+        # Clear tags (both Tag and AllowedTag instances created by sample users)
+        # Note: AllowedTags owned by admin are preserved as hospital configuration
         Tag.objects.filter(created_by__username__startswith='sample_').delete()
         AllowedTag.objects.filter(created_by__username__startswith='sample_').delete()
 
@@ -80,13 +81,40 @@ class Command(BaseCommand):
         # Clear wards
         Ward.objects.filter(created_by__username__startswith='sample_').delete()
 
-        # Clear users last (now safe since all dependent objects are deleted)
+        # Clear sample users last (now safe since all dependent objects are deleted)
+        # Note: Admin user is preserved as system configuration
         User.objects.filter(username__startswith='sample_').delete()
 
 
     def create_users(self):
         self.stdout.write('Creating users...')
         
+        # First create/get admin user for system configuration
+        if not self.dry_run:
+            admin_user, created = User.objects.get_or_create(
+                username='admin',
+                defaults={
+                    'email': 'admin@example.com',
+                    'is_staff': True,
+                    'is_superuser': True,
+                }
+            )
+            
+            if created:
+                admin_user.set_password('admin123')
+                admin_user.save()
+                self.stdout.write(
+                    self.style.SUCCESS(f'Created admin user: admin/admin123')
+                )
+            else:
+                self.stdout.write(
+                    self.style.WARNING(f'Admin user already exists: admin')
+                )
+            
+            self.admin_user = admin_user
+        else:
+            self.stdout.write('Would create admin user: admin/admin123')
+            self.admin_user = None
         
         users_data = [
             # Doctors
@@ -118,22 +146,33 @@ class Command(BaseCommand):
                 continue
                 
             profession = user_data.pop('profession')
-            user = User.objects.create_user(
-                password=password,
-                profession_type=profession,
-                professional_registration_number=f'REG{random.randint(10000, 99999)}',
-                **user_data
+            
+            # Check if user already exists
+            user, created = User.objects.get_or_create(
+                username=user_data['username'],
+                defaults={
+                    'profession_type': profession,
+                    'professional_registration_number': f'REG{random.randint(10000, 99999)}',
+                    **user_data
+                }
             )
             
+            if created:
+                # Set password only for newly created users
+                user.set_password(password)
+                user.save()
+                profession_name = user.get_profession_type_display()
+                self.stdout.write(f'  Created {profession_name}: {user.email}')
+            else:
+                profession_name = user.get_profession_type_display()
+                self.stdout.write(f'  User already exists: {profession_name} {user.email}')
             
             self.users.append(user)
-            profession_name = user.get_profession_type_display()
-            self.stdout.write(f'  Created {profession_name}: {user.email}')
 
     def create_sample_wards(self):
         self.stdout.write('Creating sample wards...')
         
-        admin_user = self.users[0] if self.users and not self.dry_run else None
+        admin_user = self.admin_user
         
         wards_data = [
             {
@@ -220,20 +259,34 @@ class Command(BaseCommand):
         ]
 
         self.allowed_tags = []
-        admin_user = self.users[0] if self.users and not self.dry_run else None
+        created_count = 0
         
         for tag_data in tags_data:
             if self.dry_run:
                 self.stdout.write(f'Would create tag: {tag_data["name"]}')
                 continue
                 
-            allowed_tag = AllowedTag.objects.create(
-                created_by=admin_user,
-                updated_by=admin_user,
-                **tag_data
+            # Use get_or_create to avoid duplicates, and assign to admin user
+            allowed_tag, created = AllowedTag.objects.get_or_create(
+                name=tag_data['name'],
+                defaults={
+                    'description': tag_data['description'],
+                    'color': tag_data['color'],
+                    'created_by': self.admin_user,
+                    'updated_by': self.admin_user,
+                }
             )
+            
+            if created:
+                created_count += 1
+                self.stdout.write(f'  Created tag: {allowed_tag.name}')
+            else:
+                self.stdout.write(f'  Tag already exists: {allowed_tag.name}')
+                
             self.allowed_tags.append(allowed_tag)
-            self.stdout.write(f'  Created tag: {allowed_tag.name}')
+        
+        if not self.dry_run:
+            self.stdout.write(f'Created {created_count} new tags (owned by admin user)')
 
     def create_patients(self):
         self.stdout.write('Creating patients...')
@@ -350,13 +403,13 @@ class Command(BaseCommand):
             for allowed_tag in selected_allowed_tags:
                 tag, created = Tag.objects.get_or_create(
                     allowed_tag=allowed_tag,
+                    patient=patient,
                     defaults={
                         'notes': f'Tag aplicada ao paciente {patient.name}',
                         'created_by': creator,
                         'updated_by': creator,
                     }
                 )
-                patient.tags.add(tag)
         
         return patient
     

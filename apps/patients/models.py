@@ -58,6 +58,12 @@ class Tag(models.Model):
         related_name="tag_instances",
         verbose_name="Tag Permitida",
     )
+    patient = models.ForeignKey(
+        'Patient',
+        on_delete=models.CASCADE,
+        related_name="patient_tags",
+        verbose_name="Paciente",
+    )
     notes = models.TextField(blank=True, verbose_name="Notas")
 
     # Tracking fields
@@ -79,8 +85,8 @@ class Tag(models.Model):
         verbose_name_plural = "Tags"
         constraints = [
             models.UniqueConstraint(
-                fields=['allowed_tag'],
-                name='unique_tag_per_allowed_tag'
+                fields=['allowed_tag', 'patient'],
+                name='unique_tag_per_patient_per_allowed_tag'
             )
         ]
 
@@ -94,6 +100,7 @@ class Tag(models.Model):
     @property
     def color(self):
         return self.allowed_tag.color
+
 
 
 class Ward(models.Model):
@@ -676,10 +683,7 @@ class Patient(models.Model):
         help_text="Total de dias internado ao longo de todas as internações",
     )
 
-    # Tags relationship
-    tags = models.ManyToManyField(
-        Tag, blank=True, related_name="patients", verbose_name="Tags"
-    )
+    # Tags are now accessed via reverse relationship: patient.patient_tags.all()
 
     # Tracking fields
     created_at = models.DateTimeField(auto_now_add=True)

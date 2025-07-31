@@ -1,0 +1,605 @@
+{% load patient_tags %}
+{% load permission_tags %}
+
+<!-- Tag Management Section -->
+{% can_user_view_patient_tags user patient as can_view_tags %}
+{% can_user_manage_patient_tags user patient as can_manage_tags %}
+
+{% if can_view_tags %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-tags me-2 text-medical-primary"></i>
+            Gerenciamento de Tags
+            {% if not can_manage_tags %}
+                <small class="text-muted ms-2">(Visualização apenas)</small>
+            {% endif %}
+        </h5>
+    </div>
+    
+    <div class="card-body">
+        <!-- Current Tags Display -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="d-flex align-items-center mb-2">
+                    <strong class="me-2">Tags Atuais:</strong>
+                </div>
+                <div id="current-tags-container">
+                    {% if patient.patient_tags.all %}
+                        {% for tag in patient.patient_tags.all %}
+                        <div class="tag-item d-inline-flex align-items-center me-2 mb-2" data-tag-id="{{ tag.id }}">
+                            <span class="badge" style="background-color: {{ tag.allowed_tag.color }}; color: white;">
+                                <i class="bi bi-tag-fill me-1"></i>{{ tag.allowed_tag.name }}
+                                {% if can_manage_tags %}
+                                <button type="button" class="btn btn-sm p-0 ms-1 text-white border-0 bg-transparent remove-tag-btn" 
+                                        data-tag-id="{{ tag.id }}" 
+                                        data-tag-name="{{ tag.allowed_tag.name }}"
+                                        style="font-size: 0.8em; line-height: 1;">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div id="no-tags-message" class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Nenhuma tag atribuída a este paciente
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tag Management Actions -->
+        {% if can_manage_tags %}
+        <div class="row mb-3">
+            <div class="col-12">
+                <button type="button" class="btn btn-sm btn-outline-success" 
+                        data-bs-toggle="modal" data-bs-target="#addTagModal">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Adicionar Tag
+                </button>
+                {% if patient.patient_tags.all %}
+                <button type="button" class="btn btn-sm btn-outline-warning ms-2" 
+                        data-bs-toggle="modal" data-bs-target="#manageTagsModal">
+                    <i class="bi bi-gear me-1"></i>
+                    Gerenciar Tags
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tag Statistics (Optional Enhancement) -->
+        <div class="row">
+            <div class="col-12">
+                <div class="small text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Total de tags: <span id="tag-count">{{ patient.patient_tags.all|length }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Tag Modal -->
+{% if can_manage_tags %}
+<div class="modal fade" id="addTagModal" tabindex="-1" aria-labelledby="addTagModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addTagModalLabel">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Adicionar Tag ao Paciente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Paciente</label>
+                        <input type="text" class="form-control" value="{{ patient.name }}" readonly>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Status Atual</label>
+                        <div class="form-control-plaintext">
+                            {{ patient.status|patient_status_badge }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label for="available-tags" class="form-label">Tags Disponíveis *</label>
+                        <div id="available-tags" class="available-tags-container">
+                            <!-- Will be populated via AJAX -->
+                            <div class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                                <div class="mt-2 small text-muted">Carregando tags disponíveis...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <label for="tag-notes" class="form-label">Observações (opcional)</label>
+                        <textarea id="tag-notes" class="form-control" rows="2" 
+                                  placeholder="Adicione observações sobre a atribuição desta tag..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="add-tag-btn" class="btn btn-success" disabled>
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Adicionar Tag
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Tags Modal (Bulk Operations) -->
+<div class="modal fade" id="manageTagsModal" tabindex="-1" aria-labelledby="manageTagsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="manageTagsModalLabel">
+                    <i class="bi bi-gear me-2"></i>
+                    Gerenciar Tags do Paciente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Paciente</label>
+                        <input type="text" class="form-control" value="{{ patient.name }}" readonly>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tags Atuais</label>
+                        <div class="form-control-plaintext">
+                            <span class="badge bg-secondary">{{ patient.patient_tags.all|length }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="mb-3">Tags Atribuídas</h6>
+                        <div id="assigned-tags-list">
+                            {% for tag in patient.patient_tags.all %}
+                            <div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2 assigned-tag-item" 
+                                 data-tag-id="{{ tag.id }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge me-2" style="background-color: {{ tag.allowed_tag.color }}; color: white;">
+                                        <i class="bi bi-tag-fill me-1"></i>{{ tag.allowed_tag.name }}
+                                    </span>
+                                    <small class="text-muted">
+                                        Atribuída em {{ tag.created_at|date:"d/m/Y H:i" }}
+                                    </small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-assigned-tag-btn" 
+                                        data-tag-id="{{ tag.id }}" data-tag-name="{{ tag.allowed_tag.name }}">
+                                    <i class="bi bi-trash"></i>
+                                    Remover
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-outline-danger" id="remove-all-tags-btn" 
+                        {% if not patient.patient_tags.all %}disabled{% endif %}>
+                    <i class="bi bi-trash"></i>
+                    Remover Todas
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove Tag Confirmation Modal -->
+<div class="modal fade" id="removeTagModal" tabindex="-1" aria-labelledby="removeTagModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="removeTagModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+                    Confirmar Remoção de Tag
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja remover a tag <strong id="tag-to-remove-name"></strong> do paciente <strong>{{ patient.name }}</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Esta ação não pode ser desfeita.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="confirm-remove-tag-btn" class="btn btn-danger">
+                    <i class="bi bi-trash me-1"></i>
+                    Remover Tag
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.available-tags-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+}
+
+.available-tag-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.available-tag-item:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.available-tag-item.selected {
+    background-color: #e7f3ff;
+    border-color: #0d6efd;
+}
+
+.tag-item .remove-tag-btn {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.tag-item:hover .remove-tag-btn {
+    opacity: 1;
+}
+
+.assigned-tag-item {
+    transition: background-color 0.2s ease;
+}
+
+.assigned-tag-item:hover {
+    background-color: #f8f9fa;
+}
+
+#current-tags-container:empty + #no-tags-message {
+    display: block;
+}
+
+#current-tags-container:not(:empty) + #no-tags-message {
+    display: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const patientId = '{{ patient.id }}';
+    const canManageTags = {{ can_manage_tags|yesno:'true,false' }};
+    let selectedTagId = null;
+    
+    // Load available tags when add modal opens
+    document.getElementById('addTagModal').addEventListener('show.bs.modal', function() {
+        loadAvailableTags();
+    });
+    
+    // Handle tag selection in add modal
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.available-tag-item')) {
+            const tagItem = e.target.closest('.available-tag-item');
+            
+            // Remove selection from other items
+            document.querySelectorAll('.available-tag-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select clicked item
+            tagItem.classList.add('selected');
+            selectedTagId = tagItem.dataset.tagId;
+            
+            // Enable add button
+            document.getElementById('add-tag-btn').disabled = false;
+        }
+    });
+    
+    // Handle add tag button click
+    document.getElementById('add-tag-btn').addEventListener('click', function() {
+        if (selectedTagId) {
+            addTagToPatient(selectedTagId);
+        }
+    });
+    
+    // Handle remove tag buttons (quick remove)
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-tag-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.remove-tag-btn');
+            const tagId = btn.dataset.tagId;
+            const tagName = btn.dataset.tagName;
+            showRemoveTagConfirmation(tagId, tagName);
+        }
+    });
+    
+    // Handle remove tag buttons in manage modal
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-assigned-tag-btn')) {
+            const btn = e.target.closest('.remove-assigned-tag-btn');
+            const tagId = btn.dataset.tagId;
+            const tagName = btn.dataset.tagName;
+            showRemoveTagConfirmation(tagId, tagName);
+        }
+    });
+    
+    // Handle confirm remove tag
+    document.getElementById('confirm-remove-tag-btn').addEventListener('click', function() {
+        const tagId = this.dataset.tagId;
+        if (tagId) {
+            removeTagFromPatient(tagId);
+        }
+    });
+    
+    // Handle remove all tags
+    document.getElementById('remove-all-tags-btn').addEventListener('click', function() {
+        if (confirm('Tem certeza que deseja remover TODAS as tags deste paciente? Esta ação não pode ser desfeita.')) {
+            removeAllTags();
+        }
+    });
+    
+    function loadAvailableTags() {
+        const container = document.getElementById('available-tags');
+        
+        fetch(`/patients/${patientId}/tags/api/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.available_tags) {
+                    renderAvailableTags(data.available_tags);
+                } else {
+                    showError('Erro ao carregar tags disponíveis');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading available tags:', error);
+                showError('Erro ao carregar tags disponíveis');
+            });
+    }
+    
+    function renderAvailableTags(tags) {
+        const container = document.getElementById('available-tags');
+        
+        if (tags.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-3 text-muted">
+                    <i class="bi bi-info-circle"></i>
+                    <div class="mt-2">Todas as tags disponíveis já foram atribuídas a este paciente</div>
+                </div>
+            `;
+            return;
+        }
+        
+        const tagsHtml = tags.map(tag => `
+            <div class="available-tag-item p-2 rounded mb-2" data-tag-id="${tag.id}">
+                <div class="d-flex align-items-center">
+                    <span class="badge me-2" style="background-color: ${tag.color}; color: white;">
+                        <i class="bi bi-tag-fill me-1"></i>${tag.name}
+                    </span>
+                    <small class="text-muted">${tag.description || 'Sem descrição'}</small>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = tagsHtml;
+        selectedTagId = null;
+        document.getElementById('add-tag-btn').disabled = true;
+    }
+    
+    function addTagToPatient(tagId) {
+        const notes = document.getElementById('tag-notes').value;
+        const addBtn = document.getElementById('add-tag-btn');
+        
+        // Disable button and show loading
+        addBtn.disabled = true;
+        addBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Adicionando...';
+        
+        const formData = new FormData();
+        formData.append('tag_id', tagId);
+        formData.append('notes', notes);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch(`/patients/${patientId}/tags/add/`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Refresh current tags display
+                refreshCurrentTags();
+                
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('addTagModal')).hide();
+                
+                // Show success message
+                showSuccess('Tag adicionada com sucesso!');
+                
+                // Reset form
+                document.getElementById('tag-notes').value = '';
+                selectedTagId = null;
+            } else {
+                showError(data.error || 'Erro ao adicionar tag');
+            }
+        })
+        .catch(error => {
+            console.error('Error adding tag:', error);
+            showError('Erro ao adicionar tag');
+        })
+        .finally(() => {
+            // Reset button
+            addBtn.disabled = false;
+            addBtn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Adicionar Tag';
+        });
+    }
+    
+    function showRemoveTagConfirmation(tagId, tagName) {
+        document.getElementById('tag-to-remove-name').textContent = tagName;
+        document.getElementById('confirm-remove-tag-btn').dataset.tagId = tagId;
+        
+        const modal = new bootstrap.Modal(document.getElementById('removeTagModal'));
+        modal.show();
+    }
+    
+    function removeTagFromPatient(tagId) {
+        const confirmBtn = document.getElementById('confirm-remove-tag-btn');
+        
+        // Disable button and show loading
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Removendo...';
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch(`/patients/${patientId}/tags/${tagId}/remove/`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Refresh current tags display
+                refreshCurrentTags();
+                
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('removeTagModal')).hide();
+                
+                // Show success message
+                showSuccess('Tag removida com sucesso!');
+            } else {
+                showError(data.error || 'Erro ao remover tag');
+            }
+        })
+        .catch(error => {
+            console.error('Error removing tag:', error);
+            showError('Erro ao remover tag');
+        })
+        .finally(() => {
+            // Reset button
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="bi bi-trash me-1"></i>Remover Tag';
+        });
+    }
+    
+    function removeAllTags() {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch(`/patients/${patientId}/tags/remove-all/`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                refreshCurrentTags();
+                bootstrap.Modal.getInstance(document.getElementById('manageTagsModal')).hide();
+                showSuccess('Todas as tags foram removidas com sucesso!');
+            } else {
+                showError(data.error || 'Erro ao remover tags');
+            }
+        })
+        .catch(error => {
+            console.error('Error removing all tags:', error);
+            showError('Erro ao remover todas as tags');
+        });
+    }
+    
+    function refreshCurrentTags() {
+        fetch(`/patients/${patientId}/tags/api/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.current_tags) {
+                    updateCurrentTagsDisplay(data.current_tags);
+                    updateTagCount(data.current_tags.length);
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing current tags:', error);
+            });
+    }
+    
+    function updateCurrentTagsDisplay(tags) {
+        const container = document.getElementById('current-tags-container');
+        
+        if (tags.length === 0) {
+            container.innerHTML = '';
+            document.getElementById('no-tags-message').style.display = 'block';
+            document.getElementById('remove-all-tags-btn').disabled = true;
+            return;
+        }
+        
+        const tagsHtml = tags.map(tag => `
+            <div class="tag-item d-inline-flex align-items-center me-2 mb-2" data-tag-id="${tag.id}">
+                <span class="badge" style="background-color: ${tag.color}; color: white;">
+                    <i class="bi bi-tag-fill me-1"></i>${tag.name}
+                    ${canManageTags ? `
+                    <button type="button" class="btn btn-sm p-0 ms-1 text-white border-0 bg-transparent remove-tag-btn" 
+                            data-tag-id="${tag.id}" 
+                            data-tag-name="${tag.name}"
+                            style="font-size: 0.8em; line-height: 1;">
+                        <i class="bi bi-x"></i>
+                    </button>
+                    ` : ''}
+                </span>
+            </div>
+        `).join('');
+        
+        container.innerHTML = tagsHtml;
+        document.getElementById('no-tags-message').style.display = 'none';
+        document.getElementById('remove-all-tags-btn').disabled = false;
+    }
+    
+    function updateTagCount(count) {
+        document.getElementById('tag-count').textContent = count;
+    }
+    
+    function showSuccess(message) {
+        // You can implement your preferred notification system here
+        alert(message); // Temporary - replace with proper toast/notification
+    }
+    
+    function showError(message) {
+        // You can implement your preferred notification system here
+        alert(message); // Temporary - replace with proper toast/notification
+    }
+});
+</script>
+{% else %}
+<!-- Permission Denied Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-tags me-2 text-medical-primary"></i>
+            Gerenciamento de Tags
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Você não tem permissão para visualizar as tags deste paciente.
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -17,9 +17,9 @@ class AllowedTagAdmin(admin.ModelAdmin):
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('allowed_tag', 'notes', 'created_at')
-    list_filter = ('allowed_tag',)
-    search_fields = ('allowed_tag__name', 'notes')
+    list_display = ('allowed_tag', 'patient', 'notes', 'created_at')
+    list_filter = ('allowed_tag', 'patient')
+    search_fields = ('allowed_tag__name', 'patient__name', 'notes')
     readonly_fields = ('created_at', 'created_by', 'updated_at', 'updated_by')
 
     def save_model(self, request, obj, form, change):
@@ -136,10 +136,9 @@ class WardAdmin(admin.ModelAdmin):
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
     list_display = ('name', 'birthday', 'gender', 'status', 'ward', 'bed', 'current_record_number', 'total_admissions_count', 'is_currently_admitted', 'created_at')
-    list_filter = ('status', 'gender', 'ward', 'tags')
+    list_filter = ('status', 'gender', 'ward')
     search_fields = ('name', 'id_number', 'fiscal_number', 'healthcard_number', 'current_record_number')
     readonly_fields = ('current_record_number', 'total_admissions_count', 'total_inpatient_days', 'current_admission_id', 'created_at', 'created_by', 'updated_at', 'updated_by')
-    filter_horizontal = ('tags',)
     
     fieldsets = (
         ('Informações Básicas', {
@@ -162,9 +161,6 @@ class PatientAdmin(admin.ModelAdmin):
         ('Estatísticas de Internação', {
             'fields': ('total_admissions_count', 'total_inpatient_days', 'current_admission_id'),
             'classes': ('collapse',)
-        }),
-        ('Tags', {
-            'fields': ('tags',)
         }),
         ('Auditoria', {
             'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),

@@ -25,6 +25,9 @@ class Event(models.Model):
     TRANSFER_EVENT = 17              # NEW
     DEATH_DECLARATION_EVENT = 18     # NEW
     OUTPATIENT_STATUS_EVENT = 19     # NEW
+    TAG_ADDED_EVENT = 20              # NEW
+    TAG_REMOVED_EVENT = 21            # NEW
+    TAG_BULK_REMOVE_EVENT = 22        # NEW
 
     EVENT_TYPE_CHOICES = (
         (HISTORY_AND_PHYSICAL_EVENT, "Anamnese e Exame Físico"),
@@ -47,6 +50,9 @@ class Event(models.Model):
         (TRANSFER_EVENT, "Transferência"),                        # NEW
         (DEATH_DECLARATION_EVENT, "Declaração de Óbito"),         # NEW
         (OUTPATIENT_STATUS_EVENT, "Status Ambulatorial"),         # NEW
+        (TAG_ADDED_EVENT, "Tag Adicionada"),                      # NEW
+        (TAG_REMOVED_EVENT, "Tag Removida"),                      # NEW
+        (TAG_BULK_REMOVE_EVENT, "Tags Removidas em Lote"),        # NEW
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -116,6 +122,9 @@ class Event(models.Model):
             17: "bg-primary",  # Transfer
             18: "bg-dark",  # Death Declaration
             19: "bg-light",  # Outpatient Status
+            20: "bg-success",  # Tag Added
+            21: "bg-warning",  # Tag Removed
+            22: "bg-danger",  # Tag Bulk Remove
         }
         return badge_classes.get(self.event_type, "bg-secondary")
 
@@ -142,6 +151,9 @@ class Event(models.Model):
             17: "bi-arrow-left-right",  # Transfer
             18: "bi-heart-pulse",  # Death Declaration
             19: "bi-person-check",  # Outpatient Status
+            20: "bi-tag-fill",  # Tag Added
+            21: "bi-tag",  # Tag Removed
+            22: "bi-tags",  # Tag Bulk Remove
         }
         return icon_classes.get(self.event_type, "bi-file-text")
 
@@ -168,6 +180,9 @@ class Event(models.Model):
             17: "Transferência",  # Transferência
             18: "Óbito",  # Declaração de Óbito
             19: "Ambulatorial",  # Status Ambulatorial
+            20: "Tag +",  # Tag Adicionada
+            21: "Tag -",  # Tag Removida
+            22: "Tags --",  # Tags Removidas em Lote
         }
         return short_display_map.get(self.event_type, self.get_event_type_display())
 
@@ -490,5 +505,133 @@ class StatusChangeEvent(Event):
     
     def get_edit_url(self):
         """Return URL to edit status change"""
+        from django.urls import reverse
+        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+
+
+class TagAddedEvent(Event):
+    """Event for tracking tag additions to patients in timeline"""
+    
+    tag_name = models.CharField(
+        max_length=100,
+        verbose_name="Nome da Tag",
+        help_text="Nome da tag adicionada"
+    )
+    tag_color = models.CharField(
+        max_length=7,
+        verbose_name="Cor da Tag",
+        help_text="Cor da tag em formato hexadecimal"
+    )
+    tag_notes = models.TextField(
+        blank=True,
+        verbose_name="Observações da Tag",
+        help_text="Observações sobre a atribuição da tag"
+    )
+    
+    class Meta:
+        verbose_name = "Evento de Tag Adicionada"
+        verbose_name_plural = "Eventos de Tags Adicionadas"
+    
+    def save(self, *args, **kwargs):
+        """Override save to set event_type"""
+        self.event_type = self.TAG_ADDED_EVENT
+        # Set description based on tag name
+        if not self.description:
+            self.description = f"Tag '{self.tag_name}' adicionada"
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Tag adicionada: {self.tag_name}"
+    
+    def get_absolute_url(self):
+        """Return URL to view patient tags"""
+        from django.urls import reverse
+        return reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+    
+    def get_edit_url(self):
+        """Return URL to patient detail (tags can't be edited, only removed)"""
+        from django.urls import reverse
+        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+
+
+class TagRemovedEvent(Event):
+    """Event for tracking tag removals from patients in timeline"""
+    
+    tag_name = models.CharField(
+        max_length=100,
+        verbose_name="Nome da Tag",
+        help_text="Nome da tag removida"
+    )
+    tag_color = models.CharField(
+        max_length=7,
+        verbose_name="Cor da Tag",
+        help_text="Cor da tag em formato hexadecimal"
+    )
+    tag_notes = models.TextField(
+        blank=True,
+        verbose_name="Observações da Tag",
+        help_text="Observações que a tag tinha antes da remoção"
+    )
+    
+    class Meta:
+        verbose_name = "Evento de Tag Removida"
+        verbose_name_plural = "Eventos de Tags Removidas"
+    
+    def save(self, *args, **kwargs):
+        """Override save to set event_type"""
+        self.event_type = self.TAG_REMOVED_EVENT
+        # Set description based on tag name
+        if not self.description:
+            self.description = f"Tag '{self.tag_name}' removida"
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Tag removida: {self.tag_name}"
+    
+    def get_absolute_url(self):
+        """Return URL to view patient tags"""
+        from django.urls import reverse
+        return reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+    
+    def get_edit_url(self):
+        """Return URL to patient detail (removed tags can't be restored from timeline)"""
+        from django.urls import reverse
+        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+
+
+class TagBulkRemoveEvent(Event):
+    """Event for tracking bulk removal of tags from patients in timeline"""
+    
+    tag_count = models.PositiveIntegerField(
+        verbose_name="Quantidade de Tags",
+        help_text="Número de tags removidas na operação em lote"
+    )
+    tag_names = models.TextField(
+        verbose_name="Nomes das Tags",
+        help_text="Lista de nomes das tags removidas, separados por vírgula"
+    )
+    
+    class Meta:
+        verbose_name = "Evento de Remoção em Lote de Tags"
+        verbose_name_plural = "Eventos de Remoção em Lote de Tags"
+    
+    def save(self, *args, **kwargs):
+        """Override save to set event_type"""
+        self.event_type = self.TAG_BULK_REMOVE_EVENT
+        # Set description based on tag count
+        if not self.description:
+            self.description = f"{self.tag_count} tag(s) removida(s) em lote"
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Remoção em lote: {self.tag_count} tag(s)"
+    
+    def get_absolute_url(self):
+        """Return URL to view patient tags"""
+        from django.urls import reverse
+        return reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+    
+    def get_edit_url(self):
+        """Return URL to patient detail (bulk removed tags can't be restored from timeline)"""
         from django.urls import reverse
         return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})

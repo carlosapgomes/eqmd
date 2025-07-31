@@ -102,6 +102,33 @@ class PatientFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('gender', form.errors)
 
+    def test_patient_form_no_tag_field(self):
+        """Test that PatientForm no longer includes tag_selection field after refactor"""
+        form = PatientForm()
+        self.assertNotIn('tag_selection', form.fields)
+        
+    def test_patient_form_save_without_tags(self):
+        """Test that PatientForm saves correctly without tag functionality"""
+        form_data = {
+            'name': 'Test Patient',
+            'birthday': '1990-01-01',
+            'gender': Patient.GenderChoices.MALE,
+        }
+        
+        form = PatientForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        
+        # Save form without tags
+        patient = form.save(commit=False)
+        patient.created_by = self.user
+        patient.updated_by = self.user
+        patient.save()
+        
+        # Verify patient was created without tags
+        self.assertEqual(patient.name, 'Test Patient')
+        self.assertEqual(patient.tags.count(), 0)
+        self.assertEqual(patient.created_by, self.user)
+
 
 class StatusChangeFormTests(TestCase):
     @classmethod

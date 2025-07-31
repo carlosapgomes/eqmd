@@ -33,7 +33,7 @@ def patient_tags(patient):
 
     Usage: {% patient_tags patient %}
     """
-    return {'tags': patient.tags.all()}
+    return {'tags': patient.patient_tags.all()}
 
 
 @register.filter
@@ -137,3 +137,83 @@ def patient_gender_display(gender):
     """
     gender_labels = dict(Patient.GenderChoices.choices)
     return gender_labels.get(gender, 'Não Informado')
+
+
+@register.inclusion_tag('patients/partials/patient_tag_badge.html')
+def patient_tag_badge(tag, removable=False, patient=None):
+    """
+    Render individual tag with color and styling, optionally with remove button.
+
+    Usage: {% patient_tag_badge tag %}
+           {% patient_tag_badge tag removable=True patient=patient %}
+    """
+    return {
+        'tag': tag,
+        'removable': removable,
+        'patient': patient
+    }
+
+
+@register.inclusion_tag('patients/partials/tag_management_widget.html', takes_context=True)
+def tag_management_widget(context, patient):
+    """
+    Render complete tag management interface for patient detail page.
+
+    Usage: {% tag_management_widget patient %}
+    """
+    from apps.patients.models import AllowedTag
+    
+    return {
+        'patient': patient,
+        'user': context['user'],
+        'available_tags': AllowedTag.objects.filter(is_active=True),
+        'can_manage_tags': context['user'].has_perm('patients.change_patient'),
+        'current_tags': patient.patient_tags.all(),
+        'request': context.get('request')
+    }
+
+
+@register.filter
+def available_for_patient(allowed_tags, patient):
+    """
+    Filter AllowedTag queryset to exclude tags already assigned to patient.
+
+    Usage: {{ available_tags|available_for_patient:patient }}
+    """
+    assigned_tag_ids = patient.patient_tags.values_list('allowed_tag_id', flat=True)
+    return allowed_tags.exclude(id__in=assigned_tag_ids)
+
+
+@register.simple_tag
+def get_available_tags_for_patient(patient):
+    """
+    Get list of available tags that can be assigned to patient.
+
+    Usage: {% get_available_tags_for_patient patient as available_tags %}
+    """
+    from apps.patients.models import AllowedTag
+    
+    assigned_tag_ids = patient.patient_tags.values_list('allowed_tag_id', flat=True)
+    return AllowedTag.objects.filter(is_active=True).exclude(id__in=assigned_tag_ids)
+
+
+@register.filter
+def can_manage_patient_tags(user, patient):
+    """
+    Check if user can manage patient tags.
+
+    Usage: {{ user|can_manage_patient_tags:patient }}
+    """
+    return user.has_perm('patients.change_patient')
+
+
+@register.simple_tag
+def tag_assignment_history(patient, limit=5):
+    """
+    Get recent tag assignment history for patient.
+
+    Usage: {% tag_assignment_history patient as history %}
+           {% tag_assignment_history patient limit=10 as history %}
+    """
+    # This would require an audit log system - placeholder for future enhancement
+    return []

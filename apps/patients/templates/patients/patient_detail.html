@@ -1,6 +1,7 @@
 {% extends "patients/patient_base.html" %}
 {% load static %}
 {% load patient_tags %}
+{% csrf_token %}
 {% block title %}{{ patient.name }}{% endblock %}
 {% block patient_content %}
 <div class="row">
@@ -109,20 +110,7 @@
               </div>
             </div>
 
-            <div class="row">
-              <div class="col-12 mb-3">
-                <label class="form-label text-medical-gray">Tags</label>
-                <div class="form-control-plaintext text-medical-dark-gray">
-                  {% for tag in patient.tags.all %}
-                  <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">
-                    {{ tag.name }}
-                  </span>
-                  {% empty %}
-                  <span class="text-muted">Nenhuma tag atribuída</span>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
+            <!-- Tags section moved to tag management component -->
           </div>
         </div>
       </div>
@@ -216,6 +204,9 @@
     <!-- Record Tracking Sections -->
     {% include 'patients/partials/record_number_section.html' %}
     {% include 'patients/partials/admission_section.html' %}
+    
+    <!-- Tag Management Section -->
+    {% include 'patients/partials/tag_management.html' %}
 
 
     <!-- Related Data Sections -->

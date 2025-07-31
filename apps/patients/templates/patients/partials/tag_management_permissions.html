@@ -1,0 +1,47 @@
+{% comment %}
+Tag Management Permissions Context Template
+
+This template provides permission-based rendering contexts for tag management
+interfaces. It's used by the tag_permissions_context template tag.
+
+Usage:
+{% load permission_tags %}
+{% tag_permissions_context patient %}
+{% endcomment %}
+
+{# Hidden div that stores permission data for JavaScript access #}
+<div id="tag-permissions-data" 
+     data-can-manage="{{ can_manage_tags|yesno:'true,false' }}"
+     data-can-view="{{ can_view_tags|yesno:'true,false' }}"
+     data-can-add="{{ can_add_tags|yesno:'true,false' }}"
+     data-can-remove="{{ can_remove_tags|yesno:'true,false' }}"
+     class="d-none">
+</div>
+
+{# Permission-based conditional content #}
+{% if can_view_tags %}
+    <div class="tag-management-permissions">
+        {% if can_manage_tags %}
+            <div class="alert alert-info alert-sm" role="alert">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    Você tem permissão para gerenciar tags deste paciente.
+                </small>
+            </div>
+        {% else %}
+            <div class="alert alert-warning alert-sm" role="alert">
+                <small>
+                    <i class="fas fa-eye"></i>
+                    Você pode visualizar, mas não gerenciar tags deste paciente.
+                </small>
+            </div>
+        {% endif %}
+    </div>
+{% else %}
+    <div class="alert alert-danger alert-sm" role="alert">
+        <small>
+            <i class="fas fa-ban"></i>
+            Você não tem permissão para visualizar tags deste paciente.
+        </small>
+    </div>
+{% endif %}

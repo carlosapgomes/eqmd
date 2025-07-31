@@ -17,6 +17,12 @@ from apps.core.permissions import (
     can_see_patient_in_search,
     is_doctor,
 )
+from apps.core.permissions.utils import (
+    can_manage_patient_tags,
+    can_add_patient_tag,
+    can_remove_patient_tag,
+    can_view_patient_tags,
+)
 from apps.core.permissions.constants import (
     MEDICAL_DOCTOR,
     RESIDENT,
@@ -414,3 +420,84 @@ def get_user_accessible_models(user):
         accessible.append('events')
 
     return accessible
+
+
+# Tag Management Permission Template Tags
+
+@register.simple_tag
+def can_user_manage_patient_tags(user, patient):
+    """
+    Check if user can manage (add/remove) tags for a patient.
+    
+    Usage: {% can_user_manage_patient_tags user patient as can_manage %}
+    """
+    return can_manage_patient_tags(user, patient)
+
+
+@register.simple_tag
+def can_user_add_patient_tag(user, patient, allowed_tag):
+    """
+    Check if user can add a specific tag to a patient.
+    
+    Usage: {% can_user_add_patient_tag user patient allowed_tag as can_add %}
+    """
+    return can_add_patient_tag(user, patient, allowed_tag)
+
+
+@register.simple_tag
+def can_user_remove_patient_tag(user, patient, tag):
+    """
+    Check if user can remove a specific tag from a patient.
+    
+    Usage: {% can_user_remove_patient_tag user patient tag as can_remove %}
+    """
+    return can_remove_patient_tag(user, patient, tag)
+
+
+@register.simple_tag
+def can_user_view_patient_tags(user, patient):
+    """
+    Check if user can view tags for a patient.
+    
+    Usage: {% can_user_view_patient_tags user patient as can_view %}
+    """
+    return can_view_patient_tags(user, patient)
+
+
+@register.filter
+def can_manage_tags(user):
+    """
+    Check if user can generally manage patient tags (has required permission).
+    
+    Usage: {% if user|can_manage_tags %}
+    """
+    if not user.is_authenticated:
+        return False
+    
+    return user.has_perm('patients.change_patient')
+
+
+@register.inclusion_tag('patients/partials/tag_management_permissions.html', takes_context=True)
+def tag_permissions_context(context, patient):
+    """
+    Render tag management permissions context for templates.
+    
+    Usage: {% tag_permissions_context patient %}
+    """
+    user = context.get('user')
+    if not user or not user.is_authenticated:
+        return {
+            'can_manage_tags': False,
+            'can_view_tags': False,
+            'can_add_tags': False,
+            'can_remove_tags': False,
+        }
+    
+    return {
+        'user': user,
+        'patient': patient,
+        'can_manage_tags': can_manage_patient_tags(user, patient),
+        'can_view_tags': can_view_patient_tags(user, patient),
+        'can_add_tags': can_manage_patient_tags(user, patient),
+        'can_remove_tags': can_manage_patient_tags(user, patient),
+    }

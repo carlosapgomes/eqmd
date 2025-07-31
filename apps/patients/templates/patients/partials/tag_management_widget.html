@@ -1,0 +1,41 @@
+{% load patient_tags %}
+
+<!-- Simplified Tag Management Widget -->
+<div class="tag-management-widget">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <label class="form-label text-medical-gray mb-0">Tags</label>
+        {% if can_manage_tags %}
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-success btn-sm" 
+                    data-bs-toggle="modal" data-bs-target="#addTagModal"
+                    title="Adicionar tag">
+                <i class="bi bi-plus"></i>
+            </button>
+            {% if current_tags %}
+            <button type="button" class="btn btn-outline-secondary btn-sm" 
+                    data-bs-toggle="modal" data-bs-target="#manageTagsModal"
+                    title="Gerenciar tags">
+                <i class="bi bi-gear"></i>
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="tag-display-area">
+        {% if current_tags %}
+            {% for tag in current_tags %}
+                {% patient_tag_badge tag removable=can_manage_tags patient=patient %}
+            {% endfor %}
+        {% else %}
+            <div class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                Nenhuma tag atribuída
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="small text-muted mt-1">
+        Total: <span class="tag-count">{{ current_tags|length }}</span>
+    </div>
+</div>

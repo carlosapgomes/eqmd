@@ -268,9 +268,8 @@ initialize_data() {
   if [[ "$DRY_RUN" == true ]]; then
     print_status "[DRY RUN] Would set up permission groups..."
     print_status "[DRY RUN] Would create sample wards..."
-    print_status "[DRY RUN] Would create sample tags..."
     print_status "[DRY RUN] Would populate comprehensive sample data..."
-    print_status "[DRY RUN] This includes: hospital, medical staff, patients, daily notes, drug templates, prescription templates, and outpatient prescriptions"
+    print_status "[DRY RUN] This includes: admin user, hospital, medical staff, patients, sample tags, daily notes, drug templates, prescription templates, and outpatient prescriptions"
     print_success "[DRY RUN] Application data would be initialized successfully"
     return 0
   fi
@@ -291,16 +290,8 @@ initialize_data() {
     exit 1
   fi
 
-  print_status "Creating sample tags..."
-  if uv run python manage.py create_sample_tags; then
-    print_success "Sample tags created successfully"
-  else
-    print_error "Failed to create sample tags"
-    exit 1
-  fi
-
   print_status "Populating comprehensive sample data..."
-  print_status "This includes: hospitals, medical staff, patients, daily notes, drug templates, prescription templates, and outpatient prescriptions"
+  print_status "This includes: admin user, hospitals, medical staff, patients, sample tags, daily notes, drug templates, prescription templates, and outpatient prescriptions"
   if uv run python manage.py populate_sample_data; then
     print_success "Sample data populated successfully"
   else
@@ -350,7 +341,7 @@ display_completion() {
   echo "  • Daily notes and medical events"
   echo "  • Drug templates and prescription templates"
   echo "  • Outpatient prescriptions"
-  echo "  • Permission groups and tags"
+  echo "  • Permission groups and sample tags (Portuguese medical terminology)"
   echo ""
   print_success "Database reset completed successfully!"
 }

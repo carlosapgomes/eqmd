@@ -409,3 +409,107 @@ def can_create_event_type(user: Any, patient: Any, event_type: str) -> bool:
         bool: True if user can create this event type, False otherwise
     """
     return user.is_authenticated
+
+
+def can_manage_patient_tags(user: Any, patient: Any) -> bool:
+    """
+    Check if a user can manage (add/remove) tags for a patient.
+    
+    Rules:
+    - User must be authenticated
+    - User must have 'patients.change_patient' permission
+    - User must be able to access the patient
+    
+    Args:
+        user: The user requesting tag management
+        patient: The patient object
+        
+    Returns:
+        bool: True if tag management is allowed, False otherwise
+    """
+    if user is None or patient is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    
+    # Check if user can access patient
+    if not can_access_patient(user, patient):
+        return False
+    
+    # Check if user has required permission
+    return user.has_perm('patients.change_patient')
+
+
+def can_add_patient_tag(user: Any, patient: Any, allowed_tag: Any) -> bool:
+    """
+    Check if a user can add a specific tag to a patient.
+    
+    Rules:
+    - Must pass can_manage_patient_tags check
+    - AllowedTag must be active
+    - Tag must not already be assigned to patient
+    
+    Args:
+        user: The user requesting to add the tag
+        patient: The patient object
+        allowed_tag: The AllowedTag object to add
+        
+    Returns:
+        bool: True if tag addition is allowed, False otherwise
+    """
+    if not can_manage_patient_tags(user, patient):
+        return False
+    
+    # Check if allowed_tag is active
+    if not getattr(allowed_tag, 'is_active', True):
+        return False
+    
+    # Check if tag is already assigned to patient
+    if patient.patient_tags.filter(allowed_tag=allowed_tag).exists():
+        return False
+    
+    return True
+
+
+def can_remove_patient_tag(user: Any, patient: Any, tag: Any) -> bool:
+    """
+    Check if a user can remove a specific tag from a patient.
+    
+    Rules:
+    - Must pass can_manage_patient_tags check
+    - Tag must be assigned to the patient
+    
+    Args:
+        user: The user requesting to remove the tag
+        patient: The patient object
+        tag: The Tag object to remove
+        
+    Returns:
+        bool: True if tag removal is allowed, False otherwise
+    """
+    if not can_manage_patient_tags(user, patient):
+        return False
+    
+    # Check if tag is assigned to this patient
+    if not patient.patient_tags.filter(pk=tag.pk).exists():
+        return False
+    
+    return True
+
+
+def can_view_patient_tags(user: Any, patient: Any) -> bool:
+    """
+    Check if a user can view tags for a patient.
+    
+    Rules:
+    - User must be able to access the patient
+    
+    Args:
+        user: The user requesting to view tags
+        patient: The patient object
+        
+    Returns:
+        bool: True if tag viewing is allowed, False otherwise
+    """
+    return can_access_patient(user, patient)

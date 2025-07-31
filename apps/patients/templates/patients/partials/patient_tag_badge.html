@@ -1,0 +1,16 @@
+{% load patient_tags %}
+
+<div class="tag-item d-inline-flex align-items-center me-2 mb-2" data-tag-id="{{ tag.id }}">
+    <span class="badge" style="background-color: {{ tag.color }}; color: white;">
+        <i class="bi bi-tag-fill me-1"></i>{{ tag.name }}
+        {% if removable and patient and user|can_manage_patient_tags:patient %}
+        <button type="button" class="btn btn-sm p-0 ms-1 text-white border-0 bg-transparent remove-tag-btn" 
+                data-tag-id="{{ tag.id }}" 
+                data-tag-name="{{ tag.name }}"
+                title="Remover tag"
+                style="font-size: 0.8em; line-height: 1;">
+            <i class="bi bi-x"></i>
+        </button>
+        {% endif %}
+    </span>
+</div>

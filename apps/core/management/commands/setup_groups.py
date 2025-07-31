@@ -68,14 +68,14 @@ class Command(BaseCommand):
                 pass
 
     def _create_medical_doctor_group(self):
-        """Create Medical Doctors group with full permissions."""
+        """Create Medical Doctors group with full permissions (except admin-only features)."""
         group, created = Group.objects.get_or_create(name='Medical Doctors')
         
         if created:
             self.stdout.write('Created group: Medical Doctors')
         
-        # Medical doctors get full permissions for all models
-        permissions = self._get_all_model_permissions()
+        # Medical doctors get all permissions except admin-only features (like tag creation)
+        permissions = self._get_admin_restricted_permissions()
         group.permissions.set(permissions)
         
         self.stdout.write(f'Assigned {permissions.count()} permissions to Medical Doctors')
@@ -149,8 +149,27 @@ class Command(BaseCommand):
         """Get all permissions for all models."""
         return Permission.objects.all()
 
+    def _get_admin_restricted_permissions(self):
+        """Get all permissions except AllowedTag creation (admin-only)."""
+        from apps.patients.models import AllowedTag
+        from django.contrib.contenttypes.models import ContentType
+        
+        # Get all permissions
+        all_permissions = Permission.objects.all()
+        
+        # Exclude add_allowedtag permission (admin-only)
+        try:
+            tag_ct = ContentType.objects.get_for_model(AllowedTag)
+            restricted_permissions = all_permissions.exclude(
+                content_type=tag_ct,
+                codename='add_allowedtag'
+            )
+            return restricted_permissions
+        except:
+            return all_permissions
+
     def _get_patient_related_permissions(self):
-        """Get all patient-related permissions."""
+        """Get all patient-related permissions (excluding AllowedTag creation for non-admin roles)."""
         permissions = []
         
         # Get patient app content types
@@ -161,10 +180,16 @@ class Command(BaseCommand):
             tag_ct = ContentType.objects.get_for_model(AllowedTag)
             tag_instance_ct = ContentType.objects.get_for_model(Tag)
             
-            # Add all permissions for these models
+            # Add all permissions for Patient and Tag models
             permissions.extend(Permission.objects.filter(content_type=patient_ct))
-            permissions.extend(Permission.objects.filter(content_type=tag_ct))
             permissions.extend(Permission.objects.filter(content_type=tag_instance_ct))
+            
+            # Add only view, change, delete permissions for AllowedTag (no add)
+            # Tag creation should be admin-only to maintain system consistency
+            permissions.extend(Permission.objects.filter(
+                content_type=tag_ct,
+                codename__in=[f'view_{tag_ct.model}', f'change_{tag_ct.model}', f'delete_{tag_ct.model}']
+            ))
             
         except ImportError:
             self.stdout.write(self.style.WARNING('Patients app not available'))
@@ -172,7 +197,7 @@ class Command(BaseCommand):
         return permissions
 
     def _get_patient_view_change_permissions(self):
-        """Get view and change permissions for patients (no delete)."""
+        """Get view and change permissions for patients (no delete, no AllowedTag creation)."""
         permissions = []
         
         try:
@@ -182,12 +207,19 @@ class Command(BaseCommand):
             tag_ct = ContentType.objects.get_for_model(AllowedTag)
             tag_instance_ct = ContentType.objects.get_for_model(Tag)
             
-            # Add view and change permissions (no delete)
-            for ct in [patient_ct, tag_ct, tag_instance_ct]:
+            # Add view, change, and add permissions for Patient and Tag models
+            for ct in [patient_ct, tag_instance_ct]:
                 permissions.extend(Permission.objects.filter(
                     content_type=ct,
                     codename__in=[f'view_{ct.model}', f'change_{ct.model}', f'add_{ct.model}']
                 ))
+            
+            # Add only view and change permissions for AllowedTag (no add, no delete)
+            # Tag creation should be admin-only to maintain system consistency
+            permissions.extend(Permission.objects.filter(
+                content_type=tag_ct,
+                codename__in=[f'view_{tag_ct.model}', f'change_{tag_ct.model}']
+            ))
             
         except ImportError:
             self.stdout.write(self.style.WARNING('Patients app not available'))

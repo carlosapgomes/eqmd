@@ -108,6 +108,27 @@ urlpatterns = [
     path(
         "tags/<int:pk>/delete/", views.AllowedTagDeleteView.as_view(), name="tag_delete"
     ),
+    # Patient Tag Management URLs
+    path(
+        "<uuid:patient_id>/tags/add/", 
+        views.PatientTagAddView.as_view(), 
+        name="patient_tag_add"
+    ),
+    path(
+        "<uuid:patient_id>/tags/<uuid:tag_id>/remove/", 
+        views.PatientTagRemoveView.as_view(), 
+        name="patient_tag_remove"
+    ),
+    path(
+        "<uuid:patient_id>/tags/remove-all/", 
+        views.PatientTagRemoveAllView.as_view(), 
+        name="patient_tag_remove_all"
+    ),
+    path(
+        "<uuid:patient_id>/tags/api/", 
+        views.PatientTagsAPIView.as_view(), 
+        name="patient_tags_api"
+    ),
     # API URLs
     path(
         "api/<uuid:patient_id>/record-numbers/",

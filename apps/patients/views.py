@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.views import View
 from django.utils import timezone
 
-from .models import Patient, AllowedTag, PatientRecordNumber, PatientAdmission, Ward
+from .models import Patient, AllowedTag, Tag, PatientRecordNumber, PatientAdmission, Ward
 from .forms import (
     PatientForm, AllowedTagForm, 
     PatientRecordNumberForm, QuickRecordNumberUpdateForm,
@@ -20,7 +20,10 @@ from .forms import (
     TransferPatientForm, DeclareDeathForm, SetOutpatientForm
 )
 # from apps.hospitals.models import Hospital  # Removed for single-hospital refactor
-from apps.core.permissions.utils import can_access_patient, can_change_patient_personal_data
+from apps.core.permissions.utils import (
+    can_access_patient, can_change_patient_personal_data,
+    can_manage_patient_tags, can_add_patient_tag, can_remove_patient_tag, can_view_patient_tags
+)
 
 
 class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -40,7 +43,7 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             queryset = super().get_queryset().none()
         
         # Add optimized select_related and prefetch_related
-        queryset = queryset.select_related('created_by').prefetch_related('tags__allowed_tag')
+        queryset = queryset.select_related('created_by').prefetch_related('patient_tags__allowed_tag')
         
         # Search functionality
         search_query = self.request.GET.get('search', '').strip()
@@ -119,6 +122,8 @@ class PatientDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         
         # Add permission context
         context['can_edit_patient'] = can_change_patient_personal_data(self.request.user, patient)
+        context['can_manage_tags'] = can_manage_patient_tags(self.request.user, patient)
+        context['can_view_tags'] = can_view_patient_tags(self.request.user, patient)
 
         # Add record number history
         context['record_numbers'] = patient.record_numbers.all().order_by('-effective_date')
@@ -1072,5 +1077,281 @@ class SetOutpatientView(PatientStatusChangeView):
             messages.error(request, 'Dados inválidos para status ambulatorial.')
         
         return redirect('patients:patient_detail', pk=patient.pk)
+
+
+# Tag Management Views
+
+class PatientTagAddView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Add tag to patient via AJAX"""
+    permission_required = 'patients.change_patient'
+
+    def post(self, request, patient_id):
+        patient = get_object_or_404(Patient, pk=patient_id)
+        
+        # Enhanced permission check using new utility functions
+        if not can_manage_patient_tags(request.user, patient):
+            return JsonResponse({
+                'error': 'Você não tem permissão para gerenciar tags deste paciente'
+            }, status=403)
+        
+        try:
+            tag_id = request.POST.get('tag_id')
+            if not tag_id:
+                return JsonResponse({'error': 'ID da tag é obrigatório'}, status=400)
+            
+            allowed_tag = get_object_or_404(AllowedTag, pk=tag_id)
+            
+            # Enhanced permission check for adding specific tag
+            if not can_add_patient_tag(request.user, patient, allowed_tag):
+                return JsonResponse({
+                    'error': 'Não é possível adicionar esta tag ao paciente'
+                }, status=400)
+            
+            # Get notes from request
+            notes = request.POST.get('notes', '')
+            
+            # Check if this tag is already assigned to this patient
+            existing_tag = Tag.objects.filter(
+                allowed_tag=allowed_tag,
+                patient=patient
+            ).first()
+            
+            if existing_tag:
+                return JsonResponse({
+                    'error': f'Tag "{allowed_tag.name}" já está atribuída a este paciente'
+                }, status=400)
+            
+            # Create new tag instance with direct patient relationship
+            tag = Tag.objects.create(
+                allowed_tag=allowed_tag,
+                patient=patient,
+                notes=notes,
+                created_by=request.user,
+                updated_by=request.user
+            )
+            
+            # Create timeline event for tag addition
+            from apps.events.models import TagAddedEvent
+            TagAddedEvent.objects.create(
+                patient=patient,
+                event_datetime=timezone.now(),
+                description=f"Tag '{allowed_tag.name}' adicionada",
+                tag_name=allowed_tag.name,
+                tag_color=allowed_tag.color,
+                tag_notes=notes,
+                created_by=request.user,
+                updated_by=request.user
+            )
+            
+            # Return updated tag list
+            tags_data = []
+            for patient_tag in patient.patient_tags.select_related('allowed_tag').all():
+                tags_data.append({
+                    'id': str(patient_tag.id),
+                    'name': patient_tag.allowed_tag.name,
+                    'color': patient_tag.allowed_tag.color,
+                    'allowed_tag_id': patient_tag.allowed_tag.id
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Tag "{allowed_tag.name}" adicionada com sucesso',
+                'tags': tags_data
+            })
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('patients.tags')
+            logger.error(
+                f"Error adding tag to patient {patient.pk} by user "
+                f"{request.user.username}: {str(e)}"
+            )
+            return JsonResponse({'error': 'Erro interno do servidor'}, status=500)
+
+
+class PatientTagRemoveView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Remove tag from patient via AJAX"""
+    permission_required = 'patients.change_patient'
+
+    def post(self, request, patient_id, tag_id):
+        patient = get_object_or_404(Patient, pk=patient_id)
+        tag = get_object_or_404(Tag, pk=tag_id, patient=patient)
+        
+        # Enhanced permission check using new utility functions
+        if not can_remove_patient_tag(request.user, patient, tag):
+            return JsonResponse({
+                'error': 'Você não tem permissão para remover esta tag do paciente'
+            }, status=403)
+        
+        try:
+            tag_name = tag.allowed_tag.name
+            tag_color = tag.allowed_tag.color
+            tag_notes = tag.notes
+            
+            # Delete tag instance (automatically removes from patient)
+            tag.delete()
+            
+            # Create timeline event for tag removal
+            from apps.events.models import TagRemovedEvent
+            TagRemovedEvent.objects.create(
+                patient=patient,
+                event_datetime=timezone.now(),
+                description=f"Tag '{tag_name}' removida",
+                tag_name=tag_name,
+                tag_color=tag_color,
+                tag_notes=tag_notes,
+                created_by=request.user,
+                updated_by=request.user
+            )
+            
+            # Return updated tag list
+            tags_data = []
+            for patient_tag in patient.patient_tags.select_related('allowed_tag').all():
+                tags_data.append({
+                    'id': str(patient_tag.id),
+                    'name': patient_tag.allowed_tag.name,
+                    'color': patient_tag.allowed_tag.color,
+                    'allowed_tag_id': patient_tag.allowed_tag.id
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Tag "{tag_name}" removida com sucesso',
+                'tags': tags_data
+            })
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('patients.tags')
+            logger.error(
+                f"Error removing tag from patient {patient.pk} by user "
+                f"{request.user.username}: {str(e)}"
+            )
+            return JsonResponse({'error': 'Erro interno do servidor'}, status=500)
+
+
+class PatientTagRemoveAllView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Remove all tags from patient via AJAX"""
+    permission_required = 'patients.change_patient'
+    
+    def post(self, request, patient_id):
+        patient = get_object_or_404(Patient, pk=patient_id)
+        
+        # Enhanced permission check using new utility functions
+        if not can_manage_patient_tags(request.user, patient):
+            return JsonResponse({
+                'error': 'Você não tem permissão para gerenciar tags deste paciente'
+            }, status=403)
+        
+        try:
+            # Get tag information before deletion for audit trail
+            tags_info = list(patient.patient_tags.select_related('allowed_tag').values(
+                'allowed_tag__name', 'allowed_tag__color', 'notes'
+            ))
+            tag_count = len(tags_info)
+            
+            if tag_count == 0:
+                return JsonResponse({'error': 'Nenhuma tag para remover'}, status=400)
+            
+            # Delete all tag instances for this patient
+            patient.patient_tags.all().delete()
+            
+            # Create timeline event for bulk tag removal
+            from apps.events.models import TagBulkRemoveEvent
+            tag_names_list = [tag_info['allowed_tag__name'] for tag_info in tags_info]
+            TagBulkRemoveEvent.objects.create(
+                patient=patient,
+                event_datetime=timezone.now(),
+                description=f"{tag_count} tag(s) removida(s) em lote",
+                tag_count=tag_count,
+                tag_names=', '.join(tag_names_list),
+                created_by=request.user,
+                updated_by=request.user
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'{tag_count} tag(s) removida(s) com sucesso',
+                'tags': []
+            })
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('patients.tags')
+            logger.error(
+                f"Error removing all tags from patient {patient.pk} by user "
+                f"{request.user.username}: {str(e)}"
+            )
+            return JsonResponse({'error': 'Erro interno do servidor'}, status=500)
+
+
+class PatientTagsAPIView(LoginRequiredMixin, View):
+    """API endpoint for patient tags"""
+
+    def get(self, request, patient_id):
+        patient = get_object_or_404(Patient, pk=patient_id)
+        
+        # Enhanced permission check using new utility functions
+        if not can_view_patient_tags(request.user, patient):
+            return JsonResponse({
+                'error': 'Você não tem permissão para visualizar tags deste paciente'
+            }, status=403)
+        
+        try:
+            # Get current patient tags
+            tags_data = []
+            for tag in patient.patient_tags.select_related('allowed_tag').all():
+                tags_data.append({
+                    'id': str(tag.id),
+                    'name': tag.allowed_tag.name,
+                    'color': tag.allowed_tag.color,
+                    'allowed_tag_id': tag.allowed_tag.id,
+                    'notes': tag.notes,
+                    'created_at': tag.created_at.isoformat(),
+                    'created_by': tag.created_by.get_full_name() or tag.created_by.username
+                })
+            
+            # Get available tags (not already assigned) - only if user can manage tags
+            available_tags_data = []
+            if can_manage_patient_tags(request.user, patient):
+                assigned_allowed_tag_ids = patient.patient_tags.values_list('allowed_tag_id', flat=True)
+                available_tags = AllowedTag.objects.filter(
+                    is_active=True
+                ).exclude(
+                    id__in=assigned_allowed_tag_ids
+                ).order_by('name')
+                
+                for allowed_tag in available_tags:
+                    available_tags_data.append({
+                        'id': allowed_tag.id,
+                        'name': allowed_tag.name,
+                        'color': allowed_tag.color,
+                        'description': allowed_tag.description
+                    })
+            
+            # Add permission context
+            permissions = {
+                'can_manage_tags': can_manage_patient_tags(request.user, patient),
+                'can_view_tags': can_view_patient_tags(request.user, patient)
+            }
+            
+            return JsonResponse({
+                'patient_id': str(patient.pk),
+                'patient_name': patient.name,
+                'current_tags': tags_data,
+                'available_tags': available_tags_data,
+                'permissions': permissions
+            })
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('patients.tags')
+            logger.error(
+                f"Error fetching tags for patient {patient.pk} by user "
+                f"{request.user.username}: {str(e)}"
+            )
+            return JsonResponse({'error': 'Erro interno do servidor'}, status=500)
+
+
 
 

@@ -126,9 +126,9 @@
                     {% endif %}
                   </td>
                   <td>
-                    {% for tag in patient.tags.all %}
-                    <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">
-                      {{ tag.name }}
+                    {% for tag in patient.patient_tags.all %}
+                    <span class="badge me-1" style="background-color: {{ tag.allowed_tag.color }}; color: white;">
+                      {{ tag.allowed_tag.name }}
                     </span>
                     {% empty %}
                     <span class="text-muted">-</span>

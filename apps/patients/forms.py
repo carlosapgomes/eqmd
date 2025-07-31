@@ -31,14 +31,6 @@ class TagCreationForm(forms.Form):
 
 
 class PatientForm(forms.ModelForm):
-    # Include tag selection in the form
-    tag_selection = forms.ModelMultipleChoiceField(
-        queryset=AllowedTag.objects.filter(is_active=True),
-        widget=forms.CheckboxSelectMultiple,
-        required=False,
-        label="Tags",
-        help_text="Selecione as tags aplicáveis para este paciente"
-    )
     
     # Add record number field to patient form
     initial_record_number = forms.CharField(
@@ -143,16 +135,6 @@ class PatientForm(forms.ModelForm):
         if self.instance and self.instance.pk and self.instance.birthday:
             self.fields['birthday'].initial = self.instance.birthday.strftime('%Y-%m-%d')
         
-        # Set initial values for tag selection if editing existing patient
-        if self.instance and self.instance.pk:
-            self.fields['tag_selection'].initial = [
-                tag.allowed_tag for tag in self.instance.tags.all()
-            ]
-        
-        # Update tag selection widget for medical theme
-        self.fields['tag_selection'].widget.attrs.update({
-            'class': 'form-check-input medical-checkbox'
-        })
         
         # Update record number widget for medical theme
         self.fields['initial_record_number'].widget.attrs.update({
@@ -205,14 +187,6 @@ class PatientForm(forms.ModelForm):
                 ],
                 description="Informações sobre a localização atual no hospital"
             ),
-            FormSection(
-                title="Categorização",
-                icon="bi-tags",
-                fields=[
-                    ('tag_selection', self['tag_selection']),
-                ],
-                description="Tags para categorização e organização do paciente"
-            ),
         ]
 
     def clean(self):
@@ -245,23 +219,6 @@ class PatientForm(forms.ModelForm):
                     updated_by=current_user
                 )
             
-            # Handle tag selection
-            selected_allowed_tags = self.cleaned_data.get('tag_selection', [])
-            
-            # Clear existing tags
-            instance.tags.clear()
-            
-            # Create new tag instances for selected allowed tags
-            current_user = getattr(self, 'current_user', instance.updated_by)
-            for allowed_tag in selected_allowed_tags:
-                tag, created = Tag.objects.get_or_create(
-                    allowed_tag=allowed_tag,
-                    defaults={
-                        'created_by': current_user,
-                        'updated_by': current_user,
-                    }
-                )
-                instance.tags.add(tag)
                         
         return instance
 
