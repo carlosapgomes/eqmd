@@ -15,6 +15,5 @@ This directory contains specialized documentation:
 - API endpoints and JSON responses
 - Tag management workflows
 - Deployment configurations
-- Portuguese translations
 
 For complete usage guides, model details, and implementation information, see the main Patients guide at `docs/apps/patients.md`.
