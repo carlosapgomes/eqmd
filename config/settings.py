@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",
     "taggit",
+    "simple_history",
     "apps.core",  # New app for core/pages functionality
     "apps.accounts.apps.AccountsConfig",  # New accounts app
     "apps.patients",  # Patient management app
@@ -104,6 +105,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",  # Built-in history tracking
+    "apps.core.middleware.EnhancedHistoryMiddleware",      # Our IP tracking enhancement
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -367,4 +370,8 @@ PDF_CONFIG = {
         'italic': 'Times-Italic'
     }
 }
+
+# Django Simple History Configuration
+SIMPLE_HISTORY_HISTORY_ID_USE_UUID = True
+SIMPLE_HISTORY_EDIT = True
 

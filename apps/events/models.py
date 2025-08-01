@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.conf import settings
 from model_utils.managers import InheritanceManager
+from simple_history.models import HistoricalRecords
 
 
 class Event(models.Model):
@@ -80,6 +81,11 @@ class Event(models.Model):
     )
 
     objects = InheritanceManager()
+    
+    # History tracking
+    history = HistoricalRecords(
+        history_change_reason_field=models.TextField(null=True),
+    )
 
     def __str__(self):
         return str(self.description)

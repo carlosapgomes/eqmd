@@ -1,17 +1,22 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 from .models import Patient, PatientRecordNumber, PatientAdmission, AllowedTag, Tag, Ward
 
 @admin.register(AllowedTag)
-class AllowedTagAdmin(admin.ModelAdmin):
+class AllowedTagAdmin(SimpleHistoryAdmin):
     list_display = ('name', 'description', 'color', 'is_active', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('name', 'description')
     readonly_fields = ('created_at', 'created_by', 'updated_at', 'updated_by')
+    history_list_display = ['name', 'color', 'is_active', 'history_change_reason']
 
     def save_model(self, request, obj, form, change):
         if not change:  # If creating a new object
             obj.created_by = request.user
         obj.updated_by = request.user
+        # Add change reason for admin modifications
+        if change:
+            obj._change_reason = f"Admin change by {request.user.username}"
         super().save_model(request, obj, form, change)
 
 
@@ -26,6 +31,9 @@ class TagAdmin(admin.ModelAdmin):
         if not change:  # If creating a new object
             obj.created_by = request.user
         obj.updated_by = request.user
+        # Add change reason for admin modifications
+        if change:
+            obj._change_reason = f"Admin change by {request.user.username}"
         super().save_model(request, obj, form, change)
 
 
@@ -53,6 +61,9 @@ class PatientRecordNumberAdmin(admin.ModelAdmin):
         if not change:  # If creating a new object
             obj.created_by = request.user
         obj.updated_by = request.user
+        # Add change reason for admin modifications
+        if change:
+            obj._change_reason = f"Admin change by {request.user.username}"
         super().save_model(request, obj, form, change)
 
 
@@ -90,6 +101,9 @@ class PatientAdmissionAdmin(admin.ModelAdmin):
         if not change:  # If creating a new object
             obj.created_by = request.user
         obj.updated_by = request.user
+        # Add change reason for admin modifications
+        if change:
+            obj._change_reason = f"Admin change by {request.user.username}"
         super().save_model(request, obj, form, change)
 
 
@@ -134,11 +148,12 @@ class WardAdmin(admin.ModelAdmin):
 
 
 @admin.register(Patient)
-class PatientAdmin(admin.ModelAdmin):
+class PatientAdmin(SimpleHistoryAdmin):
     list_display = ('name', 'birthday', 'gender', 'status', 'ward', 'bed', 'current_record_number', 'total_admissions_count', 'is_currently_admitted', 'created_at')
     list_filter = ('status', 'gender', 'ward')
     search_fields = ('name', 'id_number', 'fiscal_number', 'healthcard_number', 'current_record_number')
     readonly_fields = ('current_record_number', 'total_admissions_count', 'total_inpatient_days', 'current_admission_id', 'created_at', 'created_by', 'updated_at', 'updated_by')
+    history_list_display = ['name', 'status', 'history_change_reason']
     
     fieldsets = (
         ('Informações Básicas', {
@@ -172,5 +187,8 @@ class PatientAdmin(admin.ModelAdmin):
         if not change:  # If creating a new object
             obj.created_by = request.user
         obj.updated_by = request.user
+        # Add change reason for admin modifications
+        if change:
+            obj._change_reason = f"Admin change by {request.user.username}"
         super().save_model(request, obj, form, change)
 

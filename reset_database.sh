@@ -267,7 +267,6 @@ initialize_data() {
 
   if [[ "$DRY_RUN" == true ]]; then
     print_status "[DRY RUN] Would set up permission groups..."
-    print_status "[DRY RUN] Would create sample wards..."
     print_status "[DRY RUN] Would populate comprehensive sample data..."
     print_status "[DRY RUN] This includes: admin user, hospital, medical staff, patients, sample tags, daily notes, drug templates, prescription templates, and outpatient prescriptions"
     print_status "[DRY RUN] Would sync user permissions to groups..."
@@ -280,14 +279,6 @@ initialize_data() {
     print_success "Permission groups created successfully"
   else
     print_error "Failed to create permission groups"
-    exit 1
-  fi
-
-  print_status "Creating sample wards..."
-  if uv run python manage.py create_sample_wards; then
-    print_success "Sample wards created successfully"
-  else
-    print_error "Failed to create sample wards"
     exit 1
   fi
 
@@ -343,7 +334,6 @@ display_completion() {
   echo "  • Each user is assigned to one or more hospitals with appropriate permissions"
   echo ""
   print_status "Available sample data:"
-  echo "  • Multiple hospitals with wards"
   echo "  • Hospital wards (UTI, PS, CM, CC, PED, MAT)"
   echo "  • Medical staff with different profession types"
   echo "  • Patients with various admission statuses"
@@ -351,6 +341,13 @@ display_completion() {
   echo "  • Drug templates and prescription templates"
   echo "  • Outpatient prescriptions"
   echo "  • Permission groups and sample tags (Portuguese medical terminology)"
+  echo ""
+  print_status "Security monitoring features:"
+  echo "  • Complete audit history tracking for all model changes"
+  echo "  • Security monitoring commands available:"
+  echo "    - uv run python manage.py detect_suspicious_activity --comprehensive"
+  echo "    - uv run python manage.py security_alert_monitor --continuous"
+  echo "    - uv run python manage.py security_report --days=7"
   echo ""
   print_success "Database reset completed successfully!"
 }

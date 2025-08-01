@@ -4,6 +4,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 from .validators import (
     validate_record_number_format,
@@ -37,6 +38,12 @@ class AllowedTag(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="+",
+    )
+
+    # History tracking
+    history = HistoricalRecords(
+        history_change_reason_field=models.TextField(null=True),
+        cascade_delete_history=False,
     )
 
     class Meta:
@@ -697,6 +704,12 @@ class Patient(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="+",
+    )
+
+    # History tracking
+    history = HistoricalRecords(
+        history_change_reason_field=models.TextField(null=True),
+        cascade_delete_history=False,
     )
 
     class Meta:

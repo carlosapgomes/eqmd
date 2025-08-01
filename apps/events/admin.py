@@ -1,15 +1,17 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 from .models import (
     Event, RecordNumberChangeEvent, AdmissionEvent, DischargeEvent
 )
 
 @admin.register(Event)
-class EventAdmin(admin.ModelAdmin):
+class EventAdmin(SimpleHistoryAdmin):
     list_display = ('description', 'event_type', 'event_datetime', 'patient', 'created_by', 'created_at')
     list_filter = ('event_type', 'created_at', 'event_datetime')
     search_fields = ('description', 'patient__name')
     date_hierarchy = 'created_at'
     readonly_fields = ('id', 'created_at', 'updated_at')
+    history_list_display = ['description', 'event_type', 'patient', 'history_change_reason']
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(

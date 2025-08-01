@@ -1,14 +1,16 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from simple_history.admin import SimpleHistoryAdmin
 from .models import EqmdCustomUser, UserProfile
 from .forms import EqmdCustomUserCreationForm, EqmdCustomUserChangeForm
 
-class EqmdCustomUserAdmin(UserAdmin):
+class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
     add_form = EqmdCustomUserCreationForm
     form = EqmdCustomUserChangeForm
     model = EqmdCustomUser
     list_display = ['username', 'email', 'first_name', 'last_name',
                     'is_active', 'profession_type', 'is_staff']
+    history_list_display = ['username', 'email', 'profession_type', 'history_change_reason']
 
     # Custom fieldsets for editing existing users
     fieldsets = (

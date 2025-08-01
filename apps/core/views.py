@@ -1,7 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.generic import ListView
+from apps.patients.models import Patient
 
 def landing_page(request):
     """
@@ -65,3 +68,19 @@ def permission_performance_api(request):
     }
 
     return JsonResponse(data)
+
+
+class PatientHistoryView(LoginRequiredMixin, ListView):
+    """View patient change history."""
+    template_name = 'patients/patient_history.html'
+    context_object_name = 'history'
+    paginate_by = 50
+    
+    def get_queryset(self):
+        patient_id = self.kwargs['patient_id']
+        return Patient.history.filter(id=patient_id).select_related('history_user')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['patient'] = get_object_or_404(Patient, id=self.kwargs['patient_id'])
+        return context

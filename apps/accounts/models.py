@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from simple_history.models import HistoricalRecords
 
 class EqmdCustomUser(AbstractUser):
     MEDICAL_DOCTOR = 0
@@ -25,6 +26,12 @@ class EqmdCustomUser(AbstractUser):
     country_id_number = models.CharField(max_length=20, blank=True)
     fiscal_number = models.CharField(max_length=20, blank=True)
     phone = models.CharField(max_length=20, blank=True)
+    
+    # History tracking
+    history = HistoricalRecords(
+        history_change_reason_field=models.TextField(null=True),
+        excluded_fields=['last_login', 'password'],
+    )
     
 
 class UserProfile(models.Model):
