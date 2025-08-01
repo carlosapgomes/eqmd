@@ -1,17 +1,20 @@
 # Patients App Documentation
 
-The Patients app provides a complete solution for managing patient information within the healthcare system.
+**📖 For comprehensive Patients documentation, see: [docs/apps/patients.md](../apps/patients.md)**
 
-## Key Features
+## Quick Links
 
-- **Patient Registration**: Create and manage patient profiles with personal and medical information
-- **Hospital Records**: Track patient admissions, transfers, and discharges
-- **Status Tracking**: Monitor patient status (inpatient, outpatient, deceased)
-- **Tagging System**: Categorize patients using customizable tags
-- **Dashboard Integration**: View patient statistics and recent activity
+- **[Complete Implementation Guide](../apps/patients.md)** - Full Patients app documentation
+- **[API Documentation](api.md)** - JSON API endpoints and usage
+- **[Tags Management](tags_management.md)** - Tag assignment workflows
+- **[Deployment Guide](deployment.md)** - Deployment-specific configurations
 
-## User Guides
+## Technical Reference Files
 
-- [Patient Management](patient_management.md)
-- [Hospital Records](hospital_records.md)
-- [Tags Management](tags_management.md)
+This directory contains specialized documentation:
+- API endpoints and JSON responses
+- Tag management workflows
+- Deployment configurations
+- Portuguese translations
+
+For complete usage guides, model details, and implementation information, see the main Patients guide at `docs/apps/patients.md`.

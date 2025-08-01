@@ -47,7 +47,6 @@
 
 ### Patients App Deep Dive  
 - **[API Documentation](patients/api.md)** - Patient API endpoints
-- **[Patient Management](patients/patient_management.md)** - Patient workflows
 - **[Tags Management](patients/tags_management.md)** - Tagging system
 
 ## 📝 Project Information
