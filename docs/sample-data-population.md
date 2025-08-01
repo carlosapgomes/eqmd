@@ -301,7 +301,7 @@ self.client.force_login(user)
 ## Related Documentation
 
 - [Database Reset Guide](database-reset.md) - How to reset database if needed
-- [Testing Strategy](testing-strategy.md) - Comprehensive testing approach
+- [Testing Guide](TESTING.md) - Comprehensive testing framework and strategy
 - [Permissions User Guide](permissions/user-guide.md) - Understanding permission system
 
 ## Security Notes

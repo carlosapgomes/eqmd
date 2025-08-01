@@ -29,7 +29,7 @@
 ## 🛠️ Development
 
 - **[Template Guidelines](development/template-guidelines.md)** - Django template best practices
-- **[Testing Strategy](testing-strategy.md)** - Comprehensive testing approach
+- **[Testing Guide](TESTING.md)** - Comprehensive testing framework and strategy
 - **[Styling](styling.md)** - CSS and frontend guidelines
 
 ## 🚀 Deployment

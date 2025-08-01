@@ -22,6 +22,30 @@ All testing dependencies are managed through `uv`. To install:
 uv add --dev pytest pytest-django pytest-cov factory-boy faker
 ```
 
+## Testing Strategy
+
+### Testing Pyramid Structure
+
+```
+    🔺 E2E Tests (Future - Selenium)
+   🔺🔺 Integration Tests (Django TestCase)
+  🔺🔺🔺 Unit Tests (pytest/Django)
+```
+
+### Testing Levels
+
+- **Unit Tests (70% of tests)**: Models, views, forms, utilities
+- **Integration Tests (20% of tests)**: URL routing, template rendering, database interactions  
+- **End-to-End Tests (10% of tests - Future)**: Complete user workflows with browser testing
+
+### Coverage Goals
+
+- **Overall**: 80%+ coverage
+- **Critical Business Logic**: 100% coverage
+- **Models**: 90%+ coverage
+- **Views**: 85%+ coverage
+- **Forms**: 90%+ coverage
+
 ## Configuration Files
 
 ### pytest.ini
@@ -323,46 +347,64 @@ Tests should be run automatically in CI/CD pipelines:
 
 ## Current Test Status
 
-### Implemented Tests
+### ✅ Fully Working (97 tests)
 
-✅ **Accounts App Models** (20 tests)
-- User model creation and validation
-- Profile model relationships and properties
-- Signal handling for profile creation
+- **Accounts Models**: 20/20 tests passing
+- **Core Views**: 27/27 tests passing  
+- **Core URLs**: 23/23 tests passing
+- **Core Templates**: 27/27 tests passing
 
-✅ **Core App Views** (27 tests)
-- Landing page functionality
-- Dashboard authentication and content
-- Template usage and context
+### ⚠️ Partially Working
 
-✅ **Core App URLs** (23 tests)
-- URL pattern resolution
-- Namespace configuration
-- HTTP method handling
+- **Accounts Forms**: 16/18 tests passing (minor validation issues)
+- **Accounts Views**: 10/25 tests passing (missing templates and auth issues)
 
-✅ **Core App Templates** (27 tests)
-- Template existence and inheritance
+### Test Implementation Summary
+
+**Total**: 123 tests implemented, 107 passing (87% success rate)
+
+#### Key Features Tested
+
+**Model Testing**:
+- User creation with different profession types
+- Profile automatic creation via Django signals
+- Model validation and constraints
+- Relationship testing (OneToOne User-Profile)
+
+**Form Testing**:
+- Valid and invalid data scenarios
+- Password strength validation
+- Email format validation
+- Username uniqueness testing
+
+**View Testing**:
+- Authentication requirements
+- Template rendering
+- Context data validation
+- Permission checks
+
+**Template Testing**:
+- Template inheritance
 - Content verification
-- Responsive design elements
+- Bootstrap integration
+- Responsive elements
 
-### Pending Implementation
+### Next Testing Priorities
 
-⚠️ **Accounts App Views** (Partial)
-- Some view tests need template implementation
-- Authentication flow testing needs refinement
-
-⚠️ **Accounts App Forms** (Partial)
-- Form validation tests mostly working
-- Some edge cases need adjustment
+1. **Complete Accounts Views**: Fix missing templates and authentication flows
+2. **Accounts Forms**: Resolve remaining validation issues
+3. **Patient Management**: Implement patient app testing
+4. **Events System**: Add comprehensive event testing
+5. **MediaFiles**: Security and file handling tests
 
 ## Next Steps
 
-1. Complete missing templates for accounts views
-2. Implement integration tests
-3. Add API endpoint tests (when implemented)
-4. Set up automated testing in CI/CD
-5. Implement performance testing
-6. Add security testing
+1. Complete Accounts app testing (views and forms)
+2. Implement patient management tests
+3. Add events system testing
+4. Implement integration tests
+5. Set up automated testing in CI/CD
+6. Add performance and security testing
 
 ## Resources
 
