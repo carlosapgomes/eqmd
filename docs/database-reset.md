@@ -84,11 +84,8 @@ uv run python manage.py create_sample_wards
 # Create sample tags (optional)
 uv run python manage.py create_sample_tags
 
-# Create comprehensive sample data (hospitals, users, patients, daily notes, drug templates, prescriptions)
+# Create comprehensive sample data (users, patients, daily notes, drug templates, prescriptions)
 uv run python manage.py populate_sample_data
-
-# Assign users to hospitals if needed
-uv run python manage.py assign_users_to_hospitals
 ```
 
 ## Option 2: Database-Only Reset
@@ -199,9 +196,8 @@ After completing a database reset, verify:
 
 - [ ] Development server starts without errors: `uv run python manage.py runserver`
 - [ ] Admin interface loads: `http://localhost:8000/admin/`
-- [ ] Can create test wards, patients, events, daily notes, drug templates, and prescriptions
+- [ ] Can create test tags, patients, events, daily notes, drug templates, and prescriptions
 - [ ] Permissions system works correctly
-- [ ] Hospital context middleware functions properly
 - [ ] Drug templates and prescription functionality works
 
 ## Best Practices
