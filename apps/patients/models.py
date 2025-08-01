@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
+from apps.core.models.soft_delete import SoftDeleteModel
 from .validators import (
     validate_record_number_format,
     validate_admission_datetime,
@@ -13,7 +14,7 @@ from .validators import (
 )
 
 
-class AllowedTag(models.Model):
+class AllowedTag(SoftDeleteModel):
     """Model representing allowed tags that can be assigned to patients"""
 
     name = models.CharField(max_length=100, unique=True, verbose_name="Nome")
@@ -47,9 +48,13 @@ class AllowedTag(models.Model):
     )
 
     class Meta:
+        db_table = 'patients_allowedtag'
         ordering = ["name"]
         verbose_name = "Tag Permitida"
         verbose_name_plural = "Tags Permitidas"
+        indexes = [
+            models.Index(fields=['is_deleted', 'name']),
+        ]
 
     def __str__(self):
         return self.name
@@ -598,7 +603,7 @@ class PatientAdmission(models.Model):
         return self
 
 
-class Patient(models.Model):
+class Patient(SoftDeleteModel):
     """Model representing a patient in the system"""
 
     class Status(models.IntegerChoices):
@@ -713,12 +718,18 @@ class Patient(models.Model):
     )
 
     class Meta:
+        db_table = 'patients_patient'
         ordering = ["-created_at"]
         verbose_name = "Paciente"
         verbose_name_plural = "Pacientes"
+        indexes = [
+            models.Index(fields=['is_deleted', 'status']),
+            models.Index(fields=['is_deleted', 'created_at']),
+        ]
 
     def __str__(self):
-        return self.name
+        deleted_indicator = " [DELETED]" if self.is_deleted else ""
+        return f"{self.name}{deleted_indicator}"
 
     def get_absolute_url(self):
         return reverse("patients:patient_detail", kwargs={"pk": self.pk})

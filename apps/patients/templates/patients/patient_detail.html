@@ -40,6 +40,42 @@
       </div>
     </div>
 
+    <!-- Deletion Status Alert -->
+    {% if patient.is_deleted %}
+      <div class="alert alert-danger mb-4">
+        <div class="d-flex align-items-start">
+          <i class="bi bi-exclamation-triangle-fill me-3 text-danger" style="font-size: 1.5rem;"></i>
+          <div class="flex-grow-1">
+            <h5 class="alert-heading mb-2">
+              <strong>Este paciente foi excluído</strong>
+            </h5>
+            <p class="mb-2">
+              <strong>Excluído por:</strong> 
+              {{ patient.deleted_by.get_full_name|default:patient.deleted_by.username }}
+            </p>
+            <p class="mb-2">
+              <strong>Data da exclusão:</strong> 
+              {{ patient.deleted_at|date:"d/m/Y à\s H:i" }}
+            </p>
+            {% if patient.deletion_reason %}
+              <p class="mb-3">
+                <strong>Motivo:</strong> {{ patient.deletion_reason }}
+              </p>
+            {% endif %}
+
+            {% if user.is_superuser %}
+              <form method="post" action="{% url 'patients:restore' patient.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm">
+                  <i class="bi bi-arrow-clockwise me-2"></i>Restaurar Paciente
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
     <!-- Main Patient Information -->
     <div class="row">
       <!-- Basic Information Card -->

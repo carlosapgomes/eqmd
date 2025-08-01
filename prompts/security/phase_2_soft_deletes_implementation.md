@@ -11,11 +11,13 @@
 ## Problem Statement
 
 Current system allows **permanent deletion** of:
+
 - Patient records
 - Medical events
 - Critical system data
 
 Based on your experience with bad actors attempting to delete patients, we need:
+
 - Protection against permanent data loss
 - Ability to recover "deleted" records
 - Audit trail of deletion attempts
@@ -24,6 +26,7 @@ Based on your experience with bad actors attempting to delete patients, we need:
 ## Solution: Soft Delete Implementation
 
 Instead of physically removing records from database:
+
 - Mark records as `is_deleted=True`
 - Filter out deleted records in normal queries
 - Preserve all relationships and history
@@ -42,47 +45,47 @@ from django.utils import timezone
 
 class SoftDeleteQuerySet(models.QuerySet):
     """QuerySet that filters out soft-deleted objects by default."""
-    
+
     def delete(self):
         """Soft delete all objects in queryset."""
         return super().update(
             is_deleted=True,
             deleted_at=timezone.now()
         )
-    
+
     def hard_delete(self):
         """Actually delete objects from database (admin only)."""
         return super().delete()
-    
+
     def active(self):
         """Return only non-deleted objects."""
         return self.filter(is_deleted=False)
-    
+
     def deleted(self):
         """Return only deleted objects."""
         return self.filter(is_deleted=True)
-    
+
     def with_deleted(self):
         """Return all objects including deleted ones."""
         return self.all()
 
 class SoftDeleteManager(models.Manager):
     """Manager that filters out soft-deleted objects by default."""
-    
+
     def get_queryset(self):
         return SoftDeleteQuerySet(self.model, using=self._db).active()
-    
+
     def all_with_deleted(self):
         """Get all objects including soft-deleted ones."""
         return SoftDeleteQuerySet(self.model, using=self._db)
-    
+
     def deleted_only(self):
         """Get only soft-deleted objects."""
         return SoftDeleteQuerySet(self.model, using=self._db).deleted()
 
 class SoftDeleteModel(models.Model):
     """Abstract base class for soft delete functionality."""
-    
+
     is_deleted = models.BooleanField(default=False, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.ForeignKey(
@@ -93,13 +96,13 @@ class SoftDeleteModel(models.Model):
         related_name='%(class)s_deleted_set'
     )
     deletion_reason = models.TextField(blank=True)
-    
+
     objects = SoftDeleteManager()
     all_objects = models.Manager()  # Access to all objects
-    
+
     class Meta:
         abstract = True
-    
+
     def delete(self, using=None, keep_parents=False, deleted_by=None, reason=''):
         """Soft delete this object."""
         self.is_deleted = True
@@ -107,11 +110,11 @@ class SoftDeleteModel(models.Model):
         self.deleted_by = deleted_by
         self.deletion_reason = reason
         self.save(using=using)
-    
+
     def hard_delete(self, using=None, keep_parents=False):
         """Actually delete this object from database."""
         super().delete(using=using, keep_parents=keep_parents)
-    
+
     def restore(self, restored_by=None):
         """Restore a soft-deleted object."""
         self.is_deleted = False
@@ -119,7 +122,7 @@ class SoftDeleteModel(models.Model):
         self.deleted_by = None
         self.deletion_reason = ''
         self.save()
-        
+
         # Log restoration in history if available
         if hasattr(self, 'history'):
             self._change_reason = f"Restored by {restored_by.username if restored_by else 'system'}"
@@ -135,7 +138,7 @@ from apps.core.models.soft_delete import SoftDeleteModel
 
 class Patient(SoftDeleteModel):
     # ... existing fields ...
-    
+
     class Meta:
         db_table = 'patients_patient'
         verbose_name = 'Patient'
@@ -144,7 +147,7 @@ class Patient(SoftDeleteModel):
             models.Index(fields=['is_deleted', 'status']),
             models.Index(fields=['is_deleted', 'created_at']),
         ]
-    
+
     def __str__(self):
         deleted_indicator = " [DELETED]" if self.is_deleted else ""
         return f"{self.name}{deleted_indicator}"
@@ -156,7 +159,7 @@ class Patient(SoftDeleteModel):
 # apps/events/models.py
 class Event(SoftDeleteModel):
     # ... existing fields ...
-    
+
     class Meta:
         db_table = 'events_event'
         indexes = [
@@ -171,7 +174,7 @@ class Event(SoftDeleteModel):
 # apps/patients/models.py
 class AllowedTag(SoftDeleteModel):
     # ... existing fields ...
-    
+
     class Meta:
         db_table = 'patients_allowedtag'
         indexes = [
@@ -224,48 +227,48 @@ from apps.core.permissions.decorators import doctor_required
 
 class PatientDeleteView(LoginRequiredMixin, View):
     """Soft delete patient with confirmation."""
-    
+
     @doctor_required
     def post(self, request, patient_id):
         patient = get_object_or_404(Patient, id=patient_id)
-        
+
         # Require deletion reason
         reason = request.POST.get('deletion_reason', '').strip()
         if not reason:
             messages.error(request, 'Deletion reason is required.')
             return redirect('patients:detail', patient_id=patient_id)
-        
+
         # Soft delete
         patient.delete(
             deleted_by=request.user,
             reason=reason
         )
-        
+
         messages.success(
-            request, 
+            request,
             f'Patient {patient.name} has been marked as deleted. '
             'This action can be reversed by an administrator.'
         )
-        
+
         return redirect('patients:list')
 
 class PatientRestoreView(LoginRequiredMixin, View):
     """Restore soft-deleted patient (admin only)."""
-    
+
     @method_decorator(user_passes_test(lambda u: u.is_superuser))
     def post(self, request, patient_id):
         patient = get_object_or_404(
-            Patient.all_objects.filter(is_deleted=True), 
+            Patient.all_objects.filter(is_deleted=True),
             id=patient_id
         )
-        
+
         patient.restore(restored_by=request.user)
-        
+
         messages.success(
             request,
             f'Patient {patient.name} has been restored.'
         )
-        
+
         return redirect('patients:detail', patient_id=patient_id)
 ```
 
@@ -277,10 +280,10 @@ class PatientRestoreView(LoginRequiredMixin, View):
 class PatientListView(ListView):
     model = Patient
     # No changes needed - Patient.objects automatically filters out deleted
-    
+
 class PatientDetailView(DetailView):
     model = Patient
-    
+
     def get_object(self):
         # Show deleted patients to admins only
         if self.request.user.is_superuser:
@@ -303,17 +306,17 @@ from django.contrib import messages
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
     list_display = [
-        'name', 'fiscal_number', 'status', 'is_deleted', 
+        'name', 'fiscal_number', 'status', 'is_deleted',
         'deleted_at', 'deleted_by', 'created_at'
     ]
     list_filter = ['is_deleted', 'status', 'deleted_at']
     search_fields = ['name', 'fiscal_number']
     readonly_fields = ['deleted_at', 'deleted_by', 'deletion_reason']
-    
+
     def get_queryset(self, request):
         # Show all patients including deleted ones in admin
         return Patient.all_objects.all()
-    
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -324,21 +327,21 @@ class PatientAdmin(admin.ModelAdmin):
             ),
         ]
         return custom_urls + urls
-    
+
     def restore_patient(self, request, patient_id):
         """Restore a soft-deleted patient."""
         patient = Patient.all_objects.get(id=patient_id)
         patient.restore(restored_by=request.user)
-        
+
         messages.success(
             request,
             f'Patient "{patient.name}" has been successfully restored.'
         )
-        
+
         return HttpResponseRedirect(f'/admin/patients/patient/{patient_id}/change/')
-    
+
     actions = ['soft_delete_selected', 'restore_selected']
-    
+
     def soft_delete_selected(self, request, queryset):
         """Soft delete selected patients."""
         count = 0
@@ -349,13 +352,13 @@ class PatientAdmin(admin.ModelAdmin):
                     reason=f'Bulk deletion by admin {request.user.username}'
                 )
                 count += 1
-        
+
         messages.success(
             request,
             f'{count} patient(s) were soft deleted.'
         )
     soft_delete_selected.short_description = "Soft delete selected patients"
-    
+
     def restore_selected(self, request, queryset):
         """Restore selected patients."""
         count = 0
@@ -363,7 +366,7 @@ class PatientAdmin(admin.ModelAdmin):
             if patient.is_deleted:
                 patient.restore(restored_by=request.user)
                 count += 1
-        
+
         messages.success(
             request,
             f'{count} patient(s) were restored.'
@@ -389,7 +392,7 @@ class PatientAdmin(admin.ModelAdmin):
             <br>
             Reason: {{ patient.deletion_reason }}
         {% endif %}
-        
+
         {% if user.is_superuser %}
             <form method="post" action="{% url 'patients:restore' patient.id %}" class="d-inline mt-2">
                 {% csrf_token %}
@@ -418,14 +421,14 @@ class PatientAdmin(admin.ModelAdmin):
                 <div class="modal-body">
                     <p><strong>Warning:</strong> This will mark the patient as deleted.</p>
                     <p>This action can be reversed by an administrator.</p>
-                    
+
                     <div class="mb-3">
                         <label for="deletion_reason" class="form-label">Reason for deletion (required):</label>
-                        <textarea 
-                            class="form-control" 
-                            id="deletion_reason" 
-                            name="deletion_reason" 
-                            rows="3" 
+                        <textarea
+                            class="form-control"
+                            id="deletion_reason"
+                            name="deletion_reason"
+                            rows="3"
                             required
                             placeholder="Please explain why this patient is being deleted..."
                         ></textarea>
@@ -448,7 +451,7 @@ class PatientAdmin(admin.ModelAdmin):
 ```python
 # apps/patients/tests/test_soft_delete.py
 from django.test import TestCase
-from django.contrib.auth import get_user_model  
+from django.contrib.auth import get_user_model
 from apps.patients.models import Patient
 
 User = get_user_model()
@@ -457,58 +460,58 @@ class TestSoftDelete(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testuser')
         self.admin = User.objects.create_superuser(username='admin')
-        
+
     def test_soft_delete_patient(self):
         """Test that patient soft delete works."""
         patient = Patient.objects.create(
             name='Test Patient',
             created_by=self.user
         )
-        
+
         # Soft delete
         patient.delete(deleted_by=self.user, reason='Test deletion')
-        
+
         # Should not appear in normal queries
         self.assertEqual(Patient.objects.count(), 0)
-        
+
         # Should appear in all_objects
         self.assertEqual(Patient.all_objects.count(), 1)
-        
+
         # Check deletion fields
         deleted_patient = Patient.all_objects.first()
         self.assertTrue(deleted_patient.is_deleted)
         self.assertEqual(deleted_patient.deleted_by, self.user)
         self.assertEqual(deleted_patient.deletion_reason, 'Test deletion')
         self.assertIsNotNone(deleted_patient.deleted_at)
-    
+
     def test_restore_patient(self):
         """Test that patient restoration works."""
         patient = Patient.objects.create(
             name='Test Patient',
             created_by=self.user
         )
-        
+
         # Soft delete then restore
         patient.delete(deleted_by=self.user, reason='Test deletion')
         patient.restore(restored_by=self.admin)
-        
+
         # Should appear in normal queries again
         self.assertEqual(Patient.objects.count(), 1)
-        
+
         # Check restoration
         restored_patient = Patient.objects.first()
         self.assertFalse(restored_patient.is_deleted)
         self.assertIsNone(restored_patient.deleted_at)
         self.assertIsNone(restored_patient.deleted_by)
         self.assertEqual(restored_patient.deletion_reason, '')
-    
+
     def test_cascade_soft_delete(self):
         """Test that related objects handle soft deletes properly."""
         patient = Patient.objects.create(
             name='Test Patient',
             created_by=self.user
         )
-        
+
         # Create related event
         from apps.events.models import Event
         event = Event.objects.create(
@@ -516,10 +519,10 @@ class TestSoftDelete(TestCase):
             description='Test event',
             created_by=self.user
         )
-        
+
         # Soft delete patient
         patient.delete(deleted_by=self.user, reason='Test deletion')
-        
+
         # Event should still exist and reference the patient
         self.assertEqual(Event.objects.count(), 1)
         self.assertEqual(Event.objects.first().patient, patient)
@@ -538,7 +541,7 @@ from apps.events.models import Event
 
 class Command(BaseCommand):
     help = 'Clean up old soft-deleted records'
-    
+
     def add_arguments(self, parser):
         parser.add_argument(
             '--days',
@@ -551,32 +554,32 @@ class Command(BaseCommand):
             action='store_true',
             help='Show what would be deleted without actually deleting'
         )
-    
+
     def handle(self, *args, **options):
         cutoff_date = datetime.now() - timedelta(days=options['days'])
-        
+
         # Find old soft-deleted records
         old_patients = Patient.all_objects.filter(
             is_deleted=True,
             deleted_at__lt=cutoff_date
         )
-        
+
         old_events = Event.all_objects.filter(
             is_deleted=True,
             deleted_at__lt=cutoff_date
         )
-        
+
         if options['dry_run']:
             self.stdout.write(f"Would delete {old_patients.count()} patients")
             self.stdout.write(f"Would delete {old_events.count()} events")
         else:
             patient_count = old_patients.count()
             event_count = old_events.count()
-            
+
             # Hard delete old records
             old_patients.hard_delete()
             old_events.hard_delete()
-            
+
             self.stdout.write(
                 self.style.SUCCESS(
                     f'Deleted {patient_count} patients and {event_count} events '
@@ -588,27 +591,30 @@ class Command(BaseCommand):
 ## Implementation Checklist
 
 ### Development Phase
-- [ ] Create soft delete base classes (SoftDeleteModel, SoftDeleteManager)
-- [ ] Update Patient model to inherit from SoftDeleteModel
-- [ ] Update Event model to inherit from SoftDeleteModel
-- [ ] Update AllowedTag model to inherit from SoftDeleteModel
-- [ ] Create initial database schema with soft delete fields
-- [ ] Update patient delete/restore views
-- [ ] Update admin interface with restore functionality
-- [ ] Update templates to show deletion status
-- [ ] Write comprehensive tests
-- [ ] Create cleanup management command
+
+- [x] Create soft delete base classes (SoftDeleteModel, SoftDeleteManager)
+- [x] Update Patient model to inherit from SoftDeleteModel
+- [x] Update Event model to inherit from SoftDeleteModel
+- [x] Update AllowedTag model to inherit from SoftDeleteModel
+- [x] Create initial database schema with soft delete fields
+- [x] Update patient delete/restore views
+- [x] Update admin interface with restore functionality
+- [x] Update templates to show deletion status
+- [x] Write comprehensive tests
+- [x] Create cleanup management command
 
 ### Testing Phase
-- [ ] Test soft delete functionality
-- [ ] Test restoration functionality
-- [ ] Test admin interface operations
-- [ ] Test cascade behavior with related objects
-- [ ] Test performance with large datasets
-- [ ] Test edge cases (already deleted, etc.)
-- [ ] Verify history integration works
+
+- [x] Test soft delete functionality
+- [x] Test restoration functionality
+- [x] Test admin interface operations
+- [x] Test cascade behavior with related objects
+- [x] Test performance with large datasets
+- [x] Test edge cases (already deleted, etc.)
+- [x] Verify history integration works
 
 ### Deployment Phase
+
 - [ ] Deploy to staging environment
 - [ ] Verify soft delete behavior in staging
 - [ ] Train admin users on restoration process
@@ -618,18 +624,21 @@ class Command(BaseCommand):
 ## Expected Benefits
 
 ### Data Protection
+
 - **Prevents permanent data loss** from malicious deletions
 - **Enables recovery** of accidentally deleted records
 - **Maintains data integrity** and relationships
 - **Preserves audit history** of deleted records
 
 ### Security Improvements
+
 - **Tracks deletion attempts** with user attribution
 - **Requires deletion reasons** for accountability
 - **Admin oversight** of all deletions
 - **Recovery capabilities** for incident response
 
 ### Operational Benefits
+
 - **Reduces data loss incidents**
 - **Simplifies backup/restore operations**
 - **Enables data retention policies**
@@ -638,14 +647,17 @@ class Command(BaseCommand):
 ## Risk Considerations
 
 ### Query Performance
+
 - **Risk**: Additional filtering on all queries
 - **Mitigation**: Database indexes on `is_deleted` field
 
 ### Storage Usage
+
 - **Risk**: Deleted records consume storage
 - **Mitigation**: Cleanup command for old deletions
 
 ### Code Complexity
+
 - **Risk**: Need to handle deleted records in queries
 - **Mitigation**: Manager automatically filters, clear documentation
 
@@ -659,3 +671,4 @@ class Command(BaseCommand):
 - [ ] Cleanup process maintains reasonable storage usage
 
 This phase provides critical protection against the database poisoning scenarios you experienced, ensuring data can be recovered and incidents can be investigated.
+

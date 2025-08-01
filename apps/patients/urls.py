@@ -16,6 +16,7 @@ urlpatterns = [
     path("create/", views.PatientCreateView.as_view(), name="patient_create"),
     path("<uuid:pk>/update/", views.PatientUpdateView.as_view(), name="patient_update"),
     path("<uuid:pk>/delete/", views.PatientDeleteView.as_view(), name="patient_delete"),
+    path("<uuid:pk>/restore/", views.PatientRestoreView.as_view(), name="patient_restore"),
     # Patient Record Number URLs
     path(
         "<uuid:patient_id>/record-number/create/",

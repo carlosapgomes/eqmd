@@ -1,6 +1,8 @@
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import user_passes_test
+from django.utils.decorators import method_decorator
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Q, Case, When, IntegerField
@@ -24,6 +26,7 @@ from apps.core.permissions.utils import (
     can_access_patient, can_change_patient_personal_data,
     can_manage_patient_tags, can_add_patient_tag, can_remove_patient_tag, can_view_patient_tags
 )
+from apps.core.permissions.decorators import doctor_required
 
 
 class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -102,6 +105,13 @@ class PatientDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
     template_name = 'patients/patient_detail.html'
     context_object_name = 'patient'
     permission_required = 'patients.view_patient'
+
+    def get_object(self):
+        # Show deleted patients to admins only
+        if self.request.user.is_superuser:
+            return get_object_or_404(Patient.all_objects, pk=self.kwargs['pk'])
+        else:
+            return get_object_or_404(Patient, pk=self.kwargs['pk'])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -225,15 +235,52 @@ class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
         return response
 
 
-class PatientDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
-    model = Patient
-    success_url = reverse_lazy('patients:patient_list')
-    permission_required = 'patients.delete_patient'
+class PatientDeleteView(LoginRequiredMixin, View):
+    """Soft delete patient with confirmation."""
 
-    def delete(self, request, *args, **kwargs):
-        patient = self.get_object()
-        messages.success(request, f"Patient {patient.name} deleted successfully.")
-        return super().delete(request, *args, **kwargs)
+    @doctor_required
+    def post(self, request, pk):
+        patient = get_object_or_404(Patient, pk=pk)
+
+        # Require deletion reason
+        reason = request.POST.get('deletion_reason', '').strip()
+        if not reason:
+            messages.error(request, 'Deletion reason is required.')
+            return redirect('patients:patient_detail', pk=pk)
+
+        # Soft delete
+        patient.delete(
+            deleted_by=request.user,
+            reason=reason
+        )
+
+        messages.success(
+            request,
+            f'Patient {patient.name} has been marked as deleted. '
+            'This action can be reversed by an administrator.'
+        )
+
+        return redirect('patients:patient_list')
+
+
+class PatientRestoreView(LoginRequiredMixin, View):
+    """Restore soft-deleted patient (admin only)."""
+
+    @method_decorator(user_passes_test(lambda u: u.is_superuser))
+    def post(self, request, pk):
+        patient = get_object_or_404(
+            Patient.all_objects.filter(is_deleted=True),
+            pk=pk
+        )
+
+        patient.restore(restored_by=request.user)
+
+        messages.success(
+            request,
+            f'Patient {patient.name} has been restored.'
+        )
+
+        return redirect('patients:patient_detail', pk=pk)
 
 
 

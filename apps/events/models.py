@@ -4,8 +4,25 @@ from django.conf import settings
 from model_utils.managers import InheritanceManager
 from simple_history.models import HistoricalRecords
 
+from apps.core.models.soft_delete import SoftDeleteModel, SoftDeleteQuerySet
 
-class Event(models.Model):
+
+class SoftDeleteInheritanceManager(InheritanceManager):
+    """Manager that combines InheritanceManager with soft delete functionality."""
+    
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db).active()
+    
+    def all_with_deleted(self):
+        """Get all objects including soft-deleted ones."""
+        return SoftDeleteQuerySet(self.model, using=self._db)
+    
+    def deleted_only(self):
+        """Get only soft-deleted objects."""
+        return SoftDeleteQuerySet(self.model, using=self._db).deleted()
+
+
+class Event(SoftDeleteModel):
     HISTORY_AND_PHYSICAL_EVENT = 0
     DAILY_NOTE_EVENT = 1
     SIMPLE_NOTE_EVENT = 2
@@ -80,7 +97,7 @@ class Event(models.Model):
         verbose_name="Atualizado por",
     )
 
-    objects = InheritanceManager()
+    objects = SoftDeleteInheritanceManager()
     
     # History tracking
     history = HistoricalRecords(
@@ -226,6 +243,7 @@ class Event(models.Model):
         return timezone.now() <= edit_deadline
 
     class Meta:
+        db_table = 'events_event'
         ordering = ["-created_at"]
         verbose_name = "Evento"
         verbose_name_plural = "Eventos"
@@ -234,6 +252,8 @@ class Event(models.Model):
             ("delete_own_event_24h", "Can delete own events within 24 hours"),
         ]
         indexes = [
+            models.Index(fields=['is_deleted', 'patient', 'event_datetime']),
+            models.Index(fields=['is_deleted', 'created_by']),
             models.Index(
                 fields=["patient", "-event_datetime"], name="event_patient_dt_idx"
             ),

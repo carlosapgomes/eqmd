@@ -1,14 +1,97 @@
 from django.contrib import admin
+from django.urls import path
+from django.http import HttpResponseRedirect
+from django.contrib import messages
 from simple_history.admin import SimpleHistoryAdmin
 from .models import Patient, PatientRecordNumber, PatientAdmission, AllowedTag, Tag, Ward
 
 @admin.register(AllowedTag)
 class AllowedTagAdmin(SimpleHistoryAdmin):
-    list_display = ('name', 'description', 'color', 'is_active', 'created_at')
-    list_filter = ('is_active',)
+    list_display = (
+        'name', 'description', 'color', 'is_active', 
+        'is_deleted', 'deleted_at', 'deleted_by', 'created_at'
+    )
+    list_filter = ('is_deleted', 'is_active', 'deleted_at')
     search_fields = ('name', 'description')
-    readonly_fields = ('created_at', 'created_by', 'updated_at', 'updated_by')
+    readonly_fields = (
+        'deleted_at', 'deleted_by', 'deletion_reason',
+        'created_at', 'created_by', 'updated_at', 'updated_by'
+    )
     history_list_display = ['name', 'color', 'is_active', 'history_change_reason']
+
+    fieldsets = (
+        ('Tag Information', {
+            'fields': ('name', 'description', 'color', 'is_active')
+        }),
+        ('Deletion Information', {
+            'fields': ('is_deleted', 'deleted_at', 'deleted_by', 'deletion_reason'),
+            'classes': ('collapse',)
+        }),
+        ('Audit Information', {
+            'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
+            'classes': ('collapse',)
+        })
+    )
+
+    def get_queryset(self, request):
+        # Show all tags including deleted ones in admin
+        return AllowedTag.all_objects.all()
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<path:object_id>/restore/',
+                self.admin_site.admin_view(self.restore_allowedtag),
+                name='patients_allowedtag_restore',
+            ),
+        ]
+        return custom_urls + urls
+
+    def restore_allowedtag(self, request, object_id):
+        """Restore a soft-deleted allowed tag."""
+        allowedtag = AllowedTag.all_objects.get(id=object_id)
+        allowedtag.restore(restored_by=request.user)
+
+        messages.success(
+            request,
+            f'Allowed tag "{allowedtag.name}" has been successfully restored.'
+        )
+
+        return HttpResponseRedirect(f'/admin/patients/allowedtag/{object_id}/change/')
+
+    actions = ['soft_delete_selected', 'restore_selected']
+
+    def soft_delete_selected(self, request, queryset):
+        """Soft delete selected allowed tags."""
+        count = 0
+        for allowedtag in queryset:
+            if not allowedtag.is_deleted:
+                allowedtag.delete(
+                    deleted_by=request.user,
+                    reason=f'Bulk deletion by admin {request.user.username}'
+                )
+                count += 1
+
+        messages.success(
+            request,
+            f'{count} allowed tag(s) were soft deleted.'
+        )
+    soft_delete_selected.short_description = "Soft delete selected allowed tags"
+
+    def restore_selected(self, request, queryset):
+        """Restore selected allowed tags."""
+        count = 0
+        for allowedtag in queryset:
+            if allowedtag.is_deleted:
+                allowedtag.restore(restored_by=request.user)
+                count += 1
+
+        messages.success(
+            request,
+            f'{count} allowed tag(s) were restored.'
+        )
+    restore_selected.short_description = "Restore selected allowed tags"
 
     def save_model(self, request, obj, form, change):
         if not change:  # If creating a new object
@@ -149,10 +232,18 @@ class WardAdmin(admin.ModelAdmin):
 
 @admin.register(Patient)
 class PatientAdmin(SimpleHistoryAdmin):
-    list_display = ('name', 'birthday', 'gender', 'status', 'ward', 'bed', 'current_record_number', 'total_admissions_count', 'is_currently_admitted', 'created_at')
-    list_filter = ('status', 'gender', 'ward')
+    list_display = (
+        'name', 'birthday', 'gender', 'status', 'ward', 'bed', 
+        'current_record_number', 'total_admissions_count', 'is_currently_admitted', 
+        'is_deleted', 'deleted_at', 'deleted_by', 'created_at'
+    )
+    list_filter = ('is_deleted', 'status', 'gender', 'ward', 'deleted_at')
     search_fields = ('name', 'id_number', 'fiscal_number', 'healthcard_number', 'current_record_number')
-    readonly_fields = ('current_record_number', 'total_admissions_count', 'total_inpatient_days', 'current_admission_id', 'created_at', 'created_by', 'updated_at', 'updated_by')
+    readonly_fields = (
+        'current_record_number', 'total_admissions_count', 'total_inpatient_days', 
+        'current_admission_id', 'deleted_at', 'deleted_by', 'deletion_reason',
+        'created_at', 'created_by', 'updated_at', 'updated_by'
+    )
     history_list_display = ['name', 'status', 'history_change_reason']
     
     fieldsets = (
@@ -177,11 +268,75 @@ class PatientAdmin(SimpleHistoryAdmin):
             'fields': ('total_admissions_count', 'total_inpatient_days', 'current_admission_id'),
             'classes': ('collapse',)
         }),
+        ('Informações de Exclusão', {
+            'fields': ('is_deleted', 'deleted_at', 'deleted_by', 'deletion_reason'),
+            'classes': ('collapse',)
+        }),
         ('Auditoria', {
             'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
             'classes': ('collapse',)
         })
     )
+
+    def get_queryset(self, request):
+        # Show all patients including deleted ones in admin
+        return Patient.all_objects.all()
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<path:object_id>/restore/',
+                self.admin_site.admin_view(self.restore_patient),
+                name='patients_patient_restore',
+            ),
+        ]
+        return custom_urls + urls
+
+    def restore_patient(self, request, object_id):
+        """Restore a soft-deleted patient."""
+        patient = Patient.all_objects.get(id=object_id)
+        patient.restore(restored_by=request.user)
+
+        messages.success(
+            request,
+            f'Patient "{patient.name}" has been successfully restored.'
+        )
+
+        return HttpResponseRedirect(f'/admin/patients/patient/{object_id}/change/')
+
+    actions = ['soft_delete_selected', 'restore_selected']
+
+    def soft_delete_selected(self, request, queryset):
+        """Soft delete selected patients."""
+        count = 0
+        for patient in queryset:
+            if not patient.is_deleted:
+                patient.delete(
+                    deleted_by=request.user,
+                    reason=f'Bulk deletion by admin {request.user.username}'
+                )
+                count += 1
+
+        messages.success(
+            request,
+            f'{count} patient(s) were soft deleted.'
+        )
+    soft_delete_selected.short_description = "Soft delete selected patients"
+
+    def restore_selected(self, request, queryset):
+        """Restore selected patients."""
+        count = 0
+        for patient in queryset:
+            if patient.is_deleted:
+                patient.restore(restored_by=request.user)
+                count += 1
+
+        messages.success(
+            request,
+            f'{count} patient(s) were restored.'
+        )
+    restore_selected.short_description = "Restore selected patients"
 
     def save_model(self, request, obj, form, change):
         if not change:  # If creating a new object
