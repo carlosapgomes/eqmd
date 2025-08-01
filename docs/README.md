@@ -43,7 +43,7 @@
 - **[Database Schema](mediafiles/database_schema.md)** - MediaFiles data model
 - **[File Storage Structure](mediafiles/file_storage_structure.md)** - File organization
 - **[Security Implementation](mediafiles/security_implementation.md)** - Security measures
-- **[Migration Plans](mediafiles/)** - FilePond migration documentation
+- **[General Migration Plan](mediafiles/migration_plan.md)** - Migration approach reference
 
 ### Patients App Deep Dive  
 - **[API Documentation](patients/api.md)** - Patient API endpoints

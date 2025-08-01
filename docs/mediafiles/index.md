@@ -39,7 +39,7 @@ Event (base model)
     └── file_id, original_filename, file_size, duration, etc.
 ```
 
-**Note**: Post-Phase 1 migration, VideoClip no longer uses MediaFile relationship. It stores file metadata directly using FilePond integration.
+**Note**: VideoClip stores file metadata directly using FilePond integration, without MediaFile relationship.
 
 ### MediaFile Model (Core File Storage)
 
@@ -86,7 +86,7 @@ class PhotoSeries(Event):
         verbose_name_plural = "Séries de Fotos"
 ```
 
-#### VideoClip Model (Post-Phase 1 Migration)
+#### VideoClip Model
 ```python
 class VideoClip(Event):
     # FilePond-based implementation - no MediaFile relationship
@@ -117,16 +117,16 @@ class PhotoSeriesFile(models.Model):
         unique_together = [['photo_series', 'order']]
 ```
 
-## FilePond Integration (Phase 1 Migration)
+## FilePond Integration
 
 ### Overview
 
-The VideoClip model has been migrated from the MediaFile-based system to a modern FilePond implementation with server-side H.264 conversion. This change provides:
+The VideoClip model uses a modern FilePond implementation with server-side H.264 conversion. This approach provides:
 
 - **Simplified Architecture**: Direct file metadata storage without MediaFile relationship
 - **Server-Side Processing**: All video conversion handled by `VideoProcessor` with ffmpeg
 - **Mobile Optimization**: Automatic H.264/MP4 conversion for universal device compatibility
-- **Reduced Complexity**: Eliminated client-side compression JavaScript (99% bundle size reduction)
+- **Reduced Complexity**: Clean client-side interface with server-side processing
 
 ### Key Components
 
@@ -177,13 +177,13 @@ MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes
 MEDIA_VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB input limit
 ```
 
-### Migration Impact
+### Implementation Features
 
-1. **Database Schema**: VideoClip model fields changed from MediaFile relationship to direct metadata storage
-2. **File Processing**: Server-side H.264 conversion replaces client-side compression
-3. **Bundle Size**: Video page JavaScript reduced from 6.6KB to 376 bytes
-4. **Template**: FilePond CDN-based interface replaces complex compression UI
-5. **URL Structure**: Added `/mediafiles/fp/` endpoints for FilePond processing
+1. **Database Schema**: VideoClip model stores file metadata directly without MediaFile relationship
+2. **File Processing**: Server-side H.264 conversion for optimal compatibility
+3. **Bundle Size**: Minimal JavaScript footprint with FilePond integration
+4. **Template**: Clean FilePond CDN-based interface for video uploads
+5. **URL Structure**: Includes `/mediafiles/fp/` endpoints for FilePond processing
 
 ## File Handling Strategy
 
