@@ -1,8 +1,20 @@
 {% extends "patients/patient_base.html" %} 
 {% load hospital_tags %} 
+{% load static %} 
 {% block title %}
 {{ page_title }} | {% hospital_name %}
 {% endblock title %} 
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/ward_patient_map.css' %}" />
+{% endblock %}
+
+{% block page_specific_scripts %}
+{{ block.super }}
+<script src="{% static 'js/ward_patient_map.js' %}"></script>
+{% endblock %}
+
 {% block patient_content %}
 <div class="container-fluid">
   <!-- Header Section -->
@@ -35,6 +47,64 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <div class="row g-3">
+            <!-- Search -->
+            <div class="col-md-4">
+              <label for="patient-search" class="form-label">
+                <i class="bi bi-search me-1"></i>
+                Buscar Paciente
+              </label>
+              <input type="text" 
+                     class="form-control" 
+                     id="patient-search" 
+                     placeholder="Nome do paciente ou número do leito...">
+            </div>
+            
+            <!-- Ward Filter -->
+            <div class="col-md-4">
+              <label for="ward-filter" class="form-label">Ala</label>
+              <select class="form-select" id="ward-filter">
+                <option value="">Todas as Alas</option>
+                {% for ward_info in ward_data %}
+                  <option value="{{ ward_info.ward.id }}">
+                    {{ ward_info.ward.abbreviation }} - {{ ward_info.ward.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <!-- Tree Controls -->
+            <div class="col-md-4">
+              <label class="form-label">Controles</label>
+              <div class="btn-group w-100" role="group">
+                <button type="button" class="btn btn-outline-secondary" id="expand-all">
+                  <i class="bi bi-arrows-expand me-1"></i>
+                  Expandir
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="collapse-all">
+                  <i class="bi bi-arrows-collapse me-1"></i>
+                  Recolher
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="refresh-data" title="Atualizar dados">
+                  <i class="bi bi-arrow-clockwise me-1"></i>
+                  Atualizar
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Search Results -->
+          <div id="search-results" class="mt-3"></div>
         </div>
       </div>
     </div>
@@ -182,73 +252,4 @@
   </div>
 </div>
 
-<!-- Basic JavaScript for tree toggle -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Basic toggle functionality
-    const toggleButtons = document.querySelectorAll(".ward-toggle");
-
-    toggleButtons.forEach((button) => {
-      button.addEventListener("click", function () {
-        const wardId = this.dataset.ward;
-        const target = document.getElementById("ward-" + wardId);
-        const icon = this.querySelector("i");
-
-        if (target.classList.contains("show")) {
-          target.classList.remove("show");
-          icon.classList.remove("bi-chevron-down");
-          icon.classList.add("bi-chevron-right");
-          this.setAttribute("aria-expanded", "false");
-        } else {
-          target.classList.add("show");
-          icon.classList.remove("bi-chevron-right");
-          icon.classList.add("bi-chevron-down");
-          this.setAttribute("aria-expanded", "true");
-        }
-      });
-    });
-  });
-</script>
-
-<style>
-  .ward-tree .ward-branch {
-    border-left: 3px solid var(--bs-medical-primary);
-    margin-left: 1rem;
-    padding-left: 1rem;
-  }
-
-  .ward-header {
-    border: 1px solid var(--bs-border-color);
-  }
-
-  .patient-item {
-    border-left: 2px solid var(--bs-medical-secondary) !important;
-    transition: box-shadow 0.2s ease;
-  }
-
-  .patient-item:hover {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .ward-toggle {
-    color: var(--bs-medical-primary);
-    text-decoration: none;
-  }
-
-  .ward-toggle:hover {
-    color: var(--bs-medical-primary-dark);
-  }
-
-  .collapse {
-    transition: height 0.3s ease;
-  }
-
-  .collapse.show {
-    display: block;
-  }
-
-  .collapse:not(.show) {
-    display: none;
-  }
-</style>
 {% endblock %}

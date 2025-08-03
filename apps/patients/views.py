@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.contrib.auth.decorators import user_passes_test
 from django.utils.decorators import method_decorator
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Q, Case, When, IntegerField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import JsonResponse
@@ -1467,5 +1467,13 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
         })
 
         return context
+
+    def get(self, request, *args, **kwargs):
+        """Handle AJAX requests for real-time updates"""
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Return only the tree content for AJAX requests
+            context = self.get_context_data()
+            return render(request, 'patients/ward_patient_map_tree_only.html', context)
+        return super().get(request, *args, **kwargs)
 
 

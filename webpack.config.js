@@ -87,6 +87,15 @@ module.exports = {
           from: "assets/js/pdf-download.js",
           to: "js/pdf-download.js",
         },
+        // Ward patient map functionality
+        {
+          from: "assets/js/ward_patient_map.js",
+          to: "js/ward_patient_map.js",
+        },
+        {
+          from: "assets/css/ward_patient_map.css",
+          to: "css/ward_patient_map.css",
+        },
         // Add these new patterns to copy your assets
         {
           from: "assets/images",

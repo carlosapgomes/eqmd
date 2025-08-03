@@ -68,6 +68,83 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/ 
 
 npm install && npm run build
 
+## Static Files Organization
+
+**This project uses Webpack for static file management with the following directory structure:**
+
+### Directory Structure
+
+```
+├── assets/                    # SOURCE FILES (committed to git)
+│   ├── js/                   # JavaScript source files
+│   ├── scss/                 # SCSS source files  
+│   ├── images/               # Image assets
+│   └── index.js              # Webpack entry point
+├── static/                    # WEBPACK OUTPUT (committed, but regenerated)
+│   ├── js/                   # Compiled/copied JavaScript
+│   ├── css/                  # Compiled CSS
+│   └── images/               # Copied images
+└── staticfiles/              # DJANGO COLLECTSTATIC OUTPUT (not committed)
+    └── ...                   # All static files for production
+```
+
+### Where to Put New Files
+
+#### ✅ JavaScript Files
+- **Source**: `assets/js/your_file.js`
+- **Output**: `static/js/your_file.js` (auto-generated)
+- **Template**: `{% static 'js/your_file.js' %}`
+
+#### ✅ CSS/SCSS Files  
+- **Source**: `assets/scss/your_file.scss`
+- **Output**: `static/your_file.css` (auto-generated)
+- **Template**: `{% static 'your_file.css' %}`
+
+#### ✅ Images
+- **Source**: `assets/images/your_image.png`
+- **Output**: `static/images/your_image.png` (auto-copied)
+- **Template**: `{% static 'images/your_image.png' %}`
+
+### Adding New Static Files
+
+#### 1. For Individual JavaScript Files (Recommended)
+
+Add to `webpack.config.js` copy patterns:
+
+```javascript
+{
+  from: "assets/js/your_file.js",
+  to: "js/your_file.js",
+},
+```
+
+#### 2. For Bundled JavaScript Files
+
+Add to webpack entry points:
+
+```javascript
+entry: {
+  your_bundle: [
+    "./assets/js/file1.js",
+    "./assets/js/file2.js"
+  ]
+}
+```
+
+#### 3. Build Process
+
+```bash
+npm run build    # Compiles and copies all assets
+```
+
+### Important Rules
+
+- **❌ NEVER edit files in `static/` directly** - Webpack overwrites them
+- **✅ ALWAYS put source files in `assets/`**
+- **✅ ALWAYS update `webpack.config.js` for new files**  
+- **✅ ALWAYS run `npm run build` after changes**
+- **📝 COMMIT both `assets/` and `static/` to git**
+
 # Python environment
 
 uv install
