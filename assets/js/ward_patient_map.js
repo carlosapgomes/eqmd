@@ -1,50 +1,40 @@
 class WardPatientMap {
     constructor() {
-        this.clearingFilters = false; // Flag to prevent recursive clearing
         this.init();
     }
 
     init() {
         this.bindStaticEvents();
         this.bindTreeEvents();
-        this.setupSearch();
-        this.setupFilters();
+        this.checkIfFiltersCleared();
         this.loadStateFromSession();
     }
 
     bindStaticEvents() {
-        // These events should only be bound once (for elements outside the tree)
-        // Expand/Collapse all functionality
-        document.getElementById('expand-all')?.addEventListener('click', () => {
+        document.getElementById("expand-all")?.addEventListener("click", () => {
             this.expandAll();
         });
-
-        document.getElementById('collapse-all')?.addEventListener('click', () => {
+        document.getElementById("collapse-all")?.addEventListener("click", () => {
             this.collapseAll();
         });
-
-        // Refresh data button
-        document.getElementById('refresh-data')?.addEventListener('click', () => {
+        document.getElementById("refresh-data")?.addEventListener("click", () => {
             this.refreshData();
         });
     }
 
     bindTreeEvents() {
-        // These events need to be re-bound after tree updates
-        // Enhanced tree toggle with animations
-        document.querySelectorAll('.ward-toggle').forEach(button => {
-            button.addEventListener('click', (e) => {
-                this.toggleWard(e.target.closest('.ward-toggle'));
+        document.querySelectorAll(".ward-toggle").forEach((button) => {
+            button.addEventListener("click", (e) => {
+                this.toggleWard(e.target.closest(".ward-toggle"));
             });
         });
 
-        // Patient row click for quick navigation
-        document.querySelectorAll('.patient-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (!e.target.closest('.btn')) {
-                    const timelineLink = item.querySelector('a[href*="timeline"]');
-                    if (timelineLink) {
-                        window.location.href = timelineLink.href;
+        document.querySelectorAll(".patient-item").forEach((item) => {
+            item.addEventListener("click", (e) => {
+                if (!e.target.closest(".btn")) {
+                    const link = item.querySelector('a[href*="timeline"]');
+                    if (link) {
+                        window.location.href = link.href;
                     }
                 }
             });
@@ -53,415 +43,115 @@ class WardPatientMap {
 
     toggleWard(button) {
         const wardId = button.dataset.ward;
-        const target = document.getElementById('ward-' + wardId);
-        const icon = button.querySelector('i');
-        const isExpanded = target.classList.contains('show');
+        const patientsDiv = document.getElementById("ward-" + wardId);
+        const icon = button.querySelector("i");
+        const isExpanded = patientsDiv.classList.contains("show");
 
-        // Animate the transition
         if (isExpanded) {
-            target.style.height = target.scrollHeight + 'px';
-            target.offsetHeight; // Force reflow
-            target.style.height = '0px';
-            target.classList.remove('show');
-            icon.classList.remove('bi-chevron-down');
-            icon.classList.add('bi-chevron-right');
-            button.setAttribute('aria-expanded', 'false');
+            // Collapse
+            patientsDiv.style.height = patientsDiv.scrollHeight + "px";
+            patientsDiv.offsetHeight; // Force reflow
+            patientsDiv.style.height = "0px";
+            patientsDiv.classList.remove("show");
+            icon.classList.remove("bi-chevron-down");
+            icon.classList.add("bi-chevron-right");
+            button.setAttribute("aria-expanded", "false");
         } else {
-            target.style.height = '0px';
-            target.classList.add('show');
-            target.style.height = target.scrollHeight + 'px';
-            icon.classList.remove('bi-chevron-right');
-            icon.classList.add('bi-chevron-down');
-            button.setAttribute('aria-expanded', 'true');
+            // Expand
+            patientsDiv.style.height = "0px";
+            patientsDiv.classList.add("show");
+            patientsDiv.style.height = patientsDiv.scrollHeight + "px";
+            icon.classList.remove("bi-chevron-right");
+            icon.classList.add("bi-chevron-down");
+            button.setAttribute("aria-expanded", "true");
             
             // Reset height after animation
             setTimeout(() => {
-                target.style.height = 'auto';
+                patientsDiv.style.height = "auto";
             }, 300);
         }
 
-        // Save state
         this.saveWardState(wardId, !isExpanded);
     }
 
     expandAll() {
-        document.querySelectorAll('.ward-toggle').forEach(button => {
+        document.querySelectorAll(".ward-toggle").forEach((button) => {
             const wardId = button.dataset.ward;
-            const target = document.getElementById('ward-' + wardId);
-            if (!target.classList.contains('show')) {
+            const patientsDiv = document.getElementById("ward-" + wardId);
+            if (!patientsDiv.classList.contains("show")) {
                 this.toggleWard(button);
             }
         });
     }
 
     collapseAll() {
-        document.querySelectorAll('.ward-toggle').forEach(button => {
+        document.querySelectorAll(".ward-toggle").forEach((button) => {
             const wardId = button.dataset.ward;
-            const target = document.getElementById('ward-' + wardId);
-            if (target.classList.contains('show')) {
+            const patientsDiv = document.getElementById("ward-" + wardId);
+            if (patientsDiv.classList.contains("show")) {
                 this.toggleWard(button);
             }
         });
     }
 
-    setupSearch() {
-        const searchInput = document.getElementById('patient-search');
-        if (!searchInput) return;
-
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                // Clear other filters and reset visibility before applying search
-                this.clearOtherFilters('search');
-                this.resetAllVisibility();
-                this.filterPatients(e.target.value.toLowerCase());
-            }, 300);
-        });
-    }
-
-    filterPatients(searchTerm) {
-        const wardBranches = document.querySelectorAll('.ward-branch');
-        
-        wardBranches.forEach(branch => {
-            const patients = branch.querySelectorAll('.patient-item');
-            let hasVisiblePatients = false;
-
-            patients.forEach(patient => {
-                const patientName = patient.querySelector('.fw-medium')?.textContent?.toLowerCase() || '';
-                const bedNumber = patient.querySelector('strong')?.textContent?.toLowerCase() || '';
-                
-                if (searchTerm === '' || 
-                    patientName.includes(searchTerm) || 
-                    bedNumber.includes(searchTerm)) {
-                    patient.style.display = 'block';
-                    hasVisiblePatients = true;
-                } else {
-                    patient.style.display = 'none';
-                }
-            });
-
-            // Show/hide ward based on whether it has visible patients
-            const wardHeader = branch.querySelector('.ward-header');
-            if (searchTerm === '' || hasVisiblePatients) {
-                branch.style.display = 'block';
-                wardHeader.style.opacity = '1';
-            } else {
-                branch.style.display = 'none';
-            }
-
-            // Auto-expand wards with search results
-            if (searchTerm !== '' && hasVisiblePatients) {
-                const wardToggle = branch.querySelector('.ward-toggle');
-                const target = branch.querySelector('.ward-patients');
-                if (!target.classList.contains('show')) {
-                    this.toggleWard(wardToggle);
-                }
-            }
-        });
-
-        this.updateSearchResults(searchTerm);
-        this.updateFilterSummary();
-    }
-
-    updateSearchResults(searchTerm) {
-        const resultContainer = document.getElementById('search-results');
-        if (!resultContainer) return;
-
-        if (searchTerm === '') {
-            resultContainer.innerHTML = '';
-            return;
-        }
-
-        const visiblePatients = document.querySelectorAll('.patient-item[style*="block"], .patient-item:not([style*="none"])');
-        const count = Array.from(visiblePatients).filter(p => p.style.display !== 'none').length;
-        
-        resultContainer.innerHTML = `
-            <div class="alert alert-info">
-                <i class="bi bi-search me-2"></i>
-                Encontrados ${count} paciente(s) para "${searchTerm}"
-                ${count === 0 ? '<br><small>Tente buscar por nome do paciente ou número do leito</small>' : ''}
-            </div>
-        `;
-    }
-
-    updateFilterSummary() {
-        const summaryElement = document.getElementById('filter-summary');
-        if (!summaryElement) return;
-
-        const visiblePatients = document.querySelectorAll('.patient-item:not([style*="none"])');
-        const totalPatients = document.querySelectorAll('.patient-item').length;
-        
-        // Check if any filters are active
-        const wardFilter = document.getElementById('ward-filter')?.value || '';
-        const tagFilter = document.getElementById('tag-filter')?.value || '';
-        const searchFilter = document.getElementById('patient-search')?.value || '';
-        
-        const hasActiveFilters = wardFilter || tagFilter || searchFilter;
-        
-        if (hasActiveFilters && visiblePatients.length !== totalPatients) {
-            summaryElement.innerHTML = `
-                <div class="alert alert-light border">
-                    <small class="text-muted">
-                        <i class="bi bi-funnel me-2"></i>
-                        Mostrando ${visiblePatients.length} de ${totalPatients} pacientes
-                    </small>
-                </div>
-            `;
-        } else {
-            summaryElement.innerHTML = '';
-        }
-    }
-
-    // Reset all patients and wards to visible state
-    resetAllVisibility() {
-        // Show all patients
-        document.querySelectorAll('.patient-item').forEach(patient => {
-            patient.style.display = 'block';
-        });
-        
-        // Show all ward branches
-        document.querySelectorAll('.ward-branch').forEach(branch => {
-            branch.style.display = 'block';
-        });
-    }
-
-    // Clear other filters without triggering their events
-    clearOtherFilters(activeFilter) {
-        if (this.clearingFilters) return; // Prevent recursive clearing
-        
-        this.clearingFilters = true;
-        
-        if (activeFilter !== 'search') {
-            const searchInput = document.getElementById('patient-search');
-            if (searchInput) searchInput.value = '';
-        }
-        
-        if (activeFilter !== 'ward') {
-            const wardFilter = document.getElementById('ward-filter');
-            if (wardFilter) wardFilter.value = '';
-        }
-        
-        if (activeFilter !== 'tag') {
-            const tagFilter = document.getElementById('tag-filter');
-            if (tagFilter) tagFilter.value = '';
-        }
-        
-        this.clearingFilters = false;
-    }
-
-    // Clear all filters (used when refreshing data)
-    clearAllFilters() {
-        if (this.clearingFilters) return; // Prevent recursive clearing
-        
-        this.clearingFilters = true;
-        
-        // Clear search input
-        const searchInput = document.getElementById('patient-search');
-        if (searchInput) searchInput.value = '';
-        
-        // Clear ward filter
-        const wardFilter = document.getElementById('ward-filter');
-        if (wardFilter) wardFilter.value = '';
-        
-        // Clear tag filter
-        const tagFilter = document.getElementById('tag-filter');
-        if (tagFilter) tagFilter.value = '';
-        
-        // Reset all visibility
-        this.resetAllVisibility();
-        
-        // Clear filter summary
-        this.updateFilterSummary();
-        
-        // Clear search results
-        const searchResults = document.getElementById('search-results');
-        if (searchResults) searchResults.innerHTML = '';
-        
-        this.clearingFilters = false;
-    }
-
-    setupFilters() {
-        // Ward filter
-        const wardFilter = document.getElementById('ward-filter');
-        wardFilter?.addEventListener('change', (e) => {
-            // Clear other filters and reset visibility before applying ward filter
-            this.clearOtherFilters('ward');
-            this.resetAllVisibility();
-            this.filterByWard(e.target.value);
-        });
-
-        // Tag filter
-        const tagFilter = document.getElementById('tag-filter');
-        tagFilter?.addEventListener('change', (e) => {
-            // Clear other filters and reset visibility before applying tag filter
-            this.clearOtherFilters('tag');
-            this.resetAllVisibility();
-            this.filterByTag(e.target.value);
-        });
-        
-        // Update URL parameters to maintain state
-        tagFilter?.addEventListener('change', (e) => {
-            const url = new URL(window.location);
-            if (e.target.value) {
-                url.searchParams.set('tag', e.target.value);
-            } else {
-                url.searchParams.delete('tag');
-            }
-            window.history.replaceState({}, '', url);
-        });
-    }
-
-
-    filterByWard(wardId) {
-        const wardBranches = document.querySelectorAll('.ward-branch');
-        
-        wardBranches.forEach(branch => {
-            const branchWardId = branch.querySelector('.ward-toggle')?.dataset.ward;
-            
-            if (wardId === '' || branchWardId === wardId) {
-                branch.style.display = 'block';
-            } else {
-                branch.style.display = 'none';
-            }
-        });
-        
-        this.updateFilterSummary();
-    }
-
-    filterByTag(tagId) {
-        const wardBranches = document.querySelectorAll('.ward-branch');
-        
-        wardBranches.forEach(branch => {
-            const patients = branch.querySelectorAll('.patient-item');
-            let hasVisiblePatients = false;
-            
-            patients.forEach(patient => {
-                if (tagId === '') {
-                    patient.style.display = 'block';
-                    hasVisiblePatients = true;
-                    return;
-                }
-                
-                // Handle missing or undefined data-patient-tags attribute
-                const patientTagsData = patient.dataset.patientTags || '';
-                const patientTagIds = patientTagsData.split(',').filter(id => id);
-                const hasTag = patientTagIds.includes(tagId);
-                
-                if (hasTag) {
-                    patient.style.display = 'block';
-                    hasVisiblePatients = true;
-                } else {
-                    patient.style.display = 'none';
-                }
-            });
-            
-            // Show/hide ward based on whether it has visible patients
-            if (tagId === '' || hasVisiblePatients) {
-                branch.style.display = 'block';
-            } else {
-                branch.style.display = 'none';
-            }
-        });
-        
-        this.updateFilterSummary();
-    }
-
-
     saveWardState(wardId, isExpanded) {
-        const states = JSON.parse(sessionStorage.getItem('wardStates') || '{}');
+        const states = JSON.parse(sessionStorage.getItem("wardStates") || "{}");
         states[wardId] = isExpanded;
-        sessionStorage.setItem('wardStates', JSON.stringify(states));
+        sessionStorage.setItem("wardStates", JSON.stringify(states));
+    }
+
+    checkIfFiltersCleared() {
+        // Check if any filters are active by examining URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasActiveFilters = urlParams.get('q') || urlParams.get('ward') || urlParams.get('tag');
+        
+        // If no filters are active, clear ward states to return to initial state
+        if (!hasActiveFilters) {
+            sessionStorage.removeItem("wardStates");
+        }
     }
 
     loadStateFromSession() {
-        const states = JSON.parse(sessionStorage.getItem('wardStates') || '{}');
-        
-        Object.keys(states).forEach(wardId => {
+        const states = JSON.parse(sessionStorage.getItem("wardStates") || "{}");
+        Object.keys(states).forEach((wardId) => {
             const button = document.querySelector(`[data-ward="${wardId}"]`);
-            const target = document.getElementById('ward-' + wardId);
-            const shouldBeExpanded = states[wardId];
-            const isCurrentlyExpanded = target?.classList.contains('show');
-
-            if (button && target && shouldBeExpanded !== isCurrentlyExpanded) {
-                this.toggleWard(button);
+            const patientsDiv = document.getElementById("ward-" + wardId);
+            if (button && patientsDiv) {
+                const shouldBeExpanded = states[wardId];
+                const isExpanded = patientsDiv.classList.contains("show");
+                if (shouldBeExpanded !== isExpanded) {
+                    this.toggleWard(button);
+                }
             }
         });
     }
 
-    // Refresh functionality for real-time updates
     async refreshData() {
-        const refreshButton = document.getElementById('refresh-data');
-        const originalContent = refreshButton?.innerHTML;
-        
+        const button = document.getElementById("refresh-data");
+        const originalHTML = button?.innerHTML;
+
         try {
-            // Clear all filters before refreshing
-            this.clearAllFilters();
-            
-            // Show loading state
-            if (refreshButton) {
-                refreshButton.disabled = true;
-                refreshButton.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Atualizando...';
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Atualizando...';
             }
-            
-            // Create URL without any filter parameters to get fresh, unfiltered data
-            const refreshUrl = new URL(window.location.href);
-            refreshUrl.searchParams.delete('tag');
-            refreshUrl.searchParams.delete('ward');
-            refreshUrl.searchParams.delete('search');
-            
-            const response = await fetch(refreshUrl.href, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            
-            if (response.ok) {
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newTreeContent = doc.querySelector('.ward-tree');
-                
-                if (newTreeContent) {
-                    document.querySelector('.ward-tree').innerHTML = newTreeContent.innerHTML;
-                    this.bindTreeEvents(); // Re-bind only tree events to new elements
-                    this.loadStateFromSession(); // Restore expanded states
-                    
-                    // Clean up URL parameters to match cleared filters
-                    const cleanUrl = new URL(window.location.href);
-                    cleanUrl.searchParams.delete('tag');
-                    cleanUrl.searchParams.delete('ward');
-                    cleanUrl.searchParams.delete('search');
-                    window.history.replaceState({}, '', cleanUrl.href);
-                    
-                    // Show success feedback briefly
-                    if (refreshButton) {
-                        refreshButton.innerHTML = '<i class="bi bi-check-circle me-1"></i>Atualizado!';
-                        setTimeout(() => {
-                            refreshButton.innerHTML = originalContent;
-                            refreshButton.disabled = false;
-                        }, 1000);
-                    }
-                }
-            } else {
-                throw new Error('Falha na atualização');
-            }
+
+            // Simple page refresh for server-side filtering
+            window.location.reload();
+
         } catch (error) {
-            console.error('Failed to refresh data:', error);
-            
-            // Show error feedback
-            if (refreshButton) {
-                refreshButton.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Erro';
+            console.error("Failed to refresh data:", error);
+            if (button) {
+                button.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Erro';
                 setTimeout(() => {
-                    refreshButton.innerHTML = originalContent;
-                    refreshButton.disabled = false;
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
                 }, 2000);
             }
         }
     }
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener("DOMContentLoaded", function() {
     new WardPatientMap();
 });

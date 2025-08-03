@@ -57,72 +57,128 @@
     <div class="col-12">
       <div class="card">
         <div class="card-body">
-          <div class="row g-3">
+          <form method="get" class="row g-3">
             <!-- Search -->
             <div class="col-md-3">
-              <label for="patient-search" class="form-label">
-                <i class="bi bi-search me-1"></i>
-                Buscar Paciente
+              <label for="search" class="form-label">
+                <i class="bi bi-search me-1"></i>Buscar Paciente
               </label>
-              <input type="text" 
-                     class="form-control" 
-                     id="patient-search" 
+              <input type="text"
+                     class="form-control"
+                     id="search"
+                     name="q"
+                     value="{{ request.GET.q|default:'' }}"
                      placeholder="Nome do paciente ou número do leito...">
             </div>
-            
-            <!-- Ward Filter -->
+
+            <!-- Ward -->
             <div class="col-md-2">
-              <label for="ward-filter" class="form-label">Ala</label>
-              <select class="form-select" id="ward-filter">
+              <label for="ward" class="form-label">Ala</label>
+              <select class="form-select" id="ward" name="ward">
                 <option value="">Todas as Alas</option>
-                {% for ward_info in ward_data %}
-                  <option value="{{ ward_info.ward.id }}">
-                    {{ ward_info.ward.abbreviation }} - {{ ward_info.ward.name }}
+                {% for ward in all_wards %}
+                  <option value="{{ ward.id }}"
+                          {% if request.GET.ward == ward.id|stringformat:"s" %}selected{% endif %}>
+                    {{ ward.abbreviation }} - {{ ward.name }}
                   </option>
                 {% endfor %}
               </select>
             </div>
-            
-            <!-- Tag Filter -->
+
+            <!-- Tag -->
             <div class="col-md-2">
-              <label for="tag-filter" class="form-label">Tag</label>
-              <select class="form-select" id="tag-filter">
+              <label for="tag" class="form-label">Tag</label>
+              <select class="form-select" id="tag" name="tag">
                 <option value="">Todas as Tags</option>
                 {% for tag in available_tags %}
-                  <option value="{{ tag.id }}" 
-                          style="background-color: {{ tag.color }}; color: white;"
-                          {% if selected_tag == tag.id|stringformat:"s" %}selected{% endif %}>
+                  <option value="{{ tag.id }}"
+                          {% if request.GET.tag == tag.id|stringformat:"s" %}selected{% endif %}
+                          style="background-color: {{ tag.color }}; color: white;">
                     {{ tag.name }}
                   </option>
                 {% endfor %}
               </select>
             </div>
-            
-            <!-- Tree Controls -->
-            <div class="col-md-3">
-              <label class="form-label">Controles</label>
+
+            <!-- Actions -->
+            <div class="col-md-3 d-flex align-items-end">
               <div class="btn-group w-100" role="group">
-                <button type="button" class="btn btn-outline-secondary d-flex align-items-center justify-content-center text-nowrap" id="expand-all">
-                  <i class="bi bi-arrows-expand me-1"></i>
-                  <span>Expandir</span>
+                <button type="submit" class="btn btn-medical-outline-primary">
+                  <i class="bi bi-search"></i>
                 </button>
-                <button type="button" class="btn btn-outline-secondary d-flex align-items-center justify-content-center text-nowrap" id="collapse-all">
-                  <i class="bi bi-arrows-collapse me-1"></i>
-                  <span>Recolher</span>
+                <a href="{% url 'apps.patients:patient_map' %}"
+                   class="btn btn-outline-secondary"
+                   title="Limpar filtros">
+                  <i class="bi bi-x-circle"></i>
+                </a>
+              </div>
+            </div>
+
+            <!-- Tree Controls -->
+            <div class="col-md-2 d-flex align-items-end">
+              <div class="btn-group w-100" role="group">
+                <button type="button" class="btn btn-outline-secondary" id="expand-all" title="Expandir todas">
+                  <i class="bi bi-arrows-expand"></i>
                 </button>
-                <button type="button" class="btn btn-outline-primary d-flex align-items-center justify-content-center text-nowrap" id="refresh-data" title="Atualizar dados">
-                  <i class="bi bi-arrow-clockwise me-1"></i>
-                  <span>Atualizar</span>
+                <button type="button" class="btn btn-outline-secondary" id="collapse-all" title="Recolher todas">
+                  <i class="bi bi-arrows-collapse"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="refresh-data" title="Atualizar dados">
+                  <i class="bi bi-arrow-clockwise"></i>
                 </button>
               </div>
             </div>
+          </form>
+
+          <!-- Active Filters -->
+          {% if active_filters %}
+          <div class="mt-3">
+            <small class="text-muted">Filtros ativos:</small>
+            <div class="d-flex flex-wrap gap-2 mt-1">
+              {% for key, value in active_filters.items %}
+                {% if key == 'q' and value %}
+                  <span class="badge bg-primary">
+                    Busca: {{ value }}
+                    <a href="?{% for k, v in request.GET.items %}{% if k != key %}{{ k }}={{ v }}&{% endif %}{% endfor %}"
+                       class="text-white text-decoration-none ms-1">
+                      <i class="bi bi-x"></i>
+                    </a>
+                  </span>
+                {% elif key == 'ward' and value %}
+                  {% for ward in all_wards %}
+                    {% if ward.id|stringformat:"s" == value %}
+                      <span class="badge bg-secondary">
+                        Ala: {{ ward.abbreviation }}
+                        <a href="?{% for k, v in request.GET.items %}{% if k != key %}{{ k }}={{ v }}&{% endif %}{% endfor %}"
+                           class="text-white text-decoration-none ms-1">
+                          <i class="bi bi-x"></i>
+                        </a>
+                      </span>
+                    {% endif %}
+                  {% endfor %}
+                {% elif key == 'tag' and value %}
+                  {% for tag in available_tags %}
+                    {% if tag.id|stringformat:"s" == value %}
+                      <span class="badge" style="background-color: {{ tag.color }};">
+                        Tag: {{ tag.name }}
+                        <a href="?{% for k, v in request.GET.items %}{% if k != key %}{{ k }}={{ v }}&{% endif %}{% endfor %}"
+                           class="text-white text-decoration-none ms-1">
+                          <i class="bi bi-x"></i>
+                        </a>
+                      </span>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+              
+              {% if active_filters|length > 1 %}
+                <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-x-circle me-1"></i>Limpar todos
+                </a>
+              {% endif %}
+            </div>
           </div>
-          
-          <!-- Filter Summary -->
-          <div id="filter-summary" class="mt-3"></div>
-          
-          <!-- Search Results -->
-          <div id="search-results" class="mt-3"></div>
+          {% endif %}
         </div>
       </div>
     </div>

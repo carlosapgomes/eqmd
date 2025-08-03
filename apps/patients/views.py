@@ -1431,21 +1431,48 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
         context = super().get_context_data(**kwargs)
 
         # Get filter parameters
-        tag_filter = self.request.GET.get('tag')
+        search_query = self.request.GET.get('q', '').strip()
+        ward_filter = self.request.GET.get('ward', '').strip()
+        tag_filter = self.request.GET.get('tag', '').strip()
 
-        # Get all active wards
-        wards = Ward.objects.filter(is_active=True).order_by('name')
+        # Build active filters for display
+        active_filters = {}
+        if search_query:
+            active_filters['q'] = search_query
+        if ward_filter:
+            active_filters['ward'] = ward_filter
+        if tag_filter:
+            active_filters['tag'] = tag_filter
+
+        # Get all active wards for dropdown (always show all wards)
+        all_wards = Ward.objects.filter(is_active=True).order_by('name')
+        
+        # Get wards to process (filtered if ward parameter provided)
+        wards_to_process = all_wards
+        if ward_filter:
+            try:
+                # Ward IDs are UUIDs, not integers
+                wards_to_process = all_wards.filter(id=ward_filter)
+            except (ValueError, TypeError):
+                pass
 
         ward_data = []
         total_patients = 0
 
-        for ward in wards:
+        for ward in wards_to_process:
             # Base queryset for patients in this ward
             patients_qs = Patient.objects.filter(
                 ward=ward,
                 status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY],
                 is_deleted=False
             ).select_related('ward').prefetch_related('patient_tags__allowed_tag')
+            
+            # Apply search query filter
+            if search_query:
+                patients_qs = patients_qs.filter(
+                    Q(name__icontains=search_query) |
+                    Q(bed__icontains=search_query)
+                )
             
             # Apply tag filter if specified
             if tag_filter:
@@ -1458,6 +1485,10 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
                     pass
             
             patients = patients_qs.order_by('bed', 'name')
+            
+            # Skip wards that have no patients after filtering
+            if not patients.exists():
+                continue
 
             patient_list = []
             for patient in patients:
@@ -1494,9 +1525,11 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
 
         context.update({
             'ward_data': ward_data,
+            'all_wards': all_wards,  # For dropdown options
             'total_patients': total_patients,
             'total_wards': len(ward_data),
             'page_title': 'Mapa de Pacientes',
+            'active_filters': active_filters,
         })
 
         # Add tag context
