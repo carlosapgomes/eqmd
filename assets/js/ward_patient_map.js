@@ -1,5 +1,6 @@
 class WardPatientMap {
     constructor() {
+        this.clearingFilters = false; // Flag to prevent recursive clearing
         this.init();
     }
 
@@ -111,6 +112,9 @@ class WardPatientMap {
         searchInput.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
+                // Clear other filters and reset visibility before applying search
+                this.clearOtherFilters('search');
+                this.resetAllVisibility();
                 this.filterPatients(e.target.value.toLowerCase());
             }, 300);
         });
@@ -157,6 +161,7 @@ class WardPatientMap {
         });
 
         this.updateSearchResults(searchTerm);
+        this.updateFilterSummary();
     }
 
     updateSearchResults(searchTerm) {
@@ -180,18 +185,131 @@ class WardPatientMap {
         `;
     }
 
+    updateFilterSummary() {
+        const summaryElement = document.getElementById('filter-summary');
+        if (!summaryElement) return;
+
+        const visiblePatients = document.querySelectorAll('.patient-item:not([style*="none"])');
+        const totalPatients = document.querySelectorAll('.patient-item').length;
+        
+        // Check if any filters are active
+        const wardFilter = document.getElementById('ward-filter')?.value || '';
+        const tagFilter = document.getElementById('tag-filter')?.value || '';
+        const searchFilter = document.getElementById('patient-search')?.value || '';
+        
+        const hasActiveFilters = wardFilter || tagFilter || searchFilter;
+        
+        if (hasActiveFilters && visiblePatients.length !== totalPatients) {
+            summaryElement.innerHTML = `
+                <div class="alert alert-light border">
+                    <small class="text-muted">
+                        <i class="bi bi-funnel me-2"></i>
+                        Mostrando ${visiblePatients.length} de ${totalPatients} pacientes
+                    </small>
+                </div>
+            `;
+        } else {
+            summaryElement.innerHTML = '';
+        }
+    }
+
+    // Reset all patients and wards to visible state
+    resetAllVisibility() {
+        // Show all patients
+        document.querySelectorAll('.patient-item').forEach(patient => {
+            patient.style.display = 'block';
+        });
+        
+        // Show all ward branches
+        document.querySelectorAll('.ward-branch').forEach(branch => {
+            branch.style.display = 'block';
+        });
+    }
+
+    // Clear other filters without triggering their events
+    clearOtherFilters(activeFilter) {
+        if (this.clearingFilters) return; // Prevent recursive clearing
+        
+        this.clearingFilters = true;
+        
+        if (activeFilter !== 'search') {
+            const searchInput = document.getElementById('patient-search');
+            if (searchInput) searchInput.value = '';
+        }
+        
+        if (activeFilter !== 'ward') {
+            const wardFilter = document.getElementById('ward-filter');
+            if (wardFilter) wardFilter.value = '';
+        }
+        
+        if (activeFilter !== 'tag') {
+            const tagFilter = document.getElementById('tag-filter');
+            if (tagFilter) tagFilter.value = '';
+        }
+        
+        this.clearingFilters = false;
+    }
+
+    // Clear all filters (used when refreshing data)
+    clearAllFilters() {
+        if (this.clearingFilters) return; // Prevent recursive clearing
+        
+        this.clearingFilters = true;
+        
+        // Clear search input
+        const searchInput = document.getElementById('patient-search');
+        if (searchInput) searchInput.value = '';
+        
+        // Clear ward filter
+        const wardFilter = document.getElementById('ward-filter');
+        if (wardFilter) wardFilter.value = '';
+        
+        // Clear tag filter
+        const tagFilter = document.getElementById('tag-filter');
+        if (tagFilter) tagFilter.value = '';
+        
+        // Reset all visibility
+        this.resetAllVisibility();
+        
+        // Clear filter summary
+        this.updateFilterSummary();
+        
+        // Clear search results
+        const searchResults = document.getElementById('search-results');
+        if (searchResults) searchResults.innerHTML = '';
+        
+        this.clearingFilters = false;
+    }
+
     setupFilters() {
         // Ward filter
         const wardFilter = document.getElementById('ward-filter');
         wardFilter?.addEventListener('change', (e) => {
+            // Clear other filters and reset visibility before applying ward filter
+            this.clearOtherFilters('ward');
+            this.resetAllVisibility();
             this.filterByWard(e.target.value);
         });
 
-        // Tag filter - commented out until implemented
-        // const tagFilter = document.getElementById('tag-filter');
-        // tagFilter?.addEventListener('change', (e) => {
-        //     this.filterByTag(e.target.value);
-        // });
+        // Tag filter
+        const tagFilter = document.getElementById('tag-filter');
+        tagFilter?.addEventListener('change', (e) => {
+            // Clear other filters and reset visibility before applying tag filter
+            this.clearOtherFilters('tag');
+            this.resetAllVisibility();
+            this.filterByTag(e.target.value);
+        });
+        
+        // Update URL parameters to maintain state
+        tagFilter?.addEventListener('change', (e) => {
+            const url = new URL(window.location);
+            if (e.target.value) {
+                url.searchParams.set('tag', e.target.value);
+            } else {
+                url.searchParams.delete('tag');
+            }
+            window.history.replaceState({}, '', url);
+        });
     }
 
 
@@ -202,26 +320,53 @@ class WardPatientMap {
             const branchWardId = branch.querySelector('.ward-toggle')?.dataset.ward;
             
             if (wardId === '' || branchWardId === wardId) {
-                branch.classList.remove('filtered-out');
+                branch.style.display = 'block';
             } else {
-                branch.classList.add('filtered-out');
+                branch.style.display = 'none';
             }
         });
+        
+        this.updateFilterSummary();
     }
 
-    updateWardVisibility() {
+    filterByTag(tagId) {
         const wardBranches = document.querySelectorAll('.ward-branch');
         
         wardBranches.forEach(branch => {
-            const visiblePatients = branch.querySelectorAll('.patient-item:not(.filtered-out)');
+            const patients = branch.querySelectorAll('.patient-item');
+            let hasVisiblePatients = false;
             
-            if (visiblePatients.length > 0) {
-                branch.classList.remove('no-visible-patients');
+            patients.forEach(patient => {
+                if (tagId === '') {
+                    patient.style.display = 'block';
+                    hasVisiblePatients = true;
+                    return;
+                }
+                
+                // Handle missing or undefined data-patient-tags attribute
+                const patientTagsData = patient.dataset.patientTags || '';
+                const patientTagIds = patientTagsData.split(',').filter(id => id);
+                const hasTag = patientTagIds.includes(tagId);
+                
+                if (hasTag) {
+                    patient.style.display = 'block';
+                    hasVisiblePatients = true;
+                } else {
+                    patient.style.display = 'none';
+                }
+            });
+            
+            // Show/hide ward based on whether it has visible patients
+            if (tagId === '' || hasVisiblePatients) {
+                branch.style.display = 'block';
             } else {
-                branch.classList.add('no-visible-patients');
+                branch.style.display = 'none';
             }
         });
+        
+        this.updateFilterSummary();
     }
+
 
     saveWardState(wardId, isExpanded) {
         const states = JSON.parse(sessionStorage.getItem('wardStates') || '{}');
@@ -250,13 +395,22 @@ class WardPatientMap {
         const originalContent = refreshButton?.innerHTML;
         
         try {
+            // Clear all filters before refreshing
+            this.clearAllFilters();
+            
             // Show loading state
             if (refreshButton) {
                 refreshButton.disabled = true;
                 refreshButton.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Atualizando...';
             }
             
-            const response = await fetch(window.location.href, {
+            // Create URL without any filter parameters to get fresh, unfiltered data
+            const refreshUrl = new URL(window.location.href);
+            refreshUrl.searchParams.delete('tag');
+            refreshUrl.searchParams.delete('ward');
+            refreshUrl.searchParams.delete('search');
+            
+            const response = await fetch(refreshUrl.href, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -272,6 +426,13 @@ class WardPatientMap {
                     document.querySelector('.ward-tree').innerHTML = newTreeContent.innerHTML;
                     this.bindTreeEvents(); // Re-bind only tree events to new elements
                     this.loadStateFromSession(); // Restore expanded states
+                    
+                    // Clean up URL parameters to match cleared filters
+                    const cleanUrl = new URL(window.location.href);
+                    cleanUrl.searchParams.delete('tag');
+                    cleanUrl.searchParams.delete('ward');
+                    cleanUrl.searchParams.delete('search');
+                    window.history.replaceState({}, '', cleanUrl.href);
                     
                     // Show success feedback briefly
                     if (refreshButton) {

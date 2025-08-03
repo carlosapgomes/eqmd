@@ -76,6 +76,18 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         elif admission_filter == 'not_admitted':
             queryset = queryset.filter(current_admission_id__isnull=True)
 
+        # Tag filter
+        tag_filter = self.request.GET.get('tag')
+        if tag_filter:
+            try:
+                tag_id = int(tag_filter)
+                # Filter patients who have this specific tag assigned
+                queryset = queryset.filter(
+                    patient_tags__allowed_tag_id=tag_id
+                ).distinct()
+            except (ValueError, TypeError):
+                pass
+
         # Apply priority ordering: inpatients first, then outpatients, both alphabetically
         from apps.core.permissions.constants import INPATIENT, EMERGENCY, TRANSFERRED, OUTPATIENT, DISCHARGED
         queryset = queryset.annotate(
@@ -96,6 +108,14 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context['admission_filter'] = self.request.GET.get('admission', '')
         context['status_choices'] = Patient.Status.choices
         context['wards'] = Ward.objects.filter(is_active=True).order_by('name')
+        
+        # Tag filter context
+        context['tag_filter'] = self.request.GET.get('tag', '')
+        context['available_tags'] = AllowedTag.objects.filter(
+            is_active=True,
+            tag_instances__isnull=False  # Only tags that are actually used
+        ).distinct().order_by('name')
+        
         return context
 
 
@@ -1410,6 +1430,9 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        # Get filter parameters
+        tag_filter = self.request.GET.get('tag')
+
         # Get all active wards
         wards = Ward.objects.filter(is_active=True).order_by('name')
 
@@ -1417,14 +1440,24 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
         total_patients = 0
 
         for ward in wards:
-            # Get current inpatients and emergency patients in this ward
-            patients = Patient.objects.filter(
+            # Base queryset for patients in this ward
+            patients_qs = Patient.objects.filter(
                 ward=ward,
                 status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY],
                 is_deleted=False
-            ).select_related('ward').prefetch_related(
-                'patient_tags__allowed_tag'
-            ).order_by('bed', 'name')
+            ).select_related('ward').prefetch_related('patient_tags__allowed_tag')
+            
+            # Apply tag filter if specified
+            if tag_filter:
+                try:
+                    tag_id = int(tag_filter)
+                    patients_qs = patients_qs.filter(
+                        patient_tags__allowed_tag_id=tag_id
+                    ).distinct()
+                except (ValueError, TypeError):
+                    pass
+            
+            patients = patients_qs.order_by('bed', 'name')
 
             patient_list = []
             for patient in patients:
@@ -1465,6 +1498,17 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
             'total_wards': len(ward_data),
             'page_title': 'Mapa de Pacientes',
         })
+
+        # Add tag context
+        context['available_tags'] = AllowedTag.objects.filter(
+            is_active=True,
+            tag_instances__patient__status__in=[
+                Patient.Status.INPATIENT, 
+                Patient.Status.EMERGENCY
+            ]
+        ).distinct().order_by('name')
+        
+        context['selected_tag'] = tag_filter
 
         return context
 

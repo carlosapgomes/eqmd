@@ -59,7 +59,7 @@
         <div class="card-body">
           <div class="row g-3">
             <!-- Search -->
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label for="patient-search" class="form-label">
                 <i class="bi bi-search me-1"></i>
                 Buscar Paciente
@@ -71,7 +71,7 @@
             </div>
             
             <!-- Ward Filter -->
-            <div class="col-md-4">
+            <div class="col-md-2">
               <label for="ward-filter" class="form-label">Ala</label>
               <select class="form-select" id="ward-filter">
                 <option value="">Todas as Alas</option>
@@ -83,25 +83,43 @@
               </select>
             </div>
             
+            <!-- Tag Filter -->
+            <div class="col-md-2">
+              <label for="tag-filter" class="form-label">Tag</label>
+              <select class="form-select" id="tag-filter">
+                <option value="">Todas as Tags</option>
+                {% for tag in available_tags %}
+                  <option value="{{ tag.id }}" 
+                          style="background-color: {{ tag.color }}; color: white;"
+                          {% if selected_tag == tag.id|stringformat:"s" %}selected{% endif %}>
+                    {{ tag.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            
             <!-- Tree Controls -->
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">Controles</label>
               <div class="btn-group w-100" role="group">
-                <button type="button" class="btn btn-outline-secondary" id="expand-all">
+                <button type="button" class="btn btn-outline-secondary d-flex align-items-center justify-content-center text-nowrap" id="expand-all">
                   <i class="bi bi-arrows-expand me-1"></i>
-                  Expandir
+                  <span>Expandir</span>
                 </button>
-                <button type="button" class="btn btn-outline-secondary" id="collapse-all">
+                <button type="button" class="btn btn-outline-secondary d-flex align-items-center justify-content-center text-nowrap" id="collapse-all">
                   <i class="bi bi-arrows-collapse me-1"></i>
-                  Recolher
+                  <span>Recolher</span>
                 </button>
-                <button type="button" class="btn btn-outline-primary" id="refresh-data" title="Atualizar dados">
+                <button type="button" class="btn btn-outline-primary d-flex align-items-center justify-content-center text-nowrap" id="refresh-data" title="Atualizar dados">
                   <i class="bi bi-arrow-clockwise me-1"></i>
-                  Atualizar
+                  <span>Atualizar</span>
                 </button>
               </div>
             </div>
           </div>
+          
+          <!-- Filter Summary -->
+          <div id="filter-summary" class="mt-3"></div>
           
           <!-- Search Results -->
           <div id="search-results" class="mt-3"></div>
@@ -164,7 +182,8 @@
                 {% if ward_info.patients %}
                 <div class="ps-4 pt-2">
                   {% for patient_info in ward_info.patients %}
-                  <div class="patient-item p-3 mb-2 bg-white border rounded">
+                  <div class="patient-item p-3 mb-2 bg-white border rounded" 
+                       data-patient-tags="{% for tag in patient_info.tags %}{{ tag.allowed_tag.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
                     <div class="d-flex flex-column flex-md-row justify-content-between">
                       <!-- Patient Info Section -->
                       <div class="flex-grow-1 mb-2 mb-md-0">
