@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ### Development
 
-```bash
+````bash
 # Development server
 uv run python manage.py runserver
 
@@ -35,9 +35,10 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/t
 
 # Single test method
 DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/test_models.py::PDFFormTemplateTests::test_str_method
-```
+````
 
 ### Option 2: Django test runner (Use for specific apps)
+
 ```bash
 # For apps that work better with Django's test runner
 uv run python manage.py test apps.patients.tests
@@ -48,6 +49,7 @@ uv run python manage.py test apps.pdf_forms.tests.test_models
 ```
 
 ### Option 3: pytest with coverage reports
+
 ```bash
 # Generate HTML coverage report (opens in browser)
 DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest --cov=apps --cov-report=html
@@ -57,28 +59,34 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/ 
 ```
 
 ## Which to Use?
+
 - **Use pytest** for most testing (faster, better features, coverage)
 - **Use Django test runner** for specific apps that have import issues
 - **Set DJANGO_SETTINGS_MODULE** when using pytest to avoid configuration errors
 
 # Frontend
+
 npm install && npm run build
 
 # Python environment
+
 uv install
 uv add package-name
 
 # Sample data
+
 uv run python manage.py create_sample_tags
 uv run python manage.py create_sample_wards
 uv run python manage.py create_sample_content
 uv run python manage.py create_sample_pdf_forms
 
 # Security monitoring and audit history
+
 uv run python manage.py detect_suspicious_activity --comprehensive --days=7
 uv run python manage.py security_alert_monitor --continuous --critical-only
 uv run python manage.py security_report --days=30 --format=json --output=report.json
-```
+
+````
 
 ## Project Architecture
 
@@ -128,7 +136,7 @@ uv run python manage.py security_report --days=30 --format=json --output=report.
 - **mediafiles**: Secure file management, photos/videos, FilePond integration
 - **pdf_forms**: Hospital forms with coordinate-based positioning
 
-**📖 Detailed documentation**: 
+**📖 Detailed documentation**:
 - [docs/apps/patients.md](docs/apps/patients.md) - Complete patient management guide
 - [docs/apps/events.md](docs/apps/events.md) - Timeline architecture and event system
 - [docs/apps/dailynotes.md](docs/apps/dailynotes.md) - Daily notes features and optimizations
@@ -152,9 +160,10 @@ uv run python manage.py security_report --days=30 --format=json --output=report.
 can_access_patient(user, patient)           # Always True (universal access)
 can_edit_event(user, event)                 # 24h time window
 can_change_patient_status(user, patient, status)  # Doctors/residents only
-```
+````
 
 ### Key Commands
+
 ```bash
 uv run python manage.py setup_groups
 uv run python manage.py permission_audit --action=report
@@ -167,6 +176,7 @@ uv run python manage.py permission_audit --action=report
 **Environment-based single hospital setup**
 
 ### Environment Variables
+
 ```bash
 HOSPITAL_NAME="Your Hospital Name"
 HOSPITAL_ADDRESS="123 Medical Center Drive"
@@ -176,6 +186,7 @@ HOSPITAL_LOGO_PATH="static/images/hospital-logo.png"
 ```
 
 ### Template Tags
+
 ```django
 {% load hospital_tags %}
 {% hospital_name %}
@@ -189,7 +200,9 @@ HOSPITAL_LOGO_PATH="static/images/hospital-logo.png"
 **Critical Rule**: ALL content must be within template blocks when extending templates.
 
 ### Event Card Structure
+
 Event card templates extend `event_card_base.html` with blocks:
+
 - `{% block event_actions %}` - Buttons
 - `{% block event_content %}` - Main content
 - `{% block extra_css %}` - CSS
@@ -197,9 +210,10 @@ Event card templates extend `event_card_base.html` with blocks:
 
 **📖 Detailed documentation**: See [docs/development/template-guidelines.md](docs/development/template-guidelines.md)
 
-
 # important-instruction-reminders
+
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
+

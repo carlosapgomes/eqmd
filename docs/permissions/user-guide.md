@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide explains how the EquipeMed permission system works from a user perspective, including role-based access control, hospital context management, and permission rules.
+This guide explains how the EquipeMed permission system works from a user perspective, including role-based access control and permission rules for single hospital operations.
 
 ## User Roles and Permissions
 
@@ -26,27 +26,29 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 - Full access to all patient statuses (inpatient, outpatient, emergency, discharged, transferred)
 
 ### Residents
-**Full Hospital Access** - Complete access to patients in current hospital
+**Full Access** - Complete control over all system features (same as Medical Doctors)
 
 **Permissions:**
-- ✅ View, create, edit, and delete patients in current hospital
-- ✅ Change patient status (except discharge)
-- ❌ Cannot discharge patients
-- ❌ Cannot edit patient personal data
+- ✅ View, create, edit, and delete patients
+- ✅ Change patient status (including discharge)
+- ✅ Edit patient personal data
 - ✅ View, create, edit, and delete medical events
-- ✅ View hospital and ward information
+- ✅ Manage hospital and ward information
 - ✅ Edit/delete own medical records within 24 hours
+- ✅ Manage patient record numbers and admissions
+- ✅ Access all patient statuses (inpatient, outpatient, emergency, discharged, transferred)
 
-**Restrictions:**
-- Must have hospital context selected
-- Cannot access patients in other hospitals
-- Cannot perform final patient discharge
+**Special Privileges:**
+- Identical permissions to Medical Doctors
+- Full system access for training and clinical work
+- No restrictions on patient management or status changes
 
 ### Nurses
-**Limited Patient Management** - Patient care with restrictions
+**Extended Patient Management** - Comprehensive patient care capabilities
 
 **Permissions:**
-- ✅ View and edit patients in current hospital
+- ✅ View, create, and edit patients
+- ✅ Manage patient record numbers and admissions
 - ✅ Limited patient status changes (cannot discharge)
 - ✅ Can admit emergency patients to inpatient status
 - ❌ Cannot delete patients
@@ -54,110 +56,97 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 - ✅ View, create, edit, and delete medical events
 - ✅ View hospital and ward information
 - ✅ Edit/delete own medical records within 24 hours
+- ✅ Full media file management (photos, videos, series)
+- ✅ Full access to daily notes and simple notes
+- ✅ View-only access to history & physicals (physician documents)
 
 **Special Rules:**
 - Can change emergency patients to inpatient status
 - Cannot perform patient discharge
-- Limited to current hospital context
+- Can create and manage patient records
+- Full access to media files for nursing documentation
+- Cannot create or edit history & physical documents (physician responsibility)
 
 ### Physiotherapists
-**Full Hospital Access** - Similar to residents
+**Limited Access** - Therapy documentation only
 
 **Permissions:**
-- ✅ View, create, edit, and delete patients in current hospital
-- ✅ Change patient status (except discharge)
-- ❌ Cannot discharge patients
-- ❌ Cannot edit patient personal data
-- ✅ View, create, edit, and delete medical events
-- ✅ View hospital and ward information
-- ✅ Edit/delete own medical records within 24 hours
-
-**Restrictions:**
-- Must have hospital context selected
-- Cannot access patients in other hospitals
-- Cannot perform final patient discharge
-
-### Students
-**View-Only Access** - Limited to outpatients for learning
-
-**Permissions:**
-- ✅ View outpatients across all their hospitals (not limited to current hospital context)
-- ❌ Cannot view inpatients, emergency, or discharged patients
+- ✅ View patients (read-only access)
 - ❌ Cannot create, edit, or delete patients
 - ❌ Cannot change patient status
 - ❌ Cannot edit patient personal data
-- ✅ View medical events (limited)
-- ✅ View hospital and ward information
-- ❌ Cannot edit or delete medical records
+- ❌ Cannot manage patient admissions or discharges
+- ✅ View medical events (read-only)
+- ❌ Cannot create or edit medical events
+- ✅ View hospital and ward information (read-only)
+- ✅ Create, edit, and delete therapy simple notes only
 
-**Restrictions:**
-- Limited to outpatients only
-- Read-only access to most features
-- Can access outpatients from any hospital they belong to
+**Focus:**
+- Physiotherapy documentation through simple notes
+- View-only access to patient information
+- No involvement in patient management or medical decisions
+- Focused on therapeutic care documentation
 
-## Hospital Context Management
+### Students
+**Supervised Learning Access** - Focused on observation and supervised documentation
 
-### What is Hospital Context?
+**Permissions:**
+- ✅ View all patients (learning purposes)
+- ✅ View all medical documentation (daily notes, H&P, prescriptions)
+- ✅ View medical events and hospital information
+- ✅ Create simple notes for supervised observations
+- ✅ Edit own simple notes for corrections
+- ✅ Add photos and photo series for wound/surgery documentation
+- ✅ View medical media files
+- ✅ View PDF form templates
+- ❌ Cannot create daily notes (too formal for students)
+- ❌ Cannot create, edit, or delete patients
+- ❌ Cannot change patient status or personal data
+- ❌ Cannot submit PDF forms
 
-Hospital context determines which hospital you are currently working in. This is essential for:
-- Accessing patients in your current hospital
-- Ensuring data privacy and security
-- Complying with hospital-specific workflows
+**Learning Model:**
+- Simple notes serve as supervised observations
+- Residents review student notes and promote to formal records
+- Media documentation helps with wound and surgical progress tracking
+- Read-only access to formal medical documentation for learning
 
-### Setting Your Hospital Context
+## Single Hospital Environment
 
-1. **Automatic Prompt**: If you don't have a hospital context set, you'll be prompted to select one
-2. **Manual Selection**: Go to "Select Hospital" in the navigation menu
-3. **Hospital Selection Page**: Choose from hospitals you have access to
-4. **Session Persistence**: Your selection persists across browser sessions
+### Hospital Configuration
 
-### Hospital Context Rules
-
-- **Required for Admitted Patients**: Hospital context required to access inpatients/emergency/transferred patients
-- **Flexible for Outpatients**: Outpatients accessible across user's hospitals regardless of current context
-- **Easy Switching**: You can change hospitals at any time through the interface
-- **Status-Dependent Security**: Prevents unauthorized access based on patient admission status
+EquipeMed is configured for single hospital operation using environment-based configuration:
+- Hospital name, address, and contact information set via environment variables
+- No hospital selection required - all users work within the same hospital
+- Simplified patient access without hospital context restrictions
 
 ## Patient Access Rules
 
 ### General Access Rules
 
-1. **Status-Dependent Access**: Patient access rules vary by patient status (admitted vs outpatient)
-2. **Role-Based Access**: Your profession determines what you can do
-3. **Hospital Context**: Required for admitted patients, broader for outpatients
-4. **Time-Based Restrictions**: Medical records can only be edited for 24 hours
+1. **Universal Access**: All medical staff can access all patients in the single hospital environment
+2. **Role-Based Capabilities**: Your profession determines what actions you can perform
+3. **Time-Based Restrictions**: Medical records can only be edited for 24 hours
+4. **Status-Based Workflows**: Different patient statuses may have different management workflows
 
-### Patient Status Types and Hospital Assignment
+### Patient Status Types
 
-- **Outpatient (Ambulatorial)**: Patients receiving care without admission - **No fixed hospital assignment**
-- **Inpatient (Internado)**: Patients admitted to hospital - **Requires current hospital assignment**
-- **Emergency (Emergência)**: Patients in emergency care - **Requires current hospital assignment**
-- **Discharged (Alta)**: Recently discharged patients - **No current hospital assignment**
-- **Transferred (Transferido)**: Patients transferred between facilities - **Requires current hospital assignment**
+- **Outpatient (Ambulatorial)**: Patients receiving care without admission
+- **Inpatient (Internado)**: Patients admitted to the hospital  
+- **Emergency (Emergência)**: Patients in emergency care
+- **Discharged (Alta)**: Recently discharged patients
+- **Transferred (Transferido)**: Patients transferred between departments or facilities
 
-### Updated Access Rules by Patient Status
+### Access Rules by Role
 
-#### Admitted Patients (Inpatient, Emergency, Transferred)
-**Strict Hospital Access** - Users must be in the same hospital as the patient
+**Universal Patient Access** - All medical staff can access all patients
 
-| Role | Access Rule |
-|------|-------------|
-| **Medical Doctors** | ✅ Full access if in same hospital |
-| **Residents** | ✅ Full access if in same hospital |
-| **Nurses** | ✅ Full access if in same hospital |
-| **Physiotherapists** | ✅ Full access if in same hospital |
-| **Students** | ❌ No access to admitted patients |
-
-#### Outpatients & Discharged Patients
-**Broader Hospital Access** - Users can access patients from multiple hospitals
-
-| Role | Access Rule |
-|------|-------------|
-| **Medical Doctors** | ✅ Access if patient has records at user's hospitals |
-| **Residents** | ✅ Access if patient has records at user's hospitals |
-| **Nurses** | ✅ Access if patient has records at user's hospitals |
-| **Physiotherapists** | ✅ Access if patient has records at user's hospitals |
-| **Students** | ✅ Outpatients only, across all user hospitals |
+| Role | Patient Access | Capabilities |
+|------|---------------|-------------|
+| **Medical Doctors** | ✅ All patients | Full management capabilities |
+| **Residents** | ✅ All patients | Full management capabilities (identical to doctors) |
+| **Nurses** | ✅ All patients | Extended patient management, cannot discharge |
+| **Physiotherapists** | ✅ All patients | View-only access, therapy documentation |
+| **Students** | ✅ All patients | Supervised learning, simple notes and media only |
 
 ## Medical Record Rules
 
@@ -187,17 +176,16 @@ Hospital context determines which hospital you are currently working in. This is
 
 | Status Change | Medical Doctors | Residents | Nurses | Physiotherapists | Students |
 |---------------|-----------------|-----------|---------|------------------|----------|
-| **Outpatient → Inpatient** | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Emergency → Inpatient** | ✅ | ✅ | ✅ (Special Rule) | ✅ | ❌ |
-| **Inpatient → Outpatient** | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Any → Discharged** | ✅ Only | ❌ | ❌ | ❌ | ❌ |
-| **Any → Transferred** | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Outpatient → Inpatient** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Emergency → Inpatient** | ✅ | ✅ | ✅ (Special Rule) | ❌ | ❌ |
+| **Inpatient → Outpatient** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Any → Discharged** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Any → Transferred** | ✅ | ✅ | ✅ | ❌ | ❌ |
 
 ### Special Rules
 
 - **Nurse Emergency Rule**: Nurses can admit emergency patients to inpatient status
-- **Doctor Discharge Rule**: Only doctors can discharge patients
-- **Hospital Context Required**: Must be in the same hospital as the patient
+- **Doctor & Resident Discharge Rule**: Only doctors and residents can discharge patients
 
 ## Personal Data Protection
 
@@ -211,10 +199,8 @@ Patient personal data includes:
 
 ### Who Can Edit Personal Data?
 
-- **Medical Doctors Only**: Only doctors can modify patient personal information
-- **Hospital Context Rules**:
-  - **Outpatients**: Any doctor can edit
-  - **Inpatients/Emergency/Discharged/Transferred**: Doctor must be in the same hospital
+- **Medical Doctors & Residents**: Only doctors and residents can modify patient personal information
+- **Universal Access**: All doctors and residents can edit personal data for any patient in the hospital
 
 ### Why These Restrictions?
 
@@ -228,9 +214,8 @@ Patient personal data includes:
 ### Starting Your Shift
 
 1. **Log In**: Use your EquipeMed credentials
-2. **Select Hospital**: Choose your current hospital if not already set
-3. **Access Dashboard**: View patient statistics and recent patients
-4. **Begin Work**: Access patients and create medical records as needed
+2. **Access Dashboard**: View patient statistics and recent patients
+3. **Begin Work**: Access patients and create medical records as needed
 
 ### Accessing a Patient
 
@@ -254,27 +239,19 @@ Patient personal data includes:
 3. **Update Status**: Change the patient status field
 4. **Save Changes**: Submit the form
 
-### Switching Hospitals
-
-1. **Navigation Menu**: Click "Select Hospital" in the menu
-2. **Choose Hospital**: Select from available hospitals
-3. **Confirm Selection**: Your hospital context will be updated
-4. **Continue Work**: Access patients in the new hospital context
 
 ## Troubleshooting
 
 ### "You don't have permission" Messages
 
-- **Check Role**: Verify your role has the required permissions
-- **Hospital Context**: Ensure you have selected a hospital
-- **Patient Location**: Verify the patient is in your current hospital
+- **Check Role**: Verify your role has the required permissions for the action
 - **Time Limits**: Check if 24-hour editing window has expired
+- **Business Logic**: Some restrictions are enforced by business rules (e.g., only doctors can discharge)
 
 ### Cannot Access Patients
 
-- **Hospital Context**: Make sure you have selected a hospital
-- **Patient Status**: Students can only access outpatients
-- **Role Restrictions**: Verify your role allows patient access
+- **Role Restrictions**: Verify your role allows the specific type of patient access
+- **Authentication**: Ensure you are properly logged in
 
 ### Cannot Edit Medical Records
 
@@ -282,11 +259,6 @@ Patient personal data includes:
 - **Time Limit**: Records can only be edited within 24 hours
 - **Permission Level**: Verify you have event editing permissions
 
-### Hospital Selection Issues
-
-- **Available Hospitals**: You can only select hospitals you have access to
-- **Session Issues**: Try logging out and back in
-- **Contact Admin**: If you need access to additional hospitals
 
 ## Getting Help
 
@@ -299,8 +271,8 @@ Patient personal data includes:
 ### Permission Issues
 
 - **Role Assignment**: Contact your supervisor or HR department
-- **Hospital Access**: Request access through proper channels
 - **Group Membership**: Verify your profession type is correctly set
+- **System Access**: Ensure your account is properly configured
 
 ### Medical Record Questions
 
@@ -313,9 +285,9 @@ Patient personal data includes:
 ### Security
 
 - **Log Out**: Always log out when finished
-- **Hospital Context**: Only select hospitals where you're currently working
 - **Personal Data**: Be careful when editing patient personal information
 - **Access Control**: Don't share login credentials
+- **Role Awareness**: Understand your role's capabilities and limitations
 
 ### Medical Records
 
@@ -328,8 +300,8 @@ Patient personal data includes:
 
 - **Verify Identity**: Always confirm patient identity
 - **Status Updates**: Keep patient status current
-- **Hospital Context**: Ensure you're in the correct hospital
 - **Role Awareness**: Understand your role's limitations
+- **Collaboration**: Work effectively with other medical staff
 
 ### System Usage
 

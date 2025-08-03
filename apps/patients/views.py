@@ -1,5 +1,5 @@
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import user_passes_test
 from django.utils.decorators import method_decorator

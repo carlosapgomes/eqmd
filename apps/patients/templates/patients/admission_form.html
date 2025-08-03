@@ -1,5 +1,6 @@
-{% extends 'base.html' %}
+{% extends "patients/patient_base.html" %}
 {% load static %}
+{% load patient_tags %}
 
 {% block title %}
     {% if form.instance.pk %}
@@ -9,7 +10,7 @@
     {% endif %}
 {% endblock %}
 
-{% block content %}
+{% block patient_content %}
 <div class="container-fluid mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -37,7 +38,7 @@
                     <div class="alert alert-info">
                         <strong>Paciente:</strong> {{ patient.name }}
                         <br>
-                        <strong>Status:</strong> <span class="badge {% patient_status_badge_color patient.status %}">{{ patient.get_status_display }}</span>
+                        <strong>Status:</strong> {{ patient.status|patient_status_badge }}
                     </div>
 
                     <form method="post" novalidate>

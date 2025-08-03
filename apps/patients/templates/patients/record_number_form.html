@@ -1,5 +1,6 @@
-{% extends 'base.html' %}
+{% extends "patients/patient_base.html" %}
 {% load static %}
+{% load patient_tags %}
 
 {% block title %}
     {% if form.instance.pk %}
@@ -9,12 +10,12 @@
     {% endif %}
 {% endblock %}
 
-{% block content %}
+{% block patient_content %}
 <div class="container-fluid mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'patients:index' %}">Pacientes</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'patients:detail' patient.uuid %}">{{ patient.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'patients:patient_list' %}">Pacientes</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'patients:patient_detail' patient.id %}">{{ patient.name }}</a></li>
             <li class="breadcrumb-item active">Número do Prontuário</li>
         </ol>
     </nav>
@@ -37,7 +38,7 @@
                     <div class="alert alert-info">
                         <strong>Paciente:</strong> {{ patient.name }}
                         <br>
-                        <strong>Status:</strong> <span class="badge {% patient_status_badge_color patient.status %}">{{ patient.get_status_display }}</span>
+                        <strong>Status:</strong> {{ patient.status|patient_status_badge }}
                     </div>
 
                     <form method="post" novalidate>
@@ -83,7 +84,7 @@
                         </div>
                         
                         <div class="d-flex justify-content-between">
-                            <a href="{% url 'patients:detail' patient.uuid %}" class="btn btn-secondary">
+                            <a href="{% url 'patients:patient_detail' patient.id %}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i>
                                 Voltar
                             </a>

@@ -1,9 +1,37 @@
 from django.db import models
 from django.utils import timezone
+from model_utils.managers import InheritanceQuerySet
 
 
 class SoftDeleteQuerySet(models.QuerySet):
     """QuerySet that filters out soft-deleted objects by default."""
+
+    def delete(self):
+        """Soft delete all objects in queryset."""
+        return super().update(
+            is_deleted=True,
+            deleted_at=timezone.now()
+        )
+
+    def hard_delete(self):
+        """Actually delete objects from database (admin only)."""
+        return super().delete()
+
+    def active(self):
+        """Return only non-deleted objects."""
+        return self.filter(is_deleted=False)
+
+    def deleted(self):
+        """Return only deleted objects."""
+        return self.filter(is_deleted=True)
+
+    def with_deleted(self):
+        """Return all objects including deleted ones."""
+        return self.all()
+
+
+class SoftDeleteInheritanceQuerySet(InheritanceQuerySet):
+    """QuerySet that combines InheritanceQuerySet with soft delete functionality."""
 
     def delete(self):
         """Soft delete all objects in queryset."""

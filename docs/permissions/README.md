@@ -251,10 +251,10 @@ The system automatically assigns users to profession-based groups using Django s
 Users are automatically assigned to groups based on their profession type:
 
 - **Medical Doctors**: Full permissions for all models and operations
-- **Residents**: Full patient access, can discharge, can edit personal data
-- **Nurses**: Full patient access, limited status changes, cannot edit personal data
-- **Physiotherapists**: Full patient access, limited status changes, cannot edit personal data
-- **Students**: Full patient access, limited status changes, cannot edit personal data
+- **Residents**: Full permissions for all models and operations (identical to Medical Doctors)
+- **Nurses**: Extended patient management, can create patients and manage records, full media access, limited status changes, cannot edit personal data, view-only access to history & physicals
+- **Physiotherapists**: View-only patient access, therapy notes documentation only, no patient management
+- **Students**: Supervised learning access, simple notes only, media documentation, view-only for formal records
 
 ### Group Setup
 

@@ -1,4 +1,4 @@
-{% load patients_tags %}
+{% load patient_tags %}
 
 <!-- Patient Record Tracking Sidebar Widget -->
 <div class="card mb-3">
@@ -22,7 +22,7 @@
             <li class="mb-2">
                 <small class="text-muted">Status:</small>
                 <br>
-                <span class="badge {% patient_status_badge_color patient.status %}">{{ patient.get_status_display }}</span>
+                {{ patient.status|patient_status_badge }}
             </li>
             <li class="mb-2">
                 <small class="text-muted">Internação:</small>

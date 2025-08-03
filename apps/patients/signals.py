@@ -87,7 +87,8 @@ def create_admission_discharge_events(sender, instance, created, **kwargs):
     else:
         logger.info("Signal: No discharge datetime, removing any existing discharge events")
         # Remove discharge event if discharge was cancelled
-        deleted_count = DischargeEvent.objects.filter(admission=instance).delete()[0]
+        delete_result = DischargeEvent.objects.filter(admission=instance).delete()
+        deleted_count = delete_result[0] if isinstance(delete_result, tuple) else delete_result
         logger.info(f"Signal: Deleted {deleted_count} discharge events")
 
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a comprehensive API reference for the EquipeMed permission system, including all utility functions, decorators, template tags, and management commands.
+This document provides a comprehensive API reference for the EquipeMed permission system, including all utility functions, decorators, template tags, and management commands for single hospital operations.
 
 ## Table of Contents
 
@@ -11,10 +11,9 @@ This document provides a comprehensive API reference for the EquipeMed permissio
 3. [Template Tags](#template-tags)
 4. [Cache Utilities](#cache-utilities)
 5. [Query Optimization](#query-optimization)
-6. [Hospital Context Middleware](#hospital-context-middleware)
-7. [Custom Permission Backend](#custom-permission-backend)
-8. [Management Commands](#management-commands)
-9. [Constants](#constants)
+6. [Custom Permission Backend](#custom-permission-backend)
+7. [Management Commands](#management-commands)
+8. [Constants](#constants)
 
 ## Permission Utilities
 
@@ -34,8 +33,8 @@ Check if a user can access a specific patient.
 - `bool`: True if user can access the patient, False otherwise
 
 **Rules:**
-- **Universal Access**: All medical staff can access all patients in single-hospital environment
-- **No Hospital Context Required**: Hospital restrictions removed in simplified architecture
+- **Universal Access**: All medical staff can access all patients in the single hospital environment
+- **Simplified Architecture**: No hospital context restrictions for single hospital operations
 
 **Example:**
 ```python
@@ -61,8 +60,8 @@ Check if a user can change a patient's status.
 - `bool`: True if user can change the status, False otherwise
 
 **Rules:**
-- Doctors: Can change any patient status (including discharge)
-- Nurses/Physiotherapists/Residents: Limited status changes (cannot discharge patients)
+- Doctors & Residents: Can change any patient status (including discharge)
+- Nurses/Physiotherapists: Limited status changes (cannot discharge patients)
 - Students: Cannot change patient status
 - Special rule: Nurses can admit emergency patients to inpatient status
 
@@ -90,7 +89,7 @@ Check if a user can modify patient personal information.
 **Rules:**
 - **Doctors/Residents**: Can change patient personal data
 - **Others**: Cannot change patient personal data
-- **No Hospital Restrictions**: Single hospital environment simplifies access
+- **Universal Access**: All doctors and residents can edit personal data for any patient in the hospital
 
 **Example:**
 ```python
@@ -194,23 +193,6 @@ if is_doctor(request.user):
     pass
 ```
 
-#### `has_hospital_context(user) -> bool`
-
-Check if a user has a valid hospital context.
-
-**Parameters:**
-- `user` (User): The user to check
-
-**Returns:**
-- `bool`: True if user has hospital context, False otherwise
-
-**Example:**
-```python
-from apps.core.permissions import has_hospital_context
-
-if not has_hospital_context(request.user):
-    return redirect('hospitals:select')
-```
 
 #### `get_user_profession_type(user) -> str`
 
@@ -292,13 +274,6 @@ Check if user can manage events.
 
 Check if user can view events.
 
-#### `can_manage_hospitals(user) -> bool`
-
-Check if user can manage hospitals.
-
-#### `can_view_hospitals(user) -> bool`
-
-Check if user can view hospitals.
 
 **Example:**
 ```python
@@ -697,12 +672,6 @@ Get an event queryset with optimized queries.
 **Returns:**
 - `QuerySet`: Optimized event queryset
 
-### `get_optimized_hospital_queryset()`
-
-Get a hospital queryset with optimized queries.
-
-**Returns:**
-- `QuerySet`: Optimized hospital queryset
 
 ### `get_patients_for_user(user)`
 
@@ -732,15 +701,6 @@ Get events accessible to a specific user.
 **Returns:**
 - `QuerySet`: Events accessible to the user
 
-### `get_hospitals_for_user(user)`
-
-Get hospitals accessible to a specific user.
-
-**Parameters:**
-- `user` (User): The user to get hospitals for
-
-**Returns:**
-- `QuerySet`: Hospitals accessible to the user
 
 ### `get_recent_patients_optimized(user, limit=10)`
 
@@ -769,62 +729,6 @@ from apps.core.permissions.queries import get_permission_summary_optimized
 
 summary = get_permission_summary_optimized(request.user)
 print(f"Total permissions: {summary['permission_counts']['total_permissions']}")
-```
-
-## Hospital Context Middleware
-
-The hospital context middleware is available in `apps.hospitals.middleware.HospitalContextMiddleware`.
-
-### `set_hospital_context(request, hospital_id)`
-
-Set the current hospital context for the user.
-
-**Parameters:**
-- `request` (HttpRequest): Django request object
-- `hospital_id` (UUID): UUID of the hospital to set as current
-
-**Returns:**
-- `Hospital`: Hospital object if successful, None if not found
-
-**Example:**
-```python
-from apps.hospitals.middleware import HospitalContextMiddleware
-
-hospital = HospitalContextMiddleware.set_hospital_context(request, hospital_id)
-if hospital:
-    # Hospital context set successfully
-    pass
-```
-
-### `clear_hospital_context(request)`
-
-Clear the current hospital context for the user.
-
-**Parameters:**
-- `request` (HttpRequest): Django request object
-
-**Example:**
-```python
-from apps.hospitals.middleware import HospitalContextMiddleware
-
-HospitalContextMiddleware.clear_hospital_context(request)
-```
-
-### `get_available_hospitals(user)`
-
-Get hospitals available to a user.
-
-**Parameters:**
-- `user` (User): The user to get hospitals for
-
-**Returns:**
-- `QuerySet`: Available hospitals for the user
-
-**Example:**
-```python
-from apps.hospitals.middleware import HospitalContextMiddleware
-
-available_hospitals = HospitalContextMiddleware.get_available_hospitals(request.user)
 ```
 
 ## Custom Permission Backend

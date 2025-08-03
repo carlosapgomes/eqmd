@@ -404,6 +404,9 @@ class Command(BaseCommand):
             admission_type = random.choice([PatientAdmission.AdmissionType.EMERGENCY, PatientAdmission.AdmissionType.SCHEDULED])
             bed = f'Leito {random.randint(1, 50)}'
             
+            # Select a random ward for the admission
+            ward = random.choice(self.wards) if self.wards else None
+            
             # Create admission record
             admission = PatientAdmission.objects.create(
                 patient=patient,
@@ -411,6 +414,7 @@ class Command(BaseCommand):
                 admission_type=admission_type,
                 initial_bed=bed,
                 admission_diagnosis=self.get_random_admission_diagnosis(),
+                ward=ward,
                 is_active=True,
                 created_by=creator,
                 updated_by=creator,
@@ -420,10 +424,11 @@ class Command(BaseCommand):
             patient.status = Patient.Status.INPATIENT
             patient.current_admission_id = admission.id
             patient.bed = bed
+            patient.ward = ward
             patient.last_admission_date = admission_datetime.date()
             patient.total_admissions_count = 1
             patient.save(update_fields=[
-                'status', 'current_admission_id', 'bed', 'last_admission_date', 
+                'status', 'current_admission_id', 'bed', 'ward', 'last_admission_date', 
                 'total_admissions_count', 'updated_at'
             ])
         

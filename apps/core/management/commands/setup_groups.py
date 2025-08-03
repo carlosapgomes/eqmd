@@ -192,6 +192,30 @@ class Command(BaseCommand):
             'patients.delete_tag',
         ])
         
+        # Patient record number management
+        permissions.extend([
+            'patients.view_patientrecordnumber',
+            'patients.add_patientrecordnumber',
+            'patients.change_patientrecordnumber',
+            'patients.delete_patientrecordnumber',
+        ])
+        
+        # Patient admission management
+        permissions.extend([
+            'patients.view_patientadmission',
+            'patients.add_patientadmission',
+            'patients.change_patientadmission',
+            'patients.delete_patientadmission',
+        ])
+        
+        # Ward management
+        permissions.extend([
+            'patients.view_ward',
+            'patients.add_ward',
+            'patients.change_ward',
+            'patients.delete_ward',
+        ])
+        
         # Medical events with time-limited editing
         permissions.extend([
             'events.view_event',
@@ -228,8 +252,26 @@ class Command(BaseCommand):
         # Patient viewing and limited updates
         permissions.extend([
             'patients.view_patient',
-            'patients.change_patient',  # Limited to non-critical changes
+            'patients.add_patient',        # Nurses can create patients
+            'patients.change_patient',     # Limited to non-critical changes
         ])
+        
+        # Patient record number permissions (needed for patient management)
+        permissions.extend([
+            'patients.view_patientrecordnumber',
+            'patients.add_patientrecordnumber',     # Needed for record management
+            'patients.change_patientrecordnumber',
+        ])
+        
+        # Patient admission permissions (needed for admissions)
+        permissions.extend([
+            'patients.view_patientadmission',
+            'patients.add_patientadmission',        # Needed for admissions
+            'patients.change_patientadmission',
+        ])
+        
+        # Ward viewing
+        permissions.append('patients.view_ward')
         
         # Patient tag viewing and management
         permissions.extend([
@@ -249,12 +291,11 @@ class Command(BaseCommand):
         permissions.extend(self._get_app_permissions('dailynotes'))
         permissions.extend(self._get_app_permissions('simplenotes'))
         
-        # Media viewing and basic uploads
-        permissions.extend(self._get_view_permissions('mediafiles'))
-        permissions.extend([
-            'mediafiles.add_photo',  # For nursing documentation
-            'mediafiles.add_photoseries',
-        ])
+        # History & Physicals - view only (physicians create these)
+        permissions.extend(self._get_view_permissions('historyandphysicals'))
+        
+        # Full media management for nursing documentation
+        permissions.extend(self._get_app_permissions('mediafiles'))
         
         # Forms (view and fill)
         permissions.extend([
@@ -269,90 +310,86 @@ class Command(BaseCommand):
         return permissions
 
     def _get_physiotherapist_permissions(self):
-        """Clinical permissions for physiotherapy work."""
+        """Limited clinical permissions focused on therapy documentation."""
         permissions = []
         
-        # Full patient access (needed for therapy management)
-        permissions.extend([
-            'patients.view_patient',
-            'patients.add_patient',
-            'patients.change_patient',
-            'patients.delete_patient',
-        ])
+        # Patient viewing only (cannot add, edit, or delete patients)
+        permissions.append('patients.view_patient')
         
-        # Patient tag management
+        # Ward and tag viewing only
         permissions.extend([
+            'patients.view_ward',
             'patients.view_tag',
-            'patients.add_tag',
-            'patients.change_tag',
-            'patients.delete_tag',
         ])
         
-        # Full event management for therapy documentation
-        permissions.extend([
-            'events.view_event',
-            'events.add_event',
-            'events.change_event',
-            'events.delete_event',
-        ])
+        # Basic event viewing
+        permissions.append('events.view_event')
         
-        # Medical documentation
-        permissions.extend(self._get_app_permissions('dailynotes'))
-        permissions.extend(self._get_app_permissions('historyandphysicals'))
+        # Physiotherapy documentation - simple notes only
         permissions.extend(self._get_app_permissions('simplenotes'))
-        
-        # Media for therapy documentation
-        permissions.extend(self._get_app_permissions('mediafiles'))
-        
-        # PDF forms
-        permissions.extend(self._get_pdf_forms_permissions())
         
         # Template viewing
         permissions.append('sample_content.view_samplecontent')
         
-        # NO prescriptions (not in physiotherapist scope)
-        # NO user management or admin permissions
+        # NO patient creation, editing, or deletion
+        # NO patient admissions or discharges
+        # NO patient personal data editing
+        # NO patient record number management
+        # NO complex medical documentation (dailynotes, H&P)
+        # NO media file management
+        # NO PDF forms
+        # NO patient tag management
+        # NO event creation or editing
         
         return permissions
 
     def _get_student_permissions(self):
-        """Read-only permissions for medical students."""
+        """Supervised learning permissions for medical students."""
         permissions = []
         
         # View-only patient access
         permissions.append('patients.view_patient')
         
-        # View-only tags
-        permissions.append('patients.view_tag')
+        # View-only tags and wards
+        permissions.extend([
+            'patients.view_tag',
+            'patients.view_ward',
+        ])
         
         # View-only events
         permissions.append('events.view_event')
         
-        # Can create learning notes (with supervision)
-        permissions.extend([
-            'dailynotes.view_dailynote',
-            'dailynotes.add_dailynote',
-            'dailynotes.change_dailynote',  # Own notes only through business logic
-        ])
+        # View all medical documentation (learning purposes)
+        permissions.extend(self._get_view_permissions('dailynotes'))
+        permissions.extend(self._get_view_permissions('historyandphysicals'))
+        permissions.extend(self._get_view_permissions('outpatientprescriptions'))
         
+        # Simple notes only - for supervised observations
         permissions.extend([
             'simplenotes.view_simplenote',
-            'simplenotes.add_simplenote',
-            'simplenotes.change_simplenote',  # Own notes only
+            'simplenotes.add_simplenote',      # Supervised observations
+            'simplenotes.change_simplenote',   # Edit own notes only
         ])
         
-        # View medical media
-        permissions.extend(self._get_view_permissions('mediafiles'))
-        
-        # View and fill forms (learning purposes)
+        # Media files - for wound/surgery documentation
         permissions.extend([
-            'pdf_forms.view_pdfformtemplate',
-            'pdf_forms.view_pdfformsubmission',
-            'pdf_forms.add_pdfformsubmission',
+            'mediafiles.view_photo',
+            'mediafiles.view_photoseries',
+            'mediafiles.view_video',
+            'mediafiles.add_photo',           # Document wounds, surgical sites
+            'mediafiles.add_photoseries',     # Progress documentation
         ])
+        
+        # View forms only (no submissions - not essential for learning)
+        permissions.append('pdf_forms.view_pdfformtemplate')
         
         # Template viewing
         permissions.append('sample_content.view_samplecontent')
+        
+        # NO daily notes creation (too formal for students)
+        # NO form submissions (not essential for supervised learning)
+        # NO patient management or status changes
+        # NO personal data editing
         
         return permissions
 

@@ -4,22 +4,22 @@ from django.conf import settings
 from model_utils.managers import InheritanceManager
 from simple_history.models import HistoricalRecords
 
-from apps.core.models.soft_delete import SoftDeleteModel, SoftDeleteQuerySet
+from apps.core.models.soft_delete import SoftDeleteModel, SoftDeleteInheritanceQuerySet
 
 
 class SoftDeleteInheritanceManager(InheritanceManager):
     """Manager that combines InheritanceManager with soft delete functionality."""
     
     def get_queryset(self):
-        return SoftDeleteQuerySet(self.model, using=self._db).active()
+        return SoftDeleteInheritanceQuerySet(self.model, using=self._db).active()
     
     def all_with_deleted(self):
         """Get all objects including soft-deleted ones."""
-        return SoftDeleteQuerySet(self.model, using=self._db)
+        return SoftDeleteInheritanceQuerySet(self.model, using=self._db)
     
     def deleted_only(self):
         """Get only soft-deleted objects."""
-        return SoftDeleteQuerySet(self.model, using=self._db).deleted()
+        return SoftDeleteInheritanceQuerySet(self.model, using=self._db).deleted()
 
 
 class Event(SoftDeleteModel):
