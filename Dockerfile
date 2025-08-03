@@ -65,7 +65,11 @@ RUN mkdir -p /app/media /app/staticfiles
 RUN python manage.py collectstatic --noinput --clear
 
 # Create non-root user for security
-RUN useradd --create-home --shell /bin/bash appuser && \
+# Allow customizing user ID to match host user
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN groupadd -g $GROUP_ID appuser && \
+    useradd -u $USER_ID -g $GROUP_ID --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app
 USER appuser
 

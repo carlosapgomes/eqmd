@@ -18,11 +18,14 @@ git clone https://github.com/carlosapgomes/eqmd.git
 cd eqmd
 ```
 
-### 2. Create Required Directories
+### 2. Create Required Directories and Fix Permissions
 
 ```bash
 mkdir -p media staticfiles
 chmod 755 media staticfiles
+
+# Fix ownership for Docker compatibility
+sudo chown -R $(id -u):$(id -g) .
 ```
 
 ### 3. Set Production Environment Variables
@@ -46,34 +49,39 @@ EOF
 ### 4. Build the Docker Image
 
 ```bash
-docker-compose build web
+# Set user IDs for permission compatibility
+export USER_ID=$(id -u)
+export GROUP_ID=$(id -g)
+
+# Build with matching user IDs
+docker-compose build eqmd
 ```
 
 ### 5. Run Database Migrations
 
 ```bash
-docker-compose run --rm web python manage.py migrate
+docker-compose run --rm eqmd python manage.py migrate
 ```
 
 ### 6. Create Superuser
 
 ```bash
-docker-compose run --rm web python manage.py createsuperuser
+docker-compose run --rm eqmd python manage.py createsuperuser
 ```
 
 ### 7. Load Sample Data (Optional)
 
 ```bash
-docker-compose run --rm web python manage.py create_sample_tags
-docker-compose run --rm web python manage.py create_sample_wards
-docker-compose run --rm web python manage.py create_sample_content
-docker-compose run --rm web python manage.py create_sample_pdf_forms
+docker-compose run --rm eqmd python manage.py create_sample_tags
+docker-compose run --rm eqmd python manage.py create_sample_wards
+docker-compose run --rm eqmd python manage.py create_sample_content
+docker-compose run --rm eqmd python manage.py create_sample_pdf_forms
 ```
 
 ### 8. Start Production Services
 
 ```bash
-docker-compose up -d web
+docker-compose up -d eqmd
 ```
 
 ### 9. Verify Deployment
@@ -83,10 +91,10 @@ docker-compose up -d web
 docker-compose ps
 
 # Check logs
-docker-compose logs web
+docker-compose logs eqmd
 
 # Test application
-curl http://localhost:8000
+curl http://localhost:8778
 ```
 
 ### 10. Setup Reverse Proxy (Recommended)
@@ -99,7 +107,7 @@ server {
     server_name yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:8000;
+        proxy_pass http://localhost:8778;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -126,8 +134,8 @@ server {
 
 ```bash
 git pull
-docker-compose build web
-docker-compose up -d web
+docker-compose build eqmd
+docker-compose up -d eqmd
 ```
 
 ### Backup Database
@@ -140,28 +148,28 @@ cp db.sqlite3 db.sqlite3.backup.$(date +%Y%m%d)
 
 ```bash
 # Follow logs in real-time
-docker-compose logs -f web
+docker-compose logs -f eqmd
 
 # View recent logs
-docker-compose logs --tail=100 web
+docker-compose logs --tail=100 eqmd
 ```
 
 ### Access Container Shell
 
 ```bash
-docker-compose exec web bash
+docker-compose exec eqmd bash
 ```
 
 ### Run Management Commands
 
 ```bash
 # Run any Django management command
-docker-compose run --rm web python manage.py <command>
+docker-compose run --rm eqmd python manage.py <command>
 
 # Examples:
-docker-compose run --rm web python manage.py collectstatic --noinput
-docker-compose run --rm web python manage.py setup_groups
-docker-compose run --rm web python manage.py permission_audit --action=report
+docker-compose run --rm eqmd python manage.py collectstatic --noinput
+docker-compose run --rm eqmd python manage.py setup_groups
+docker-compose run --rm eqmd python manage.py permission_audit --action=report
 ```
 
 ## Security Considerations
@@ -169,7 +177,7 @@ docker-compose run --rm web python manage.py permission_audit --action=report
 1. **Environment Variables**: Never commit `.env.prod` to version control
 2. **Secret Key**: Generate a strong, unique secret key for production
 3. **HTTPS**: Always use SSL/TLS in production
-4. **Firewall**: Restrict access to port 8000, use reverse proxy instead
+4. **Firewall**: Restrict access to port 8778, use reverse proxy instead
 5. **Updates**: Regularly update Docker images and dependencies
 6. **Backups**: Schedule regular database backups
 7. **Monitoring**: Set up application and container monitoring
@@ -180,21 +188,21 @@ docker-compose run --rm web python manage.py permission_audit --action=report
 
 ```bash
 # Check detailed logs
-docker-compose logs web
+docker-compose logs eqmd
 
 # Check container status
 docker-compose ps
 
 # Rebuild image
-docker-compose build --no-cache web
+docker-compose build --no-cache eqmd
 ```
 
 ### Database Issues
 
 ```bash
 # Reset database (⚠️ DESTRUCTIVE)
-docker-compose run --rm web python manage.py flush --noinput
-docker-compose run --rm web python manage.py migrate
+docker-compose run --rm eqmd python manage.py flush --noinput
+docker-compose run --rm eqmd python manage.py migrate
 ```
 
 ### Permission Issues

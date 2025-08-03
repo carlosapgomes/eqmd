@@ -1,55 +1,53 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  web:
-    build: .
+  eqmd:
+    build: 
+      context: .
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi:application"
+             gunicorn --bind 0.0.0.0:8778 --workers 3 config.wsgi:application"
     volumes:
       - .:/app
       - ./media:/app/media
-      - static_volume:/app/staticfiles
+      - ./staticfiles:/app/staticfiles
     ports:
-      - "8000:8000"
-    environment:
-      - DEBUG=False
-      # Hospital configuration
-      - HOSPITAL_NAME=Sample Hospital
-      - HOSPITAL_ADDRESS=123 Medical Center Drive
-      - HOSPITAL_PHONE=+1-555-123-4567
-      - HOSPITAL_EMAIL=info@sample-hospital.com
-      - HOSPITAL_PDF_FORMS_ENABLED=true
+      - "8778:8778"
+    env_file:
+      - .env
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8778/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
   # Development service with hot reload
-  web-dev:
-    build: .
+  eqmd-dev:
+    build: 
+      context: .
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
+             python manage.py runserver 0.0.0.0:8778"
     volumes:
       - .:/app
       - ./media:/app/media
     ports:
-      - "8001:8000"
+      - "8779:8778"
+    env_file:
+      - .env
     environment:
       - DEBUG=True
-      # Hospital configuration
-      - HOSPITAL_NAME=Development Hospital
-      - HOSPITAL_ADDRESS=123 Dev Center Drive
-      - HOSPITAL_PHONE=+1-555-123-4567
-      - HOSPITAL_EMAIL=dev@sample-hospital.com
-      - HOSPITAL_PDF_FORMS_ENABLED=true
     profiles:
       - dev
 
-volumes:
-  static_volume:
+# No volumes needed - using direct host mounts
+
