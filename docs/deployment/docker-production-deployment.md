@@ -99,7 +99,7 @@ curl http://localhost:8778
 
 ### 10. Setup Reverse Proxy (Recommended)
 
-Configure nginx or similar to handle SSL and static files:
+Configure nginx to handle SSL and static files. The Docker setup automatically copies static files to `/var/www/equipemed/static/`:
 
 ```nginx
 server {
@@ -115,18 +115,17 @@ server {
     }
 
     location /static/ {
-        alias /path/to/eqmd/staticfiles/;
+        alias /var/www/equipemed/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
-    location /media/ {
-        alias /path/to/eqmd/media/;
-        expires 1y;
-        add_header Cache-Control "public";
-    }
+    # Media files are served by Django application for security/permissions
+    # No separate nginx location needed - handled by proxy_pass above
 }
 ```
+
+**Note**: Media files (`/media/`) are served by the Django application to enforce proper authentication and permissions. Only static files are served directly by nginx for performance.
 
 ## Maintenance Commands
 
@@ -136,6 +135,35 @@ server {
 git pull
 docker-compose build eqmd
 docker-compose up -d eqmd
+```
+
+### Stop Services
+
+```bash
+# Stop the service
+docker-compose stop eqmd
+
+# Stop and remove containers
+docker-compose down
+
+# Stop and remove containers with volumes (⚠️ removes all data)
+docker-compose down -v
+```
+
+### Remove Services and Clean Up
+
+```bash
+# Remove stopped containers
+docker-compose rm eqmd
+
+# Remove containers and networks
+docker-compose down
+
+# Remove everything including images (complete cleanup)
+docker-compose down --rmi all
+
+# Remove unused Docker resources
+docker system prune -a
 ```
 
 ### Backup Database

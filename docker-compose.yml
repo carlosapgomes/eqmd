@@ -1,8 +1,6 @@
-version: "3.8"
-
 services:
   eqmd:
-    build: 
+    build:
       context: .
       args:
         USER_ID: ${USER_ID:-1000}
@@ -10,11 +8,15 @@ services:
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
+             mkdir -p /var/www/equipemed/static &&
+             cp -r /app/staticfiles/* /var/www/equipemed/static/ 2>/dev/null || true &&
+             chown -R 33:33 /var/www/equipemed/ &&
              gunicorn --bind 0.0.0.0:8778 --workers 3 config.wsgi:application"
     volumes:
       - .:/app
       - ./media:/app/media
       - ./staticfiles:/app/staticfiles
+      - /var/www:/var/www
     ports:
       - "8778:8778"
     env_file:
@@ -28,7 +30,7 @@ services:
 
   # Development service with hot reload
   eqmd-dev:
-    build: 
+    build:
       context: .
       args:
         USER_ID: ${USER_ID:-1000}
@@ -36,10 +38,14 @@ services:
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
+             mkdir -p /var/www/equipemed/static &&
+             cp -r /app/staticfiles/* /var/www/equipemed/static/ 2>/dev/null || true &&
+             chown -R 33:33 /var/www/equipemed/ &&
              python manage.py runserver 0.0.0.0:8778"
     volumes:
       - .:/app
       - ./media:/app/media
+      - /var/www:/var/www
     ports:
       - "8779:8778"
     env_file:
@@ -48,6 +54,5 @@ services:
       - DEBUG=True
     profiles:
       - dev
-
 # No volumes needed - using direct host mounts
 
