@@ -100,6 +100,7 @@ urlpatterns = [
     path("wards/add/", views.WardCreateView.as_view(), name="ward_create"),
     path("wards/<uuid:pk>/", views.WardDetailView.as_view(), name="ward_detail"),
     path("wards/<uuid:pk>/edit/", views.WardUpdateView.as_view(), name="ward_update"),
+    path("map/", views.WardPatientMapView.as_view(), name="patient_map"),
     # Tag URLs
     path("tags/", views.AllowedTagListView.as_view(), name="tag_list"),
     path("tags/create/", views.AllowedTagCreateView.as_view(), name="tag_create"),

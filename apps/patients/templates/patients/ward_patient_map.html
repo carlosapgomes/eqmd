@@ -1,0 +1,254 @@
+{% extends "patients/patient_base.html" %} 
+{% load hospital_tags %} 
+{% block title %}
+{{ page_title }} | {% hospital_name %}
+{% endblock title %} 
+{% block patient_content %}
+<div class="container-fluid">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="mb-1">
+            <i class="bi bi-diagram-3-fill text-medical-primary me-2"></i>
+            Mapa de Pacientes
+          </h2>
+          <p class="text-muted mb-0">
+            Visão geral da distribuição de pacientes pelas alas do hospital
+          </p>
+        </div>
+        <div class="text-end">
+          <div class="bg-light rounded p-3">
+            <div class="row text-center">
+              <div class="col">
+                <div class="h4 mb-0 text-medical-primary">
+                  {{ total_patients }}
+                </div>
+                <small class="text-muted">Pacientes</small>
+              </div>
+              <div class="col">
+                <div class="h4 mb-0 text-medical-secondary">
+                  {{ total_wards }}
+                </div>
+                <small class="text-muted">Alas Ativas</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tree View Section -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          {% if ward_data %}
+          <div class="ward-tree">
+            {% for ward_info in ward_data %}
+            <div class="ward-branch mb-4">
+              <!-- Ward Header -->
+              <div class="ward-header p-3 bg-light rounded">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                  <div class="d-flex align-items-center mb-2 mb-md-0">
+                    <button
+                      class="btn btn-sm btn-link p-0 me-2 ward-toggle"
+                      type="button"
+                      data-ward="{{ ward_info.ward.id }}"
+                      aria-expanded="false"
+                    >
+                      <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <i class="bi bi-building text-medical-primary me-2"></i>
+                    <div>
+                      <h5 class="mb-0">
+                        {{ ward_info.ward.abbreviation }} - {{ ward_info.ward.name }}
+                      </h5>
+                      {% if ward_info.ward.floor %}
+                      <small class="text-muted">{{ ward_info.ward.floor }}</small>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="badge bg-medical-primary">
+                      {{ ward_info.patient_count }}{% if ward_info.capacity_estimate %} / {{ ward_info.capacity_estimate }}{% endif %} pacientes
+                    </span>
+                    {% if ward_info.utilization_percentage %}
+                    <span
+                      class="badge {% if ward_info.utilization_percentage > 90 %}bg-danger{% elif ward_info.utilization_percentage > 75 %}bg-warning{% else %}bg-success{% endif %}"
+                    >
+                      {{ ward_info.utilization_percentage }}%
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Patients List -->
+              <div
+                class="ward-patients collapse"
+                id="ward-{{ ward_info.ward.id }}"
+              >
+                {% if ward_info.patients %}
+                <div class="ps-4 pt-2">
+                  {% for patient_info in ward_info.patients %}
+                  <div class="patient-item p-3 mb-2 bg-white border rounded">
+                    <div class="d-flex flex-column flex-md-row justify-content-between">
+                      <!-- Patient Info Section -->
+                      <div class="flex-grow-1 mb-2 mb-md-0">
+                        <div class="d-flex align-items-start">
+                          <i class="bi bi-hospital text-medical-secondary me-2 mt-1"></i>
+                          <div class="flex-grow-1">
+                            <!-- Bed and Name -->
+                            <div class="mb-1">
+                              <strong class="text-medical-primary">{{ patient_info.bed }}</strong>
+                              <span class="mx-2">•</span>
+                              <span class="fw-medium">{{ patient_info.patient.name }}</span>
+                            </div>
+                            <!-- Admission Duration -->
+                            {% if patient_info.admission_duration %}
+                            <div class="mb-2">
+                              <small class="text-muted">
+                                <i class="bi bi-clock me-1"></i>
+                                {{ patient_info.admission_duration }}
+                              </small>
+                            </div>
+                            {% endif %}
+                            <!-- Tags -->
+                            {% if patient_info.tags %}
+                            <div class="d-flex flex-wrap gap-1">
+                              {% for tag in patient_info.tags %}
+                              <span
+                                class="badge"
+                                style="background-color: {{ tag.allowed_tag.color }}; font-size: 0.7rem;"
+                              >
+                                {{ tag.allowed_tag.name }}
+                              </span>
+                              {% endfor %}
+                            </div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Timeline Button -->
+                      <div class="d-flex align-items-start align-items-md-center">
+                        <a
+                          href="{% url 'apps.patients:patient_events_timeline' patient_id=patient_info.patient.pk %}"
+                          class="btn btn-sm btn-outline-medical-primary w-100 w-md-auto"
+                        >
+                          <i class="bi bi-clock-history me-1"></i>
+                          Timeline
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% else %}
+                <div class="ps-4 pt-2">
+                  <div class="text-muted fst-italic p-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Nenhum paciente internado nesta ala
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-5">
+            <i class="bi bi-building display-4 text-muted mb-3"></i>
+            <h4>Nenhuma ala cadastrada</h4>
+            <p class="text-muted">
+              Configure as alas do hospital para visualizar o mapa de pacientes.
+            </p>
+            {% if perms.patients.add_ward %}
+            <a
+              href="{% url 'apps.patients:ward_create' %}"
+              class="btn btn-medical-primary"
+            >
+              <i class="bi bi-plus-circle me-2"></i>
+              Adicionar Ala
+            </a>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Basic JavaScript for tree toggle -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Basic toggle functionality
+    const toggleButtons = document.querySelectorAll(".ward-toggle");
+
+    toggleButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const wardId = this.dataset.ward;
+        const target = document.getElementById("ward-" + wardId);
+        const icon = this.querySelector("i");
+
+        if (target.classList.contains("show")) {
+          target.classList.remove("show");
+          icon.classList.remove("bi-chevron-down");
+          icon.classList.add("bi-chevron-right");
+          this.setAttribute("aria-expanded", "false");
+        } else {
+          target.classList.add("show");
+          icon.classList.remove("bi-chevron-right");
+          icon.classList.add("bi-chevron-down");
+          this.setAttribute("aria-expanded", "true");
+        }
+      });
+    });
+  });
+</script>
+
+<style>
+  .ward-tree .ward-branch {
+    border-left: 3px solid var(--bs-medical-primary);
+    margin-left: 1rem;
+    padding-left: 1rem;
+  }
+
+  .ward-header {
+    border: 1px solid var(--bs-border-color);
+  }
+
+  .patient-item {
+    border-left: 2px solid var(--bs-medical-secondary) !important;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .patient-item:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .ward-toggle {
+    color: var(--bs-medical-primary);
+    text-decoration: none;
+  }
+
+  .ward-toggle:hover {
+    color: var(--bs-medical-primary-dark);
+  }
+
+  .collapse {
+    transition: height 0.3s ease;
+  }
+
+  .collapse.show {
+    display: block;
+  }
+
+  .collapse:not(.show) {
+    display: none;
+  }
+</style>
+{% endblock %}

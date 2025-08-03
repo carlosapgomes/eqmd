@@ -137,6 +137,14 @@
             </a>
           </li>
           {% endif %}
+          {% if perms.patients.view_patient %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'apps.patients:patient_map' %}">
+              <i class="bi bi-diagram-3-fill"></i>
+              Mapa de Pacientes
+            </a>
+          </li>
+          {% endif %}
         </ul>
         
         <!-- Clinical Workflows -->
@@ -305,6 +313,14 @@
             <a class="nav-link" href="{% url 'apps.patients:tag_list' %}">
               <i class="bi bi-tags"></i>
               Gerenciar Tags
+            </a>
+          </li>
+          {% endif %}
+          {% if perms.patients.view_patient %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'apps.patients:patient_map' %}">
+              <i class="bi bi-diagram-3-fill"></i>
+              Mapa de Pacientes
             </a>
           </li>
           {% endif %}

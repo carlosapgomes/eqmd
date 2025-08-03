@@ -1,4 +1,4 @@
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import user_passes_test
@@ -1400,5 +1400,72 @@ class PatientTagsAPIView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Erro interno do servidor'}, status=500)
 
 
+class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """
+    Display a tree view of wards and their current inpatients/emergency patients
+    """
+    template_name = "patients/ward_patient_map.html"
+    permission_required = "patients.view_patient"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Get all active wards
+        wards = Ward.objects.filter(is_active=True).order_by('name')
+
+        ward_data = []
+        total_patients = 0
+
+        for ward in wards:
+            # Get current inpatients and emergency patients in this ward
+            patients = Patient.objects.filter(
+                ward=ward,
+                status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY],
+                is_deleted=False
+            ).select_related('ward').prefetch_related(
+                'patient_tags__allowed_tag'
+            ).order_by('bed', 'name')
+
+            patient_list = []
+            for patient in patients:
+                # Get current admission for duration info
+                current_admission = patient.get_current_admission()
+                admission_duration = None
+                if current_admission:
+                    admission_duration = current_admission.duration_display
+
+                patient_list.append({
+                    'patient': patient,
+                    'bed': patient.bed or 'Sem leito',
+                    'tags': patient.patient_tags.all(),
+                    'admission_duration': admission_duration,
+                    'status_display': patient.get_status_display(),
+                })
+
+            ward_info = {
+                'ward': ward,
+                'patient_count': len(patient_list),
+                'capacity_estimate': ward.capacity_estimate,
+                'patients': patient_list,
+                'utilization_percentage': None
+            }
+
+            # Calculate utilization if capacity is known
+            if ward.capacity_estimate and ward.capacity_estimate > 0:
+                ward_info['utilization_percentage'] = round(
+                    (len(patient_list) / ward.capacity_estimate) * 100, 1
+                )
+
+            ward_data.append(ward_info)
+            total_patients += len(patient_list)
+
+        context.update({
+            'ward_data': ward_data,
+            'total_patients': total_patients,
+            'total_wards': len(ward_data),
+            'page_title': 'Mapa de Pacientes',
+        })
+
+        return context
 
 
