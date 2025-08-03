@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi:application"
+    volumes:
+      - .:/app
+      - ./media:/app/media
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      # Hospital configuration
+      - HOSPITAL_NAME=Sample Hospital
+      - HOSPITAL_ADDRESS=123 Medical Center Drive
+      - HOSPITAL_PHONE=+1-555-123-4567
+      - HOSPITAL_EMAIL=info@sample-hospital.com
+      - HOSPITAL_PDF_FORMS_ENABLED=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development service with hot reload
+  web-dev:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+      - ./media:/app/media
+    ports:
+      - "8001:8000"
+    environment:
+      - DEBUG=True
+      # Hospital configuration
+      - HOSPITAL_NAME=Development Hospital
+      - HOSPITAL_ADDRESS=123 Dev Center Drive
+      - HOSPITAL_PHONE=+1-555-123-4567
+      - HOSPITAL_EMAIL=dev@sample-hospital.com
+      - HOSPITAL_PDF_FORMS_ENABLED=true
+    profiles:
+      - dev
+
+volumes:
+  static_volume:
