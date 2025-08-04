@@ -10,7 +10,6 @@ services:
              python manage.py collectstatic --noinput &&
              mkdir -p /var/www/equipemed/static &&
              cp -r /app/staticfiles/* /var/www/equipemed/static/ 2>/dev/null || true &&
-             chown -R 33:33 /var/www/equipemed/ &&
              gunicorn --bind 0.0.0.0:8778 --workers 3 config.wsgi:application"
     volumes:
       - .:/app
@@ -40,7 +39,6 @@ services:
              python manage.py collectstatic --noinput &&
              mkdir -p /var/www/equipemed/static &&
              cp -r /app/staticfiles/* /var/www/equipemed/static/ 2>/dev/null || true &&
-             chown -R 33:33 /var/www/equipemed/ &&
              python manage.py runserver 0.0.0.0:8778"
     volumes:
       - .:/app

@@ -82,6 +82,10 @@ docker-compose run --rm eqmd python manage.py create_sample_pdf_forms
 
 ```bash
 docker-compose up -d eqmd
+
+# Fix static files permissions for nginx
+sudo chown -R www-data:www-data /var/www/equipemed/
+sudo chmod -R 755 /var/www/equipemed/
 ```
 
 ### 9. Verify Deployment
@@ -135,6 +139,10 @@ server {
 git pull
 docker-compose build eqmd
 docker-compose up -d eqmd
+
+# Fix static files permissions after update
+sudo chown -R www-data:www-data /var/www/equipemed/
+sudo chmod -R 755 /var/www/equipemed/
 ```
 
 ### Stop Services
@@ -236,9 +244,16 @@ docker-compose run --rm eqmd python manage.py migrate
 ### Permission Issues
 
 ```bash
-# Fix media directory permissions
+# Fix media directory permissions (for container access)
 sudo chown -R $(whoami):$(whoami) media
 chmod 755 media
+
+# Fix static files permissions (for nginx access)
+sudo chown -R www-data:www-data /var/www/equipemed/
+sudo chmod -R 755 /var/www/equipemed/
+
+# If static files are not updating, check container logs
+docker-compose logs eqmd | grep -i "operation not permitted"
 ```
 
 ### Performance Issues
