@@ -110,6 +110,15 @@ module.exports = {
           to: "[name][ext]",
           noErrorOnMissing: true,
         },
+        // PWA files
+        {
+          from: "assets/manifest.json",
+          to: "manifest.json",
+        },
+        {
+          from: "assets/sw.js",
+          to: "sw.js",
+        },
       ],
     }),
   ],
