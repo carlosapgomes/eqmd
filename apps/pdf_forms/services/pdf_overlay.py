@@ -305,9 +305,10 @@ class PDFFormOverlay:
         elif field_type == "date":
             # Format date value
             if hasattr(field_value, "strftime"):
-                formatted_date = field_value.strftime("%d/%m/%Y")
+                formatted_date = field_value.strftime("%d-%m-%Y")
             else:
-                formatted_date = str(field_value)
+                # Handle string dates that might be in YYYY-MM-DD format
+                formatted_date = self._format_date_string(str(field_value))
             pdf_canvas.drawString(x_points, y_points, formatted_date)
         elif field_type in ["text", "textarea"]:
             # Handle multi-line text
@@ -348,6 +349,28 @@ class PDFFormOverlay:
             x_points + size * 0.8,
             checkbox_y + size * 0.7,
         )
+
+    def _format_date_string(self, date_str):
+        """
+        Format date string from YYYY-MM-DD to DD-MM-YYYY format.
+        
+        Args:
+            date_str (str): Date string potentially in YYYY-MM-DD format
+            
+        Returns:
+            str: Formatted date string in DD-MM-YYYY format
+        """
+        try:
+            # Try to parse YYYY-MM-DD format and convert to DD-MM-YYYY
+            from datetime import datetime
+            if len(date_str) == 10 and date_str.count('-') == 2:
+                parsed_date = datetime.strptime(date_str, '%Y-%m-%d')
+                return parsed_date.strftime('%d-%m-%Y')
+        except (ValueError, TypeError):
+            pass
+        
+        # If parsing fails, return original string
+        return date_str
 
     def _draw_multiline_text(
         self, pdf_canvas, text, x_points, y_points, max_width, font_size
