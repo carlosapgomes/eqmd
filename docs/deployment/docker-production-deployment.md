@@ -18,17 +18,29 @@ git clone https://github.com/carlosapgomes/eqmd.git
 cd eqmd
 ```
 
-### 2. Create Required Directories and Fix Permissions
+### 2. Create eqmd System User
+
+```bash
+# Create dedicated system user for EquipeMed (no login shell)
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin eqmd
+
+# Verify user was created with correct UID
+id eqmd
+# Should show: uid=1001(eqmd) gid=1001(eqmd) groups=1001(eqmd)
+```
+
+### 3. Create Required Directories and Fix Permissions
 
 ```bash
 mkdir -p media staticfiles
 chmod 755 media staticfiles
 
-# Fix ownership for Docker compatibility
-sudo chown -R $(id -u):$(id -g) .
+# Fix ownership for Docker compatibility  
+sudo chown -R eqmd:eqmd .
+sudo chown -R eqmd:eqmd /var/www/equipemed/
 ```
 
-### 3. Set Production Environment Variables
+### 4. Set Production Environment Variables
 
 ```bash
 # Create environment file
@@ -46,62 +58,62 @@ EOF
 
 **Important**: Replace the values above with your actual production settings.
 
-### 4. Build the Docker Image
+### 5. Build the Docker Image
 
 ```bash
-# Set user IDs for permission compatibility
-export USER_ID=$(id -u)
-export GROUP_ID=$(id -g)
+# Set eqmd user IDs for permission compatibility
+export USER_ID=$(id -u eqmd)
+export GROUP_ID=$(id -g eqmd)
 
 # Build with matching user IDs
-docker-compose build eqmd
+docker compose build eqmd
 ```
 
-### 5. Run Database Migrations
+### 6. Run Database Migrations
 
 ```bash
-docker-compose run --rm eqmd python manage.py migrate
+docker compose run --rm eqmd python manage.py migrate
 ```
 
-### 6. Create Superuser
+### 7. Create Superuser
 
 ```bash
-docker-compose run --rm eqmd python manage.py createsuperuser
+docker compose run --rm eqmd python manage.py createsuperuser
 ```
 
-### 7. Load Sample Data (Optional)
+### 8. Load Sample Data (Optional)
 
 ```bash
-docker-compose run --rm eqmd python manage.py create_sample_tags
-docker-compose run --rm eqmd python manage.py create_sample_wards
-docker-compose run --rm eqmd python manage.py create_sample_content
-docker-compose run --rm eqmd python manage.py create_sample_pdf_forms
+docker compose run --rm eqmd python manage.py create_sample_tags
+docker compose run --rm eqmd python manage.py create_sample_wards
+docker compose run --rm eqmd python manage.py create_sample_content
+docker compose run --rm eqmd python manage.py create_sample_pdf_forms
 ```
 
-### 8. Start Production Services
+### 9. Start Production Services
 
 ```bash
-docker-compose up -d eqmd
+docker compose up -d eqmd
 
 # Fix static files permissions for nginx
 sudo chown -R www-data:www-data /var/www/equipemed/
 sudo chmod -R 755 /var/www/equipemed/
 ```
 
-### 9. Verify Deployment
+### 10. Verify Deployment
 
 ```bash
 # Check container status
-docker-compose ps
+docker compose ps
 
 # Check logs
-docker-compose logs eqmd
+docker compose logs eqmd
 
 # Test application
 curl http://localhost:8778
 ```
 
-### 10. Setup Reverse Proxy (Recommended)
+### 11. Setup Reverse Proxy (Recommended)
 
 Configure nginx to handle SSL and static files. The Docker setup automatically copies static files to `/var/www/equipemed/static/`:
 
@@ -136,14 +148,30 @@ server {
 ### Update Application
 
 ```bash
-git pull
-docker-compose build eqmd
-docker-compose up -d eqmd
+# Use the upgrade script for automated updates
+sudo ./upgrade.sh
+```
 
-# Fix static files permissions after update
+**Manual update process:**
+```bash
+# Copy updated code to server first
+docker compose build eqmd
+
+# Fix permissions BEFORE starting container to allow file copy
+sudo chown -R eqmd:eqmd /var/www/equipemed/
+docker compose up -d eqmd
+
+# Wait for container to start, then manually copy static files
+sleep 10
+CONTAINER_ID=$(docker compose ps -q eqmd)
+docker exec $CONTAINER_ID sh -c "cp -rv /app/staticfiles/* /var/www/equipemed/static/"
+
+# Fix static files permissions for nginx AFTER copy
 sudo chown -R www-data:www-data /var/www/equipemed/
 sudo chmod -R 755 /var/www/equipemed/
 ```
+
+**Note**: The automatic copy during container startup may fail silently due to permission issues. The manual copy step ensures all static files (including PWA files) are properly deployed.
 
 ### Stop Services
 

@@ -3,13 +3,13 @@ services:
     build:
       context: .
       args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
+        USER_ID: ${USER_ID:-1001}
+        GROUP_ID: ${GROUP_ID:-1001}
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              mkdir -p /var/www/equipemed/static &&
-             cp -r /app/staticfiles/* /var/www/equipemed/static/ 2>/dev/null || true &&
+             cp -r /app/staticfiles/* /var/www/equipemed/static/ || echo "Static files copy failed - run manual copy after deployment" &&
              gunicorn --bind 0.0.0.0:8778 --workers 3 config.wsgi:application"
     volumes:
       - .:/app
@@ -32,13 +32,13 @@ services:
     build:
       context: .
       args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
+        USER_ID: ${USER_ID:-1001}
+        GROUP_ID: ${GROUP_ID:-1001}
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              mkdir -p /var/www/equipemed/static &&
-             cp -r /app/staticfiles/* /var/www/equipemed/static/ 2>/dev/null || true &&
+             cp -r /app/staticfiles/* /var/www/equipemed/static/ || echo "Static files copy failed - run manual copy after deployment" &&
              python manage.py runserver 0.0.0.0:8778"
     volumes:
       - .:/app
