@@ -16,6 +16,7 @@ class PatientFieldMapper:
     PATIENT_FIELD_MAPPINGS = {
         'name': {'type': 'text', 'label': 'Nome do Paciente'},
         'birthday': {'type': 'date', 'label': 'Data de Nascimento'},
+        'age': {'type': 'number', 'label': 'Idade'},
         'healthcard_number': {'type': 'text', 'label': 'Número do Cartão de Saúde'},
         'id_number': {'type': 'text', 'label': 'Número de Identidade'},
         'fiscal_number': {'type': 'text', 'label': 'Número Fiscal'},
