@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from django.db import models
 from django.conf import settings
 from django.urls import reverse
@@ -733,6 +734,12 @@ class Patient(SoftDeleteModel):
 
     def get_absolute_url(self):
         return reverse("patients:patient_detail", kwargs={"pk": self.pk})
+
+    @property
+    def age(self):
+        """Calculate current age in years"""
+        today = date.today()
+        return today.year - self.birthday.year - ((today.month, today.day) < (self.birthday.month, self.birthday.day))
 
     def clean(self):
         """Validate patient data"""
