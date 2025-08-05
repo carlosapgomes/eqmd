@@ -1,0 +1,43 @@
+{% comment %}
+Form section partial template for accordion-based section rendering
+Usage: {% render_form_section section_key section_data form %}
+{% endcomment %}
+{% load pdf_forms_tags %}
+
+<div class="accordion-item">
+  <h2 class="accordion-header" id="heading-{{ section_key }}">
+    <button class="accordion-button {% if section_info.collapsed %}collapsed{% endif %}" 
+            type="button" 
+            data-bs-toggle="collapse" 
+            data-bs-target="#collapse-{{ section_key }}"
+            aria-expanded="{% if not section_info.collapsed %}true{% else %}false{% endif %}"
+            aria-controls="collapse-{{ section_key }}">
+      {% if section_info.icon %}
+      <i class="{{ section_info.icon }} me-2"></i>
+      {% endif %}
+      {{ section_info.label }}
+      <span class="badge bg-primary ms-auto me-2">
+        {{ field_names|length }}
+      </span>
+    </button>
+  </h2>
+  <div id="collapse-{{ section_key }}" 
+       class="accordion-collapse collapse {% if not section_info.collapsed %}show{% endif %}"
+       aria-labelledby="heading-{{ section_key }}"
+       data-bs-parent="#form-sections">
+    <div class="accordion-body">
+      {% if section_info.description %}
+      <p class="text-muted mb-3">{{ section_info.description }}</p>
+      {% endif %}
+      <div class="row">
+        {% for field_name in field_names %}
+          {% with field=form|lookup:field_name %}
+            {% if field %}
+              {% render_form_field field %}
+            {% endif %}
+          {% endwith %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>

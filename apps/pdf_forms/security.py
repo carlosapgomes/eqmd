@@ -92,7 +92,17 @@ class PDFFormSecurity:
         if not field_config:
             return True
 
-        for field_name, config in field_config.items():
+        # Handle new sectioned format
+        if 'sections' in field_config and 'fields' in field_config:
+            # Validate sections configuration
+            PDFFormSecurity.validate_section_configuration(field_config.get('sections', {}))
+            # Validate fields configuration
+            fields_config = field_config.get('fields', {})
+        else:
+            # Backward compatibility: treat entire config as fields
+            fields_config = field_config
+
+        for field_name, config in fields_config.items():
             # Validate field name
             if not isinstance(field_name, str) or not field_name.replace('_', '').isalnum():
                 raise ValidationError(f"Invalid field name: {field_name}")
@@ -126,6 +136,84 @@ class PDFFormSecurity:
             if config['type'] in ['choice', 'multiple_choice']:
                 if 'choices' not in config or not isinstance(config['choices'], list):
                     raise ValidationError(f"Choice field '{field_name}' must have a 'choices' list")
+
+            # Validate section reference if present
+            if 'section' in config:
+                section_key = config['section']
+                if not isinstance(section_key, str) or not section_key.replace('_', '').isalnum():
+                    raise ValidationError(f"Invalid section key '{section_key}' for field '{field_name}'")
+
+            # Validate field order if present
+            if 'field_order' in config:
+                try:
+                    field_order = int(config['field_order'])
+                    if field_order < 1:
+                        raise ValidationError(f"Field order must be positive for field '{field_name}'")
+                except (ValueError, TypeError):
+                    raise ValidationError(f"Invalid field order for field '{field_name}'")
+
+        return True
+
+    @staticmethod
+    def validate_section_configuration(sections_config):
+        """Validate sections configuration structure."""
+        if not isinstance(sections_config, dict):
+            raise ValidationError("Sections configuration must be a dictionary")
+
+        # Allow empty sections
+        if not sections_config:
+            return True
+
+        section_orders = []
+        for section_key, section_config in sections_config.items():
+            # Validate section key
+            if not isinstance(section_key, str) or not section_key.replace('_', '').isalnum():
+                raise ValidationError(f"Invalid section key: {section_key}")
+
+            # Validate section configuration structure
+            if not isinstance(section_config, dict):
+                raise ValidationError(f"Section configuration for '{section_key}' must be a dictionary")
+
+            # Required fields
+            required_fields = ['label', 'order']
+            for required_field in required_fields:
+                if required_field not in section_config:
+                    raise ValidationError(f"Section '{section_key}' missing required property: {required_field}")
+
+            # Validate label
+            label = section_config['label']
+            if not isinstance(label, str) or not label.strip():
+                raise ValidationError(f"Section '{section_key}' must have a non-empty label")
+
+            # Validate order
+            try:
+                order = int(section_config['order'])
+                if order < 1:
+                    raise ValidationError(f"Section order must be positive for section '{section_key}'")
+                section_orders.append(order)
+            except (ValueError, TypeError):
+                raise ValidationError(f"Invalid order for section '{section_key}'")
+
+            # Validate optional fields
+            if 'description' in section_config:
+                if not isinstance(section_config['description'], str):
+                    raise ValidationError(f"Section description must be a string for section '{section_key}'")
+
+            if 'collapsed' in section_config:
+                if not isinstance(section_config['collapsed'], bool):
+                    raise ValidationError(f"Section collapsed property must be boolean for section '{section_key}'")
+
+            if 'icon' in section_config:
+                icon = section_config['icon']
+                if not isinstance(icon, str):
+                    raise ValidationError(f"Section icon must be a string for section '{section_key}'")
+                # Basic validation for Bootstrap icons
+                if icon and not icon.startswith('bi-'):
+                    raise ValidationError(f"Invalid icon format for section '{section_key}'. Must start with 'bi-'")
+
+        # Check for duplicate orders
+        if len(section_orders) != len(set(section_orders)):
+            raise ValidationError("Section orders must be unique")
 
         return True
 

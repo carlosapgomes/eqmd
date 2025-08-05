@@ -1,0 +1,27 @@
+{% comment %}
+Reusable form field partial template for consistent styling
+Usage: {% render_form_field field %}
+{% endcomment %}
+
+<div class="col-md-6 mb-3">
+  <label for="{{ field.id_for_label }}" class="form-label">
+    {{ field.label }}
+    {% if field.field.required %}
+    <span class="text-danger">*</span>
+    {% endif %}
+  </label>
+
+  {{ field }}
+
+  {% if field.help_text %}
+  <div class="form-text">{{ field.help_text }}</div>
+  {% endif %}
+
+  {% if field.errors %}
+  <div class="invalid-feedback d-block">
+    {% for error in field.errors %}
+      {{ error }}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

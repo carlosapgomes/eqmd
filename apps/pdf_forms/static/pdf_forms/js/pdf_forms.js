@@ -109,6 +109,108 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Accordion state management for form sections
+    const accordionButtons = document.querySelectorAll('.form-section-accordion .accordion-button');
+    accordionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const sectionId = this.getAttribute('data-bs-target');
+            const isCollapsed = this.classList.contains('collapsed');
+            
+            // Save state to localStorage for persistence across page loads
+            if (sectionId) {
+                localStorage.setItem(`pdf-form-section-${sectionId}`, String(!isCollapsed));
+            }
+        });
+    });
+    
+    // Restore accordion states on page load
+    accordionButtons.forEach(button => {
+        const sectionId = button.getAttribute('data-bs-target');
+        if (sectionId) {
+            const savedState = localStorage.getItem(`pdf-form-section-${sectionId}`);
+            
+            if (savedState === 'false') {
+                // Section should be collapsed
+                const target = document.querySelector(sectionId);
+                if (target && target.classList.contains('show')) {
+                    target.classList.remove('show');
+                    button.classList.add('collapsed');
+                    button.setAttribute('aria-expanded', 'false');
+                }
+            } else if (savedState === 'true') {
+                // Section should be expanded
+                const target = document.querySelector(sectionId);
+                if (target && !target.classList.contains('show')) {
+                    target.classList.add('show');
+                    button.classList.remove('collapsed');
+                    button.setAttribute('aria-expanded', 'true');
+                }
+            }
+        }
+    });
+    
+    // Enhanced form validation for sectioned forms
+    const sectionedForms = document.querySelectorAll('.pdf-form:has(.form-section-accordion)');
+    sectionedForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const requiredFields = form.querySelectorAll('[required]');
+            let firstInvalidField = null;
+            let firstInvalidSection = null;
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                    
+                    // Find the section containing this field
+                    if (!firstInvalidField) {
+                        firstInvalidField = field;
+                        const accordionBody = field.closest('.accordion-body');
+                        if (accordionBody) {
+                            const accordionCollapse = accordionBody.closest('.accordion-collapse');
+                            if (accordionCollapse) {
+                                firstInvalidSection = accordionCollapse;
+                            }
+                        }
+                    }
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                
+                // Expand the section containing the first invalid field
+                if (firstInvalidSection && !firstInvalidSection.classList.contains('show')) {
+                    const sectionId = firstInvalidSection.id;
+                    const button = document.querySelector(`[data-bs-target="#${sectionId}"]`);
+                    if (button) {
+                        // Programmatically expand the section
+                        firstInvalidSection.classList.add('show');
+                        button.classList.remove('collapsed');
+                        button.setAttribute('aria-expanded', 'true');
+                        
+                        // Update localStorage
+                        localStorage.setItem(`pdf-form-section-#${sectionId}`, 'true');
+                    }
+                }
+                
+                // Focus and scroll to the first invalid field
+                if (firstInvalidField) {
+                    setTimeout(() => {
+                        firstInvalidField.focus();
+                        firstInvalidField.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                    }, 100); // Small delay to allow accordion animation
+                }
+            }
+        });
+    });
+    
     // Form data preview (for debugging)
     if (window.location.search.includes('debug=1')) {
         console.log('PDF Forms Debug Mode Active');

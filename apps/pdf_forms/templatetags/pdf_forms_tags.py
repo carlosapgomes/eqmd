@@ -71,3 +71,47 @@ def pdf_form_file_size_check(file_size):
     """Check if file size is within PDF forms limits."""
     max_size = pdf_forms_max_file_size()
     return file_size <= max_size
+
+
+@register.filter
+def lookup(form, field_name):
+    """Lookup form field by name for sectioned form rendering."""
+    try:
+        return form[field_name]
+    except KeyError:
+        return None
+
+
+@register.inclusion_tag('pdf_forms/partials/form_field.html')
+def render_form_field(field):
+    """Render a single form field with consistent styling."""
+    return {'field': field}
+
+
+@register.inclusion_tag('pdf_forms/partials/form_section.html')
+def render_form_section(section_key, section_data, form):
+    """Render a complete form section with accordion styling."""
+    return {
+        'section_key': section_key,
+        'section_info': section_data['info'],
+        'field_names': section_data['fields'],
+        'form': form
+    }
+
+
+@register.filter
+def has_sections(form):
+    """Check if form has section-based organization."""
+    return getattr(form, '_has_sections', False)
+
+
+@register.filter
+def get_sections_metadata(form):
+    """Get sections metadata from form."""
+    return getattr(form, '_sections_metadata', {'sections': {}, 'unsectioned_fields': []})
+
+
+@register.filter
+def get_unsectioned_fields(form):
+    """Get list of unsectioned fields from form."""
+    return getattr(form, '_unsectioned_fields', [])

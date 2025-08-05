@@ -309,6 +309,216 @@
 .zoom-controls button:hover {
     background: #f0f0f0;
 }
+
+/* Section Management Styles */
+#section-management {
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+.section-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    transition: all 0.2s ease;
+}
+
+.section-item:hover {
+    background: #e9ecef;
+    border-color: #007cba;
+}
+
+.section-item.dragging {
+    opacity: 0.6;
+    transform: scale(0.98);
+}
+
+.section-item.reorder-mode {
+    cursor: move;
+}
+
+.section-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.section-drag-handle {
+    display: none;
+    cursor: move;
+    color: #6c757d;
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.reorder-mode .section-drag-handle {
+    display: inline-block;
+}
+
+.section-icon {
+    margin-right: 8px;
+    font-size: 16px;
+    color: #007cba;
+}
+
+.section-name {
+    font-weight: bold;
+    color: #495057;
+    margin-right: 8px;
+}
+
+.section-field-count {
+    font-size: 11px;
+    color: #6c757d;
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+
+.section-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.section-actions button {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.section-actions .btn-edit {
+    background: #17a2b8;
+    color: white;
+}
+
+.section-actions .btn-edit:hover {
+    background: #138496;
+}
+
+.section-actions .btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.section-actions .btn-delete:hover {
+    background: #c82333;
+}
+
+.section-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.section-controls .btn-sm {
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+/* Field List Section Grouping */
+.field-list-section {
+    margin-bottom: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.field-list-section-header {
+    background: #f1f3f4;
+    padding: 8px 12px;
+    font-weight: bold;
+    color: #495057;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.field-list-section-icon {
+    margin-right: 6px;
+    color: #007cba;
+}
+
+.field-list-section .field-item {
+    margin: 0;
+    border: none;
+    border-left: 3px solid #007cba;
+    border-radius: 0;
+}
+
+.field-item.has-section-assignment {
+    border-left: 3px solid #28a745;
+}
+
+.field-item.no-section {
+    border-left: 3px solid #6c757d;
+}
+
+.field-item.has-section-assignment .field-type {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Modal enhancements */
+.modal-dialog .form-text {
+    font-size: 11px;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+.form-preview-section {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.form-preview-section-header {
+    background: #f8f9fa;
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.form-preview-section-header i {
+    margin-right: 8px;
+    color: #007cba;
+}
+
+.form-preview-section-body {
+    padding: 15px;
+}
+
+.form-preview-field {
+    margin-bottom: 10px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 3px;
+    font-size: 12px;
+    border-left: 3px solid #007cba;
+}
+
+.form-preview-field-name {
+    font-weight: bold;
+    color: #495057;
+}
+
+.form-preview-field-type {
+    color: #6c757d;
+    font-size: 10px;
+    text-transform: uppercase;
+}
 </style>
 {% endblock %}
 
@@ -363,6 +573,29 @@
         <div class="field-list" id="field-list">
             <div style="padding: 20px; text-align: center; color: #666;">
                 No fields configured
+            </div>
+        </div>
+        
+        <!-- Section Management Panel -->
+        <div id="section-management" class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Form Sections</h4>
+                <button type="button" class="btn btn-outline-success btn-sm" id="add-section-btn">
+                    <i class="bi bi-plus"></i> Add Section
+                </button>
+            </div>
+            <div id="sections-list" class="mb-3">
+                <div style="padding: 15px; text-align: center; color: #666; font-style: italic;">
+                    No sections configured
+                </div>
+            </div>
+            <div class="section-controls">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="reorder-sections-btn">
+                    <i class="bi bi-arrow-up-down"></i> Reorder Sections
+                </button>
+                <button type="button" class="btn btn-outline-info btn-sm" id="preview-sections-btn">
+                    <i class="bi bi-eye"></i> Preview Form
+                </button>
             </div>
         </div>
         
@@ -424,6 +657,22 @@
                     </label>
                 </div>
                 
+                <!-- Section Assignment -->
+                <div class="form-group">
+                    <label for="field-section">Section</label>
+                    <select id="field-section" name="section" class="form-control">
+                        <option value="">-- No Section --</option>
+                        <!-- Dynamically populated with available sections -->
+                    </select>
+                    <small style="color: #666;">Assign this field to a form section for better organization</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="field-order">Order within Section</label>
+                    <input type="number" id="field-order" name="field_order" class="form-control" min="1" placeholder="1">
+                    <small style="color: #666;">Order of this field within its section (lower numbers appear first)</small>
+                </div>
+                
                 <div class="form-group" id="max-length-group">
                     <label for="field-max-length">Max Length</label>
                     <input type="number" id="field-max-length" name="max_length" min="1">
@@ -473,6 +722,98 @@
     </div>
 </div>
 
+<!-- Section Editor Modal -->
+<div class="modal fade" id="sectionModal" tabindex="-1" aria-labelledby="sectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sectionModalLabel">Section Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="section-form">
+                    <div class="mb-3">
+                        <label for="section-key" class="form-label">Section Key</label>
+                        <input type="text" class="form-control" id="section-key" required>
+                        <div class="form-text">Unique identifier (e.g., patient_info). Only letters, numbers, and underscores allowed.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="section-label" class="form-label">Section Label</label>
+                        <input type="text" class="form-control" id="section-label" required>
+                        <div class="form-text">Display name (e.g., Patient Information)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="section-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="section-description" rows="2" placeholder="Optional description..."></textarea>
+                        <div class="form-text">Optional description shown below the section header</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="section-icon" class="form-label">Icon</label>
+                        <select class="form-control" id="section-icon">
+                            <option value="">No Icon</option>
+                            <option value="bi-person">👤 Person</option>
+                            <option value="bi-telephone">📞 Phone</option>
+                            <option value="bi-journal-medical">📋 Medical Journal</option>
+                            <option value="bi-clipboard-pulse">🏥 Medical Clipboard</option>
+                            <option value="bi-prescription2">💊 Prescription</option>
+                            <option value="bi-hospital">🏥 Hospital</option>
+                            <option value="bi-exclamation-triangle">⚠️ Emergency</option>
+                            <option value="bi-shield-check">🛡️ Insurance</option>
+                            <option value="bi-file-text">📄 Document</option>
+                            <option value="bi-journal-text">📝 Notes</option>
+                            <option value="bi-heart-pulse">💓 Vitals</option>
+                            <option value="bi-clipboard-check">✅ Diagnosis</option>
+                            <option value="bi-capsule">💊 Treatment</option>
+                            <option value="bi-box-arrow-right">↗️ Discharge</option>
+                        </select>
+                        <div class="form-text">Bootstrap icon to display next to the section name</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="section-order" class="form-label">Display Order</label>
+                        <input type="number" class="form-control" id="section-order" min="1" required>
+                        <div class="form-text">Order in which this section appears (lower numbers first)</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="section-collapsed">
+                            <label class="form-check-label" for="section-collapsed">
+                                Start Collapsed
+                            </label>
+                            <div class="form-text">Section starts collapsed when form loads</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-section-btn">Save Section</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Preview Modal -->
+<div class="modal fade" id="sectionPreviewModal" tabindex="-1" aria-labelledby="sectionPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sectionPreviewModalLabel">Form Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="form-preview-content">
+                    <div class="accordion" id="preview-accordion">
+                        <!-- Preview content will be populated here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Global variables
 let pdfCanvas = null;
@@ -480,7 +821,10 @@ let ctx = null;
 let pdfImage = null;
 let pdfScale = 1;
 let fields = {};
+let sections = {};
 let selectedField = null;
+let editingSectionKey = null;
+let isReorderMode = false;
 let isDragging = false;
 let isResizing = false;
 let resizeType = null; // 'right', 'bottom', 'corner'
@@ -505,14 +849,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadExistingFields() {
     try {
-        const existingFields = {{ current_fields_json|safe }};
-        if (existingFields && typeof existingFields === 'object' && Object.keys(existingFields).length > 0) {
-            fields = existingFields;
+        const existingConfig = {{ current_fields_json|safe }};
+        if (existingConfig && typeof existingConfig === 'object' && Object.keys(existingConfig).length > 0) {
+            // Check if it's the new sectioned format
+            if (existingConfig.sections && existingConfig.fields) {
+                sections = existingConfig.sections || {};
+                fields = existingConfig.fields || {};
+            } else {
+                // Legacy format - treat as fields only
+                sections = {};
+                fields = existingConfig;
+            }
             updateFieldList();
+            updateSectionsList();
+            updateFieldSectionDropdown();
         }
     } catch (error) {
-        console.warn('Error loading existing fields:', error);
+        console.warn('Error loading existing configuration:', error);
         fields = {};
+        sections = {};
     }
 }
 
@@ -750,6 +1105,15 @@ function setupEventListeners() {
     
     // Choices management
     document.getElementById('add-choice-btn').addEventListener('click', addChoice);
+    
+    // Section management event listeners
+    document.getElementById('add-section-btn').addEventListener('click', () => showSectionModal());
+    document.getElementById('save-section-btn').addEventListener('click', saveSectionConfiguration);
+    document.getElementById('reorder-sections-btn').addEventListener('click', toggleReorderMode);
+    document.getElementById('preview-sections-btn').addEventListener('click', showFormPreview);
+    
+    // Section assignment changes
+    document.getElementById('field-section').addEventListener('change', handleFieldSectionChange);
 }
 
 function createNewField(x, y) {
@@ -817,6 +1181,8 @@ function loadFieldProperties(fieldName) {
     document.getElementById('field-width').value = fieldConfig.width || 4.0;
     document.getElementById('field-height').value = fieldConfig.height || 0.7;
     document.getElementById('field-patient-mapping').value = fieldConfig.patient_field_mapping || '';
+    document.getElementById('field-section').value = fieldConfig.section || '';
+    document.getElementById('field-order').value = fieldConfig.field_order || '';
     
     // Update position and size display
     document.getElementById('position-display').textContent = `${fieldConfig.x}, ${fieldConfig.y}`;
@@ -846,6 +1212,8 @@ function updateSelectedField() {
     const width = document.getElementById('field-width').value;
     const height = document.getElementById('field-height').value;
     const patientMapping = document.getElementById('field-patient-mapping').value;
+    const sectionKey = document.getElementById('field-section').value;
+    const fieldOrder = document.getElementById('field-order').value;
     
     // Handle field rename
     if (newName !== selectedField && newName && !fields[newName]) {
@@ -865,6 +1233,17 @@ function updateSelectedField() {
         fieldConfig.patient_field_mapping = patientMapping;
     } else {
         delete fieldConfig.patient_field_mapping;
+    }
+    
+    // Update section assignment
+    if (sectionKey) {
+        fieldConfig.section = sectionKey;
+        if (fieldOrder) {
+            fieldConfig.field_order = parseInt(fieldOrder) || 1;
+        }
+    } else {
+        delete fieldConfig.section;
+        delete fieldConfig.field_order;
     }
     
     // Update dimensions
@@ -1173,7 +1552,10 @@ function saveFields() {
             'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
-            fields: fields
+            fields: Object.keys(sections).length > 0 ? {
+                sections: sections,
+                fields: fields
+            } : fields
         })
     })
     .then(response => response.json())
@@ -1191,6 +1573,374 @@ function saveFields() {
         saveBtn.textContent = originalText;
         saveBtn.disabled = false;
     });
+}
+
+// Section Management Functions
+function updateSectionsList() {
+    const sectionsList = document.getElementById('sections-list');
+    
+    if (Object.keys(sections).length === 0) {
+        sectionsList.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-style: italic;">No sections configured</div>';
+        return;
+    }
+    
+    sectionsList.innerHTML = '';
+    
+    // Sort sections by order
+    const sortedSections = Object.entries(sections).sort(([,a], [,b]) => (a.order || 999) - (b.order || 999));
+    
+    sortedSections.forEach(([sectionKey, sectionConfig]) => {
+        const sectionItem = document.createElement('div');
+        sectionItem.className = 'section-item';
+        sectionItem.setAttribute('data-section-key', sectionKey);
+        
+        const fieldCount = getFieldCountForSection(sectionKey);
+        
+        sectionItem.innerHTML = `
+            <div class="section-drag-handle">⋮⋮</div>
+            <div class="section-info">
+                ${sectionConfig.icon ? `<i class="${sectionConfig.icon} section-icon"></i>` : ''}
+                <span class="section-name">${sectionConfig.label}</span>
+                <span class="section-field-count">${fieldCount} fields</span>
+            </div>
+            <div class="section-actions">
+                <button class="btn-edit" onclick="editSection('${sectionKey}')">Edit</button>
+                <button class="btn-delete" onclick="deleteSection('${sectionKey}')">Delete</button>
+            </div>
+        `;
+        
+        sectionsList.appendChild(sectionItem);
+    });
+}
+
+function updateFieldSectionDropdown() {
+    const sectionSelect = document.getElementById('field-section');
+    
+    // Clear existing options except the first one
+    const firstOption = sectionSelect.firstElementChild;
+    sectionSelect.innerHTML = '';
+    sectionSelect.appendChild(firstOption);
+    
+    // Add section options
+    const sortedSections = Object.entries(sections).sort(([,a], [,b]) => (a.order || 999) - (b.order || 999));
+    
+    sortedSections.forEach(([sectionKey, sectionConfig]) => {
+        const option = document.createElement('option');
+        option.value = sectionKey;
+        option.textContent = `${sectionConfig.icon ? sectionConfig.icon + ' ' : ''}${sectionConfig.label}`;
+        sectionSelect.appendChild(option);
+    });
+}
+
+function showSectionModal(sectionKey = null) {
+    editingSectionKey = sectionKey;
+    const modal = new bootstrap.Modal(document.getElementById('sectionModal'));
+    const modalTitle = document.getElementById('sectionModalLabel');
+    
+    if (sectionKey) {
+        // Editing existing section
+        modalTitle.textContent = 'Edit Section';
+        const sectionConfig = sections[sectionKey];
+        
+        document.getElementById('section-key').value = sectionKey;
+        document.getElementById('section-key').disabled = true; // Don't allow key changes
+        document.getElementById('section-label').value = sectionConfig.label || '';
+        document.getElementById('section-description').value = sectionConfig.description || '';
+        document.getElementById('section-icon').value = sectionConfig.icon || '';
+        document.getElementById('section-order').value = sectionConfig.order || getNextSectionOrder();
+        document.getElementById('section-collapsed').checked = sectionConfig.collapsed || false;
+    } else {
+        // Creating new section
+        modalTitle.textContent = 'Add New Section';
+        document.getElementById('section-form').reset();
+        document.getElementById('section-key').disabled = false;
+        document.getElementById('section-order').value = getNextSectionOrder();
+    }
+    
+    modal.show();
+}
+
+function saveSectionConfiguration() {
+    const sectionKey = document.getElementById('section-key').value.trim();
+    const sectionLabel = document.getElementById('section-label').value.trim();
+    const sectionDescription = document.getElementById('section-description').value.trim();
+    const sectionIcon = document.getElementById('section-icon').value;
+    const sectionOrder = parseInt(document.getElementById('section-order').value) || 1;
+    const sectionCollapsed = document.getElementById('section-collapsed').checked;
+    
+    // Validation
+    if (!sectionKey || !sectionLabel) {
+        showError('Section key and label are required');
+        return;
+    }
+    
+    // Validate section key format
+    if (!/^[a-zA-Z0-9_]+$/.test(sectionKey)) {
+        showError('Section key can only contain letters, numbers, and underscores');
+        return;
+    }
+    
+    // Check for duplicate keys (when creating new)
+    if (!editingSectionKey && sections[sectionKey]) {
+        showError('Section key already exists');
+        return;
+    }
+    
+    // Check for duplicate orders
+    const existingOrders = Object.values(sections)
+        .filter((_, key) => editingSectionKey !== Object.keys(sections)[key])
+        .map(s => s.order);
+    
+    if (existingOrders.includes(sectionOrder)) {
+        showError('Section order already in use');
+        return;
+    }
+    
+    // Save section
+    sections[sectionKey] = {
+        label: sectionLabel,
+        description: sectionDescription,
+        order: sectionOrder,
+        collapsed: sectionCollapsed,
+        icon: sectionIcon
+    };
+    
+    // Update UI
+    updateSectionsList();
+    updateFieldSectionDropdown();
+    updateFieldList();
+    
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('sectionModal')).hide();
+    editingSectionKey = null;
+    
+    showSuccess(`Section "${sectionLabel}" ${editingSectionKey ? 'updated' : 'created'} successfully`);
+}
+
+function editSection(sectionKey) {
+    showSectionModal(sectionKey);
+}
+
+function deleteSection(sectionKey) {
+    const sectionName = sections[sectionKey]?.label || sectionKey;
+    const fieldCount = getFieldCountForSection(sectionKey);
+    
+    let message = `Delete section "${sectionName}"?`;
+    if (fieldCount > 0) {
+        message += `\n\nThis section contains ${fieldCount} field(s). The fields will become unsectioned.`;
+    }
+    
+    if (!confirm(message)) {
+        return;
+    }
+    
+    // Remove section assignment from fields
+    Object.keys(fields).forEach(fieldName => {
+        if (fields[fieldName].section === sectionKey) {
+            delete fields[fieldName].section;
+            delete fields[fieldName].field_order;
+        }
+    });
+    
+    // Delete section
+    delete sections[sectionKey];
+    
+    // Update UI
+    updateSectionsList();
+    updateFieldSectionDropdown();
+    updateFieldList();
+    
+    showSuccess(`Section "${sectionName}" deleted successfully`);
+}
+
+function getFieldCountForSection(sectionKey) {
+    return Object.values(fields).filter(field => field.section === sectionKey).length;
+}
+
+function getNextSectionOrder() {
+    const orders = Object.values(sections).map(s => s.order || 0);
+    return orders.length > 0 ? Math.max(...orders) + 1 : 1;
+}
+
+function handleFieldSectionChange() {
+    if (!selectedField) return;
+    
+    const sectionKey = document.getElementById('field-section').value;
+    
+    if (sectionKey) {
+        fields[selectedField].section = sectionKey;
+        // Set default field order within section
+        const fieldsInSection = Object.values(fields).filter(f => f.section === sectionKey);
+        fields[selectedField].field_order = fieldsInSection.length;
+        document.getElementById('field-order').value = fields[selectedField].field_order;
+    } else {
+        delete fields[selectedField].section;
+        delete fields[selectedField].field_order;
+        document.getElementById('field-order').value = '';
+    }
+    
+    updateFieldList();
+    updateSectionsList();
+}
+
+function toggleReorderMode() {
+    isReorderMode = !isReorderMode;
+    const button = document.getElementById('reorder-sections-btn');
+    const sectionsList = document.getElementById('sections-list');
+    
+    if (isReorderMode) {
+        button.innerHTML = '<i class="bi bi-check"></i> Done Reordering';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        sectionsList.classList.add('reorder-mode');
+        
+        // Enable drag and drop
+        enableSectionDragAndDrop();
+    } else {
+        button.innerHTML = '<i class="bi bi-arrow-up-down"></i> Reorder Sections';
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-secondary');
+        sectionsList.classList.remove('reorder-mode');
+        
+        // Disable drag and drop
+        disableSectionDragAndDrop();
+    }
+}
+
+function enableSectionDragAndDrop() {
+    const sectionItems = document.querySelectorAll('.section-item');
+    
+    sectionItems.forEach(item => {
+        item.draggable = true;
+        item.addEventListener('dragstart', handleSectionDragStart);
+        item.addEventListener('dragover', handleSectionDragOver);
+        item.addEventListener('drop', handleSectionDrop);
+        item.addEventListener('dragend', handleSectionDragEnd);
+    });
+}
+
+function disableSectionDragAndDrop() {
+    const sectionItems = document.querySelectorAll('.section-item');
+    
+    sectionItems.forEach(item => {
+        item.draggable = false;
+        item.removeEventListener('dragstart', handleSectionDragStart);
+        item.removeEventListener('dragover', handleSectionDragOver);
+        item.removeEventListener('drop', handleSectionDrop);
+        item.removeEventListener('dragend', handleSectionDragEnd);
+    });
+}
+
+let draggedSectionKey = null;
+
+function handleSectionDragStart(e) {
+    draggedSectionKey = e.target.getAttribute('data-section-key');
+    e.target.classList.add('dragging');
+}
+
+function handleSectionDragOver(e) {
+    e.preventDefault();
+}
+
+function handleSectionDrop(e) {
+    e.preventDefault();
+    const targetSectionKey = e.target.closest('.section-item')?.getAttribute('data-section-key');
+    
+    if (draggedSectionKey && targetSectionKey && draggedSectionKey !== targetSectionKey) {
+        // Swap orders
+        const draggedOrder = sections[draggedSectionKey].order;
+        const targetOrder = sections[targetSectionKey].order;
+        
+        sections[draggedSectionKey].order = targetOrder;
+        sections[targetSectionKey].order = draggedOrder;
+        
+        // Update UI
+        updateSectionsList();
+        enableSectionDragAndDrop(); // Re-enable after update
+    }
+}
+
+function handleSectionDragEnd(e) {
+    e.target.classList.remove('dragging');
+    draggedSectionKey = null;
+}
+
+function showFormPreview() {
+    const modal = new bootstrap.Modal(document.getElementById('sectionPreviewModal'));
+    const previewContent = document.getElementById('preview-accordion');
+    
+    previewContent.innerHTML = '';
+    
+    if (Object.keys(sections).length === 0) {
+        previewContent.innerHTML = '<div class="text-center text-muted p-4">No sections configured</div>';
+    } else {
+        // Sort sections by order
+        const sortedSections = Object.entries(sections).sort(([,a], [,b]) => (a.order || 999) - (b.order || 999));
+        
+        sortedSections.forEach(([sectionKey, sectionConfig]) => {
+            const sectionFields = Object.entries(fields)
+                .filter(([, fieldConfig]) => fieldConfig.section === sectionKey)
+                .sort(([,a], [,b]) => (a.field_order || 999) - (b.field_order || 999));
+            
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'form-preview-section';
+            
+            let fieldsHtml = '';
+            if (sectionFields.length === 0) {
+                fieldsHtml = '<div class="text-muted">No fields assigned to this section</div>';
+            } else {
+                fieldsHtml = sectionFields.map(([fieldName, fieldConfig]) => `
+                    <div class="form-preview-field">
+                        <div class="form-preview-field-name">${fieldConfig.label || fieldName}</div>
+                        <div class="form-preview-field-type">${fieldConfig.type || 'text'}</div>
+                    </div>
+                `).join('');
+            }
+            
+            sectionDiv.innerHTML = `
+                <div class="form-preview-section-header">
+                    ${sectionConfig.icon ? `<i class="${sectionConfig.icon}"></i>` : ''}
+                    ${sectionConfig.label}
+                    <span class="badge bg-primary ms-auto">${sectionFields.length}</span>
+                </div>
+                <div class="form-preview-section-body">
+                    ${sectionConfig.description ? `<p class="text-muted mb-3">${sectionConfig.description}</p>` : ''}
+                    ${fieldsHtml}
+                </div>
+            `;
+            
+            previewContent.appendChild(sectionDiv);
+        });
+        
+        // Show unsectioned fields
+        const unsectionedFields = Object.entries(fields).filter(([, fieldConfig]) => !fieldConfig.section);
+        if (unsectionedFields.length > 0) {
+            const unsectionedDiv = document.createElement('div');
+            unsectionedDiv.className = 'form-preview-section';
+            
+            const fieldsHtml = unsectionedFields.map(([fieldName, fieldConfig]) => `
+                <div class="form-preview-field">
+                    <div class="form-preview-field-name">${fieldConfig.label || fieldName}</div>
+                    <div class="form-preview-field-type">${fieldConfig.type || 'text'}</div>
+                </div>
+            `).join('');
+            
+            unsectionedDiv.innerHTML = `
+                <div class="form-preview-section-header">
+                    <i class="bi-gear"></i>
+                    Other Fields
+                    <span class="badge bg-secondary ms-auto">${unsectionedFields.length}</span>
+                </div>
+                <div class="form-preview-section-body">
+                    ${fieldsHtml}
+                </div>
+            `;
+            
+            previewContent.appendChild(unsectionedDiv);
+        }
+    }
+    
+    modal.show();
 }
 
 function showError(message) {

@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from .field_mapping import PatientFieldMapper
+from .section_utils import SectionUtils
 
 
 class DynamicFormGenerator:
@@ -25,26 +26,58 @@ class DynamicFormGenerator:
     def generate_form_class(self, pdf_template, patient=None):
         """
         Create Django form class from PDF template field configuration.
+        Enhanced to handle sectioned field organization.
 
         Args:
             pdf_template (PDFFormTemplate): Template with field configuration
             patient: Patient object for field auto-population (optional)
 
         Returns:
-            type: Django form class
+            type: Django form class with section metadata
         """
         form_fields = {}
         field_config = pdf_template.form_fields or {}
         initial_values = {}
         
-        # Check if template is configured
+        # Handle empty configuration gracefully (backward compatibility)
         if not field_config:
-            raise ValidationError(
-                f"Template '{pdf_template.name}' is not configured. "
-                "Please configure the field positions first using the admin interface."
-            )
+            # Return empty form class for unconfigured templates
+            form_class_name = f"{pdf_template.name.replace(' ', '')}Form"
+            form_class = type(form_class_name, (forms.Form,), {})
+            
+            # Add section metadata for consistency
+            form_class._sections_metadata = {'sections': {}, 'unsectioned_fields': []}
+            form_class._has_sections = False
+            form_class._unsectioned_fields = []
+            form_class._patient_initial_values = {}
+            
+            return form_class
 
-        for field_name, config in field_config.items():
+        # Handle both new sectioned format and legacy format
+        sections_config, fields_config = self._extract_sections_and_fields(field_config)
+        
+        # Handle case where fields_config is empty but we have sections
+        if not fields_config:
+            # Return empty form class for templates with no fields
+            form_class_name = f"{pdf_template.name.replace(' ', '')}Form"
+            form_class = type(form_class_name, (forms.Form,), {})
+            
+            # Add section metadata (may have sections but no fields)
+            organized_sections = SectionUtils.organize_fields_by_section(sections_config, {})
+            form_class._sections_metadata = organized_sections
+            form_class._has_sections = bool(sections_config)
+            form_class._unsectioned_fields = organized_sections.get('unsectioned_fields', [])
+            form_class._patient_initial_values = {}
+            
+            return form_class
+        
+        # Validate section assignments
+        is_valid, errors = SectionUtils.validate_section_assignment(sections_config, fields_config)
+        if not is_valid:
+            raise ValidationError(f"Section validation failed: {'; '.join(errors)}")
+
+        # Create Django form fields
+        for field_name, config in fields_config.items():
             django_field = self._create_django_field(field_name, config)
             if django_field:
                 form_fields[field_name] = django_field
@@ -77,6 +110,12 @@ class DynamicFormGenerator:
         
         # Store initial values as a class attribute for later use
         form_class._patient_initial_values = initial_values
+        
+        # Add section metadata to form class
+        sections_metadata = self._organize_sections(sections_config, fields_config)
+        form_class._sections_metadata = sections_metadata
+        form_class._has_sections = bool(sections_config)
+        form_class._unsectioned_fields = sections_metadata.get('unsectioned_fields', [])
 
         return form_class
 
@@ -190,3 +229,96 @@ class DynamicFormGenerator:
         except (ValueError, TypeError, AttributeError):
             # If any formatting fails, return None to avoid form errors
             return None
+
+    def _extract_sections_and_fields(self, field_config):
+        """
+        Extract sections and fields from configuration, handling both formats.
+        
+        Args:
+            field_config (dict): Raw field configuration
+            
+        Returns:
+            tuple: (sections_config, fields_config)
+        """
+        if not isinstance(field_config, dict):
+            return {}, {}
+        
+        # Check if it's in new sectioned format
+        if 'sections' in field_config and 'fields' in field_config:
+            return field_config.get('sections', {}), field_config.get('fields', {})
+        else:
+            # Legacy format - treat entire config as fields
+            return {}, field_config
+
+    def _organize_sections(self, sections_config, fields_config):
+        """
+        Organize sections and fields into structured format for template rendering.
+        
+        Args:
+            sections_config (dict): Sections configuration
+            fields_config (dict): Fields configuration
+            
+        Returns:
+            dict: Organized structure with sections and their fields
+        """
+        # Use SectionUtils to organize fields by section
+        organized = SectionUtils.organize_fields_by_section(sections_config, fields_config)
+        
+        # Convert field lists to just field names for template compatibility
+        for section_key in organized['sections']:
+            field_objects = organized['sections'][section_key]['fields']
+            organized['sections'][section_key]['fields'] = [
+                field_obj['name'] for field_obj in field_objects
+            ]
+        
+        return organized
+
+    def _sort_sections_by_order(self, sections):
+        """
+        Sort sections by their order property.
+        
+        Args:
+            sections (dict): Sections configuration
+            
+        Returns:
+            list: Sorted list of (section_key, section_config) tuples
+        """
+        if not isinstance(sections, dict):
+            return []
+        
+        return sorted(
+            sections.items(),
+            key=lambda x: x[1].get('order', 999) if isinstance(x[1], dict) else 999
+        )
+
+    def _sort_fields_within_section(self, fields, field_configs):
+        """
+        Sort fields within a section by field_order property.
+        
+        Args:
+            fields (list): List of field names
+            field_configs (dict): Fields configuration
+            
+        Returns:
+            list: Sorted list of field names
+        """
+        if not isinstance(fields, list) or not isinstance(field_configs, dict):
+            return fields
+        
+        return sorted(
+            fields,
+            key=lambda field_name: field_configs.get(field_name, {}).get('field_order', 999)
+        )
+
+    def _get_section_field_count(self, section_key, field_configs):
+        """
+        Count fields assigned to a specific section.
+        
+        Args:
+            section_key (str): Section identifier
+            field_configs (dict): Fields configuration
+            
+        Returns:
+            int: Number of fields assigned to the section
+        """
+        return SectionUtils.get_section_field_count(section_key, field_configs)
