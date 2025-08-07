@@ -145,6 +145,36 @@ npm run build    # Compiles and copies all assets
 - **✅ ALWAYS run `npm run build` after changes**
 - **📝 COMMIT both `assets/` and `static/` to git**
 
+## Frontend Styling Guidelines
+
+**IMPORTANT: Bootstrap vs Django Admin Styling**
+
+### ✅ Use Bootstrap 5.3 for:
+- **User-facing templates** (`templates/` directories in apps)
+- **Main application interface** (patient management, forms, dashboards)
+- **Public pages** (login, landing pages, user workflows)
+- **Custom views and templates** accessed by medical staff
+
+### ❌ Keep Django Admin styling for:
+- **Admin interface templates** (`templates/admin/` directories)
+- **Django admin customizations**
+- **Administrative backend interfaces**
+- **Staff-only management interfaces**
+
+### Key Rules:
+- **NEVER** add Bootstrap CSS/JS to admin templates - use vanilla JavaScript instead
+- **ALWAYS** use Bootstrap for main application templates and user-facing interfaces
+- **MAINTAIN** Django's default admin styling for consistency and functionality
+- **PREFER** vanilla JavaScript over Bootstrap JS in admin contexts when needed
+
+### Examples:
+```
+✅ templates/patients/patient_list.html - Use Bootstrap
+✅ templates/pdf_forms/form_fill.html - Use Bootstrap
+❌ templates/admin/pdf_forms/configure_fields.html - NO Bootstrap, use vanilla JS
+❌ templates/admin/patients/change_form.html - Keep Django admin styling
+```
+
 # Python environment
 
 uv install
@@ -183,7 +213,7 @@ uv run python manage.py security_report --days=30 --format=json --output=report.
 ### Key Features
 
 - **Authentication**: django-allauth with email-based login
-- **Frontend**: Bootstrap 5.3, Webpack, Portuguese localization
+- **Frontend**: Bootstrap 5.3 (user-facing only), Webpack, Portuguese localization
 - **Security**: UUID identifiers, CSRF protection, role-based permissions, comprehensive audit history
 - **Testing**: pytest + Django test runner, factory-boy, comprehensive coverage
 - **Hospital Configuration**: Environment-based single hospital setup

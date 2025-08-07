@@ -192,12 +192,38 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
         if not isinstance(fields_config, dict):
             raise ValidationError("Fields configuration must be a dictionary")
         
-        # Use the more comprehensive validation from field mapping utils
-        from .services.field_mapping import FieldMappingUtils
-        is_valid, errors = FieldMappingUtils.validate_field_config(fields_config)
-        
-        if not is_valid:
-            raise ValidationError('; '.join(errors))
+        # Check if this is the new sectioned format
+        if 'sections' in fields_config and 'fields' in fields_config:
+            # New sectioned format - validate sections and fields separately
+            sections = fields_config.get('sections', {})
+            fields = fields_config.get('fields', {})
+            
+            # Validate sections structure
+            if not isinstance(sections, dict):
+                raise ValidationError("Sections configuration must be a dictionary")
+            
+            for section_key, section_config in sections.items():
+                if not isinstance(section_config, dict):
+                    raise ValidationError(f"Section '{section_key}' configuration must be a dictionary")
+                
+                # Required section fields
+                if not section_config.get('label'):
+                    raise ValidationError(f"Section '{section_key}' missing required 'label'")
+            
+            # Validate fields using existing validation
+            from .services.field_mapping import FieldMappingUtils
+            is_valid, errors = FieldMappingUtils.validate_field_config(fields)
+            
+            if not is_valid:
+                raise ValidationError('; '.join(errors))
+                
+        else:
+            # Legacy format - validate as before
+            from .services.field_mapping import FieldMappingUtils
+            is_valid, errors = FieldMappingUtils.validate_field_config(fields_config)
+            
+            if not is_valid:
+                raise ValidationError('; '.join(errors))
     
     def pdf_preview(self, obj):
         if obj.pdf_file:
