@@ -235,8 +235,9 @@ class PDFFormOverlay:
         # Create PDF canvas with same dimensions as original
         pdf_canvas = canvas.Canvas(buffer, pagesize=(page_width, page_height))
 
-        # Process each field in the configuration
-        for field_name, config in field_config.items():
+        # Process each field in the configuration (new sectioned format)
+        fields_config = field_config['fields']
+        for field_name, config in fields_config.items():
             if field_name in form_data:
                 field_value = form_data[field_name]
                 if field_value is not None and str(field_value).strip():
@@ -326,29 +327,18 @@ class PDFFormOverlay:
             pdf_canvas.drawString(x_points, y_points, str(field_value))
 
     def _draw_checkbox(self, pdf_canvas, x_points, y_points, config):
-        """Draw a checked checkbox."""
+        """Draw an X for checked checkbox (no border since PDF form has parentheses)."""
         size = config.get("width", 0.5) * cm
+        font_size = config.get("font_size", 12)
 
-        # Draw checkbox border - x_points and y_points already include padding
-        # Adjust y position to align checkbox properly within field
-        checkbox_y = y_points + (
-            config.get("font_size", 12) * 0.2
-        )  # Slight upward adjustment
-        pdf_canvas.rect(x_points, checkbox_y, size, size)
-
-        # Draw check mark using the adjusted checkbox_y position
-        pdf_canvas.line(
-            x_points + size * 0.2,
-            checkbox_y + size * 0.4,
-            x_points + size * 0.4,
-            checkbox_y + size * 0.2,
-        )
-        pdf_canvas.line(
-            x_points + size * 0.4,
-            checkbox_y + size * 0.2,
-            x_points + size * 0.8,
-            checkbox_y + size * 0.7,
-        )
+        # Set font for the X character
+        pdf_canvas.setFont("Helvetica-Bold", font_size)
+        
+        # Adjust y position to align X properly within the parentheses
+        x_y = y_points + (font_size * 0.1)  # Fine-tune vertical alignment
+        
+        # Draw capital X
+        pdf_canvas.drawString(x_points, x_y, "X")
 
     def _format_date_string(self, date_str):
         """
