@@ -2,7 +2,7 @@ from django.test import TestCase
 from django import forms
 from unittest.mock import patch, MagicMock, mock_open
 from apps.pdf_forms.services.form_generator import DynamicFormGenerator
-from apps.pdf_forms.services.pdf_overlay import PDFFormOverlay
+from apps.pdf_forms.services.pdf_overlay import PDFFormOverlay, REPORTLAB_AVAILABLE, PDF_LIBRARY_AVAILABLE
 from apps.pdf_forms.tests.factories import PDFFormTemplateFactory, UserFactory
 import os
 import tempfile
@@ -314,8 +314,11 @@ class PDFFormOverlayAdvancedTests(TestCase):
         }
         
         field_config = {
-            'patient_name': {'x': 5.0, 'y': 10.0, 'width': 8.0, 'height': 0.7},
-            'date_of_birth': {'x': 5.0, 'y': 11.0, 'width': 5.0, 'height': 0.7}
+            'sections': {},
+            'fields': {
+                'patient_name': {'x': 5.0, 'y': 10.0, 'width': 8.0, 'height': 0.7, 'type': 'text'},
+                'date_of_birth': {'x': 5.0, 'y': 11.0, 'width': 5.0, 'height': 0.7, 'type': 'date'}
+            }
         }
         
         # Test the new generate_pdf_response method
@@ -403,7 +406,10 @@ class PDFFormOverlayAdvancedTests(TestCase):
         mock_exists.return_value = False
         
         form_data = {'patient_name': 'John Doe'}
-        field_config = {'patient_name': {'x': 5.0, 'y': 10.0}}
+        field_config = {
+            'sections': {},
+            'fields': {'patient_name': {'x': 5.0, 'y': 10.0, 'type': 'text'}}
+        }
         
         with self.assertRaises(FileNotFoundError):
             self.overlay.generate_pdf_response(
@@ -423,7 +429,10 @@ class PDFFormOverlayAdvancedTests(TestCase):
         mock_reader.side_effect = Exception("Memory error")
         
         form_data = {'patient_name': 'John Doe'}
-        field_config = {'patient_name': {'x': 5.0, 'y': 10.0}}
+        field_config = {
+            'sections': {},
+            'fields': {'patient_name': {'x': 5.0, 'y': 10.0, 'type': 'text'}}
+        }
         
         # Should handle the exception gracefully
         with self.assertRaises(Exception):
@@ -787,3 +796,65 @@ class ServiceIntegrationTests(TestCase):
         for result in results:
             self.assertIsNotNone(result)
             self.assertIn('field1', result().fields)
+
+
+class DateTimeFormattingTests(TestCase):
+    """Test datetime formatting functionality in PDF overlay service."""
+
+    def setUp(self):
+        """Set up test dependencies."""
+        if not REPORTLAB_AVAILABLE or not PDF_LIBRARY_AVAILABLE:
+            self.skipTest("PDF libraries not available for testing")
+        
+        self.overlay = PDFFormOverlay()
+
+    def test_format_datetime_string_html5_input(self):
+        """Test formatting HTML5 datetime-local input format."""
+        # HTML5 datetime-local format: YYYY-MM-DDTHH:MM
+        input_datetime = "2023-12-25T14:30"
+        expected_output = "25-12-2023 14:30"
+        
+        result = self.overlay._format_datetime_string(input_datetime)
+        self.assertEqual(result, expected_output)
+
+    def test_format_datetime_string_various_formats(self):
+        """Test formatting various datetime string formats."""
+        test_cases = [
+            ("2023-12-25T14:30", "25-12-2023 14:30"),      # HTML5 datetime-local
+            ("2023-12-25 14:30:00", "25-12-2023 14:30"),   # Standard with seconds
+            ("2023-12-25 14:30", "25-12-2023 14:30"),      # Standard without seconds
+            ("2023-12-25T14:30:00", "25-12-2023 14:30"),   # ISO with seconds
+        ]
+        
+        for input_str, expected in test_cases:
+            with self.subTest(input_str=input_str):
+                result = self.overlay._format_datetime_string(input_str)
+                self.assertEqual(result, expected)
+
+    def test_format_datetime_string_invalid_format(self):
+        """Test that invalid datetime strings return original value."""
+        invalid_inputs = [
+            "invalid-datetime",
+            "2023-25-12T14:30",  # Invalid date
+            "not-a-date",
+            "",
+        ]
+        
+        for invalid_input in invalid_inputs:
+            with self.subTest(invalid_input=invalid_input):
+                result = self.overlay._format_datetime_string(invalid_input)
+                self.assertEqual(result, invalid_input)
+
+    def test_datetime_field_rendering_in_pdf(self):
+        """Test that datetime fields are properly formatted when rendered in PDF."""
+        from datetime import datetime
+        
+        # Test with datetime object
+        test_datetime = datetime(2023, 12, 25, 14, 30, 0)
+        formatted = test_datetime.strftime("%d-%m-%Y %H:%M")
+        
+        self.assertEqual(formatted, "25-12-2023 14:30")
+        
+        # Test that our string formatter produces the same result
+        string_formatted = self.overlay._format_datetime_string("2023-12-25T14:30")
+        self.assertEqual(formatted, string_formatted)

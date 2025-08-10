@@ -269,6 +269,7 @@ class PDFFormOverlay:
         y_cm = config.get("y", 0)
         font_size = config.get("font_size", 12)
         font_family = config.get("font_family", "Helvetica")
+        
 
         # Convert cm to points (1 cm = 28.35 points)
         # Add horizontal padding from left edge
@@ -295,6 +296,13 @@ class PDFFormOverlay:
         # Set text color
         pdf_canvas.setFillColor(black)
 
+        # Check if this is a datetime object first, regardless of field_type config
+        # This ensures datetime objects are always formatted correctly
+        if hasattr(field_value, "strftime"):
+            formatted_datetime = field_value.strftime("%d-%m-%Y %H:%M")
+            pdf_canvas.drawString(x_points, y_points, formatted_datetime)
+            return
+
         # Render based on field type
         if field_type == "boolean":
             # Render checkbox
@@ -311,6 +319,14 @@ class PDFFormOverlay:
                 # Handle string dates that might be in YYYY-MM-DD format
                 formatted_date = self._format_date_string(str(field_value))
             pdf_canvas.drawString(x_points, y_points, formatted_date)
+        elif field_type == "datetime":
+            # Format datetime value as DD-MM-YYYY HH:MM
+            if hasattr(field_value, "strftime"):
+                formatted_datetime = field_value.strftime("%d-%m-%Y %H:%M")
+            else:
+                # Handle string datetimes that might be in ISO format
+                formatted_datetime = self._format_datetime_string(str(field_value))
+            pdf_canvas.drawString(x_points, y_points, formatted_datetime)
         elif field_type in ["text", "textarea"]:
             # Handle multi-line text
             text_value = str(field_value)
@@ -323,8 +339,14 @@ class PDFFormOverlay:
             else:
                 pdf_canvas.drawString(x_points, y_points, text_value)
         else:
-            # Default: render as string
-            pdf_canvas.drawString(x_points, y_points, str(field_value))
+            # Default: render as string, but check if it's a datetime object first
+            if hasattr(field_value, "strftime"):
+                # This is a datetime object, format it properly regardless of field type
+                formatted_datetime = field_value.strftime("%d-%m-%Y %H:%M")
+                pdf_canvas.drawString(x_points, y_points, formatted_datetime)
+            else:
+                # Regular string rendering
+                pdf_canvas.drawString(x_points, y_points, str(field_value))
 
     def _draw_checkbox(self, pdf_canvas, x_points, y_points, config):
         """Draw an X for checked checkbox (no border since PDF form has parentheses)."""
@@ -361,6 +383,42 @@ class PDFFormOverlay:
         
         # If parsing fails, return original string
         return date_str
+
+    def _format_datetime_string(self, datetime_str):
+        """
+        Format datetime string from ISO format to DD-MM-YYYY HH:MM format.
+        
+        Args:
+            datetime_str (str): Datetime string potentially in ISO format (YYYY-MM-DDTHH:MM)
+            
+        Returns:
+            str: Formatted datetime string in DD-MM-YYYY HH:MM format
+        """
+        try:
+            from datetime import datetime
+            
+            # Try common datetime formats
+            datetime_formats = [
+                '%Y-%m-%dT%H:%M',         # HTML5 datetime-local format: 2023-12-25T14:30
+                '%Y-%m-%d %H:%M:%S',      # Standard format: 2023-12-25 14:30:00
+                '%Y-%m-%d %H:%M',         # Short format: 2023-12-25 14:30
+                '%Y-%m-%dT%H:%M:%S',      # ISO format with seconds: 2023-12-25T14:30:00
+                '%Y-%m-%d %H:%M:%S%z',    # With timezone: 2025-08-09 09:21:00-03:00
+                '%Y-%m-%d %H:%M:%S.%f%z', # With microseconds and timezone: 2025-08-09 09:21:00.123456-03:00
+            ]
+            
+            for fmt in datetime_formats:
+                try:
+                    parsed_datetime = datetime.strptime(datetime_str, fmt)
+                    return parsed_datetime.strftime('%d-%m-%Y %H:%M')
+                except ValueError:
+                    continue
+                    
+        except (ValueError, TypeError):
+            pass
+        
+        # If parsing fails, return original string
+        return datetime_str
 
     def _draw_multiline_text(
         self, pdf_canvas, text, x_points, y_points, max_width, font_size
