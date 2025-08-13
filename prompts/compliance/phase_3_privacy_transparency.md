@@ -164,6 +164,7 @@ class ConsentRecord(models.Model):
         ('research', 'Pesquisa Médica'),
         ('marketing', 'Comunicações de Marketing'),
         ('data_sharing', 'Compartilhamento de Dados'),
+        ('hospital_consent', 'Consentimento Hospitalar'),  # New for hospital scenario
     ]
     
     CONSENT_STATUS = [
@@ -171,6 +172,12 @@ class ConsentRecord(models.Model):
         ('denied', 'Consentimento Negado'),
         ('withdrawn', 'Consentimento Retirado'),
         ('expired', 'Consentimento Expirado'),
+    ]
+    
+    CONSENT_SOURCE = [
+        ('direct', 'Consentimento Direto'),
+        ('hospital_form', 'Formulário Hospitalar'),
+        ('supplementary', 'Consentimento Suplementar'),
     ]
     
     # Consent identification
@@ -223,12 +230,33 @@ class ConsentRecord(models.Model):
     legal_basis = models.CharField(max_length=100)
     lawful_basis_explanation = models.TextField(verbose_name="Explicação da base legal")
     
+    # Consent source tracking
+    consent_source = models.CharField(
+        max_length=20,
+        choices=CONSENT_SOURCE,
+        default='direct',
+        help_text="Origem do consentimento"
+    )
+    
+    hospital_consent_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Referência do consentimento hospitalar (número do documento)"
+    )
+    
     # Evidence and audit
     consent_evidence = models.FileField(
         upload_to='consent_evidence/',
         null=True,
         blank=True,
-        help_text="Documento comprobatório do consentimento"
+        help_text="Documento comprobatório do consentimento (PDF escaneado do hospital)"
+    )
+    
+    hospital_consent_document = models.FileField(
+        upload_to='hospital_consent/',
+        null=True,
+        blank=True,
+        help_text="Cópia escaneada do consentimento hospitalar"
     )
     
     # Metadata
@@ -270,8 +298,19 @@ class ConsentRecord(models.Model):
             reason=reason or 'Solicitação do titular'
         )
     
+    def is_hospital_based(self):
+        """Check if consent is based on hospital documentation"""
+        return self.consent_source == 'hospital_form'
+    
+    def requires_supplementary_consent(self):
+        """Check if additional consent is needed beyond hospital consent"""
+        # Define which activities need explicit consent beyond hospital forms
+        supplementary_required = ['research', 'marketing', 'photo_video']
+        return self.consent_type in supplementary_required
+    
     def __str__(self):
-        return f"{self.patient.name} - {self.get_consent_type_display()} - {self.status}"
+        source_indicator = "[H]" if self.is_hospital_based() else ""
+        return f"{self.patient.name} - {self.get_consent_type_display()} - {self.status} {source_indicator}"
 
 class ConsentWithdrawal(models.Model):
     """Records consent withdrawal details"""
@@ -1306,9 +1345,9 @@ class DataProcessingNoticeAdmin(admin.ModelAdmin):
 
 @admin.register(ConsentRecord)
 class ConsentRecordAdmin(admin.ModelAdmin):
-    list_display = ['consent_id', 'patient', 'consent_type', 'status', 'granted_at', 'is_valid']
-    list_filter = ['consent_type', 'status', 'granted_by_relationship', 'consent_method']
-    search_fields = ['patient__name', 'granted_by', 'purpose_description']
+    list_display = ['consent_id', 'patient', 'consent_type', 'consent_source', 'status', 'granted_at', 'is_valid']
+    list_filter = ['consent_type', 'consent_source', 'status', 'granted_by_relationship', 'consent_method']
+    search_fields = ['patient__name', 'granted_by', 'purpose_description', 'hospital_consent_reference']
     readonly_fields = ['consent_id', 'created_at', 'updated_at']
     
     fieldsets = [
@@ -1332,7 +1371,11 @@ class ConsentRecordAdmin(admin.ModelAdmin):
             'fields': ['legal_basis', 'lawful_basis_explanation']
         }),
         ('Evidência', {
-            'fields': ['consent_evidence']
+            'fields': ['consent_evidence', 'hospital_consent_document', 'hospital_consent_reference']
+        }),
+        ('Origem do Consentimento', {
+            'fields': ['consent_source'],
+            'description': 'Identifica se o consentimento veio de formulário hospitalar ou foi coletado diretamente'
         })
     ]
     
@@ -1340,6 +1383,11 @@ class ConsentRecordAdmin(admin.ModelAdmin):
         return obj.is_valid()
     is_valid.boolean = True
     is_valid.short_description = 'Válido'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Add annotation to show hospital-based consents clearly
+        return qs.select_related('patient')
 
 @admin.register(MinorConsentRecord)
 class MinorConsentRecordAdmin(admin.ModelAdmin):
@@ -1385,7 +1433,356 @@ python manage.py create_privacy_policy --version "1.0"
 python manage.py create_processing_notices
 ```
 
-### Step 8: Initial Data Processing Notices
+### Step 8: Hospital Consent Validation Service
+
+**File**: `apps/core/services/consent_validation.py`
+
+```python
+from django.core.exceptions import ValidationError
+from apps.core.models import ConsentRecord, LGPDComplianceSettings
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+class HospitalConsentValidator:
+    """Service to validate hospital consent documents for LGPD compliance"""
+    
+    def __init__(self):
+        self.lgpd_settings = LGPDComplianceSettings.objects.first()
+    
+    def evaluate_hospital_consent(self, hospital_consent_document, patient, consent_activities):
+        """
+        Evaluate if hospital consent covers required activities
+        
+        Args:
+            hospital_consent_document: Scanned hospital consent form
+            patient: Patient object
+            consent_activities: List of activities patient will engage in
+            
+        Returns:
+            dict: {
+                'sufficient': bool,
+                'covered_activities': list,
+                'gaps': list,
+                'recommendations': list
+            }
+        """
+        
+        # Define what hospital consent typically covers
+        hospital_covered_activities = [
+            'medical_treatment',  # Always covered by hospital
+            'data_processing',    # Basic data storage for medical care
+            'emergency_contact',  # Usually included in hospital forms
+        ]
+        
+        # Activities that typically need explicit consent
+        explicit_consent_required = [
+            'research',           # Research participation
+            'marketing',          # Marketing communications 
+            'photo_video',        # Medical photography
+            'data_sharing',       # Sharing beyond care team
+        ]
+        
+        covered_activities = []
+        gaps = []
+        recommendations = []
+        
+        # Evaluate coverage
+        for activity in consent_activities:
+            if activity in hospital_covered_activities:
+                covered_activities.append(activity)
+            elif activity in explicit_consent_required:
+                gaps.append(activity)
+            else:
+                # Unknown activity - requires evaluation
+                gaps.append(activity)
+        
+        # Generate recommendations
+        if gaps:
+            if 'research' in gaps:
+                recommendations.append(
+                    "Collect specific research consent form before including patient in studies"
+                )
+            if 'photo_video' in gaps:
+                recommendations.append(
+                    "Obtain explicit consent before capturing medical images"
+                )
+            if 'marketing' in gaps:
+                recommendations.append(
+                    "Collect marketing consent separately - cannot rely on hospital forms"
+                )
+        
+        # Determine if hospital consent is sufficient
+        sufficient = len(gaps) == 0
+        
+        return {
+            'sufficient': sufficient,
+            'covered_activities': covered_activities,
+            'gaps': gaps,
+            'recommendations': recommendations,
+            'hospital_coverage_percentage': len(covered_activities) / len(consent_activities) * 100 if consent_activities else 0
+        }
+    
+    def create_hospital_consent_record(self, patient, hospital_document, reference_number, clerk_name):
+        """
+        Create consent record based on hospital documentation
+        
+        Args:
+            patient: Patient object
+            hospital_document: Uploaded hospital consent file
+            reference_number: Hospital form reference number
+            clerk_name: Name of clerk who copied the data
+            
+        Returns:
+            ConsentRecord: Created consent record
+        """
+        
+        consent_record = ConsentRecord.objects.create(
+            patient=patient,
+            consent_type='hospital_consent',
+            purpose_description='Consentimento coletado pelo hospital para tratamento médico e gestão de dados',
+            data_categories='Dados de identificação, dados médicos, informações de contato',
+            processing_activities='Coleta, armazenamento, uso para cuidados médicos, comunicação médica',
+            status='granted',
+            granted_at=datetime.now(),
+            granted_by=patient.name,
+            granted_by_relationship='self',
+            consent_method='paper_form',
+            consent_source='hospital_form',
+            hospital_consent_reference=reference_number,
+            hospital_consent_document=hospital_document,
+            legal_basis='art11_ii_a',
+            lawful_basis_explanation='Consentimento coletado pelo hospital para prestação de cuidados médicos'
+        )
+        
+        logger.info(f"Created hospital consent record for patient {patient.name} (ref: {reference_number})")
+        return consent_record
+    
+    def validate_consent_completeness(self, patient):
+        """
+        Validate that patient has all required consents for system use
+        
+        Returns:
+            dict: Validation results with missing consents
+        """
+        
+        required_consents = ['medical_treatment', 'data_processing']
+        existing_consents = ConsentRecord.objects.filter(
+            patient=patient,
+            status='granted'
+        ).values_list('consent_type', flat=True)
+        
+        missing_consents = []
+        for required in required_consents:
+            if required not in existing_consents:
+                missing_consents.append(required)
+        
+        return {
+            'complete': len(missing_consents) == 0,
+            'missing_consents': missing_consents,
+            'existing_consents': list(existing_consents)
+        }
+```
+
+### Step 9: Consent Strategy Decision Framework
+
+**File**: `prompts/compliance/templates/consent_decision_framework.md`
+
+```markdown
+# LGPD Consent Strategy Decision Framework
+
+## Hospital Consent Evaluation Checklist
+
+### Step 1: Relationship Assessment
+
+**Question 1: What is your relationship with the hospital?**
+- [ ] **Same legal entity** - Your system is part of the hospital's infrastructure
+- [ ] **Contracted service** - You provide services under contract to the hospital  
+- [ ] **Independent parallel system** - Separate entity copying hospital data
+- [ ] **Shared care team** - Healthcare professionals serving same patients
+
+**Legal Implication:**
+- Same entity: Can use hospital consent under shared institutional processing
+- Contracted: May use hospital consent if contract covers data processing
+- Independent: Need separate consent evaluation
+- Shared team: Can use professional relationship exception
+
+### Step 2: Hospital Consent Document Review
+
+**Question 2: Does the hospital consent form include:**
+- [ ] Specific mention of "auxiliary systems" or "parallel medical records"
+- [ ] Authorization for "data sharing with healthcare team"
+- [ ] Permission for "continuity of care" activities
+- [ ] General consent for "medical data processing"
+
+**Scoring:**
+- 4/4 checked: Hospital consent likely sufficient
+- 3/4 checked: Hospital consent probably sufficient with documentation
+- 2/4 checked: Supplementary consent recommended
+- 1/4 checked: Separate consent required
+
+### Step 3: Data Processing Activities Assessment
+
+**Question 3: What activities does your system perform?**
+
+**Always Covered by Hospital Consent:**
+- [ ] Basic patient identification
+- [ ] Medical record storage
+- [ ] Care coordination
+- [ ] Emergency contact procedures
+
+**Requires Explicit Evaluation:**
+- [ ] Medical photography/video
+- [ ] Research activities
+- [ ] Quality improvement analytics
+- [ ] Data sharing with external systems
+
+**Never Covered by Hospital Consent:**
+- [ ] Marketing communications
+- [ ] Commercial data sharing
+- [ ] Non-medical research
+- [ ] Patient contact for non-medical purposes
+
+### Step 4: Risk Assessment
+
+**Question 4: Risk factors present:**
+- [ ] Hospital and your system have different privacy policies
+- [ ] Hospital consent language is vague or outdated
+- [ ] Patients are not informed about your parallel system
+- [ ] Your system processes data differently than hospital
+- [ ] You store data longer than hospital
+- [ ] You share data with parties hospital doesn't
+
+**Risk Level:**
+- 0-1 factors: **Low risk** - Hospital consent acceptable
+- 2-3 factors: **Medium risk** - Document relationship, consider supplementary consent
+- 4+ factors: **High risk** - Separate consent collection required
+
+## Decision Matrix
+
+| Relationship | Hospital Consent Quality | Risk Level | Recommended Approach |
+|---|---|---|---|
+| Same Entity | High | Low | Use hospital consent |
+| Same Entity | Medium | Low-Medium | Document + Use hospital consent |
+| Contracted | High | Low | Use hospital consent + Contract clause |
+| Contracted | Medium | Medium | Supplementary consent form |
+| Independent | Any | Medium-High | Separate consent collection |
+| Shared Team | High | Low | Use hospital consent + Professional basis |
+
+## Implementation Strategies
+
+### Strategy A: Use Hospital Consent (Lower Risk)
+
+**When to use:**
+- Same legal entity or contracted service
+- High-quality hospital consent forms
+- Low risk assessment score
+
+**Implementation:**
+1. Document legal relationship with hospital
+2. Store scanned copies of hospital consent forms
+3. Map hospital consent to system activities
+4. Create consent records with `consent_source='hospital_form'`
+5. Regular validation of consent adequacy
+
+**Pros:**
+- Lower administrative burden
+- Familiar process for medical staff
+- Reduced patient friction
+
+**Cons:**
+- Dependent on hospital consent quality
+- Less granular control
+- Potential gaps for specific activities
+
+### Strategy B: Supplementary Consent (Balanced Risk)
+
+**When to use:**
+- Medium risk assessment
+- Hospital consent has minor gaps
+- Need explicit consent for specific activities
+
+**Implementation:**
+1. Use hospital consent for basic medical activities
+2. Collect brief supplementary consent for gaps
+3. Focus on high-risk activities (photos, research)
+4. Create hybrid consent records
+
+**Pros:**
+- Addresses specific compliance gaps
+- Maintains most existing workflow
+- Provides clear legal protection
+
+**Cons:**
+- Additional administrative step
+- Patient needs to provide consent twice
+- More complex tracking
+
+### Strategy C: Independent Consent Collection (Higher Compliance)
+
+**When to use:**
+- Independent parallel system
+- High risk assessment score
+- Poor quality hospital consent
+- Need maximum legal protection
+
+**Implementation:**
+1. Design comprehensive consent form
+2. Collect consent during patient onboarding
+3. Train staff on consent procedures
+4. Implement robust consent management
+
+**Pros:**
+- Maximum LGPD compliance
+- Full control over consent quality
+- Clear legal basis for all activities
+- Granular consent tracking
+
+**Cons:**
+- Higher administrative burden
+- Additional training required
+- Patient experience friction
+- Duplicate consent collection
+
+## Documentation Requirements
+
+Regardless of strategy chosen, document:
+
+1. **Legal Basis Analysis**
+   - Relationship assessment results
+   - Hospital consent evaluation
+   - Risk assessment scoring
+   - Strategy decision rationale
+
+2. **Consent Source Tracking**
+   - Hospital consent reference numbers
+   - Scanned document storage
+   - Consent validity periods
+   - Gap identification
+
+3. **Audit Trail**
+   - Decision-making process
+   - Staff training records
+   - Consent validation procedures
+   - Compliance monitoring results
+
+## Regular Review Process
+
+**Quarterly Review:**
+- Hospital consent form updates
+- New processing activities assessment
+- Risk factor changes
+- Strategy effectiveness evaluation
+
+**Annual Review:**
+- Full relationship assessment
+- Legal basis documentation update
+- Consent strategy optimization
+- Compliance audit preparation
+```
+
+### Step 10: Initial Data Processing Notices
 
 **File**: `apps/core/management/commands/create_processing_notices.py`
 
@@ -1519,15 +1916,55 @@ class Command(BaseCommand):
         self.stdout.write(f"- DPO configured: {'Yes' if lgpd_settings.dpo_email else 'No'}")
 ```
 
-## Deliverable Summary
+## Hospital Consent Integration Summary
+
+### Updated Features for Hospital Scenario
+
+1. **Enhanced ConsentRecord Model**
+   - `consent_source` field to track hospital vs. direct consent
+   - `hospital_consent_reference` for hospital form tracking
+   - `hospital_consent_document` for scanned document storage
+   - Helper methods for hospital consent evaluation
+
+2. **Consent Validation Service**
+   - `HospitalConsentValidator` for evaluating hospital consent adequacy
+   - Gap analysis for activities not covered by hospital forms
+   - Automatic consent record creation from hospital documents
+
+3. **Decision Framework**
+   - Structured evaluation process for hospital consent sufficiency
+   - Risk assessment matrix
+   - Implementation strategy recommendations
+   - Documentation requirements
+
+### Consent Strategy Options
+
+**Option A: Hospital Consent Only**
+- Store scanned hospital consent forms
+- Map activities to hospital consent coverage
+- Document legal relationship with hospital
+- Suitable for: Same entity, contracted services, low-risk activities
+
+**Option B: Supplementary Consent**
+- Use hospital consent for basic medical activities
+- Collect additional consent for specific activities (photos, research)
+- Hybrid approach balancing compliance and workflow
+- Suitable for: Independent systems with specific activity gaps
+
+**Option C: Independent Consent**
+- Collect comprehensive consent directly from patients
+- Maximum compliance and control
+- Higher administrative burden
+- Suitable for: High-risk scenarios, poor hospital consent quality
 
 ### Files Created
 1. **Models**: `PrivacyPolicy`, `DataProcessingNotice`, `ConsentRecord`, `MinorConsentRecord`
-2. **Forms**: `PatientConsentForm`, `MinorConsentForm`
-3. **Views**: Privacy policy display, data processing notices
-4. **Templates**: Privacy policy page with table of contents
-5. **Commands**: Privacy policy creation, processing notices setup, validation
-6. **Admin**: Complete admin interfaces for all models
+2. **Services**: `HospitalConsentValidator` for consent evaluation
+3. **Forms**: `PatientConsentForm`, `MinorConsentForm`
+4. **Views**: Privacy policy display, data processing notices
+5. **Templates**: Privacy policy page, consent decision framework
+6. **Commands**: Privacy policy creation, processing notices setup, validation
+7. **Admin**: Complete admin interfaces with hospital consent tracking
 
 ### URLs Added
 - `/privacidade/` - Main privacy policy
@@ -1548,9 +1985,13 @@ After completing Phase 3, proceed to **Phase 4: Data Lifecycle Management** to i
 **Phase 3 Completion Criteria**:
 - [ ] Privacy policy system functional with version control
 - [ ] Data processing notices created for key contexts
-- [ ] Consent management system operational
+- [ ] Consent management system operational with hospital consent support
+- [ ] Hospital consent validation service implemented
+- [ ] Consent source tracking functional (hospital vs. direct)
 - [ ] Minor consent handling implemented
 - [ ] DPO contact information configured
 - [ ] Legal review process established
 - [ ] Privacy policy accessible to users
+- [ ] Consent decision framework documented
+- [ ] Hospital consent strategy chosen and documented
 - [ ] Validation command shows full compliance
