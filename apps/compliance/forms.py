@@ -1,7 +1,8 @@
 from django import forms
-from .models import PatientDataRequest, DataCorrectionDetail
+from .models import PatientDataRequest, DataCorrectionDetail, ConsentRecord, MinorConsentRecord
 from apps.patients.models import Patient
 from django.core.exceptions import ValidationError
+from datetime import date, datetime
 import re
 
 
@@ -132,3 +133,199 @@ class DataCorrectionDetailForm(forms.ModelForm):
             'approved': forms.Select(choices=[(None, '---'), (True, 'Aprovado'), (False, 'Rejeitado')], attrs={'class': 'form-select'}),
             'review_notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
+
+
+class PatientConsentForm(forms.Form):
+    """Consent collection form for new patients"""
+    
+    # Patient identification
+    patient_name = forms.CharField(max_length=200, label="Nome do Paciente")
+    patient_birth_date = forms.DateField(label="Data de Nascimento", widget=forms.DateInput(attrs={'type': 'date'}))
+    
+    # Consent types
+    medical_treatment = forms.BooleanField(
+        required=True,
+        label="Tratamento Médico",
+        help_text="Concordo com o processamento dos meus dados para prestação de cuidados médicos"
+    )
+    
+    data_storage = forms.BooleanField(
+        required=True,
+        label="Armazenamento de Dados",
+        help_text="Concordo com o armazenamento dos meus dados médicos pelo período legal"
+    )
+    
+    emergency_contact = forms.BooleanField(
+        required=False,
+        label="Contato de Emergência",
+        help_text="Autorizo o contato com familiares em caso de emergência"
+    )
+    
+    photo_video = forms.BooleanField(
+        required=False,
+        label="Fotos e Vídeos Médicos",
+        help_text="Autorizo a captura de imagens para fins médicos"
+    )
+    
+    research_participation = forms.BooleanField(
+        required=False,
+        label="Pesquisa Médica",
+        help_text="Autorizo o uso dos meus dados anonimizados para pesquisa médica"
+    )
+    
+    quality_improvement = forms.BooleanField(
+        required=False,
+        label="Melhoria da Qualidade",
+        help_text="Autorizo o uso dos dados para análise e melhoria dos serviços"
+    )
+    
+    # Terms acceptance
+    privacy_policy_read = forms.BooleanField(
+        required=True,
+        label="Li e compreendi a Política de Privacidade",
+        help_text="Declaro que li, compreendi e aceito os termos da Política de Privacidade"
+    )
+    
+    consent_method = forms.CharField(widget=forms.HiddenInput(), initial='web_form')
+    
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean_patient_birth_date(self):
+        birth_date = self.cleaned_data.get('patient_birth_date')
+        if birth_date:
+            today = date.today()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            
+            # Store age for later use
+            self.patient_age = age
+            
+            if age < 0:
+                raise forms.ValidationError("Data de nascimento não pode ser no futuro")
+            if age > 120:
+                raise forms.ValidationError("Data de nascimento parece incorreta")
+        
+        return birth_date
+    
+    def is_minor(self):
+        """Check if patient is a minor"""
+        return hasattr(self, 'patient_age') and self.patient_age < 18
+    
+    def save(self, patient):
+        """Save consent records for patient"""
+        consent_data = self.cleaned_data
+        
+        # Get IP address from request
+        ip_address = None
+        user_agent = ""
+        if self.request:
+            ip_address = self.get_client_ip(self.request)
+            user_agent = self.request.META.get('HTTP_USER_AGENT', '')
+        
+        # Create consent records for each granted consent
+        consent_records = []
+        
+        consent_mappings = [
+            ('medical_treatment', 'medical_treatment', 'Tratamento médico e cuidados de saúde'),
+            ('data_storage', 'data_processing', 'Armazenamento de dados médicos'),
+            ('emergency_contact', 'data_sharing', 'Contato de emergência com familiares'),
+            ('photo_video', 'photo_video', 'Captura de fotos e vídeos médicos'),
+            ('research_participation', 'research', 'Participação em pesquisa médica'),
+            ('quality_improvement', 'data_processing', 'Melhoria da qualidade dos serviços'),
+        ]
+        
+        for form_field, consent_type, description in consent_mappings:
+            if consent_data.get(form_field):
+                consent_record = ConsentRecord.objects.create(
+                    patient=patient,
+                    consent_type=consent_type,
+                    purpose_description=description,
+                    data_categories='Dados médicos e identificação',
+                    processing_activities='Coleta, armazenamento, uso conforme finalidade',
+                    status='granted',
+                    granted_at=datetime.now(),
+                    granted_by=consent_data['patient_name'],
+                    granted_by_relationship='self' if not self.is_minor() else 'parent',
+                    consent_method=consent_data['consent_method'],
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    legal_basis='art11_ii_a' if consent_type == 'medical_treatment' else 'art7_i',
+                    lawful_basis_explanation=f'Consentimento para {description.lower()}'
+                )
+                consent_records.append(consent_record)
+        
+        return consent_records
+    
+    def get_client_ip(self, request):
+        """Get client IP address"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+
+
+class MinorConsentForm(forms.ModelForm):
+    """Special consent form for patients under 18"""
+    
+    class Meta:
+        model = MinorConsentRecord
+        fields = [
+            'guardian_name', 'guardian_relationship', 'guardian_document',
+            'guardian_phone', 'guardian_email', 'consent_method',
+            'guardian_id_verified', 'verification_method',
+            'data_sharing_restricted', 'marketing_prohibited', 'research_participation_allowed'
+        ]
+        
+        widgets = {
+            'guardian_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'guardian_relationship': forms.Select(attrs={'class': 'form-select'}),
+            'guardian_document': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CPF do responsável'}),
+            'guardian_phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'guardian_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'consent_method': forms.Select(attrs={'class': 'form-select'}),
+            'verification_method': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        
+        labels = {
+            'guardian_name': 'Nome do Responsável',
+            'guardian_relationship': 'Relação com o Paciente',
+            'guardian_document': 'CPF do Responsável',
+            'guardian_phone': 'Telefone do Responsável',
+            'guardian_email': 'Email do Responsável',
+            'consent_method': 'Método de Consentimento',
+            'guardian_id_verified': 'Identidade Verificada',
+            'verification_method': 'Método de Verificação',
+            'data_sharing_restricted': 'Restringir Compartilhamento',
+            'marketing_prohibited': 'Proibir Marketing',
+            'research_participation_allowed': 'Permitir Pesquisa',
+        }
+    
+    # Additional consent confirmations
+    understands_minor_rights = forms.BooleanField(
+        required=True,
+        label="Compreendo os direitos especiais de menores conforme LGPD"
+    )
+    
+    accepts_responsibility = forms.BooleanField(
+        required=True,
+        label="Aceito a responsabilidade pelo consentimento como responsável legal"
+    )
+    
+    def save(self, patient):
+        """Save minor consent record"""
+        instance = super().save(commit=False)
+        instance.patient = patient
+        instance.patient_birth_date = patient.birthday
+        
+        # Calculate age
+        today = date.today()
+        age = today.year - patient.birthday.year - ((today.month, today.day) < (patient.birthday.month, patient.birthday.day))
+        instance.age_at_consent = age
+        instance.is_minor = age < 18
+        instance.consent_date = datetime.now()
+        
+        instance.save()
+        return instance

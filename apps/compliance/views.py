@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.views.generic import CreateView, ListView, DetailView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -8,9 +8,10 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 from django.urls import reverse_lazy
-from .models import PatientDataRequest
+from .models import PatientDataRequest, PrivacyPolicy, DataProcessingNotice
 from .forms import PatientDataRequestCreationForm, PatientDataRequestManagementForm
 from .services.data_export import PatientDataExportService
+import markdown
 
 
 class PatientDataRequestCreateView(LoginRequiredMixin, CreateView):
@@ -195,3 +196,64 @@ class PatientDataRequestUpdateView(LoginRequiredMixin, UpdateView):
 
         messages.success(self.request, 'Solicitação atualizada com sucesso!')
         return super().form_valid(form)
+
+
+def privacy_policy(request, policy_type='main'):
+    """Display current privacy policy"""
+    policy = get_object_or_404(
+        PrivacyPolicy,
+        policy_type=policy_type,
+        is_active=True
+    )
+    
+    # Convert markdown to HTML
+    content_html = markdown.markdown(policy.content_markdown, extensions=['tables', 'toc'])
+    
+    context = {
+        'policy': policy,
+        'content_html': content_html,
+    }
+    
+    return render(request, 'compliance/privacy_policy.html', context)
+
+
+def data_processing_notice(request, context):
+    """Display data processing notice for specific context"""
+    notice = get_object_or_404(
+        DataProcessingNotice,
+        context=context,
+        is_active=True
+    )
+    
+    return render(request, 'compliance/data_processing_notice.html', {'notice': notice})
+
+
+class PrivacyPolicyDetailView(DetailView):
+    """Detailed privacy policy view with version history"""
+    model = PrivacyPolicy
+    template_name = 'compliance/privacy_policy_detail.html'
+    context_object_name = 'policy'
+    
+    def get_object(self):
+        policy_type = self.kwargs.get('policy_type', 'main')
+        return get_object_or_404(
+            PrivacyPolicy,
+            policy_type=policy_type,
+            is_active=True
+        )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Add version history
+        context['version_history'] = PrivacyPolicy.objects.filter(
+            policy_type=self.object.policy_type
+        ).order_by('-effective_date')[:5]
+        
+        # Convert markdown to HTML
+        context['content_html'] = markdown.markdown(
+            self.object.content_markdown,
+            extensions=['tables', 'toc', 'codehilite']
+        )
+        
+        return context

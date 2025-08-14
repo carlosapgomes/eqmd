@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.urls import reverse
 from datetime import timedelta
 import uuid
 
@@ -363,3 +364,355 @@ class DataCorrectionDetail(models.Model):
     class Meta:
         verbose_name = "Detalhe de Correção"
         verbose_name_plural = "Detalhes de Correção"
+
+
+class PrivacyPolicy(models.Model):
+    """Manages privacy policy versions and content - LGPD Article 9"""
+    
+    POLICY_TYPES = [
+        ('main', 'Política Principal'),
+        ('staff', 'Política para Funcionários'),
+        ('research', 'Política para Pesquisa'),
+        ('marketing', 'Política para Marketing'),
+    ]
+    
+    # Version control
+    version = models.CharField(max_length=10)
+    policy_type = models.CharField(max_length=20, choices=POLICY_TYPES, default='main')
+    title = models.CharField(max_length=200)
+    
+    # Content
+    summary = models.TextField(help_text="Resumo executivo da política")
+    content_markdown = models.TextField(help_text="Conteúdo completo em Markdown")
+    
+    # Metadata
+    effective_date = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey('accounts.EqmdCustomUser', on_delete=models.SET_NULL, null=True)
+    is_active = models.BooleanField(default=False)
+    
+    # Legal compliance
+    legal_review_completed = models.BooleanField(default=False)
+    legal_reviewer = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_policies'
+    )
+    legal_review_date = models.DateTimeField(null=True, blank=True)
+    
+    # Notification tracking
+    notification_sent = models.BooleanField(default=False)
+    notification_sent_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = "Política de Privacidade"
+        verbose_name_plural = "Políticas de Privacidade"
+        ordering = ['-effective_date', '-version']
+        unique_together = ['version', 'policy_type']
+    
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            # Deactivate other policies of same type
+            PrivacyPolicy.objects.filter(
+                policy_type=self.policy_type,
+                is_active=True
+            ).exclude(id=self.id).update(is_active=False)
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        return reverse('privacy_policy_detail', kwargs={'policy_type': self.policy_type})
+    
+    def __str__(self):
+        return f"{self.title} v{self.version}"
+
+
+class DataProcessingNotice(models.Model):
+    """Data processing notices for specific activities - LGPD Article 9"""
+    
+    NOTICE_CONTEXTS = [
+        ('patient_registration', 'Cadastro de Paciente'),
+        ('medical_consultation', 'Consulta Médica'),
+        ('emergency_treatment', 'Atendimento de Emergência'),
+        ('staff_onboarding', 'Integração de Funcionário'),
+        ('research_participation', 'Participação em Pesquisa'),
+        ('photo_video_capture', 'Captura de Foto/Vídeo'),
+        ('prescription_management', 'Gestão de Prescrições'),
+    ]
+    
+    # Identification
+    notice_id = models.CharField(max_length=50, unique=True)
+    context = models.CharField(max_length=30, choices=NOTICE_CONTEXTS)
+    title = models.CharField(max_length=200)
+    
+    # Content
+    purpose_description = models.TextField(verbose_name="Descrição da finalidade")
+    data_categories = models.TextField(verbose_name="Categorias de dados coletados")
+    legal_basis = models.CharField(max_length=100, verbose_name="Base legal")
+    retention_period = models.CharField(max_length=200, verbose_name="Período de retenção")
+    recipients = models.TextField(verbose_name="Destinatários dos dados")
+    
+    # Rights information
+    rights_summary = models.TextField(verbose_name="Resumo dos direitos do titular")
+    contact_info = models.TextField(verbose_name="Informações de contato DPO")
+    
+    # Display settings
+    display_format = models.CharField(
+        max_length=20,
+        choices=[
+            ('modal', 'Modal/Pop-up'),
+            ('inline', 'Integrado na página'),
+            ('banner', 'Banner de notificação'),
+            ('pdf', 'Documento PDF'),
+        ],
+        default='modal'
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Aviso de Processamento de Dados"
+        verbose_name_plural = "Avisos de Processamento de Dados"
+        ordering = ['context', 'title']
+    
+    def __str__(self):
+        return f"{self.get_context_display()} - {self.title}"
+
+
+class ConsentRecord(models.Model):
+    """Records consent given by data subjects - LGPD Article 8"""
+    
+    CONSENT_TYPES = [
+        ('data_processing', 'Processamento de Dados Gerais'),
+        ('medical_treatment', 'Tratamento Médico'),
+        ('photo_video', 'Captura de Foto/Vídeo'),
+        ('research', 'Pesquisa Médica'),
+        ('marketing', 'Comunicações de Marketing'),
+        ('data_sharing', 'Compartilhamento de Dados'),
+        ('hospital_consent', 'Consentimento Hospitalar'),
+    ]
+    
+    CONSENT_STATUS = [
+        ('granted', 'Consentimento Concedido'),
+        ('denied', 'Consentimento Negado'),
+        ('withdrawn', 'Consentimento Retirado'),
+        ('expired', 'Consentimento Expirado'),
+    ]
+    
+    CONSENT_SOURCE = [
+        ('direct', 'Consentimento Direto'),
+        ('hospital_form', 'Formulário Hospitalar'),
+        ('supplementary', 'Consentimento Suplementar'),
+    ]
+    
+    # Consent identification
+    consent_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    
+    # Subject information
+    patient = models.ForeignKey('patients.Patient', on_delete=models.CASCADE, related_name='consents')
+    consent_type = models.CharField(max_length=30, choices=CONSENT_TYPES)
+    
+    # Consent details
+    purpose_description = models.TextField(verbose_name="Finalidade específica")
+    data_categories = models.TextField(verbose_name="Categorias de dados envolvidos")
+    processing_activities = models.TextField(verbose_name="Atividades de processamento")
+    
+    # Consent status
+    status = models.CharField(max_length=20, choices=CONSENT_STATUS, default='granted')
+    granted_at = models.DateTimeField()
+    withdrawn_at = models.DateTimeField(null=True, blank=True)
+    expiration_date = models.DateTimeField(null=True, blank=True)
+    
+    # Consent context
+    granted_by = models.CharField(max_length=200, verbose_name="Concedido por")  # Patient name or guardian
+    granted_by_relationship = models.CharField(
+        max_length=50,
+        choices=[
+            ('self', 'Próprio paciente'),
+            ('parent', 'Pai/Mãe'),
+            ('guardian', 'Responsável legal'),
+            ('healthcare_proxy', 'Procurador de saúde'),
+        ],
+        default='self'
+    )
+    
+    # Technical details
+    consent_method = models.CharField(
+        max_length=30,
+        choices=[
+            ('web_form', 'Formulário Web'),
+            ('verbal', 'Verbal (registrado)'),
+            ('paper_form', 'Formulário Físico'),
+            ('electronic_signature', 'Assinatura Eletrônica'),
+        ],
+        default='web_form'
+    )
+    
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    # Legal compliance
+    legal_basis = models.CharField(max_length=100)
+    lawful_basis_explanation = models.TextField(verbose_name="Explicação da base legal")
+    
+    # Consent source tracking
+    consent_source = models.CharField(
+        max_length=20,
+        choices=CONSENT_SOURCE,
+        default='direct',
+        help_text="Origem do consentimento"
+    )
+    
+    hospital_consent_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Referência do consentimento hospitalar (número do documento)"
+    )
+    
+    # Evidence and audit
+    consent_evidence = models.FileField(
+        upload_to='consent_evidence/',
+        null=True,
+        blank=True,
+        help_text="Documento comprobatório do consentimento (PDF escaneado do hospital)"
+    )
+    
+    hospital_consent_document = models.FileField(
+        upload_to='hospital_consent/',
+        null=True,
+        blank=True,
+        help_text="Cópia escaneada do consentimento hospitalar"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Registro de Consentimento"
+        verbose_name_plural = "Registros de Consentimento"
+        ordering = ['-granted_at']
+        indexes = [
+            models.Index(fields=['patient', 'consent_type', 'status']),
+            models.Index(fields=['granted_at', 'status']),
+        ]
+    
+    def is_valid(self):
+        """Check if consent is currently valid"""
+        if self.status != 'granted':
+            return False
+        
+        if self.expiration_date and timezone.now() > self.expiration_date:
+            return False
+            
+        if self.withdrawn_at:
+            return False
+            
+        return True
+    
+    def withdraw(self, withdrawn_by=None, reason=None):
+        """Withdraw consent"""
+        self.status = 'withdrawn'
+        self.withdrawn_at = timezone.now()
+        self.save()
+        
+        # Create withdrawal record
+        ConsentWithdrawal.objects.create(
+            consent_record=self,
+            withdrawn_by=withdrawn_by or self.granted_by,
+            reason=reason or 'Solicitação do titular'
+        )
+    
+    def is_hospital_based(self):
+        """Check if consent is based on hospital documentation"""
+        return self.consent_source == 'hospital_form'
+    
+    def requires_supplementary_consent(self):
+        """Check if additional consent is needed beyond hospital consent"""
+        # Define which activities need explicit consent beyond hospital forms
+        supplementary_required = ['research', 'marketing', 'photo_video']
+        return self.consent_type in supplementary_required
+    
+    def __str__(self):
+        source_indicator = "[H]" if self.is_hospital_based() else ""
+        return f"{self.patient.name} - {self.get_consent_type_display()} - {self.status} {source_indicator}"
+
+
+class ConsentWithdrawal(models.Model):
+    """Records consent withdrawal details"""
+    
+    consent_record = models.OneToOneField(ConsentRecord, on_delete=models.CASCADE, related_name='withdrawal')
+    withdrawn_by = models.CharField(max_length=200)
+    reason = models.TextField()
+    withdrawn_at = models.DateTimeField(auto_now_add=True)
+    
+    # Processing after withdrawal
+    data_deleted = models.BooleanField(default=False)
+    data_deleted_at = models.DateTimeField(null=True, blank=True)
+    deletion_evidence = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = "Retirada de Consentimento"
+        verbose_name_plural = "Retiradas de Consentimento"
+
+
+class MinorConsentRecord(models.Model):
+    """Special consent handling for patients under 18 - LGPD Article 14"""
+    
+    patient = models.OneToOneField('patients.Patient', on_delete=models.CASCADE, related_name='minor_consent')
+    
+    # Patient age verification
+    patient_birth_date = models.DateField()
+    age_at_consent = models.IntegerField()
+    is_minor = models.BooleanField(default=True)
+    
+    # Guardian information
+    guardian_name = models.CharField(max_length=200)
+    guardian_relationship = models.CharField(
+        max_length=30,
+        choices=[
+            ('mother', 'Mãe'),
+            ('father', 'Pai'),
+            ('legal_guardian', 'Responsável Legal'),
+            ('court_appointed', 'Designado pelo Tribunal'),
+        ]
+    )
+    guardian_document = models.CharField(max_length=20, help_text="CPF do responsável")
+    guardian_phone = models.CharField(max_length=20)
+    guardian_email = models.EmailField()
+    
+    # Consent details
+    consent_date = models.DateTimeField()
+    consent_method = models.CharField(
+        max_length=30,
+        choices=[
+            ('in_person', 'Presencial'),
+            ('electronic', 'Eletrônico'),
+            ('phone_verified', 'Telefone (verificado)'),
+        ]
+    )
+    
+    # Documentation
+    guardian_id_verified = models.BooleanField(default=False)
+    verification_method = models.CharField(max_length=100, blank=True)
+    consent_document = models.FileField(upload_to='minor_consent/', null=True, blank=True)
+    
+    # Special protections
+    data_sharing_restricted = models.BooleanField(default=True)
+    marketing_prohibited = models.BooleanField(default=True)
+    research_participation_allowed = models.BooleanField(default=False)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Consentimento de Menor"
+        verbose_name_plural = "Consentimentos de Menores"
+    
+    def __str__(self):
+        return f"Menor: {self.patient.name} - Responsável: {self.guardian_name}"

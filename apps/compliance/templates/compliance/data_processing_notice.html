@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ notice.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.notice-header {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    color: white;
+    padding: 2rem 0;
+}
+.notice-content {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin: 2rem 0;
+}
+.notice-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+.notice-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.notice-icon {
+    font-size: 1.2rem;
+    color: #17a2b8;
+    margin-right: 0.5rem;
+}
+.rights-box {
+    background: #f8f9fa;
+    border-left: 4px solid #17a2b8;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notice-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h1><i class="bi bi-info-circle me-3"></i>{{ notice.title }}</h1>
+                <p class="lead">Aviso sobre processamento de dados pessoais</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="notice-content">
+        
+        <!-- Purpose Description -->
+        <div class="notice-section">
+            <h4><i class="notice-icon bi bi-bullseye"></i>Finalidade do Processamento</h4>
+            <p>{{ notice.purpose_description }}</p>
+        </div>
+
+        <!-- Data Categories -->
+        <div class="notice-section">
+            <h4><i class="notice-icon bi bi-collection"></i>Categorias de Dados</h4>
+            <p>{{ notice.data_categories }}</p>
+        </div>
+
+        <!-- Legal Basis -->
+        <div class="notice-section">
+            <h4><i class="notice-icon bi bi-shield-check"></i>Base Legal</h4>
+            <p><strong>{{ notice.legal_basis }}</strong></p>
+        </div>
+
+        <!-- Recipients -->
+        <div class="notice-section">
+            <h4><i class="notice-icon bi bi-people"></i>Destinatários dos Dados</h4>
+            <p>{{ notice.recipients }}</p>
+        </div>
+
+        <!-- Retention Period -->
+        <div class="notice-section">
+            <h4><i class="notice-icon bi bi-clock-history"></i>Período de Retenção</h4>
+            <p>{{ notice.retention_period }}</p>
+        </div>
+
+        <!-- Rights Summary -->
+        <div class="notice-section">
+            <h4><i class="notice-icon bi bi-shield-lock"></i>Seus Direitos</h4>
+            <div class="rights-box">
+                <p class="mb-2"><strong>Como titular dos dados, você possui os seguintes direitos:</strong></p>
+                <p>{{ notice.rights_summary }}</p>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="notice-section">
+            <h4><i class="notice-icon bi bi-telephone"></i>Contato</h4>
+            <p>{{ notice.contact_info }}</p>
+            
+            <div class="mt-3">
+                <a href="{% url 'privacy_policy' %}" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-file-text me-1"></i>Ver Política de Privacidade Completa
+                </a>
+                <a href="#" class="btn btn-outline-secondary">
+                    <i class="bi bi-person-badge me-1"></i>Exercer Meus Direitos
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer Notice -->
+    <div class="alert alert-light border text-center">
+        <small class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Este aviso é fornecido em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018), Artigo 9º.
+        </small>
+    </div>
+</div>
+{% endblock %}

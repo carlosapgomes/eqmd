@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import DataProcessingPurpose, LGPDComplianceSettings, PatientDataRequest, DataCorrectionDetail
+from .models import (
+    DataProcessingPurpose, LGPDComplianceSettings, PatientDataRequest, DataCorrectionDetail,
+    PrivacyPolicy, DataProcessingNotice, ConsentRecord, MinorConsentRecord, ConsentWithdrawal
+)
 
 @admin.register(DataProcessingPurpose)
 class DataProcessingPurposeAdmin(admin.ModelAdmin):
@@ -133,5 +136,151 @@ class DataCorrectionDetailAdmin(admin.ModelAdmin):
         }),
         ('Aplicação', {
             'fields': ['correction_applied', 'applied_at', 'applied_by']
+        })
+    ]
+
+
+@admin.register(PrivacyPolicy)
+class PrivacyPolicyAdmin(admin.ModelAdmin):
+    list_display = ['title', 'version', 'policy_type', 'effective_date', 'is_active', 'legal_review_completed']
+    list_filter = ['policy_type', 'is_active', 'legal_review_completed', 'effective_date']
+    search_fields = ['title', 'version', 'summary']
+    readonly_fields = ['created_at']
+    
+    fieldsets = [
+        ('Informações Básicas', {
+            'fields': ['title', 'version', 'policy_type', 'summary']
+        }),
+        ('Conteúdo', {
+            'fields': ['content_markdown']
+        }),
+        ('Vigência', {
+            'fields': ['effective_date', 'is_active']
+        }),
+        ('Revisão Legal', {
+            'fields': ['legal_review_completed', 'legal_reviewer', 'legal_review_date']
+        }),
+        ('Notificação', {
+            'fields': ['notification_sent', 'notification_sent_at']
+        }),
+        ('Metadados', {
+            'fields': ['created_at', 'created_by'],
+            'classes': ['collapse']
+        })
+    ]
+    
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(DataProcessingNotice)
+class DataProcessingNoticeAdmin(admin.ModelAdmin):
+    list_display = ['notice_id', 'context', 'title', 'display_format', 'is_active']
+    list_filter = ['context', 'display_format', 'is_active']
+    search_fields = ['notice_id', 'title', 'purpose_description']
+    
+    fieldsets = [
+        ('Identificação', {
+            'fields': ['notice_id', 'context', 'title']
+        }),
+        ('Conteúdo do Aviso', {
+            'fields': ['purpose_description', 'data_categories', 'legal_basis', 'retention_period', 'recipients']
+        }),
+        ('Direitos e Contato', {
+            'fields': ['rights_summary', 'contact_info']
+        }),
+        ('Configurações de Exibição', {
+            'fields': ['display_format', 'is_active']
+        })
+    ]
+
+
+@admin.register(ConsentRecord)
+class ConsentRecordAdmin(admin.ModelAdmin):
+    list_display = ['consent_id', 'patient', 'consent_type', 'consent_source', 'status', 'granted_at', 'is_valid']
+    list_filter = ['consent_type', 'consent_source', 'status', 'granted_by_relationship', 'consent_method']
+    search_fields = ['patient__name', 'granted_by', 'purpose_description', 'hospital_consent_reference']
+    readonly_fields = ['consent_id', 'created_at', 'updated_at']
+    
+    fieldsets = [
+        ('Identificação', {
+            'fields': ['consent_id', 'patient', 'consent_type']
+        }),
+        ('Detalhes do Consentimento', {
+            'fields': ['purpose_description', 'data_categories', 'processing_activities']
+        }),
+        ('Status', {
+            'fields': ['status', 'granted_at', 'withdrawn_at', 'expiration_date']
+        }),
+        ('Contexto', {
+            'fields': ['granted_by', 'granted_by_relationship', 'consent_method']
+        }),
+        ('Dados Técnicos', {
+            'fields': ['ip_address', 'user_agent'],
+            'classes': ['collapse']
+        }),
+        ('Base Legal', {
+            'fields': ['legal_basis', 'lawful_basis_explanation']
+        }),
+        ('Evidência', {
+            'fields': ['consent_evidence', 'hospital_consent_document', 'hospital_consent_reference']
+        }),
+        ('Origem do Consentimento', {
+            'fields': ['consent_source'],
+            'description': 'Identifica se o consentimento veio de formulário hospitalar ou foi coletado diretamente'
+        })
+    ]
+    
+    def is_valid(self, obj):
+        return obj.is_valid()
+    is_valid.boolean = True
+    is_valid.short_description = 'Válido'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Add annotation to show hospital-based consents clearly
+        return qs.select_related('patient')
+
+
+@admin.register(MinorConsentRecord)
+class MinorConsentRecordAdmin(admin.ModelAdmin):
+    list_display = ['patient', 'guardian_name', 'guardian_relationship', 'age_at_consent', 'consent_date', 'guardian_id_verified']
+    list_filter = ['guardian_relationship', 'consent_method', 'guardian_id_verified']
+    search_fields = ['patient__name', 'guardian_name', 'guardian_email']
+    
+    fieldsets = [
+        ('Paciente Menor', {
+            'fields': ['patient', 'patient_birth_date', 'age_at_consent', 'is_minor']
+        }),
+        ('Responsável Legal', {
+            'fields': ['guardian_name', 'guardian_relationship', 'guardian_document', 'guardian_phone', 'guardian_email']
+        }),
+        ('Consentimento', {
+            'fields': ['consent_date', 'consent_method', 'guardian_id_verified', 'verification_method']
+        }),
+        ('Proteções Especiais', {
+            'fields': ['data_sharing_restricted', 'marketing_prohibited', 'research_participation_allowed']
+        }),
+        ('Documentação', {
+            'fields': ['consent_document']
+        })
+    ]
+
+
+@admin.register(ConsentWithdrawal)
+class ConsentWithdrawalAdmin(admin.ModelAdmin):
+    list_display = ['consent_record', 'withdrawn_by', 'withdrawn_at', 'data_deleted']
+    list_filter = ['withdrawn_at', 'data_deleted']
+    search_fields = ['consent_record__patient__name', 'withdrawn_by', 'reason']
+    readonly_fields = ['withdrawn_at']
+    
+    fieldsets = [
+        ('Retirada', {
+            'fields': ['consent_record', 'withdrawn_by', 'reason', 'withdrawn_at']
+        }),
+        ('Processamento Pós-Retirada', {
+            'fields': ['data_deleted', 'data_deleted_at', 'deletion_evidence']
         })
     ]
