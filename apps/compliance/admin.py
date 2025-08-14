@@ -6,7 +6,7 @@ from .models import (
     DataProcessingPurpose, LGPDComplianceSettings, PatientDataRequest, DataCorrectionDetail,
     PrivacyPolicy, DataProcessingNotice, ConsentRecord, MinorConsentRecord, ConsentWithdrawal,
     DataRetentionPolicy, DataRetentionSchedule, DataDeletionLog, DataAnonymizationLog,
-    AnonymizationPolicy
+    AnonymizationPolicy, SecurityIncident, IncidentAction, BreachNotification, IncidentEvidence
 )
 
 @admin.register(DataProcessingPurpose)
@@ -603,3 +603,159 @@ class AnonymizationPolicyAdmin(admin.ModelAdmin):
             'classes': ['collapse']
         })
     ]
+
+
+@admin.register(SecurityIncident)
+class SecurityIncidentAdmin(admin.ModelAdmin):
+    list_display = [
+        'incident_id', 'title', 'incident_type', 'severity', 'status',
+        'detected_at', 'anpd_required', 'subject_required', 'overdue_status'
+    ]
+    list_filter = [
+        'incident_type', 'severity', 'status', 'risk_level',
+        'anpd_notification_required', 'data_subject_notification_required',
+        'detected_at'
+    ]
+    search_fields = ['incident_id', 'title', 'description']
+    readonly_fields = ['incident_id', 'uuid', 'created_at', 'updated_at']
+    
+    fieldsets = [
+        ('Identificação', {
+            'fields': ['incident_id', 'uuid', 'title', 'incident_type']
+        }),
+        ('Classificação', {
+            'fields': ['severity', 'status', 'risk_level']
+        }),
+        ('Detecção', {
+            'fields': [
+                'detected_at', 'detected_by', 'detection_method',
+                'description', 'initial_assessment'
+            ]
+        }),
+        ('Impacto', {
+            'fields': [
+                'affected_systems', 'affected_data_categories',
+                'estimated_records_affected', 'potential_impact'
+            ]
+        }),
+        ('Equipe de Resposta', {
+            'fields': ['incident_commander', 'response_team']
+        }),
+        ('Cronologia', {
+            'fields': [
+                'containment_at', 'eradication_at', 'recovery_at', 'resolution_at'
+            ]
+        }),
+        ('Notificações', {
+            'fields': [
+                'anpd_notification_required', 'anpd_notification_deadline',
+                'data_subject_notification_required', 'subject_notification_deadline'
+            ]
+        }),
+        ('Avaliação de Risco', {
+            'fields': ['risk_assessment_notes']
+        })
+    ]
+    
+    def anpd_required(self, obj):
+        if obj.anpd_notification_required:
+            if obj.is_anpd_notification_overdue():
+                return format_html('<span style="color: red;">⚠️ Overdue</span>')
+            return format_html('<span style="color: orange;">📋 Required</span>')
+        return '❌'
+    anpd_required.short_description = 'ANPD'
+    
+    def subject_required(self, obj):
+        if obj.data_subject_notification_required:
+            if obj.is_subject_notification_overdue():
+                return format_html('<span style="color: red;">⚠️ Overdue</span>')
+            return format_html('<span style="color: orange;">📧 Required</span>')
+        return '❌'
+    subject_required.short_description = 'Subjects'
+    
+    def overdue_status(self, obj):
+        overdue_items = []
+        if obj.is_anpd_notification_overdue():
+            overdue_items.append('ANPD')
+        if obj.is_subject_notification_overdue():
+            overdue_items.append('Subjects')
+        
+        if overdue_items:
+            return format_html('<span style="color: red; font-weight: bold;">🚨 {}</span>', ', '.join(overdue_items))
+        return '✓'
+    overdue_status.short_description = 'Status'
+    
+    actions = ['create_notifications', 'escalate_severity']
+    
+    def create_notifications(self, request, queryset):
+        from apps.compliance.services.breach_notification import BreachNotificationService
+        
+        notification_service = BreachNotificationService()
+        total_notifications = 0
+        
+        for incident in queryset:
+            notifications = notification_service.process_notification_requirements(incident)
+            total_notifications += len(notifications)
+        
+        self.message_user(request, f'{total_notifications} notifications created for {queryset.count()} incidents.')
+    create_notifications.short_description = 'Create required notifications'
+    
+    def escalate_severity(self, request, queryset):
+        from apps.compliance.services.breach_detection import BreachDetectionService
+        
+        detection_service = BreachDetectionService()
+        escalated = 0
+        
+        for incident in queryset:
+            if incident.severity != 'critical':
+                detection_service.escalate_incident(incident, "Manual escalation from admin")
+                escalated += 1
+        
+        self.message_user(request, f'{escalated} incidents escalated.')
+    escalate_severity.short_description = 'Escalate severity'
+
+
+@admin.register(IncidentAction)
+class IncidentActionAdmin(admin.ModelAdmin):
+    list_display = ['incident', 'action_type', 'title', 'performed_by', 'performed_at', 'completed']
+    list_filter = ['action_type', 'completed', 'performed_at']
+    search_fields = ['incident__incident_id', 'title', 'description']
+
+
+@admin.register(BreachNotification)
+class BreachNotificationAdmin(admin.ModelAdmin):
+    list_display = [
+        'notification_id', 'incident', 'notification_type', 'recipient_name',
+        'delivery_method', 'status', 'scheduled_at', 'is_overdue'
+    ]
+    list_filter = ['notification_type', 'delivery_method', 'status', 'scheduled_at']
+    search_fields = ['notification_id', 'incident__incident_id', 'recipient_name', 'subject']
+    readonly_fields = ['notification_id', 'created_at', 'updated_at']
+    
+    def is_overdue(self, obj):
+        return obj.is_overdue()
+    is_overdue.boolean = True
+    is_overdue.short_description = 'Overdue'
+    
+    actions = ['send_notifications']
+    
+    def send_notifications(self, request, queryset):
+        from apps.compliance.services.breach_notification import BreachNotificationService
+        
+        notification_service = BreachNotificationService()
+        sent = 0
+        
+        for notification in queryset.filter(status='pending'):
+            if notification_service.send_notification(notification):
+                sent += 1
+        
+        self.message_user(request, f'{sent} notifications sent successfully.')
+    send_notifications.short_description = 'Send selected notifications'
+
+
+@admin.register(IncidentEvidence)
+class IncidentEvidenceAdmin(admin.ModelAdmin):
+    list_display = ['incident', 'evidence_type', 'name', 'collected_by', 'collected_at', 'integrity_verified']
+    list_filter = ['evidence_type', 'integrity_verified', 'collected_at']
+    search_fields = ['incident__incident_id', 'name', 'description']
+    readonly_fields = ['file_hash', 'file_size']

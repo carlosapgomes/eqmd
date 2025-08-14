@@ -1134,3 +1134,375 @@ class AnonymizationPolicy(models.Model):
     
     def __str__(self):
         return f"{self.policy_name} - {self.data_category}"
+
+
+class SecurityIncident(models.Model):
+    """Security incidents and data breaches - LGPD Article 48"""
+    
+    INCIDENT_TYPES = [
+        ('data_breach', 'Violação de Dados'),
+        ('unauthorized_access', 'Acesso Não Autorizado'),
+        ('data_loss', 'Perda de Dados'),
+        ('system_intrusion', 'Intrusão no Sistema'),
+        ('malware_attack', 'Ataque de Malware'),
+        ('phishing_attack', 'Ataque de Phishing'),
+        ('insider_threat', 'Ameaça Interna'),
+        ('physical_security', 'Segurança Física'),
+        ('data_corruption', 'Corrupção de Dados'),
+        ('service_disruption', 'Interrupção de Serviço'),
+        ('configuration_error', 'Erro de Configuração'),
+        ('human_error', 'Erro Humano'),
+    ]
+    
+    SEVERITY_LEVELS = [
+        ('low', 'Baixa'),
+        ('medium', 'Média'),
+        ('high', 'Alta'),
+        ('critical', 'Crítica'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('detected', 'Detectado'),
+        ('investigating', 'Em Investigação'),
+        ('contained', 'Contido'),
+        ('eradicated', 'Erradicado'),
+        ('recovering', 'Em Recuperação'),
+        ('resolved', 'Resolvido'),
+        ('closed', 'Fechado'),
+    ]
+    
+    RISK_LEVELS = [
+        ('minimal', 'Mínimo'),
+        ('low', 'Baixo'),
+        ('moderate', 'Moderado'),
+        ('high', 'Alto'),
+        ('severe', 'Severo'),
+    ]
+    
+    # Incident identification
+    incident_id = models.CharField(max_length=20, unique=True, editable=False)
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    
+    # Basic incident information
+    title = models.CharField(max_length=200)
+    incident_type = models.CharField(max_length=30, choices=INCIDENT_TYPES)
+    severity = models.CharField(max_length=10, choices=SEVERITY_LEVELS)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='detected')
+    
+    # Detection details
+    detected_at = models.DateTimeField()
+    detected_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='detected_incidents'
+    )
+    detection_method = models.CharField(
+        max_length=50,
+        choices=[
+            ('automated_monitoring', 'Monitoramento Automatizado'),
+            ('user_report', 'Relatório de Usuário'),
+            ('security_audit', 'Auditoria de Segurança'),
+            ('external_notification', 'Notificação Externa'),
+            ('routine_inspection', 'Inspeção de Rotina'),
+            ('third_party_alert', 'Alerta de Terceiros'),
+        ]
+    )
+    
+    # Incident description
+    description = models.TextField()
+    initial_assessment = models.TextField(blank=True)
+    
+    # Affected systems and data
+    affected_systems = models.TextField(
+        help_text="JSON list of affected systems",
+        default=list
+    )
+    affected_data_categories = models.TextField(
+        help_text="JSON list of affected data categories",
+        default=list
+    )
+    estimated_records_affected = models.IntegerField(default=0)
+    
+    # Risk assessment
+    risk_level = models.CharField(max_length=10, choices=RISK_LEVELS, default='low')
+    risk_assessment_notes = models.TextField(blank=True)
+    potential_impact = models.TextField(blank=True)
+    
+    # Response team
+    incident_commander = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='commanded_incidents'
+    )
+    response_team = models.ManyToManyField(
+        'accounts.EqmdCustomUser',
+        related_name='incident_responses',
+        blank=True
+    )
+    
+    # Timeline tracking
+    containment_at = models.DateTimeField(null=True, blank=True)
+    eradication_at = models.DateTimeField(null=True, blank=True)
+    recovery_at = models.DateTimeField(null=True, blank=True)
+    resolution_at = models.DateTimeField(null=True, blank=True)
+    
+    # Notification requirements
+    anpd_notification_required = models.BooleanField(default=False)
+    data_subject_notification_required = models.BooleanField(default=False)
+    
+    # Compliance tracking
+    anpd_notification_deadline = models.DateTimeField(null=True, blank=True)
+    subject_notification_deadline = models.DateTimeField(null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Incidente de Segurança"
+        verbose_name_plural = "Incidentes de Segurança"
+        ordering = ['-detected_at']
+        indexes = [
+            models.Index(fields=['status', 'severity']),
+            models.Index(fields=['detected_at', 'incident_type']),
+            models.Index(fields=['anpd_notification_required', 'anpd_notification_deadline']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.incident_id:
+            self.incident_id = self.generate_incident_id()
+        
+        # Auto-calculate notification deadlines
+        if self.anpd_notification_required and not self.anpd_notification_deadline:
+            # LGPD requires "reasonable time" - we use 72 hours as best practice
+            self.anpd_notification_deadline = self.detected_at + timedelta(hours=72)
+        
+        if self.data_subject_notification_required and not self.subject_notification_deadline:
+            # Give more time for subject notification after investigation
+            self.subject_notification_deadline = self.detected_at + timedelta(hours=120)  # 5 days
+        
+        super().save(*args, **kwargs)
+    
+    def generate_incident_id(self):
+        """Generate unique incident ID: INC-YYYYMMDD-XXXX"""
+        date_str = timezone.now().strftime('%Y%m%d')
+        sequence = SecurityIncident.objects.filter(
+            incident_id__startswith=f'INC-{date_str}'
+        ).count() + 1
+        return f'INC-{date_str}-{sequence:04d}'
+    
+    def is_anpd_notification_overdue(self):
+        """Check if ANPD notification is overdue"""
+        if not self.anpd_notification_required or not self.anpd_notification_deadline:
+            return False
+        return timezone.now() > self.anpd_notification_deadline
+    
+    def is_subject_notification_overdue(self):
+        """Check if subject notification is overdue"""
+        if not self.data_subject_notification_required or not self.subject_notification_deadline:
+            return False
+        return timezone.now() > self.subject_notification_deadline
+    
+    def calculate_response_time(self):
+        """Calculate incident response time metrics"""
+        if not self.resolution_at:
+            return None
+        
+        return {
+            'detection_to_containment': (self.containment_at - self.detected_at).total_seconds() / 3600 if self.containment_at else None,
+            'detection_to_resolution': (self.resolution_at - self.detected_at).total_seconds() / 3600,
+            'containment_to_resolution': (self.resolution_at - self.containment_at).total_seconds() / 3600 if self.containment_at else None,
+        }
+    
+    def __str__(self):
+        return f"{self.incident_id} - {self.title}"
+
+
+class IncidentAction(models.Model):
+    """Track actions taken during incident response"""
+    
+    ACTION_TYPES = [
+        ('investigation', 'Investigação'),
+        ('containment', 'Contenção'),
+        ('eradication', 'Erradicação'),
+        ('recovery', 'Recuperação'),
+        ('communication', 'Comunicação'),
+        ('documentation', 'Documentação'),
+        ('evidence_collection', 'Coleta de Evidências'),
+        ('system_change', 'Alteração de Sistema'),
+        ('notification', 'Notificação'),
+        ('training', 'Treinamento'),
+    ]
+    
+    incident = models.ForeignKey(SecurityIncident, on_delete=models.CASCADE, related_name='actions')
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    
+    # Execution details
+    performed_by = models.ForeignKey('accounts.EqmdCustomUser', on_delete=models.SET_NULL, null=True)
+    performed_at = models.DateTimeField()
+    duration_minutes = models.IntegerField(null=True, blank=True)
+    
+    # Status and results
+    completed = models.BooleanField(default=False)
+    results = models.TextField(blank=True)
+    evidence_collected = models.TextField(blank=True)
+    
+    # Follow-up
+    requires_follow_up = models.BooleanField(default=False)
+    follow_up_deadline = models.DateTimeField(null=True, blank=True)
+    follow_up_notes = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = "Ação de Resposta"
+        verbose_name_plural = "Ações de Resposta"
+        ordering = ['performed_at']
+    
+    def __str__(self):
+        return f"{self.incident.incident_id} - {self.title}"
+
+
+class BreachNotification(models.Model):
+    """Track breach notifications to authorities and data subjects"""
+    
+    NOTIFICATION_TYPES = [
+        ('anpd', 'ANPD (Autoridade Nacional)'),
+        ('data_subject', 'Titular dos Dados'),
+        ('regulatory_authority', 'Autoridade Regulatória'),
+        ('law_enforcement', 'Autoridades Policiais'),
+        ('business_partner', 'Parceiro de Negócios'),
+        ('media', 'Mídia'),
+        ('public_notice', 'Aviso Público'),
+    ]
+    
+    NOTIFICATION_STATUS = [
+        ('pending', 'Pendente'),
+        ('drafted', 'Rascunho Preparado'),
+        ('reviewed', 'Revisado'),
+        ('sent', 'Enviado'),
+        ('acknowledged', 'Confirmado'),
+        ('failed', 'Falhou'),
+    ]
+    
+    DELIVERY_METHODS = [
+        ('email', 'Email'),
+        ('postal_mail', 'Correio'),
+        ('web_portal', 'Portal Web'),
+        ('phone_call', 'Ligação Telefônica'),
+        ('in_person', 'Presencial'),
+        ('public_notice', 'Aviso Público'),
+        ('media_release', 'Comunicado à Imprensa'),
+    ]
+    
+    # Notification identification
+    notification_id = models.CharField(max_length=20, unique=True, editable=False)
+    incident = models.ForeignKey(SecurityIncident, on_delete=models.CASCADE, related_name='notifications')
+    
+    # Notification details
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    recipient_name = models.CharField(max_length=200)
+    recipient_contact = models.CharField(max_length=200)  # Email, phone, address
+    delivery_method = models.CharField(max_length=15, choices=DELIVERY_METHODS)
+    
+    # Content
+    subject = models.CharField(max_length=300)
+    content = models.TextField()
+    attachments = models.TextField(blank=True, help_text="JSON list of attachment files")
+    
+    # Timing
+    scheduled_at = models.DateTimeField()
+    sent_at = models.DateTimeField(null=True, blank=True)
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    
+    # Status tracking
+    status = models.CharField(max_length=15, choices=NOTIFICATION_STATUS, default='pending')
+    delivery_confirmation = models.TextField(blank=True)
+    failure_reason = models.TextField(blank=True)
+    
+    # Legal compliance
+    legal_basis = models.CharField(max_length=100)
+    compliance_notes = models.TextField(blank=True)
+    
+    # Metadata
+    created_by = models.ForeignKey('accounts.EqmdCustomUser', on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Notificação de Violação"
+        verbose_name_plural = "Notificações de Violação"
+        ordering = ['scheduled_at']
+    
+    def save(self, *args, **kwargs):
+        if not self.notification_id:
+            self.notification_id = self.generate_notification_id()
+        super().save(*args, **kwargs)
+    
+    def generate_notification_id(self):
+        """Generate notification ID: NOT-INC-YYYYMMDD-XX"""
+        date_str = timezone.now().strftime('%Y%m%d')
+        incident_sequence = self.incident.notifications.count() + 1
+        return f'NOT-{self.incident.incident_id}-{incident_sequence:02d}'
+    
+    def is_overdue(self):
+        """Check if notification is overdue"""
+        if self.status in ['sent', 'acknowledged']:
+            return False
+        return timezone.now() > self.scheduled_at
+    
+    def __str__(self):
+        return f"{self.notification_id} - {self.get_notification_type_display()}"
+
+
+class IncidentEvidence(models.Model):
+    """Store evidence and artifacts related to security incidents"""
+    
+    EVIDENCE_TYPES = [
+        ('log_file', 'Arquivo de Log'),
+        ('screenshot', 'Captura de Tela'),
+        ('network_capture', 'Captura de Rede'),
+        ('file_sample', 'Amostra de Arquivo'),
+        ('email_header', 'Cabeçalho de Email'),
+        ('system_dump', 'Dump de Sistema'),
+        ('database_record', 'Registro de Banco'),
+        ('witness_statement', 'Declaração de Testemunha'),
+        ('external_report', 'Relatório Externo'),
+        ('forensic_image', 'Imagem Forense'),
+    ]
+    
+    incident = models.ForeignKey(SecurityIncident, on_delete=models.CASCADE, related_name='evidence')
+    evidence_type = models.CharField(max_length=20, choices=EVIDENCE_TYPES)
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    
+    # File storage
+    evidence_file = models.FileField(upload_to='incident_evidence/', null=True, blank=True)
+    file_hash = models.CharField(max_length=64, blank=True)  # SHA-256
+    file_size = models.BigIntegerField(null=True, blank=True)
+    
+    # Chain of custody
+    collected_by = models.ForeignKey('accounts.EqmdCustomUser', on_delete=models.SET_NULL, null=True)
+    collected_at = models.DateTimeField()
+    collection_method = models.CharField(max_length=100)
+    
+    # Integrity
+    integrity_verified = models.BooleanField(default=False)
+    verification_method = models.CharField(max_length=100, blank=True)
+    
+    # Legal considerations
+    attorney_client_privileged = models.BooleanField(default=False)
+    retention_required = models.BooleanField(default=True)
+    retention_deadline = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = "Evidência de Incidente"
+        verbose_name_plural = "Evidências de Incidente"
+        ordering = ['collected_at']
+    
+    def __str__(self):
+        return f"{self.incident.incident_id} - {self.name}"
