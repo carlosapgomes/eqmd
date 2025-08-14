@@ -31,7 +31,7 @@ Implement ongoing compliance monitoring, audit procedures, staff training system
 
 #### 1.1 Monitoring and Audit Models
 
-**File**: `apps/core/models.py` (additions)
+**File**: `apps/compliance/models.py` (additions)
 
 ```python
 from django.db import models
@@ -521,7 +521,7 @@ class ComplianceIssue(models.Model):
 
 #### 2.1 Monitoring Service
 
-**File**: `apps/core/services/compliance_monitoring.py`
+**File**: `apps/compliance/services/compliance_monitoring.py`
 
 ```python
 from django.utils import timezone
@@ -1019,7 +1019,7 @@ class ComplianceMonitoringService:
 
 #### 3.1 Compliance Monitoring Command
 
-**File**: `apps/core/management/commands/run_compliance_monitoring.py`
+**File**: `apps/compliance/management/commands/run_compliance_monitoring.py`
 
 ```python
 from django.core.management.base import BaseCommand
@@ -1092,7 +1092,7 @@ class Command(BaseCommand):
 
 #### 3.2 Audit Management Command
 
-**File**: `apps/core/management/commands/manage_audit.py`
+**File**: `apps/compliance/management/commands/manage_audit.py`
 
 ```python
 from django.core.management.base import BaseCommand
@@ -1346,7 +1346,7 @@ class Command(BaseCommand):
 
 #### 4.1 Monitoring Admin
 
-**File**: `apps/core/admin.py` (additions)
+**File**: `apps/compliance/admin.py` (additions)
 
 ```python
 from django.contrib import admin
@@ -1531,7 +1531,7 @@ class ComplianceIssueAdmin(admin.ModelAdmin):
 
 #### 5.1 Compliance Dashboard
 
-**File**: `apps/core/views.py` (additions)
+**File**: `apps/compliance/views.py` (additions)
 
 ```python
 from django.shortcuts import render
@@ -1569,7 +1569,7 @@ def compliance_metrics_api(request):
 
 ```bash
 # Create and run migrations
-python manage.py makemigrations core --name "add_monitoring_maintenance_models"
+python manage.py makemigrations compliance --name "add_monitoring_maintenance_models"
 python manage.py migrate
 
 # Set up scheduled monitoring (add to crontab)
@@ -1615,9 +1615,10 @@ python manage.py manage_audit --list
 - **Automated alerting** for overdue items and critical issues
 
 ### Database Changes
-- New tables: `core_complianceaudit`, `core_compliancechecklist`, `core_compliancemetric`, `core_stafftrainingrecord`, `core_complianceissue`
+- New tables: `compliance_complianceaudit`, `compliance_compliancechecklist`, `compliance_compliancemetric`, `compliance_stafftrainingrecord`, `compliance_complianceissue`
 - Indexes for performance on date and status queries
 - Relationships between audits, issues, and other compliance entities
+- All LGPD compliance functionality centralized in dedicated app
 
 ### Monitoring Capabilities
 - **Real-time compliance scoring** based on multiple metrics

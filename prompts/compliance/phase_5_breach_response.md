@@ -31,7 +31,7 @@ Implement comprehensive security incident detection, breach response procedures,
 
 #### 1.1 Core Incident Models
 
-**File**: `apps/core/models.py` (additions)
+**File**: `apps/compliance/models.py` (additions)
 
 ```python
 from django.db import models
@@ -413,7 +413,7 @@ class IncidentEvidence(models.Model):
 
 #### 2.1 Breach Detection Service
 
-**File**: `apps/core/services/breach_detection.py`
+**File**: `apps/compliance/services/breach_detection.py`
 
 ```python
 from django.utils import timezone
@@ -434,12 +434,14 @@ class BreachDetectionService:
     """Service for detecting and assessing security incidents"""
     
     def __init__(self):
+        # Load configurable thresholds from LGPDComplianceSettings (Architectural Suggestion #4)
+        self.settings = self._get_compliance_settings()
         self.detection_rules = {
-            'failed_login_threshold': 10,  # Failed logins in 15 minutes
-            'bulk_access_threshold': 50,   # Patient records accessed in 1 hour
-            'off_hours_access_threshold': 5,  # Accesses between 22:00-06:00
-            'geographic_anomaly_threshold': 100,  # km from usual location
-            'data_export_threshold': 100,  # Records exported in 1 hour
+            'failed_login_threshold': self.settings.breach_detection_failed_login_threshold,
+            'bulk_access_threshold': self.settings.breach_detection_bulk_access_threshold,
+            'off_hours_access_threshold': self.settings.breach_detection_off_hours_threshold,
+            'geographic_anomaly_threshold': self.settings.breach_detection_geographic_anomaly_km,
+            'data_export_threshold': self.settings.breach_detection_data_export_threshold,
         }
         
         self.risk_matrix = {
@@ -448,6 +450,16 @@ class BreachDetectionService:
             ('data_loss', 'low'): 'medium',
             # Add more combinations as needed
         }
+    
+    def _get_compliance_settings(self):
+        """Get LGPD compliance settings with configurable thresholds"""
+        from apps.compliance.models import LGPDComplianceSettings
+        
+        try:
+            return LGPDComplianceSettings.objects.first()
+        except LGPDComplianceSettings.DoesNotExist:
+            # Return default instance if no settings exist
+            return LGPDComplianceSettings()
     
     def run_detection_scan(self):
         """Run all detection rules and create incidents for matches"""
@@ -780,7 +792,7 @@ EquipeMed
 
 #### 3.1 Notification Service
 
-**File**: `apps/core/services/breach_notification.py`
+**File**: `apps/compliance/services/breach_notification.py`
 
 ```python
 from django.utils import timezone
@@ -1163,13 +1175,13 @@ Para mais informações, acessar o sistema de gestão de incidentes.
 
 #### 4.1 Breach Detection Command
 
-**File**: `apps/core/management/commands/run_breach_detection.py`
+**File**: `apps/compliance/management/commands/run_breach_detection.py`
 
 ```python
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from apps.core.services.breach_detection import BreachDetectionService
-from apps.core.services.breach_notification import BreachNotificationService
+from apps.compliance.services.breach_detection import BreachDetectionService
+from apps.compliance.services.breach_notification import BreachNotificationService
 
 class Command(BaseCommand):
     help = 'Run breach detection and notification processing'
@@ -1246,12 +1258,12 @@ class Command(BaseCommand):
 
 #### 4.2 Incident Response Command
 
-**File**: `apps/core/management/commands/manage_incident.py`
+**File**: `apps/compliance/management/commands/manage_incident.py`
 
 ```python
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from apps.core.models import SecurityIncident, IncidentAction
+from apps.compliance.models import SecurityIncident, IncidentAction
 from apps.core.services.breach_notification import BreachNotificationService
 
 class Command(BaseCommand):
@@ -1356,7 +1368,7 @@ class Command(BaseCommand):
         
         # Handle escalation
         if options['escalate']:
-            from apps.core.services.breach_detection import BreachDetectionService
+            from apps.compliance.services.breach_detection import BreachDetectionService
             detection_service = BreachDetectionService()
             detection_service.escalate_incident(incident, "Manual escalation via command")
             self.stdout.write(f"✓ Incident escalated to {incident.get_severity_display()}")
@@ -1406,7 +1418,7 @@ class Command(BaseCommand):
 
 #### 5.1 Incident Admin
 
-**File**: `apps/core/admin.py` (additions)
+**File**: `apps/compliance/admin.py` (additions)
 
 ```python
 from django.contrib import admin
@@ -1511,7 +1523,7 @@ class SecurityIncidentAdmin(admin.ModelAdmin):
     create_notifications.short_description = 'Create required notifications'
     
     def escalate_severity(self, request, queryset):
-        from apps.core.services.breach_detection import BreachDetectionService
+        from apps.compliance.services.breach_detection import BreachDetectionService
         
         detection_service = BreachDetectionService()
         escalated = 0
@@ -1574,7 +1586,7 @@ class IncidentEvidenceAdmin(admin.ModelAdmin):
 
 ```bash
 # Create and run migrations
-python manage.py makemigrations core --name "add_breach_response_models"
+python manage.py makemigrations compliance --name "add_breach_response_models"
 python manage.py migrate
 
 # Set up scheduled detection (add to crontab)
@@ -1593,7 +1605,7 @@ python manage.py manage_incident --list
 
 # Create test incident for validation
 python manage.py shell -c "
-from apps.core.services.breach_detection import BreachDetectionService
+from apps.compliance.services.breach_detection import BreachDetectionService
 service = BreachDetectionService()
 incident = service.create_incident(
     'data_breach', 
@@ -1609,8 +1621,8 @@ print(f'Test incident created: {incident.incident_id}')
 ## Deliverable Summary
 
 ### Files Created
-1. **Models**: `SecurityIncident`, `IncidentAction`, `BreachNotification`, `IncidentEvidence`
-2. **Services**: `BreachDetectionService`, `BreachNotificationService`
+1. **Models**: `SecurityIncident`, `IncidentAction`, `BreachNotification`, `IncidentEvidence` in `apps/compliance/models.py`
+2. **Services**: `BreachDetectionService` (with configurable thresholds per Architectural Suggestion #4), `BreachNotificationService`
 3. **Commands**: Breach detection, incident management, notification processing
 4. **Admin**: Complete incident management interface
 5. **Templates**: ANPD and data subject notification templates
@@ -1626,9 +1638,10 @@ print(f'Test incident created: {incident.incident_id}')
 - **Compliance deadline monitoring** with alerts
 
 ### Database Changes
-- New tables: `core_securityincident`, `core_incidentaction`, `core_breachnotification`, `core_incidentevidence`
+- New tables: `compliance_securityincident`, `compliance_incidentaction`, `compliance_breachnotification`, `compliance_incidentevidence`
 - Indexes for performance on date and status queries
 - File upload fields for evidence storage
+- Configurable breach detection thresholds integrated with LGPDComplianceSettings
 
 ## Next Phase
 

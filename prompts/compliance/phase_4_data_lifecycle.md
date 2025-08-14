@@ -32,7 +32,7 @@ Implement comprehensive data lifecycle management including retention policies, 
 
 #### 1.1 Retention Policy Models
 
-**File**: `apps/core/models.py` (additions)
+**File**: `apps/compliance/models.py` (additions)
 
 ```python
 from django.db import models
@@ -401,7 +401,7 @@ class Patient(models.Model):
     
     def calculate_retention_end_date(self):
         """Calculate when patient data should be deleted"""
-        from apps.core.models import DataRetentionPolicy
+        from apps.compliance.models import DataRetentionPolicy
         
         try:
             policy = DataRetentionPolicy.objects.get(
@@ -430,11 +430,260 @@ class Patient(models.Model):
         self.save()
 ```
 
-### Step 2: Retention Management Services
+### Step 2: Formal Anonymization Strategy (Architectural Suggestion #2)
 
-#### 2.1 Data Retention Service
+#### 2.1 Anonymization Policy Model
 
-**File**: `apps/core/services/retention_management.py`
+**File**: `apps/compliance/models.py` (additional model)
+
+```python
+class AnonymizationPolicy(models.Model):
+    """Formal anonymization policy for data lifecycle management - Architectural Suggestion #2"""
+    
+    ANONYMIZATION_TECHNIQUES = [
+        ('k_anonymity', 'K-Anonimato'),
+        ('l_diversity', 'L-Diversidade'),
+        ('t_closeness', 'T-Proximidade'),
+        ('differential_privacy', 'Privacidade Diferencial'),
+        ('data_masking', 'Mascaramento de Dados'),
+        ('generalization', 'Generalização'),
+        ('suppression', 'Supressão'),
+        ('noise_addition', 'Adição de Ruído'),
+        ('pseudonymization', 'Pseudonimização'),
+    ]
+    
+    RISK_LEVELS = [
+        ('very_low', 'Muito Baixo (< 1%)'),
+        ('low', 'Baixo (1-5%)'),
+        ('medium', 'Médio (5-15%)'),
+        ('high', 'Alto (15-30%)'),
+        ('very_high', 'Muito Alto (> 30%)'),
+    ]
+    
+    # Policy identification
+    policy_name = models.CharField(max_length=200)
+    data_category = models.CharField(max_length=50)
+    purpose = models.CharField(max_length=200, help_text="Finalidade da anonimização")
+    
+    # Technical specifications
+    anonymization_technique = models.CharField(max_length=30, choices=ANONYMIZATION_TECHNIQUES)
+    k_value = models.IntegerField(null=True, blank=True, help_text="Valor K para k-anonimato")
+    l_value = models.IntegerField(null=True, blank=True, help_text="Valor L para l-diversidade")
+    
+    # Risk assessment
+    acceptable_risk_level = models.CharField(max_length=10, choices=RISK_LEVELS, default='low')
+    risk_assessment_method = models.TextField(help_text="Método de avaliação de risco de reidentificação")
+    
+    # Implementation details
+    fields_to_anonymize = models.TextField(help_text="JSON list of fields to anonymize")
+    anonymization_rules = models.TextField(help_text="JSON with specific anonymization rules")
+    
+    # Validation requirements
+    validation_required = models.BooleanField(default=True)
+    validation_method = models.TextField(help_text="Método de validação da eficácia da anonimização")
+    specialist_review_required = models.BooleanField(default=True)
+    
+    # Legal compliance
+    legal_basis_for_retention = models.TextField(help_text="Base legal para manter dados anonimizados")
+    anonymized_data_purpose = models.TextField(help_text="Finalidade dos dados anonimizados")
+    anonymized_retention_period = models.IntegerField(help_text="Período de retenção em dias")
+    
+    # Quality control
+    re_identification_test_results = models.TextField(blank=True)
+    effectiveness_score = models.FloatField(null=True, blank=True, help_text="Score de eficácia 0-100")
+    
+    # Approval and review
+    approved_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_anonymization_policies'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    specialist_reviewed_by = models.CharField(max_length=200, blank=True)
+    specialist_reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Review cycle
+    next_review_date = models.DateField()
+    review_frequency_months = models.IntegerField(default=12)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=False)  # Requires approval to activate
+    
+    class Meta:
+        verbose_name = "Política de Anonimização"
+        verbose_name_plural = "Políticas de Anonimização"
+        ordering = ['data_category', 'policy_name']
+    
+    def calculate_next_review_date(self):
+        """Calculate next review date"""
+        if self.approved_at:
+            return self.approved_at.date() + timedelta(days=self.review_frequency_months * 30)
+        return timezone.now().date() + timedelta(days=self.review_frequency_months * 30)
+    
+    def save(self, *args, **kwargs):
+        if not self.next_review_date:
+            self.next_review_date = self.calculate_next_review_date()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.policy_name} - {self.data_category}"
+```
+
+#### 2.2 Anonymization Policy Template Document
+
+**File**: `prompts/compliance/templates/anonymization_policy_template.md`
+
+```markdown
+# POLÍTICA DE ANONIMIZAÇÃO DE DADOS
+
+**Versão:** 1.0  
+**Data:** [DATA]  
+**Categoria de Dados:** [CATEGORIA]  
+**Responsável:** [NOME_RESPONSAVEL]  
+
+## 1. OBJETIVO
+
+Esta política define os procedimentos e critérios técnicos para anonimização de dados pessoais conforme LGPD, garantindo que os dados resultantes não permitam a reidentificação dos titulares.
+
+## 2. ESCOPO
+
+**Dados Abrangidos:** [TIPOS_DE_DADOS]  
+**Finalidade da Anonimização:** [FINALIDADE]  
+**Base Legal:** [BASE_LEGAL]  
+
+## 3. CRITÉRIOS TÉCNICOS
+
+### 3.1 Técnica de Anonimização Selecionada
+- **Técnica Principal:** [TECNICA_PRINCIPAL]
+- **Técnicas Complementares:** [TECNICAS_COMPLEMENTARES]
+- **Justificativa da Escolha:** [JUSTIFICATIVA]
+
+### 3.2 Parâmetros Técnicos
+- **Valor K (k-anonimato):** [VALOR_K]
+- **Valor L (l-diversidade):** [VALOR_L]
+- **Nível de Ruído:** [NIVEL_RUIDO]
+- **Threshold de Supressão:** [THRESHOLD]
+
+### 3.3 Campos Afetados
+| Campo Original | Técnica Aplicada | Campo Resultante | Observações |
+|---------------|------------------|------------------|-------------|
+| [CAMPO1] | [TECNICA1] | [RESULTADO1] | [OBS1] |
+| [CAMPO2] | [TECNICA2] | [RESULTADO2] | [OBS2] |
+
+## 4. AVALIAÇÃO DE RISCO DE REIDENTIFICAÇÃO
+
+### 4.1 Metodologia de Avaliação
+[METODOLOGIA_DETALHADA]
+
+### 4.2 Critérios de Aceitação
+- **Risco Máximo Aceitável:** [PERCENTUAL]%
+- **Método de Medição:** [METODO_MEDICAO]
+- **Testes de Validação:** [TESTES_VALIDACAO]
+
+### 4.3 Resultado da Avaliação
+- **Risco Calculado:** [RISCO_CALCULADO]%
+- **Status:** [APROVADO/REJEITADO]
+- **Data da Avaliação:** [DATA_AVALIACAO]
+
+## 5. PROCEDIMENTOS DE IMPLEMENTAÇÃO
+
+### 5.1 Pré-processamento
+1. [PASSO_1]
+2. [PASSO_2]
+3. [PASSO_3]
+
+### 5.2 Processo de Anonimização
+1. [PROCESSO_1]
+2. [PROCESSO_2]
+3. [PROCESSO_3]
+
+### 5.3 Validação Pós-processamento
+1. [VALIDACAO_1]
+2. [VALIDACAO_2]
+3. [VALIDACAO_3]
+
+## 6. CONTROLE DE QUALIDADE
+
+### 6.1 Testes de Eficácia
+- **Teste de Reidentificação:** [METODO_TESTE]
+- **Análise de Atributos:** [ANALISE_ATRIBUTOS]
+- **Verificação de Utilidade:** [VERIFICACAO_UTILIDADE]
+
+### 6.2 Métricas de Sucesso
+- **Preservação de Utilidade:** Mínimo [PERCENTUAL]%
+- **Redução de Risco:** Máximo [PERCENTUAL]%
+- **Qualidade dos Dados:** Mínimo [SCORE]
+
+## 7. RETENÇÃO E GESTÃO
+
+### 7.1 Dados Anonimizados
+- **Período de Retenção:** [PERIODO] anos
+- **Base Legal para Retenção:** [BASE_LEGAL_RETENCAO]
+- **Finalidade Específica:** [FINALIDADE_ESPECIFICA]
+
+### 7.2 Gestão de Ciclo de Vida
+- **Revisão da Política:** A cada [FREQUENCIA] meses
+- **Atualização Técnica:** Conforme evolução tecnológica
+- **Reavaliação de Risco:** [FREQUENCIA_REAVALIACAO]
+
+## 8. RESPONSABILIDADES
+
+### 8.1 Data Protection Officer (DPO)
+- Aprovação da política
+- Supervisão da implementação
+- Comunicação com autoridades
+
+### 8.2 Equipe Técnica
+- Implementação dos procedimentos
+- Execução dos testes
+- Manutenção dos sistemas
+
+### 8.3 Especialista em Privacidade
+- Revisão técnica especializada
+- Validação dos métodos
+- Auditoria de eficácia
+
+## 9. DOCUMENTAÇÃO E AUDITORIA
+
+### 9.1 Registros Obrigatórios
+- Log de execução de anonimização
+- Resultados dos testes de validação
+- Relatórios de revisão periódica
+
+### 9.2 Evidências de Conformidade
+- Certificados de especialistas
+- Relatórios de teste independentes
+- Documentação de aprovação
+
+## 10. REVISÃO E ATUALIZAÇÃO
+
+### 10.1 Cronograma de Revisão
+- **Próxima Revisão:** [DATA_PROXIMA_REVISAO]
+- **Responsável:** [RESPONSAVEL_REVISAO]
+- **Critérios para Revisão Antecipada:** [CRITERIOS]
+
+### 10.2 Aprovações
+
+| Função | Nome | Assinatura | Data |
+|--------|------|------------|------|
+| DPO | [NOME_DPO] | [ASSINATURA] | [DATA] |
+| Especialista | [NOME_ESPECIALISTA] | [ASSINATURA] | [DATA] |
+| Responsável Técnico | [NOME_TECNICO] | [ASSINATURA] | [DATA] |
+
+---
+
+**IMPORTANTE:** Esta política deve ser revisada por especialista em privacidade e proteção de dados antes da implementação, conforme recomendação da ANPD.
+```
+
+### Step 3: Retention Management Services
+
+#### 3.1 Data Retention Service
+
+**File**: `apps/compliance/services/retention_management.py`
 
 ```python
 from django.utils import timezone
@@ -863,12 +1112,12 @@ class DataRetentionService:
 
 #### 3.1 Retention Processing Command
 
-**File**: `apps/core/management/commands/process_data_retention.py`
+**File**: `apps/compliance/management/commands/process_data_retention.py`
 
 ```python
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from apps.core.services.retention_management import DataRetentionService
+from apps.compliance.services.retention_management import DataRetentionService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -961,11 +1210,11 @@ class Command(BaseCommand):
 
 #### 3.2 Setup Retention Policies Command
 
-**File**: `apps/core/management/commands/setup_retention_policies.py`
+**File**: `apps/compliance/management/commands/setup_retention_policies.py`
 
 ```python
 from django.core.management.base import BaseCommand
-from apps.core.models import DataRetentionPolicy
+from apps.compliance.models import DataRetentionPolicy
 
 class Command(BaseCommand):
     help = 'Sets up default data retention policies'
@@ -1098,7 +1347,7 @@ class Command(BaseCommand):
 
 #### 4.1 Retention Admin
 
-**File**: `apps/core/admin.py` (additions)
+**File**: `apps/compliance/admin.py` (additions)
 
 ```python
 from django.contrib import admin
@@ -1358,7 +1607,7 @@ class DataAnonymizationLogAdmin(admin.ModelAdmin):
 
 #### 5.1 Retention Dashboard View
 
-**File**: `apps/core/views.py` (additions)
+**File**: `apps/compliance/views.py` (additions)
 
 ```python
 from django.shortcuts import render
@@ -1422,14 +1671,14 @@ def retention_statistics_api(request):
 
 #### 6.1 Retention Testing Command
 
-**File**: `apps/core/management/commands/test_retention_system.py`
+**File**: `apps/compliance/management/commands/test_retention_system.py`
 
 ```python
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
-from apps.core.models import DataRetentionPolicy, DataRetentionSchedule
-from apps.core.services.retention_management import DataRetentionService
+from apps.compliance.models import DataRetentionPolicy, DataRetentionSchedule
+from apps.compliance.services.retention_management import DataRetentionService
 from apps.patients.models import Patient
 
 class Command(BaseCommand):
@@ -1556,7 +1805,7 @@ class Command(BaseCommand):
 
 ```bash
 # Create and run migrations
-python manage.py makemigrations core --name "add_data_lifecycle_models"
+python manage.py makemigrations compliance --name "add_data_lifecycle_models"
 python manage.py migrate
 
 # Set up retention policies
@@ -1572,11 +1821,12 @@ python manage.py test_retention_system --create-test-data
 ## Deliverable Summary
 
 ### Files Created
-1. **Models**: `DataRetentionPolicy`, `DataRetentionSchedule`, `DataDeletionLog`, `DataAnonymizationLog`
-2. **Services**: `DataRetentionService` for automated retention management
+1. **Models**: `DataRetentionPolicy`, `DataRetentionSchedule`, `DataDeletionLog`, `DataAnonymizationLog`, `AnonymizationPolicy` (Architectural Suggestion #2)
+2. **Services**: `DataRetentionService` for automated retention management  
 3. **Commands**: Retention processing, policy setup, testing commands
 4. **Admin**: Complete admin interfaces with retention dashboard
 5. **Views**: Retention monitoring dashboard for staff
+6. **Templates**: Formal anonymization policy template for specialist review (Architectural Suggestion #2)
 
 ### Key Features Implemented
 - **Automated retention scheduling** based on configurable policies
@@ -1588,9 +1838,10 @@ python manage.py test_retention_system --create-test-data
 - **Grace periods** and recovery options
 
 ### Database Changes
-- New tables: `core_dataretentionpolicy`, `core_dataretentionschedule`, `core_datadeletionlog`, `core_dataanonymizationlog`
+- New tables: `compliance_dataretentionpolicy`, `compliance_dataretentionschedule`, `compliance_datadeletionlog`, `compliance_dataanonymizationlog`, `compliance_anonymizationpolicy`
 - Enhanced Patient model with retention tracking
 - Indexes for performance on date-based queries
+- Formal anonymization policy management with specialist review workflow
 
 ## Next Phase
 

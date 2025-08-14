@@ -56,6 +56,7 @@ urlpatterns = [
     ),
     path("pdf/", include("apps.pdfgenerator.urls", namespace="pdfgenerator")),
     path("pdf-forms/", include("apps.pdf_forms.urls", namespace="pdf_forms")),
+    path("", include("apps.compliance.urls", namespace="compliance")),
 ]
 
 # Serve media and static files during development

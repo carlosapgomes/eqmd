@@ -31,7 +31,7 @@ Create Django models to document and track legal basis for all data processing.
 
 #### 1.1 Data Processing Purpose Model
 
-**File**: `apps/core/models.py` (additions)
+**File**: `apps/compliance/models.py`
 
 ```python
 class DataProcessingPurpose(models.Model):
@@ -117,6 +117,8 @@ class DataProcessingPurpose(models.Model):
 
 #### 1.2 LGPD Compliance Settings Model
 
+**File**: `apps/compliance/models.py` (additions)
+
 ```python
 class LGPDComplianceSettings(models.Model):
     """Global LGPD compliance configuration"""
@@ -152,6 +154,28 @@ class LGPDComplianceSettings(models.Model):
     privacy_policy_version = models.CharField(max_length=10, default="1.0")
     privacy_policy_last_updated = models.DateField(auto_now=True)
     
+    # Breach detection thresholds (Architectural Suggestion #4)
+    breach_detection_failed_login_threshold = models.IntegerField(
+        default=10,
+        verbose_name="Limite de tentativas de login falhadas"
+    )
+    breach_detection_bulk_access_threshold = models.IntegerField(
+        default=50,
+        verbose_name="Limite de acesso em massa a registros"
+    )
+    breach_detection_off_hours_threshold = models.IntegerField(
+        default=5,
+        verbose_name="Limite de atividade fora do horário"
+    )
+    breach_detection_geographic_anomaly_km = models.IntegerField(
+        default=100,
+        verbose_name="Limite de distância para anomalia geográfica (km)"
+    )
+    breach_detection_data_export_threshold = models.IntegerField(
+        default=100,
+        verbose_name="Limite de exportação de dados"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -170,11 +194,11 @@ class LGPDComplianceSettings(models.Model):
 
 #### 2.1 Create Management Command for Legal Basis Setup
 
-**File**: `apps/core/management/commands/setup_legal_basis.py`
+**File**: `apps/compliance/management/commands/setup_legal_basis.py`
 
 ```python
 from django.core.management.base import BaseCommand
-from apps.core.models import DataProcessingPurpose
+from apps.compliance.models import DataProcessingPurpose
 import json
 
 class Command(BaseCommand):
@@ -338,8 +362,14 @@ class Command(BaseCommand):
 #### 3.1 Create Migration
 
 ```bash
+# Create compliance app
+python manage.py startapp compliance apps/compliance
+
+# Add to INSTALLED_APPS in settings.py:
+# 'apps.compliance',
+
 # Run these commands after implementing the models
-python manage.py makemigrations core --name "add_lgpd_compliance_models"
+python manage.py makemigrations compliance --name "add_lgpd_compliance_models"
 python manage.py migrate
 ```
 
@@ -361,7 +391,7 @@ python manage.py setup_lgpd_settings \
 
 #### 4.1 Admin Interface for Legal Basis
 
-**File**: `apps/core/admin.py` (additions)
+**File**: `apps/compliance/admin.py`
 
 ```python
 from django.contrib import admin
@@ -562,14 +592,17 @@ class Command(BaseCommand):
 ## Deliverable Summary
 
 ### Files Created
-1. **Models**: `DataProcessingPurpose`, `LGPDComplianceSettings` in `apps/core/models.py`
-2. **Commands**: `setup_legal_basis.py`, `setup_lgpd_settings.py`, `validate_legal_basis.py`
-3. **Admin**: LGPD admin interfaces in `apps/core/admin.py`
-4. **Documentation**: Legal basis mapping template
+1. **App Structure**: New `apps/compliance` app for all LGPD-related functionality (Architectural Suggestion #1)
+2. **Models**: `DataProcessingPurpose`, `LGPDComplianceSettings` (with configurable breach detection thresholds per Suggestion #4)
+3. **Commands**: `setup_legal_basis.py`, `setup_lgpd_settings.py`, `validate_legal_basis.py`
+4. **Admin**: LGPD admin interfaces in `apps/compliance/admin.py`
+5. **Documentation**: Legal basis mapping template
 
 ### Database Changes
-- New tables: `core_dataprocessingpurpose`, `core_lgpdcompliancesettings`
+- New app: `apps/compliance` with dedicated models
+- New tables: `compliance_dataprocessingpurpose`, `compliance_lgpdcompliancesettings`
 - Indexes on key fields for performance
+- Configurable breach detection thresholds in settings
 - Foreign key relationships to user model
 
 ### Configuration Required

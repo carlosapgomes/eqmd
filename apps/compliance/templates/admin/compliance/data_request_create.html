@@ -1,0 +1,287 @@
+{% extends "base.html" %} 
+{% load static %} 
+{% load widget_tweaks %} 
+
+{% block title %}Nova Solicitação LGPD - Admin{% endblock %} 
+
+{% block extra_css %}
+<style>
+  .admin-header {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    padding: 1.5rem 0;
+  }
+  .form-section {
+    background: #f8f9fa;
+    border-left: 4px solid #e74c3c;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .required-field::after {
+    content: " *";
+    color: #e74c3c;
+  }
+  .staff-notice {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+</style>
+{% endblock %} 
+
+{% block content %}
+<div class="admin-header">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-10">
+        <h1>
+          <i class="bi bi-shield-plus me-3"></i>Registrar Solicitação LGPD
+        </h1>
+        <p class="lead">
+          Sistema para registrar solicitações de pacientes feitas presencialmente
+        </p>
+      </div>
+      <div class="col-md-2 text-end">
+        <a href="{% url 'compliance:data_request_list' %}" class="btn btn-light">
+          <i class="bi bi-list me-2"></i>Ver Todas
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-9">
+      <div class="staff-notice">
+        <h6><i class="bi bi-exclamation-triangle me-2"></i>Instruções para Funcionários</h6>
+        <ul class="mb-0">
+          <li>Verificar documento de identidade do solicitante presencialmente</li>
+          <li>Confirmar autorização legal se não for o próprio paciente</li>
+          <li>Digitalizar documentos e anexar ao sistema</li>
+          <li>Explicar o prazo de 15 dias para resposta conforme LGPD</li>
+        </ul>
+      </div>
+
+      <div class="card shadow">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0"><i class="bi bi-file-earmark-plus me-2"></i>Dados da Solicitação</h5>
+        </div>
+        <div class="card-body">
+          {% if messages %} 
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+          {% endfor %} 
+          {% endif %}
+
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Patient Selection Section -->
+            <div class="form-section">
+              <h6 class="text-danger mb-3">Seleção do Paciente</h6>
+              <div class="mb-3">
+                <label class="form-label">{{ form.patient.label }}</label>
+                {{ form.patient|add_class:"form-select" }}
+                {% if form.patient.help_text %}
+                <div class="form-text">{{ form.patient.help_text }}</div>
+                {% endif %}
+                {% for error in form.patient.errors %}
+                <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Request Type Section -->
+            <div class="form-section">
+              <h6 class="text-danger mb-3">Tipo de Solicitação LGPD</h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label required-field">{{ form.request_type.label }}</label>
+                  {{ form.request_type|add_class:"form-select" }}
+                  {% if form.request_type.help_text %}
+                  <div class="form-text">{{ form.request_type.help_text }}</div>
+                  {% endif %}
+                  {% for error in form.request_type.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">{{ form.priority.label }}</label>
+                  {{ form.priority|add_class:"form-select" }}
+                  {% if form.priority.help_text %}
+                  <div class="form-text">{{ form.priority.help_text }}</div>
+                  {% endif %}
+                  {% for error in form.priority.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label required-field">{{ form.description.label }}</label>
+                {{ form.description|add_class:"form-control" }}
+                {% if form.description.help_text %}
+                <div class="form-text">{{ form.description.help_text }}</div>
+                {% endif %}
+                {% for error in form.description.errors %}
+                <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Requester Information Section -->
+            <div class="form-section">
+              <h6 class="text-danger mb-3">Dados do Solicitante</h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label required-field">{{ form.requester_name.label }}</label>
+                  {{ form.requester_name|add_class:"form-control" }}
+                  {% for error in form.requester_name.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label required-field">{{ form.requester_relationship.label }}</label>
+                  {{ form.requester_relationship|add_class:"form-select" }}
+                  {% if form.requester_relationship.help_text %}
+                  <div class="form-text">{{ form.requester_relationship.help_text }}</div>
+                  {% endif %}
+                  {% for error in form.requester_relationship.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label required-field">{{ form.requester_email.label }}</label>
+                  {{ form.requester_email|add_class:"form-control" }}
+                  {% for error in form.requester_email.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">{{ form.requester_phone.label }}</label>
+                  {{ form.requester_phone|add_class:"form-control" }}
+                  {% for error in form.requester_phone.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Patient Information Section -->
+            <div class="form-section">
+              <h6 class="text-danger mb-3">Identificação do Paciente</h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label required-field">{{ form.patient_name_provided.label }}</label>
+                  {{ form.patient_name_provided|add_class:"form-control" }}
+                  {% for error in form.patient_name_provided.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">{{ form.patient_birth_date_provided.label }}</label>
+                  {{ form.patient_birth_date_provided|add_class:"form-control" }}
+                  {% for error in form.patient_birth_date_provided.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">{{ form.patient_cpf_provided.label }}</label>
+                  {{ form.patient_cpf_provided|add_class:"form-control" }}
+                  {% if form.patient_cpf_provided.help_text %}
+                  <div class="form-text">{{ form.patient_cpf_provided.help_text }}</div>
+                  {% endif %}
+                  {% for error in form.patient_cpf_provided.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">{{ form.data_export_format.label }}</label>
+                  {{ form.data_export_format|add_class:"form-select" }}
+                  {% for error in form.data_export_format.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">{{ form.additional_identifiers.label }}</label>
+                {{ form.additional_identifiers|add_class:"form-control" }}
+                {% if form.additional_identifiers.help_text %}
+                <div class="form-text">{{ form.additional_identifiers.help_text }}</div>
+                {% endif %}
+                {% for error in form.additional_identifiers.errors %}
+                <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Submit Section -->
+            <div class="form-section">
+              <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% url 'compliance:data_request_list' %}" class="btn btn-secondary me-md-2">
+                  <i class="bi bi-arrow-left me-2"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-danger btn-lg">
+                  <i class="bi bi-save me-2"></i>Registrar Solicitação
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header bg-info text-white">
+          <h6><i class="bi bi-info-circle me-2"></i>Direitos LGPD</h6>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled small">
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i>
+              <strong>Acesso:</strong> Ver dados do paciente
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i>
+              <strong>Correção:</strong> Alterar dados incorretos
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i>
+              <strong>Exclusão:</strong> Remover dados (com restrições médicas)
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success me-2"></i>
+              <strong>Portabilidade:</strong> Exportar dados
+            </li>
+          </ul>
+
+          <hr />
+
+          <p class="text-muted small">
+            <i class="bi bi-clock me-1"></i>
+            <strong>Prazo:</strong> 15 dias para resposta
+          </p>
+          <p class="text-muted small">
+            <i class="bi bi-person-check me-1"></i>
+            <strong>Verificação:</strong> Obrigatória presencialmente
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
