@@ -31,7 +31,7 @@ Implement privacy transparency requirements by creating comprehensive privacy po
 
 #### 1.1 Privacy Policy Models
 
-**File**: `apps/core/models.py` (additions)
+**File**: `apps/compliance/models.py` (additions)
 
 ```python
 from django.db import models
@@ -679,11 +679,11 @@ Esta política entra em vigor em {{ effective_date }} e permanece válida até n
 
 #### 2.2 Privacy Policy Management Command
 
-**File**: `apps/core/management/commands/create_privacy_policy.py`
+**File**: `apps/compliance/management/commands/create_privacy_policy.py`
 
 ```python
 from django.core.management.base import BaseCommand
-from apps.core.models import PrivacyPolicy, LGPDComplianceSettings
+from apps.compliance.models import PrivacyPolicy, LGPDComplianceSettings
 from datetime import date, datetime
 import os
 
@@ -774,11 +774,11 @@ class Command(BaseCommand):
 
 #### 3.1 Consent Collection Forms
 
-**File**: `apps/patients/forms.py` (additions)
+**File**: `apps/compliance/forms.py` (additions)
 
 ```python
 from django import forms
-from apps.core.models import ConsentRecord, MinorConsentRecord
+from apps.compliance.models import ConsentRecord, MinorConsentRecord
 from apps.patients.models import Patient
 from datetime import date, datetime
 
@@ -981,7 +981,7 @@ class MinorConsentForm(forms.ModelForm):
 
 #### 4.1 Privacy Policy Views
 
-**File**: `apps/core/views.py` (additions)
+**File**: `apps/compliance/views.py` (additions)
 
 ```python
 from django.shortcuts import render, get_object_or_404
@@ -1006,7 +1006,7 @@ def privacy_policy(request, policy_type='main'):
         'content_html': content_html,
     }
     
-    return render(request, 'core/privacy_policy.html', context)
+    return render(request, 'compliance/privacy_policy.html', context)
 
 def data_processing_notice(request, context):
     """Display data processing notice for specific context"""
@@ -1016,12 +1016,12 @@ def data_processing_notice(request, context):
         is_active=True
     )
     
-    return render(request, 'core/data_processing_notice.html', {'notice': notice})
+    return render(request, 'compliance/data_processing_notice.html', {'notice': notice})
 
 class PrivacyPolicyDetailView(DetailView):
     """Detailed privacy policy view with version history"""
     model = PrivacyPolicy
-    template_name = 'core/privacy_policy_detail.html'
+    template_name = 'compliance/privacy_policy_detail.html'
     context_object_name = 'policy'
     
     def get_object(self):
@@ -1051,7 +1051,7 @@ class PrivacyPolicyDetailView(DetailView):
 
 #### 4.2 Privacy Policy Template
 
-**File**: `apps/core/templates/core/privacy_policy.html`
+**File**: `apps/compliance/templates/compliance/privacy_policy.html`
 
 ```html
 {% extends "base.html" %}
@@ -1259,13 +1259,10 @@ document.querySelectorAll('.table-of-contents a[href^="#"]').forEach(anchor => {
 
 #### 5.1 Privacy URLs
 
-**File**: `apps/core/urls.py` (additions)
+**File**: `apps/compliance/urls.py` (additions)
 
 ```python
-from django.urls import path
-from . import views
-
-app_name = 'core'
+# Add these URLs to existing compliance urlpatterns
 
 urlpatterns += [
     # Privacy policy URLs
@@ -1282,7 +1279,7 @@ urlpatterns += [
 
 #### 6.1 Privacy Policy Admin
 
-**File**: `apps/core/admin.py` (additions)
+**File**: `apps/compliance/admin.py` (additions)
 
 ```python
 from django.contrib import admin
@@ -1420,7 +1417,7 @@ class MinorConsentRecordAdmin(admin.ModelAdmin):
 
 ```bash
 # Create and run migrations
-python manage.py makemigrations core --name "add_privacy_transparency_models"
+python manage.py makemigrations compliance --name "add_privacy_transparency_models"
 python manage.py migrate
 
 # Install required packages
@@ -1435,11 +1432,11 @@ python manage.py create_processing_notices
 
 ### Step 8: Hospital Consent Validation Service
 
-**File**: `apps/core/services/consent_validation.py`
+**File**: `apps/compliance/services/consent_validation.py`
 
 ```python
 from django.core.exceptions import ValidationError
-from apps.core.models import ConsentRecord, LGPDComplianceSettings
+from apps.compliance.models import ConsentRecord, LGPDComplianceSettings
 from datetime import datetime
 import logging
 
