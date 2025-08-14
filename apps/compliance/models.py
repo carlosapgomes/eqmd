@@ -1,9 +1,13 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
 from django.urls import reverse
-from datetime import timedelta
+from datetime import timedelta, date
 import uuid
+import hashlib
+import json
 
 User = get_user_model()
 
@@ -716,3 +720,417 @@ class MinorConsentRecord(models.Model):
     
     def __str__(self):
         return f"Menor: {self.patient.name} - Responsável: {self.guardian_name}"
+
+
+class DataRetentionPolicy(models.Model):
+    """Defines retention policies for different data categories - LGPD Article 15"""
+    
+    DATA_CATEGORIES = [
+        ('patient_identification', 'Identificação do Paciente'),
+        ('patient_medical_records', 'Registros Médicos'),
+        ('patient_contact_info', 'Informações de Contato'),
+        ('staff_professional_data', 'Dados Profissionais da Equipe'),
+        ('audit_logs', 'Logs de Auditoria'),
+        ('consent_records', 'Registros de Consentimento'),
+        ('media_files', 'Arquivos de Mídia'),
+        ('communication_logs', 'Logs de Comunicação'),
+        ('emergency_contacts', 'Contatos de Emergência'),
+    ]
+    
+    RETENTION_BASIS = [
+        ('legal_obligation', 'Obrigação Legal'),
+        ('medical_requirement', 'Exigência Médica'),
+        ('consent_duration', 'Duração do Consentimento'),
+        ('business_necessity', 'Necessidade Operacional'),
+        ('statute_limitation', 'Prazo Prescricional'),
+    ]
+    
+    # Policy identification
+    policy_id = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=200)
+    data_category = models.CharField(max_length=50, choices=DATA_CATEGORIES)
+    
+    # Retention rules
+    retention_period_days = models.IntegerField(help_text="Período de retenção em dias")
+    retention_basis = models.CharField(max_length=30, choices=RETENTION_BASIS)
+    legal_reference = models.CharField(max_length=200, help_text="Referência legal (ex: CFM 1.821/2007)")
+    
+    # Grace periods and warnings
+    warning_period_days = models.IntegerField(
+        default=180,
+        help_text="Dias antes da exclusão para enviar aviso"
+    )
+    grace_period_days = models.IntegerField(
+        default=30,
+        help_text="Período de graça após vencimento"
+    )
+    
+    # Deletion behavior
+    auto_delete_enabled = models.BooleanField(default=False)
+    anonymize_instead_delete = models.BooleanField(default=False)
+    require_manual_approval = models.BooleanField(default=True)
+    
+    # Exceptions and holds
+    legal_hold_exempt = models.BooleanField(default=False)
+    emergency_access_required = models.BooleanField(default=False)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey('accounts.EqmdCustomUser', on_delete=models.SET_NULL, null=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Política de Retenção"
+        verbose_name_plural = "Políticas de Retenção"
+        ordering = ['data_category', 'name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.retention_period_days} dias)"
+
+
+class DataRetentionSchedule(models.Model):
+    """Tracks retention schedules for specific data records"""
+    
+    # Record identification
+    content_type = models.ForeignKey('contenttypes.ContentType', on_delete=models.CASCADE)
+    object_id = models.UUIDField()  # UUID of the data record
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    # Retention details
+    retention_policy = models.ForeignKey(DataRetentionPolicy, on_delete=models.CASCADE)
+    data_creation_date = models.DateTimeField()
+    last_activity_date = models.DateTimeField(auto_now=True)
+    
+    # Calculated dates
+    retention_end_date = models.DateField()
+    warning_date = models.DateField()
+    deletion_date = models.DateField()
+    
+    # Status tracking
+    STATUS_CHOICES = [
+        ('active', 'Ativo'),
+        ('warning_sent', 'Aviso Enviado'),
+        ('grace_period', 'Período de Graça'),
+        ('scheduled_deletion', 'Agendado para Exclusão'),
+        ('legal_hold', 'Retenção Legal'),
+        ('deleted', 'Excluído'),
+        ('anonymized', 'Anonimizado'),
+    ]
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    
+    # Warning and deletion tracking
+    warning_sent_at = models.DateTimeField(null=True, blank=True)
+    deletion_approved_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_deletions'
+    )
+    deletion_approved_at = models.DateTimeField(null=True, blank=True)
+    
+    # Legal holds
+    legal_hold_reason = models.TextField(blank=True)
+    legal_hold_applied_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='applied_legal_holds'
+    )
+    legal_hold_applied_at = models.DateTimeField(null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Cronograma de Retenção"
+        verbose_name_plural = "Cronogramas de Retenção"
+        ordering = ['retention_end_date']
+        indexes = [
+            models.Index(fields=['retention_end_date', 'status']),
+            models.Index(fields=['warning_date', 'status']),
+            models.Index(fields=['content_type', 'object_id']),
+        ]
+        unique_together = ['content_type', 'object_id']
+    
+    def save(self, *args, **kwargs):
+        if not self.retention_end_date:
+            self.calculate_dates()
+        super().save(*args, **kwargs)
+    
+    def calculate_dates(self):
+        """Calculate retention and deletion dates"""
+        base_date = self.last_activity_date.date() if self.last_activity_date else self.data_creation_date.date()
+        
+        self.retention_end_date = base_date + timedelta(days=self.retention_policy.retention_period_days)
+        self.warning_date = self.retention_end_date - timedelta(days=self.retention_policy.warning_period_days)
+        self.deletion_date = self.retention_end_date + timedelta(days=self.retention_policy.grace_period_days)
+    
+    def is_eligible_for_warning(self):
+        """Check if warning should be sent"""
+        return (
+            date.today() >= self.warning_date and 
+            self.status == 'active' and 
+            not self.warning_sent_at
+        )
+    
+    def is_eligible_for_deletion(self):
+        """Check if data is eligible for deletion"""
+        return (
+            date.today() >= self.deletion_date and 
+            self.status in ['warning_sent', 'grace_period'] and
+            not self.legal_hold_applied_at
+        )
+    
+    def apply_legal_hold(self, user, reason):
+        """Apply legal hold to prevent deletion"""
+        self.status = 'legal_hold'
+        self.legal_hold_reason = reason
+        self.legal_hold_applied_by = user
+        self.legal_hold_applied_at = timezone.now()
+        self.save()
+    
+    def __str__(self):
+        return f"{self.content_object} - {self.retention_policy.name}"
+
+
+class DataDeletionLog(models.Model):
+    """Audit log for data deletions - compliance evidence"""
+    
+    # Deletion identification
+    deletion_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    
+    # Original record information
+    content_type = models.ForeignKey('contenttypes.ContentType', on_delete=models.CASCADE)
+    original_object_id = models.UUIDField()
+    original_object_representation = models.TextField()  # String representation before deletion
+    
+    # Deletion details
+    deletion_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('automatic', 'Automática'),
+            ('manual', 'Manual'),
+            ('patient_request', 'Solicitação do Paciente'),
+            ('legal_requirement', 'Exigência Legal'),
+            ('anonymization', 'Anonimização'),
+        ]
+    )
+    
+    deletion_reason = models.TextField()
+    retention_policy_applied = models.CharField(max_length=200)
+    
+    # Authorization
+    authorized_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='authorized_deletions'
+    )
+    authorization_date = models.DateTimeField()
+    
+    # Execution
+    executed_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='executed_deletions'
+    )
+    executed_at = models.DateTimeField()
+    
+    # Technical details
+    deletion_method = models.CharField(
+        max_length=30,
+        choices=[
+            ('soft_delete', 'Exclusão Suave'),
+            ('hard_delete', 'Exclusão Completa'),
+            ('anonymization', 'Anonimização'),
+            ('archival', 'Arquivamento'),
+        ]
+    )
+    
+    # Verification
+    verification_hash = models.CharField(max_length=64, blank=True)  # SHA-256 of deleted data
+    deletion_verified = models.BooleanField(default=False)
+    verification_date = models.DateTimeField(null=True, blank=True)
+    
+    # Related data impact
+    related_records_affected = models.IntegerField(default=0)
+    cascading_deletions = models.TextField(blank=True)  # JSON list of related deletions
+    
+    # Legal compliance
+    legal_basis_for_deletion = models.CharField(max_length=200)
+    compliance_notes = models.TextField(blank=True)
+    
+    # Recovery information (for soft deletes)
+    recovery_possible = models.BooleanField(default=False)
+    recovery_deadline = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = "Log de Exclusão de Dados"
+        verbose_name_plural = "Logs de Exclusão de Dados"
+        ordering = ['-executed_at']
+        indexes = [
+            models.Index(fields=['executed_at', 'deletion_type']),
+            models.Index(fields=['content_type', 'deletion_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.deletion_id} - {self.original_object_representation[:50]}"
+
+
+class DataAnonymizationLog(models.Model):
+    """Log for data anonymization processes"""
+    
+    anonymization_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    
+    # Source data
+    content_type = models.ForeignKey('contenttypes.ContentType', on_delete=models.CASCADE)
+    original_object_id = models.UUIDField()
+    anonymized_object_id = models.UUIDField(null=True, blank=True)  # If creating new anonymized record
+    
+    # Anonymization details
+    anonymization_method = models.CharField(
+        max_length=30,
+        choices=[
+            ('field_removal', 'Remoção de Campos'),
+            ('field_masking', 'Mascaramento'),
+            ('data_generalization', 'Generalização'),
+            ('pseudonymization', 'Pseudonimização'),
+            ('statistical_disclosure', 'Controle Estatístico'),
+        ]
+    )
+    
+    fields_anonymized = models.TextField()  # JSON list of fields
+    anonymization_rules = models.TextField()  # JSON with anonymization rules
+    
+    # Quality control
+    anonymization_quality_score = models.FloatField(null=True, blank=True)  # 0-1 score
+    re_identification_risk = models.CharField(
+        max_length=10,
+        choices=[('low', 'Baixo'), ('medium', 'Médio'), ('high', 'Alto')],
+        default='low'
+    )
+    
+    # Execution details
+    executed_by = models.ForeignKey('accounts.EqmdCustomUser', on_delete=models.SET_NULL, null=True)
+    executed_at = models.DateTimeField(auto_now_add=True)
+    
+    # Purpose and retention
+    anonymization_purpose = models.CharField(
+        max_length=30,
+        choices=[
+            ('research', 'Pesquisa'),
+            ('statistics', 'Estatísticas'),
+            ('quality_improvement', 'Melhoria da Qualidade'),
+            ('retention_compliance', 'Conformidade de Retenção'),
+        ]
+    )
+    
+    anonymized_data_retention = models.IntegerField(help_text="Dias para manter dados anonimizados")
+    
+    class Meta:
+        verbose_name = "Log de Anonimização"
+        verbose_name_plural = "Logs de Anonimização"
+        ordering = ['-executed_at']
+
+
+class AnonymizationPolicy(models.Model):
+    """Formal anonymization policy for data lifecycle management - Architectural Suggestion #2"""
+    
+    ANONYMIZATION_TECHNIQUES = [
+        ('k_anonymity', 'K-Anonimato'),
+        ('l_diversity', 'L-Diversidade'),
+        ('t_closeness', 'T-Proximidade'),
+        ('differential_privacy', 'Privacidade Diferencial'),
+        ('data_masking', 'Mascaramento de Dados'),
+        ('generalization', 'Generalização'),
+        ('suppression', 'Supressão'),
+        ('noise_addition', 'Adição de Ruído'),
+        ('pseudonymization', 'Pseudonimização'),
+    ]
+    
+    RISK_LEVELS = [
+        ('very_low', 'Muito Baixo (< 1%)'),
+        ('low', 'Baixo (1-5%)'),
+        ('medium', 'Médio (5-15%)'),
+        ('high', 'Alto (15-30%)'),
+        ('very_high', 'Muito Alto (> 30%)'),
+    ]
+    
+    # Policy identification
+    policy_name = models.CharField(max_length=200)
+    data_category = models.CharField(max_length=50)
+    purpose = models.CharField(max_length=200, help_text="Finalidade da anonimização", default='')
+    
+    # Technical specifications
+    anonymization_technique = models.CharField(max_length=30, choices=ANONYMIZATION_TECHNIQUES)
+    k_value = models.IntegerField(null=True, blank=True, help_text="Valor K para k-anonimato")
+    l_value = models.IntegerField(null=True, blank=True, help_text="Valor L para l-diversidade")
+    
+    # Risk assessment
+    acceptable_risk_level = models.CharField(max_length=10, choices=RISK_LEVELS, default='low')
+    risk_assessment_method = models.TextField(help_text="Método de avaliação de risco de reidentificação", default='')
+    
+    # Implementation details
+    fields_to_anonymize = models.TextField(help_text="JSON list of fields to anonymize", default='[]')
+    anonymization_rules = models.TextField(help_text="JSON with specific anonymization rules", default='{}')
+    
+    # Validation requirements
+    validation_required = models.BooleanField(default=True)
+    validation_method = models.TextField(help_text="Método de validação da eficácia da anonimização", default='')
+    specialist_review_required = models.BooleanField(default=True)
+    
+    # Legal compliance
+    legal_basis_for_retention = models.TextField(help_text="Base legal para manter dados anonimizados", default='')
+    anonymized_data_purpose = models.TextField(help_text="Finalidade dos dados anonimizados", default='')
+    anonymized_retention_period = models.IntegerField(help_text="Período de retenção em dias", default=1095)
+    
+    # Quality control
+    re_identification_test_results = models.TextField(blank=True)
+    effectiveness_score = models.FloatField(null=True, blank=True, help_text="Score de eficácia 0-100")
+    
+    # Approval and review
+    approved_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_anonymization_policies'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    specialist_reviewed_by = models.CharField(max_length=200, blank=True)
+    specialist_reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Review cycle
+    next_review_date = models.DateField()
+    review_frequency_months = models.IntegerField(default=12)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=False)  # Requires approval to activate
+    
+    class Meta:
+        verbose_name = "Política de Anonimização"
+        verbose_name_plural = "Políticas de Anonimização"
+        ordering = ['data_category', 'policy_name']
+    
+    def calculate_next_review_date(self):
+        """Calculate next review date"""
+        if self.approved_at:
+            return self.approved_at.date() + timedelta(days=self.review_frequency_months * 30)
+        return timezone.now().date() + timedelta(days=self.review_frequency_months * 30)
+    
+    def save(self, *args, **kwargs):
+        if not self.next_review_date:
+            self.next_review_date = self.calculate_next_review_date()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.policy_name} - {self.data_category}"

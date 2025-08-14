@@ -1,7 +1,12 @@
 from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from django.utils import timezone
 from .models import (
     DataProcessingPurpose, LGPDComplianceSettings, PatientDataRequest, DataCorrectionDetail,
-    PrivacyPolicy, DataProcessingNotice, ConsentRecord, MinorConsentRecord, ConsentWithdrawal
+    PrivacyPolicy, DataProcessingNotice, ConsentRecord, MinorConsentRecord, ConsentWithdrawal,
+    DataRetentionPolicy, DataRetentionSchedule, DataDeletionLog, DataAnonymizationLog,
+    AnonymizationPolicy
 )
 
 @admin.register(DataProcessingPurpose)
@@ -282,5 +287,319 @@ class ConsentWithdrawalAdmin(admin.ModelAdmin):
         }),
         ('Processamento Pós-Retirada', {
             'fields': ['data_deleted', 'data_deleted_at', 'deletion_evidence']
+        })
+    ]
+
+
+@admin.register(DataRetentionPolicy)
+class DataRetentionPolicyAdmin(admin.ModelAdmin):
+    list_display = [
+        'policy_id', 'name', 'data_category', 'retention_period_days', 
+        'retention_years', 'auto_delete_enabled', 'is_active'
+    ]
+    list_filter = [
+        'data_category', 'retention_basis', 'auto_delete_enabled', 
+        'anonymize_instead_delete', 'is_active'
+    ]
+    search_fields = ['policy_id', 'name', 'legal_reference']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = [
+        ('Identificação', {
+            'fields': ['policy_id', 'name', 'data_category', 'is_active']
+        }),
+        ('Período de Retenção', {
+            'fields': ['retention_period_days', 'retention_basis', 'legal_reference']
+        }),
+        ('Avisos e Prazos', {
+            'fields': ['warning_period_days', 'grace_period_days']
+        }),
+        ('Comportamento de Exclusão', {
+            'fields': [
+                'auto_delete_enabled', 'anonymize_instead_delete', 
+                'require_manual_approval'
+            ]
+        }),
+        ('Proteções', {
+            'fields': ['legal_hold_exempt', 'emergency_access_required']
+        }),
+        ('Metadados', {
+            'fields': ['created_at', 'updated_at', 'created_by'],
+            'classes': ['collapse']
+        })
+    ]
+    
+    def retention_years(self, obj):
+        return f"{obj.retention_period_days / 365.25:.1f} anos"
+    retention_years.short_description = 'Anos de Retenção'
+    
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(DataRetentionSchedule)
+class DataRetentionScheduleAdmin(admin.ModelAdmin):
+    list_display = [
+        'id', 'content_object_link', 'retention_policy', 'status', 
+        'retention_end_date', 'days_remaining', 'warning_sent'
+    ]
+    list_filter = [
+        'status', 'retention_policy__data_category', 'content_type',
+        'retention_end_date', 'warning_sent_at'
+    ]
+    search_fields = ['object_id']
+    readonly_fields = [
+        'content_type', 'object_id', 'data_creation_date', 
+        'retention_end_date', 'warning_date', 'deletion_date',
+        'created_at', 'updated_at'
+    ]
+    
+    fieldsets = [
+        ('Objeto de Dados', {
+            'fields': ['content_type', 'object_id']
+        }),
+        ('Política de Retenção', {
+            'fields': ['retention_policy']
+        }),
+        ('Datas Calculadas', {
+            'fields': [
+                'data_creation_date', 'last_activity_date',
+                'retention_end_date', 'warning_date', 'deletion_date'
+            ]
+        }),
+        ('Status e Processamento', {
+            'fields': [
+                'status', 'warning_sent_at', 'deletion_approved_by', 
+                'deletion_approved_at'
+            ]
+        }),
+        ('Retenção Legal', {
+            'fields': [
+                'legal_hold_reason', 'legal_hold_applied_by', 
+                'legal_hold_applied_at'
+            ]
+        })
+    ]
+    
+    def content_object_link(self, obj):
+        if obj.content_object:
+            return format_html(
+                '<a href="{}">{}</a>',
+                reverse(f'admin:{obj.content_type.app_label}_{obj.content_type.model}_change',
+                       args=[obj.object_id]),
+                str(obj.content_object)
+            )
+        return "Object not found"
+    content_object_link.short_description = 'Objeto'
+    
+    def days_remaining(self, obj):
+        from datetime import date
+        if obj.retention_end_date:
+            remaining = (obj.retention_end_date - date.today()).days
+            if remaining < 0:
+                return format_html('<span style="color: red;">Vencido ({} dias)</span>', abs(remaining))
+            elif remaining < 30:
+                return format_html('<span style="color: orange;">{} dias</span>', remaining)
+            else:
+                return f"{remaining} dias"
+        return "-"
+    days_remaining.short_description = 'Dias Restantes'
+    
+    def warning_sent(self, obj):
+        return obj.warning_sent_at is not None
+    warning_sent.boolean = True
+    warning_sent.short_description = 'Aviso Enviado'
+    
+    actions = ['apply_legal_hold', 'approve_deletion']
+    
+    def apply_legal_hold(self, request, queryset):
+        # Would open a form for legal hold reason
+        pass
+    apply_legal_hold.short_description = 'Aplicar retenção legal'
+    
+    def approve_deletion(self, request, queryset):
+        updated = queryset.update(
+            deletion_approved_by=request.user,
+            deletion_approved_at=timezone.now()
+        )
+        self.message_user(request, f'{updated} exclusões aprovadas.')
+    approve_deletion.short_description = 'Aprovar exclusão'
+
+
+@admin.register(DataDeletionLog)
+class DataDeletionLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'deletion_id', 'original_object_representation', 'deletion_type',
+        'executed_at', 'authorized_by', 'deletion_verified'
+    ]
+    list_filter = [
+        'deletion_type', 'deletion_method', 'deletion_verified', 
+        'executed_at', 'content_type'
+    ]
+    search_fields = [
+        'deletion_id', 'original_object_representation', 'deletion_reason'
+    ]
+    readonly_fields = [
+        'deletion_id', 'content_type', 'original_object_id',
+        'verification_hash', 'executed_at'
+    ]
+    
+    fieldsets = [
+        ('Identificação da Exclusão', {
+            'fields': [
+                'deletion_id', 'content_type', 'original_object_id',
+                'original_object_representation'
+            ]
+        }),
+        ('Detalhes da Exclusão', {
+            'fields': [
+                'deletion_type', 'deletion_reason', 'retention_policy_applied'
+            ]
+        }),
+        ('Autorização', {
+            'fields': ['authorized_by', 'authorization_date']
+        }),
+        ('Execução', {
+            'fields': [
+                'executed_by', 'executed_at', 'deletion_method'
+            ]
+        }),
+        ('Verificação', {
+            'fields': [
+                'verification_hash', 'deletion_verified', 'verification_date'
+            ]
+        }),
+        ('Impacto', {
+            'fields': [
+                'related_records_affected', 'cascading_deletions'
+            ]
+        }),
+        ('Conformidade Legal', {
+            'fields': ['legal_basis_for_deletion', 'compliance_notes']
+        }),
+        ('Recuperação', {
+            'fields': [
+                'recovery_possible', 'recovery_deadline'
+            ]
+        })
+    ]
+    
+    def has_add_permission(self, request):
+        return False  # Logs should only be created programmatically
+    
+    def has_change_permission(self, request, obj=None):
+        return False  # Logs should be immutable
+
+
+@admin.register(DataAnonymizationLog)
+class DataAnonymizationLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'anonymization_id', 'content_type', 'anonymization_method',
+        'anonymization_purpose', 're_identification_risk', 'executed_at'
+    ]
+    list_filter = [
+        'anonymization_method', 'anonymization_purpose', 're_identification_risk',
+        'executed_at'
+    ]
+    readonly_fields = ['anonymization_id', 'executed_at']
+    
+    fieldsets = [
+        ('Identificação', {
+            'fields': [
+                'anonymization_id', 'content_type', 'original_object_id',
+                'anonymized_object_id'
+            ]
+        }),
+        ('Método de Anonimização', {
+            'fields': [
+                'anonymization_method', 'fields_anonymized', 'anonymization_rules'
+            ]
+        }),
+        ('Controle de Qualidade', {
+            'fields': [
+                'anonymization_quality_score', 're_identification_risk'
+            ]
+        }),
+        ('Execução', {
+            'fields': ['executed_by', 'executed_at']
+        }),
+        ('Finalidade e Retenção', {
+            'fields': [
+                'anonymization_purpose', 'anonymized_data_retention'
+            ]
+        })
+    ]
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AnonymizationPolicy)
+class AnonymizationPolicyAdmin(admin.ModelAdmin):
+    list_display = [
+        'policy_name', 'data_category', 'anonymization_technique',
+        'acceptable_risk_level', 'is_active', 'approved_by'
+    ]
+    list_filter = [
+        'data_category', 'anonymization_technique', 'acceptable_risk_level',
+        'is_active', 'validation_required', 'specialist_review_required'
+    ]
+    search_fields = ['policy_name', 'data_category', 'purpose']
+    readonly_fields = ['created_at', 'updated_at', 'next_review_date']
+    
+    fieldsets = [
+        ('Identificação da Política', {
+            'fields': ['policy_name', 'data_category', 'purpose']
+        }),
+        ('Especificações Técnicas', {
+            'fields': [
+                'anonymization_technique', 'k_value', 'l_value'
+            ]
+        }),
+        ('Avaliação de Risco', {
+            'fields': [
+                'acceptable_risk_level', 'risk_assessment_method'
+            ]
+        }),
+        ('Detalhes de Implementação', {
+            'fields': [
+                'fields_to_anonymize', 'anonymization_rules'
+            ]
+        }),
+        ('Requisitos de Validação', {
+            'fields': [
+                'validation_required', 'validation_method', 
+                'specialist_review_required'
+            ]
+        }),
+        ('Conformidade Legal', {
+            'fields': [
+                'legal_basis_for_retention', 'anonymized_data_purpose',
+                'anonymized_retention_period'
+            ]
+        }),
+        ('Controle de Qualidade', {
+            'fields': [
+                're_identification_test_results', 'effectiveness_score'
+            ]
+        }),
+        ('Aprovação e Revisão', {
+            'fields': [
+                'approved_by', 'approved_at', 'specialist_reviewed_by',
+                'specialist_reviewed_at', 'next_review_date', 
+                'review_frequency_months'
+            ]
+        }),
+        ('Status', {
+            'fields': ['is_active']
+        }),
+        ('Metadados', {
+            'fields': ['created_at', 'updated_at'],
+            'classes': ['collapse']
         })
     ]

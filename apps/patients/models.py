@@ -5,6 +5,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from datetime import timedelta, date
 from simple_history.models import HistoricalRecords
 
 from apps.core.models.soft_delete import SoftDeleteModel
@@ -712,6 +713,36 @@ class Patient(SoftDeleteModel):
         related_name="+",
     )
 
+    # Retention tracking fields
+    last_interaction_date = models.DateTimeField(auto_now=True)
+    retention_category = models.CharField(
+        max_length=30,
+        choices=[
+            ('active_treatment', 'Tratamento Ativo'),
+            ('follow_up', 'Acompanhamento'),
+            ('discharged', 'Alta Médica'),
+            ('transferred', 'Transferido'),
+            ('deceased', 'Óbito'),
+        ],
+        default='active_treatment'
+    )
+    
+    # Deletion protection
+    deletion_protected = models.BooleanField(default=False)
+    protection_reason = models.CharField(max_length=200, blank=True, default='')
+    protection_applied_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='protected_patients'
+    )
+    protection_applied_at = models.DateTimeField(null=True, blank=True)
+    
+    # Data quality flags
+    data_completeness_score = models.FloatField(default=1.0)  # 0-1 score
+    last_data_audit = models.DateTimeField(null=True, blank=True)
+
     # History tracking
     history = HistoricalRecords(
         history_change_reason_field=models.TextField(null=True),
@@ -1025,6 +1056,41 @@ class Patient(SoftDeleteModel):
             if current_admission
             else None
         )
+
+    def update_last_interaction(self):
+        """Update last interaction timestamp"""
+        self.last_interaction_date = timezone.now()
+        self.save(update_fields=['last_interaction_date'])
+    
+    def calculate_retention_end_date(self):
+        """Calculate when patient data should be deleted"""
+        from apps.compliance.models import DataRetentionPolicy
+        
+        try:
+            policy = DataRetentionPolicy.objects.get(
+                data_category='patient_medical_records',
+                is_active=True
+            )
+            return self.last_interaction_date.date() + timedelta(days=policy.retention_period_days)
+        except DataRetentionPolicy.DoesNotExist:
+            # Default to 20 years if no policy
+            return self.last_interaction_date.date() + timedelta(days=7300)
+    
+    def is_eligible_for_deletion(self):
+        """Check if patient is eligible for deletion"""
+        if self.deletion_protected:
+            return False
+        
+        retention_end = self.calculate_retention_end_date()
+        return date.today() >= retention_end
+    
+    def apply_deletion_protection(self, user, reason):
+        """Apply deletion protection"""
+        self.deletion_protected = True
+        self.protection_reason = reason
+        self.protection_applied_by = user
+        self.protection_applied_at = timezone.now()
+        self.save()
 
     def refresh_denormalized_fields(self):
         """Refresh all denormalized fields from source data"""

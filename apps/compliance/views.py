@@ -1,16 +1,22 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.views.generic import CreateView, ListView, DetailView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 from django.urls import reverse_lazy
-from .models import PatientDataRequest, PrivacyPolicy, DataProcessingNotice
+from datetime import date, timedelta
+from .models import (
+    PatientDataRequest, PrivacyPolicy, DataProcessingNotice,
+    DataRetentionSchedule, DataDeletionLog
+)
 from .forms import PatientDataRequestCreationForm, PatientDataRequestManagementForm
 from .services.data_export import PatientDataExportService
+from .services.retention_management import DataRetentionService
 import markdown
 
 
@@ -257,3 +263,53 @@ class PrivacyPolicyDetailView(DetailView):
         )
         
         return context
+
+
+@staff_member_required
+def retention_dashboard(request):
+    """Dashboard for monitoring data retention"""
+    
+    retention_service = DataRetentionService()
+    stats = retention_service.get_retention_statistics()
+    
+    # Upcoming actions
+    today = date.today()
+    upcoming_warnings = DataRetentionSchedule.objects.filter(
+        warning_date__lte=today + timedelta(days=7),
+        status='active'
+    ).order_by('warning_date')[:10]
+    
+    upcoming_deletions = DataRetentionSchedule.objects.filter(
+        deletion_date__lte=today + timedelta(days=30),
+        status='warning_sent'
+    ).order_by('deletion_date')[:10]
+    
+    # Recent activities
+    recent_deletions = DataDeletionLog.objects.order_by('-executed_at')[:10]
+    
+    context = {
+        'stats': stats,
+        'upcoming_warnings': upcoming_warnings,
+        'upcoming_deletions': upcoming_deletions,
+        'recent_deletions': recent_deletions,
+    }
+    
+    return render(request, 'admin/core/retention_dashboard.html', context)
+
+
+@staff_member_required
+def retention_statistics_api(request):
+    """API endpoint for retention statistics"""
+    
+    retention_service = DataRetentionService()
+    stats = retention_service.get_retention_statistics()
+    
+    # Add trend data
+    last_30_days = date.today() - timedelta(days=30)
+    recent_deletions = DataDeletionLog.objects.filter(
+        executed_at__gte=last_30_days
+    ).count()
+    
+    stats['recent_deletions'] = recent_deletions
+    
+    return JsonResponse(stats)
