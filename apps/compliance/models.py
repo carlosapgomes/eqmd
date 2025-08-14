@@ -1506,3 +1506,486 @@ class IncidentEvidence(models.Model):
     
     def __str__(self):
         return f"{self.incident.incident_id} - {self.name}"
+
+
+# Phase 6: Monitoring & Maintenance Models
+
+class ComplianceAudit(models.Model):
+    """Track compliance audits and assessments"""
+    
+    AUDIT_TYPES = [
+        ('routine', 'Auditoria Rotineira'),
+        ('incident_triggered', 'Disparada por Incidente'),
+        ('regulatory_required', 'Exigência Regulatória'),
+        ('annual_review', 'Revisão Anual'),
+        ('policy_update', 'Atualização de Política'),
+        ('system_change', 'Mudança de Sistema'),
+        ('training_assessment', 'Avaliação de Treinamento'),
+    ]
+    
+    AUDIT_STATUS = [
+        ('planned', 'Planejada'),
+        ('in_progress', 'Em Andamento'),
+        ('completed', 'Concluída'),
+        ('failed', 'Falhada'),
+        ('cancelled', 'Cancelada'),
+    ]
+    
+    COMPLIANCE_SCORES = [
+        ('excellent', 'Excelente (90-100%)'),
+        ('good', 'Bom (75-89%)'),
+        ('satisfactory', 'Satisfatório (60-74%)'),
+        ('needs_improvement', 'Necessita Melhoria (40-59%)'),
+        ('poor', 'Ruim (0-39%)'),
+    ]
+    
+    # Audit identification
+    audit_id = models.CharField(max_length=20, unique=True, editable=False)
+    audit_type = models.CharField(max_length=20, choices=AUDIT_TYPES)
+    
+    # Scheduling
+    scheduled_date = models.DateField()
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Scope and focus
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    audit_scope = models.TextField(help_text="JSON list of areas/systems audited")
+    focus_areas = models.TextField(help_text="JSON list of specific focus areas")
+    
+    # Execution
+    auditor = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='conducted_audits'
+    )
+    status = models.CharField(max_length=15, choices=AUDIT_STATUS, default='planned')
+    
+    # Results
+    compliance_score = models.FloatField(null=True, blank=True, help_text="0-100 score")
+    compliance_level = models.CharField(max_length=20, choices=COMPLIANCE_SCORES, blank=True)
+    findings_count = models.IntegerField(default=0)
+    critical_findings = models.IntegerField(default=0)
+    
+    # Reporting
+    audit_report = models.TextField(blank=True)
+    recommendations = models.TextField(blank=True)
+    corrective_actions_required = models.BooleanField(default=False)
+    
+    # Follow-up
+    next_audit_due = models.DateField(null=True, blank=True)
+    follow_up_required = models.BooleanField(default=False)
+    follow_up_deadline = models.DateField(null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Auditoria de Conformidade"
+        verbose_name_plural = "Auditorias de Conformidade"
+        ordering = ['-scheduled_date']
+        indexes = [
+            models.Index(fields=['audit_type', 'status']),
+            models.Index(fields=['scheduled_date', 'completed_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.audit_id:
+            self.audit_id = self.generate_audit_id()
+        
+        # Auto-calculate next audit due date
+        if self.completed_at and not self.next_audit_due:
+            if self.audit_type == 'annual_review':
+                self.next_audit_due = self.completed_at.date() + timedelta(days=365)
+            elif self.audit_type == 'routine':
+                self.next_audit_due = self.completed_at.date() + timedelta(days=90)
+            else:
+                self.next_audit_due = self.completed_at.date() + timedelta(days=180)
+        
+        super().save(*args, **kwargs)
+    
+    def generate_audit_id(self):
+        """Generate unique audit ID: AUD-YYYYMMDD-XXX"""
+        date_str = timezone.now().strftime('%Y%m%d')
+        sequence = ComplianceAudit.objects.filter(
+            audit_id__startswith=f'AUD-{date_str}'
+        ).count() + 1
+        return f'AUD-{date_str}-{sequence:03d}'
+    
+    def calculate_compliance_score(self):
+        """Calculate overall compliance score from findings"""
+        total_checks = self.checklist_items.count()
+        if total_checks == 0:
+            return None
+        
+        passed_checks = self.checklist_items.filter(status='compliant').count()
+        score = (passed_checks / total_checks) * 100
+        
+        self.compliance_score = round(score, 1)
+        
+        # Determine compliance level
+        if score >= 90:
+            self.compliance_level = 'excellent'
+        elif score >= 75:
+            self.compliance_level = 'good'
+        elif score >= 60:
+            self.compliance_level = 'satisfactory'
+        elif score >= 40:
+            self.compliance_level = 'needs_improvement'
+        else:
+            self.compliance_level = 'poor'
+        
+        self.save()
+        return score
+    
+    def __str__(self):
+        return f"{self.audit_id} - {self.title}"
+
+
+class ComplianceChecklist(models.Model):
+    """Individual compliance checklist items"""
+    
+    CHECK_CATEGORIES = [
+        ('legal_basis', 'Base Legal'),
+        ('data_subject_rights', 'Direitos dos Titulares'),
+        ('privacy_policies', 'Políticas de Privacidade'),
+        ('retention_management', 'Gestão de Retenção'),
+        ('incident_response', 'Resposta a Incidentes'),
+        ('staff_training', 'Treinamento da Equipe'),
+        ('technical_security', 'Segurança Técnica'),
+        ('organizational_measures', 'Medidas Organizacionais'),
+    ]
+    
+    CHECK_STATUS = [
+        ('compliant', 'Conforme'),
+        ('non_compliant', 'Não Conforme'),
+        ('partially_compliant', 'Parcialmente Conforme'),
+        ('not_applicable', 'Não Aplicável'),
+        ('pending_review', 'Pendente de Revisão'),
+    ]
+    
+    PRIORITY_LEVELS = [
+        ('low', 'Baixa'),
+        ('medium', 'Média'),
+        ('high', 'Alta'),
+        ('critical', 'Crítica'),
+    ]
+    
+    audit = models.ForeignKey(ComplianceAudit, on_delete=models.CASCADE, related_name='checklist_items')
+    
+    # Check details
+    category = models.CharField(max_length=30, choices=CHECK_CATEGORIES)
+    check_id = models.CharField(max_length=20)  # e.g., "LGPD-ART7-01"
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    legal_reference = models.CharField(max_length=100)
+    
+    # Assessment
+    status = models.CharField(max_length=20, choices=CHECK_STATUS, default='pending_review')
+    priority = models.CharField(max_length=10, choices=PRIORITY_LEVELS, default='medium')
+    
+    # Evidence and notes
+    evidence_required = models.TextField(blank=True)
+    evidence_provided = models.TextField(blank=True)
+    assessor_notes = models.TextField(blank=True)
+    
+    # Remediation
+    non_compliance_details = models.TextField(blank=True)
+    recommended_action = models.TextField(blank=True)
+    remediation_deadline = models.DateField(null=True, blank=True)
+    
+    # Metadata
+    assessed_at = models.DateTimeField(null=True, blank=True)
+    assessed_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    
+    class Meta:
+        verbose_name = "Item de Checklist"
+        verbose_name_plural = "Itens de Checklist"
+        ordering = ['category', 'check_id']
+        unique_together = ['audit', 'check_id']
+    
+    def __str__(self):
+        return f"{self.check_id} - {self.title}"
+
+
+class ComplianceMetric(models.Model):
+    """Track compliance metrics over time"""
+    
+    METRIC_TYPES = [
+        ('patient_requests_response_time', 'Tempo de Resposta - Solicitações de Pacientes'),
+        ('data_retention_compliance', 'Conformidade de Retenção de Dados'),
+        ('staff_training_completion', 'Conclusão de Treinamento'),
+        ('incident_response_time', 'Tempo de Resposta a Incidentes'),
+        ('privacy_policy_awareness', 'Conhecimento da Política de Privacidade'),
+        ('data_subject_rights_fulfillment', 'Cumprimento de Direitos dos Titulares'),
+        ('breach_notification_timeliness', 'Pontualidade de Notificação de Violação'),
+        ('audit_compliance_score', 'Pontuação de Conformidade da Auditoria'),
+    ]
+    
+    # Metric identification
+    metric_type = models.CharField(max_length=50, choices=METRIC_TYPES)
+    measurement_date = models.DateField()
+    measurement_period = models.CharField(
+        max_length=20,
+        choices=[
+            ('daily', 'Diário'),
+            ('weekly', 'Semanal'),
+            ('monthly', 'Mensal'),
+            ('quarterly', 'Trimestral'),
+            ('annual', 'Anual'),
+        ],
+        default='monthly'
+    )
+    
+    # Values
+    target_value = models.FloatField(help_text="Target/expected value")
+    actual_value = models.FloatField(help_text="Actual measured value")
+    unit = models.CharField(max_length=20, help_text="e.g., 'days', 'percentage', 'count'")
+    
+    # Context
+    measurement_context = models.TextField(blank=True)
+    data_source = models.CharField(max_length=100, blank=True)
+    
+    # Performance indicators
+    performance_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('above_target', 'Acima da Meta'),
+            ('on_target', 'Na Meta'),
+            ('below_target', 'Abaixo da Meta'),
+            ('critical', 'Crítico'),
+        ],
+        blank=True
+    )
+    
+    # Metadata
+    recorded_by = models.ForeignKey('accounts.EqmdCustomUser', on_delete=models.SET_NULL, null=True)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Métrica de Conformidade"
+        verbose_name_plural = "Métricas de Conformidade"
+        ordering = ['-measurement_date', 'metric_type']
+        unique_together = ['metric_type', 'measurement_date', 'measurement_period']
+    
+    def calculate_performance_status(self):
+        """Calculate performance status based on target vs actual"""
+        if self.actual_value >= self.target_value * 1.1:  # 10% above target
+            self.performance_status = 'above_target'
+        elif self.actual_value >= self.target_value * 0.9:  # Within 10% of target
+            self.performance_status = 'on_target'
+        elif self.actual_value >= self.target_value * 0.7:  # Within 30% of target
+            self.performance_status = 'below_target'
+        else:
+            self.performance_status = 'critical'
+        
+        self.save()
+    
+    def __str__(self):
+        return f"{self.get_metric_type_display()} - {self.measurement_date}"
+
+
+class StaffTrainingRecord(models.Model):
+    """Track LGPD training for staff members"""
+    
+    TRAINING_TYPES = [
+        ('lgpd_basics', 'LGPD - Conceitos Básicos'),
+        ('patient_rights', 'Direitos dos Pacientes'),
+        ('data_security', 'Segurança de Dados'),
+        ('incident_response', 'Resposta a Incidentes'),
+        ('privacy_by_design', 'Privacidade por Design'),
+        ('data_retention', 'Retenção de Dados'),
+        ('consent_management', 'Gestão de Consentimento'),
+        ('breach_procedures', 'Procedimentos de Violação'),
+    ]
+    
+    TRAINING_STATUS = [
+        ('enrolled', 'Inscrito'),
+        ('in_progress', 'Em Progresso'),
+        ('completed', 'Concluído'),
+        ('failed', 'Reprovado'),
+        ('expired', 'Expirado'),
+        ('cancelled', 'Cancelado'),
+    ]
+    
+    # Training details
+    staff_member = models.ForeignKey('accounts.EqmdCustomUser', on_delete=models.CASCADE, related_name='training_records')
+    training_type = models.CharField(max_length=30, choices=TRAINING_TYPES)
+    training_title = models.CharField(max_length=200)
+    
+    # Scheduling
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    
+    # Progress and results
+    status = models.CharField(max_length=15, choices=TRAINING_STATUS, default='enrolled')
+    progress_percentage = models.IntegerField(default=0)
+    assessment_score = models.FloatField(null=True, blank=True)
+    passing_score = models.FloatField(default=70.0)
+    
+    # Content tracking
+    modules_completed = models.TextField(default=list, help_text="JSON list of completed modules")
+    time_spent_minutes = models.IntegerField(default=0)
+    
+    # Certification
+    certificate_issued = models.BooleanField(default=False)
+    certificate_number = models.CharField(max_length=50, blank=True)
+    next_training_due = models.DateField(null=True, blank=True)
+    
+    # Metadata
+    training_provider = models.CharField(max_length=100, blank=True)
+    training_materials = models.TextField(blank=True, help_text="JSON list of materials")
+    
+    class Meta:
+        verbose_name = "Registro de Treinamento"
+        verbose_name_plural = "Registros de Treinamento"
+        ordering = ['-enrolled_at']
+        indexes = [
+            models.Index(fields=['staff_member', 'training_type', 'status']),
+            models.Index(fields=['expires_at', 'status']),
+        ]
+    
+    def is_current(self):
+        """Check if training is current (not expired)"""
+        if self.status != 'completed':
+            return False
+        
+        if self.expires_at and timezone.now() > self.expires_at:
+            return False
+        
+        return True
+    
+    def calculate_next_training_due(self):
+        """Calculate when next training is due"""
+        if self.completed_at:
+            # Default: annual renewal
+            self.next_training_due = self.completed_at.date() + timedelta(days=365)
+            self.save()
+    
+    def __str__(self):
+        return f"{self.staff_member.get_full_name()} - {self.get_training_type_display()}"
+
+
+class ComplianceIssue(models.Model):
+    """Track compliance issues and their resolution"""
+    
+    ISSUE_TYPES = [
+        ('policy_violation', 'Violação de Política'),
+        ('process_gap', 'Lacuna de Processo'),
+        ('training_deficiency', 'Deficiência de Treinamento'),
+        ('system_weakness', 'Fraqueza do Sistema'),
+        ('documentation_missing', 'Documentação Ausente'),
+        ('deadline_missed', 'Prazo Perdido'),
+        ('external_finding', 'Achado Externo'),
+    ]
+    
+    SEVERITY_LEVELS = [
+        ('low', 'Baixa'),
+        ('medium', 'Média'),
+        ('high', 'Alta'),
+        ('critical', 'Crítica'),
+    ]
+    
+    ISSUE_STATUS = [
+        ('open', 'Aberto'),
+        ('in_progress', 'Em Progresso'),
+        ('resolved', 'Resolvido'),
+        ('closed', 'Fechado'),
+        ('deferred', 'Adiado'),
+    ]
+    
+    # Issue identification
+    issue_id = models.CharField(max_length=20, unique=True, editable=False)
+    title = models.CharField(max_length=200)
+    issue_type = models.CharField(max_length=30, choices=ISSUE_TYPES)
+    severity = models.CharField(max_length=10, choices=SEVERITY_LEVELS)
+    
+    # Description and context
+    description = models.TextField()
+    discovered_at = models.DateTimeField()
+    discovered_by = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='discovered_issues'
+    )
+    discovery_method = models.CharField(max_length=100)
+    
+    # Impact assessment
+    affected_areas = models.TextField(help_text="JSON list of affected areas")
+    potential_impact = models.TextField()
+    regulatory_risk = models.TextField(blank=True)
+    
+    # Resolution
+    status = models.CharField(max_length=15, choices=ISSUE_STATUS, default='open')
+    assigned_to = models.ForeignKey(
+        'accounts.EqmdCustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_issues'
+    )
+    
+    # Timeline
+    target_resolution_date = models.DateField()
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Resolution details
+    resolution_description = models.TextField(blank=True)
+    corrective_actions = models.TextField(blank=True)
+    preventive_measures = models.TextField(blank=True)
+    
+    # Follow-up
+    requires_follow_up = models.BooleanField(default=False)
+    follow_up_date = models.DateField(null=True, blank=True)
+    follow_up_notes = models.TextField(blank=True)
+    
+    # Related records
+    related_audit = models.ForeignKey(ComplianceAudit, on_delete=models.SET_NULL, null=True, blank=True)
+    related_incident = models.ForeignKey(SecurityIncident, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Problema de Conformidade"
+        verbose_name_plural = "Problemas de Conformidade"
+        ordering = ['-discovered_at']
+        indexes = [
+            models.Index(fields=['status', 'severity']),
+            models.Index(fields=['target_resolution_date', 'status']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.issue_id:
+            self.issue_id = self.generate_issue_id()
+        super().save(*args, **kwargs)
+    
+    def generate_issue_id(self):
+        """Generate unique issue ID: ISS-YYYYMMDD-XXX"""
+        date_str = timezone.now().strftime('%Y%m%d')
+        sequence = ComplianceIssue.objects.filter(
+            issue_id__startswith=f'ISS-{date_str}'
+        ).count() + 1
+        return f'ISS-{date_str}-{sequence:03d}'
+    
+    def is_overdue(self):
+        """Check if issue resolution is overdue"""
+        if self.status in ['resolved', 'closed']:
+            return False
+        return date.today() > self.target_resolution_date
+    
+    def __str__(self):
+        return f"{self.issue_id} - {self.title}"

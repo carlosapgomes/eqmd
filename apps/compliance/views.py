@@ -313,3 +313,31 @@ def retention_statistics_api(request):
     stats['recent_deletions'] = recent_deletions
     
     return JsonResponse(stats)
+
+
+@staff_member_required
+def compliance_dashboard(request):
+    """Main compliance monitoring dashboard"""
+    
+    from .services.compliance_monitoring import ComplianceMonitoringService
+    
+    monitoring_service = ComplianceMonitoringService()
+    dashboard_data = monitoring_service.get_compliance_dashboard_data()
+    
+    context = {
+        'dashboard_data': dashboard_data,
+    }
+    
+    return render(request, 'admin/core/compliance_dashboard.html', context)
+
+
+@staff_member_required
+def compliance_metrics_api(request):
+    """API endpoint for compliance metrics"""
+    
+    from .services.compliance_monitoring import ComplianceMonitoringService
+    
+    monitoring_service = ComplianceMonitoringService()
+    dashboard_data = monitoring_service.get_compliance_dashboard_data()
+    
+    return JsonResponse(dashboard_data)

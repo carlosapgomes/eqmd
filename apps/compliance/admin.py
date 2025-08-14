@@ -2,11 +2,14 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
+from django.db.models import Count
 from .models import (
     DataProcessingPurpose, LGPDComplianceSettings, PatientDataRequest, DataCorrectionDetail,
     PrivacyPolicy, DataProcessingNotice, ConsentRecord, MinorConsentRecord, ConsentWithdrawal,
     DataRetentionPolicy, DataRetentionSchedule, DataDeletionLog, DataAnonymizationLog,
-    AnonymizationPolicy, SecurityIncident, IncidentAction, BreachNotification, IncidentEvidence
+    AnonymizationPolicy, SecurityIncident, IncidentAction, BreachNotification, IncidentEvidence,
+    ComplianceAudit, ComplianceChecklist, ComplianceMetric,
+    StaffTrainingRecord, ComplianceIssue
 )
 
 @admin.register(DataProcessingPurpose)
@@ -759,3 +762,177 @@ class IncidentEvidenceAdmin(admin.ModelAdmin):
     list_filter = ['evidence_type', 'integrity_verified', 'collected_at']
     search_fields = ['incident__incident_id', 'name', 'description']
     readonly_fields = ['file_hash', 'file_size']
+
+
+@admin.register(ComplianceAudit)
+class ComplianceAuditAdmin(admin.ModelAdmin):
+    list_display = [
+        'audit_id', 'title', 'audit_type', 'status', 'scheduled_date',
+        'compliance_score', 'compliance_level', 'critical_findings'
+    ]
+    list_filter = ['audit_type', 'status', 'compliance_level', 'scheduled_date']
+    search_fields = ['audit_id', 'title', 'description']
+    readonly_fields = ['audit_id', 'created_at', 'updated_at']
+    
+    fieldsets = [
+        ('Identificação', {
+            'fields': ['audit_id', 'audit_type', 'title', 'description']
+        }),
+        ('Agendamento', {
+            'fields': ['scheduled_date', 'started_at', 'completed_at']
+        }),
+        ('Escopo', {
+            'fields': ['audit_scope', 'focus_areas']
+        }),
+        ('Execução', {
+            'fields': ['auditor', 'status']
+        }),
+        ('Resultados', {
+            'fields': [
+                'compliance_score', 'compliance_level', 'findings_count',
+                'critical_findings', 'audit_report', 'recommendations'
+            ]
+        }),
+        ('Acompanhamento', {
+            'fields': [
+                'corrective_actions_required', 'next_audit_due',
+                'follow_up_required', 'follow_up_deadline'
+            ]
+        })
+    ]
+    
+    actions = ['calculate_compliance_scores']
+    
+    def calculate_compliance_scores(self, request, queryset):
+        updated = 0
+        for audit in queryset:
+            if audit.status == 'completed':
+                audit.calculate_compliance_score()
+                updated += 1
+        
+        self.message_user(request, f'{updated} audit scores recalculated.')
+    calculate_compliance_scores.short_description = 'Recalculate compliance scores'
+
+
+@admin.register(ComplianceChecklist)
+class ComplianceChecklistAdmin(admin.ModelAdmin):
+    list_display = ['audit', 'check_id', 'title', 'category', 'status', 'priority', 'assessed_by']
+    list_filter = ['category', 'status', 'priority', 'assessed_at']
+    search_fields = ['check_id', 'title', 'description']
+    
+    fieldsets = [
+        ('Checklist Item', {
+            'fields': ['audit', 'category', 'check_id', 'title', 'description', 'legal_reference']
+        }),
+        ('Assessment', {
+            'fields': ['status', 'priority', 'evidence_required', 'evidence_provided', 'assessor_notes']
+        }),
+        ('Non-Compliance', {
+            'fields': ['non_compliance_details', 'recommended_action', 'remediation_deadline']
+        }),
+        ('Review', {
+            'fields': ['assessed_at', 'assessed_by']
+        })
+    ]
+
+
+@admin.register(ComplianceMetric)
+class ComplianceMetricAdmin(admin.ModelAdmin):
+    list_display = [
+        'metric_type', 'measurement_date', 'actual_value', 'target_value',
+        'unit', 'performance_status', 'measurement_period'
+    ]
+    list_filter = ['metric_type', 'performance_status', 'measurement_period', 'measurement_date']
+    search_fields = ['metric_type']
+    readonly_fields = ['recorded_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).order_by('-measurement_date')
+
+
+@admin.register(StaffTrainingRecord)
+class StaffTrainingRecordAdmin(admin.ModelAdmin):
+    list_display = [
+        'staff_member', 'training_type', 'status', 'progress_percentage',
+        'assessment_score', 'completed_at', 'expires_at', 'is_current'
+    ]
+    list_filter = ['training_type', 'status', 'expires_at']
+    search_fields = ['staff_member__first_name', 'staff_member__last_name', 'training_title']
+    
+    def is_current(self, obj):
+        return obj.is_current()
+    is_current.boolean = True
+    is_current.short_description = 'Current'
+    
+    actions = ['mark_completed', 'extend_expiration']
+    
+    def mark_completed(self, request, queryset):
+        from django.utils import timezone
+        updated = queryset.filter(status='in_progress').update(
+            status='completed',
+            completed_at=timezone.now(),
+            progress_percentage=100
+        )
+        self.message_user(request, f'{updated} training records marked as completed.')
+    mark_completed.short_description = 'Mark as completed'
+
+
+@admin.register(ComplianceIssue)
+class ComplianceIssueAdmin(admin.ModelAdmin):
+    list_display = [
+        'issue_id', 'title', 'issue_type', 'severity', 'status',
+        'target_resolution_date', 'assigned_to', 'is_overdue'
+    ]
+    list_filter = ['issue_type', 'severity', 'status', 'discovered_at']
+    search_fields = ['issue_id', 'title', 'description']
+    readonly_fields = ['issue_id', 'created_at', 'updated_at']
+    
+    fieldsets = [
+        ('Issue Details', {
+            'fields': ['issue_id', 'title', 'issue_type', 'severity', 'description']
+        }),
+        ('Discovery', {
+            'fields': ['discovered_at', 'discovered_by', 'discovery_method']
+        }),
+        ('Impact Assessment', {
+            'fields': ['affected_areas', 'potential_impact', 'regulatory_risk']
+        }),
+        ('Resolution', {
+            'fields': [
+                'status', 'assigned_to', 'target_resolution_date',
+                'resolved_at', 'closed_at'
+            ]
+        }),
+        ('Resolution Details', {
+            'fields': [
+                'resolution_description', 'corrective_actions', 'preventive_measures'
+            ]
+        }),
+        ('Follow-up', {
+            'fields': ['requires_follow_up', 'follow_up_date', 'follow_up_notes']
+        }),
+        ('Related Records', {
+            'fields': ['related_audit', 'related_incident']
+        })
+    ]
+    
+    def is_overdue(self, obj):
+        return obj.is_overdue()
+    is_overdue.boolean = True
+    is_overdue.short_description = 'Overdue'
+    
+    actions = ['resolve_issues', 'assign_to_me']
+    
+    def resolve_issues(self, request, queryset):
+        from django.utils import timezone
+        updated = queryset.filter(status__in=['open', 'in_progress']).update(
+            status='resolved',
+            resolved_at=timezone.now()
+        )
+        self.message_user(request, f'{updated} issues marked as resolved.')
+    resolve_issues.short_description = 'Mark as resolved'
+    
+    def assign_to_me(self, request, queryset):
+        updated = queryset.filter(assigned_to__isnull=True).update(assigned_to=request.user)
+        self.message_user(request, f'{updated} issues assigned to you.')
+    assign_to_me.short_description = 'Assign to me'
