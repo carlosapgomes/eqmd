@@ -1,7 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load hospital_tags %}
-
 {% block header %}
 <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
   <div class="container-fluid">
@@ -25,18 +23,25 @@
   <div class="container">
     <div class="row align-items-center min-vh-50">
       <div class="col-lg-6">
-        {% hospital_branding as hospital %}
         <h1 class="display-4 fw-bold text-medical-primary mb-4">
-          Sistema de Informação Clínica
+          Conecte sua equipe médica em todos os hospitais
         </h1>
         <p class="lead mb-4 text-medical-dark-gray">
-          Acesse o sistema para rastrear pacientes, gerenciar eventos clínicos e colaborar com sua equipe de forma segura e eficiente.
+          EquipeMed é a plataforma que permite rastrear pacientes, gerenciar eventos clínicos e colaborar entre hospitais de forma segura e eficiente.
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3 mb-4">
           <a href="{% url 'account_login' %}" class="btn btn-medical-primary btn-lg d-flex align-items-center justify-content-center">
             <i class="bi bi-box-arrow-in-right me-2"></i>
             Acessar Plataforma
           </a>
+          <a href="#recursos" class="btn btn-medical-outline-teal btn-lg d-flex align-items-center justify-content-center">
+            <i class="bi bi-info-circle me-2"></i>
+            Conhecer Recursos
+          </a>
+          <!-- <button id="pwa-install-btn" class="btn btn-medical-teal btn-lg d-flex align-items-center justify-content-center" style="display: none;"> -->
+          <!--   <i class="bi bi-download me-2"></i> -->
+          <!--   Instalar App -->
+          <!-- </button> -->
         </div>
         <div class="d-flex align-items-center text-muted">
           <i class="bi bi-shield-check text-medical-green me-2"></i>
@@ -61,10 +66,10 @@
     <div class="row">
       <div class="col-lg-8 mx-auto text-center mb-5">
         <h2 class="display-5 fw-bold text-medical-primary mb-3">
-          Principais Funcionalidades da Plataforma
+          Recursos Desenvolvidos para Médicos
         </h2>
         <p class="lead text-medical-gray">
-          Ferramentas especializadas que facilitam o trabalho da equipe médica e melhoram o atendimento ao paciente.
+          Ferramentas especializadas que facilitam o trabalho da equipe médica e melhoram o atendimento ao paciente
         </p>
       </div>
     </div>
@@ -76,7 +81,7 @@
             <i class="bi bi-person-lines-fill text-medical-teal display-4 mb-3"></i>
             <h5 class="card-title text-medical-primary">Rastreamento de Pacientes</h5>
             <p class="card-text text-medical-gray">
-              Acompanhe o histórico completo dos pacientes e suas passagens pela instituição.
+              Acompanhe o histórico completo dos pacientes através de múltiplos hospitais e especialidades médicas.
             </p>
           </div>
         </div>
@@ -145,7 +150,7 @@
     <div class="row">
       <div class="col-lg-8 mx-auto text-center mb-5">
         <h2 class="display-6 fw-bold text-medical-primary mb-3">
-          Recursos de Segurança da Plataforma
+          Confiança e Segurança em Primeiro Lugar
         </h2>
       </div>
     </div>
@@ -181,6 +186,144 @@
           <h6 class="text-medical-primary fw-bold">Suporte</h6>
           <p class="text-muted small mb-0">Equipe especializada disponível sempre que precisar</p>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Workflow Section -->
+<section class="py-5">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6">
+        <h2 class="display-6 fw-bold text-medical-primary mb-4">
+          Projetado para o Fluxo de Trabalho Médico Real
+        </h2>
+        <p class="lead text-medical-gray mb-4">
+          Desenvolvido em colaboração com profissionais de saúde para atender às necessidades reais do dia a dia hospitalar.
+        </p>
+        
+        <div class="d-flex align-items-start mb-3">
+          <i class="bi bi-check-circle-fill text-medical-teal me-3 mt-1"></i>
+          <div>
+            <h6 class="text-medical-primary mb-1">Interface Intuitiva</h6>
+            <p class="text-muted mb-0 small">Fácil de usar mesmo durante plantões intensos</p>
+          </div>
+        </div>
+        
+        <div class="d-flex align-items-start mb-3">
+          <i class="bi bi-check-circle-fill text-medical-teal me-3 mt-1"></i>
+          <div>
+            <h6 class="text-medical-primary mb-1">Acesso Móvel</h6>
+            <p class="text-muted mb-0 small">Consulte informações de qualquer dispositivo</p>
+          </div>
+        </div>
+        
+        <div class="d-flex align-items-start mb-4">
+          <i class="bi bi-check-circle-fill text-medical-teal me-3 mt-1"></i>
+          <div>
+            <h6 class="text-medical-primary mb-1">Integração Hospitalar</h6>
+            <p class="text-muted mb-0 small">Conecta-se facilmente aos sistemas existentes</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6">
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="bg-white rounded-3 shadow p-3 text-center">
+              <i class="bi bi-journal-medical text-medical-teal fs-1 mb-2"></i>
+              <h6 class="text-medical-primary mb-1">Prontuários</h6>
+              <small class="text-muted">Digitais e seguros</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="bg-white rounded-3 shadow p-3 text-center">
+              <i class="bi bi-calendar2-event text-medical-teal fs-1 mb-2"></i>
+              <h6 class="text-medical-primary mb-1">Agendamentos</h6>
+              <small class="text-muted">Gestão inteligente</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="bg-white rounded-3 shadow p-3 text-center">
+              <i class="bi bi-prescription2 text-medical-teal fs-1 mb-2"></i>
+              <h6 class="text-medical-primary mb-1">Prescrições</h6>
+              <small class="text-muted">Controle total</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="bg-white rounded-3 shadow p-3 text-center">
+              <i class="bi bi-activity text-medical-teal fs-1 mb-2"></i>
+              <h6 class="text-medical-primary mb-1">Monitoramento</h6>
+              <small class="text-muted">Tempo real</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="bg-medical-primary py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto text-center">
+        <h2 class="display-6 fw-bold text-white mb-3">
+          Pronto para Transformar sua Prática Médica?
+        </h2>
+        <p class="lead text-white opacity-75 mb-4">
+          Junte-se aos profissionais de saúde que já confiam no EquipeMed para melhorar o cuidado aos pacientes.
+        </p>
+        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+          <a href="{% url 'account_login' %}" class="btn btn-light btn-lg d-flex align-items-center justify-content-center">
+            <i class="bi bi-box-arrow-in-right me-2"></i>
+            Começar Agora
+          </a>
+          <a href="#recursos" class="btn btn-outline-light btn-lg d-flex align-items-center justify-content-center">
+            <i class="bi bi-telephone me-2"></i>
+            Falar com Especialista
+          </a>
+        </div>
+        
+        <div class="row mt-5 text-center">
+          <div class="col-md-4">
+            <div class="text-white">
+              <h4 class="fw-bold">500+</h4>
+              <p class="opacity-75 mb-0">Médicos Ativos</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-white">
+              <h4 class="fw-bold">50+</h4>
+              <p class="opacity-75 mb-0">Hospitais Conectados</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-white">
+              <h4 class="fw-bold">10.000+</h4>
+              <p class="opacity-75 mb-0">Pacientes Atendidos</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer CTA -->
+<section class="py-4 bg-light border-top">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h6 class="text-medical-primary mb-1">Tem dúvidas sobre o EquipeMed?</h6>
+        <p class="text-muted mb-0 small">Nossa equipe está pronta para ajudar você a implementar a solução ideal para sua instituição.</p>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <a href="{% url 'account_login' %}" class="btn btn-medical-teal">
+          <i class="bi bi-chat-dots me-2"></i>
+          Entrar em Contato
+        </a>
       </div>
     </div>
   </div>
