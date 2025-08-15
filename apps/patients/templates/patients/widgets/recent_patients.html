@@ -17,7 +17,11 @@
         <tbody>
           {% for patient in recent_patients %}
           <tr>
-            <td>{{ patient.name }}</td>
+            <td>
+              <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.pk %}" class="text-decoration-none">
+                      <strong>{{ patient.name }}</strong>
+              </a>
+            </td>
             <td>{{ patient.status|patient_status_badge }}</td>
             <td>
               <a

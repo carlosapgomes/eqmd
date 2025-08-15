@@ -10,11 +10,17 @@
   <div class="col-12">
     <div class="d-flex justify-content-between align-items-center">
       <div>
-        <h1 class="h3 text-medical-primary mb-1">Bem-vindo, Dr. Silva</h1>
+        <h1 class="h3 text-medical-primary mb-1">Bem-vindo, 
+              {% if user.profile.display_name %}
+                {{ user.profile.display_name }}
+              {% else %}
+                {{ user.get_full_name|default:user.username }}
+              {% endif %}
+          </h1>
         <p class="text-medical-gray mb-0">Painel de controle - EquipeMed</p>
       </div>
       <div class="text-end">
-        <small class="text-muted">Último acesso: Hoje, 14:30</small>
+        <small class="text-muted">Último acesso:{{ user.last_login|date:"d/m/Y H:i" }}</small>
       </div>
     </div>
   </div>
