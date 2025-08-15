@@ -22,13 +22,13 @@
 
 <!-- Quick Actions Cards -->
 <div class="row g-4 mb-5">
-  <div class="col-md-6 col-lg-3">
+  <div class="col-md-6 col-lg-6">
     <div class="card card-medical h-100 text-center">
       <div class="card-body p-4">
         <i class="bi bi-person-plus-fill text-medical-teal display-4 mb-3"></i>
         <h5 class="card-title text-medical-primary">Novo Paciente</h5>
         <p class="card-text text-medical-gray small mb-3">Cadastrar novo paciente no sistema</p>
-        <a href="#" class="btn btn-medical-teal btn-sm">
+        <a href="{% url 'apps.patients:patient_create' %}" class="btn btn-medical-teal btn-sm">
           <i class="bi bi-plus-circle me-1"></i>
           Cadastrar
         </a>
@@ -36,13 +36,13 @@
     </div>
   </div>
   
-  <div class="col-md-6 col-lg-3">
+  <div class="col-md-6 col-lg-6">
     <div class="card card-medical h-100 text-center">
       <div class="card-body p-4">
         <i class="bi bi-search text-medical-green display-4 mb-3"></i>
         <h5 class="card-title text-medical-primary">Buscar Paciente</h5>
         <p class="card-text text-medical-gray small mb-3">Localizar paciente por nome ou ID</p>
-        <a href="#" class="btn btn-medical-green btn-sm">
+        <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-medical-primary btn-sm">
           <i class="bi bi-search me-1"></i>
           Buscar
         </a>
@@ -50,142 +50,143 @@
     </div>
   </div>
   
-  <div class="col-md-6 col-lg-3">
-    <div class="card card-medical h-100 text-center">
-      <div class="card-body p-4">
-        <i class="bi bi-calendar2-event-fill text-medical-deep-blue display-4 mb-3"></i>
-        <h5 class="card-title text-medical-primary">Agenda</h5>
-        <p class="card-text text-medical-gray small mb-3">Visualizar compromissos do dia</p>
-        <a href="#" class="btn btn-medical-deep-blue btn-sm">
-          <i class="bi bi-calendar3 me-1"></i>
-          Ver Agenda
-        </a>
-      </div>
-    </div>
+  <!-- <div class="col-md-6 col-lg-3"> -->
+  <!--   <div class="card card-medical h-100 text-center"> -->
+  <!--     <div class="card-body p-4"> -->
+  <!--       <i class="bi bi-calendar2-event-fill text-medical-deep-blue display-4 mb-3"></i> -->
+  <!--       <h5 class="card-title text-medical-primary">Agenda</h5> -->
+  <!--       <p class="card-text text-medical-gray small mb-3">Visualizar compromissos do dia</p> -->
+  <!--       <a href="#" class="btn btn-medical-deep-blue btn-sm"> -->
+  <!--         <i class="bi bi-calendar3 me-1"></i> -->
+  <!--         Ver Agenda -->
+  <!--       </a> -->
+  <!--     </div> -->
+  <!--   </div> -->
+  <!-- </div> -->
+  
+<!--   <div class="col-md-6 col-lg-3"> -->
+<!--     <div class="card card-medical h-100 text-center"> -->
+<!--       <div class="card-body p-4"> -->
+<!--         <i class="bi bi-clipboard2-pulse-fill text-medical-warning-orange display-4 mb-3"></i> -->
+<!--         <h5 class="card-title text-medical-primary">Eventos Urgentes</h5> -->
+<!--         <p class="card-text text-medical-gray small mb-3">Acompanhar casos prioritários</p> -->
+<!--         <a href="#" class="btn btn-medical-warning-orange btn-sm"> -->
+<!--           <i class="bi bi-exclamation-triangle me-1"></i> -->
+<!--           Ver Urgentes -->
+<!--         </a> -->
+<!--       </div> -->
+<!--     </div> -->
+<!--   </div> -->
+<!-- </div> -->
+
+
+<!-- Dashboard Widgets -->
+<div class="row g-4">
+  <!-- Recent Patients from Patient App -->
+  <div class="">
+    {% include 'patients/widgets/recent_patients.html' %}
   </div>
   
-  <div class="col-md-6 col-lg-3">
-    <div class="card card-medical h-100 text-center">
-      <div class="card-body p-4">
-        <i class="bi bi-clipboard2-pulse-fill text-medical-warning-orange display-4 mb-3"></i>
-        <h5 class="card-title text-medical-primary">Eventos Urgentes</h5>
-        <p class="card-text text-medical-gray small mb-3">Acompanhar casos prioritários</p>
-        <a href="#" class="btn btn-medical-warning-orange btn-sm">
-          <i class="bi bi-exclamation-triangle me-1"></i>
-          Ver Urgentes
-        </a>
-      </div>
-    </div>
-  </div>
+  <!-- Recent Daily Notes Widget -->
+  <!-- <div class="col-lg-4"> -->
+  <!--   {% recent_dailynotes_widget %} -->
+  <!-- </div> -->
+  
+  <!-- Today's Schedule -->
+  <!-- <div class="col-lg-6"> -->
+  <!--   <div class="card card-medical h-100"> -->
+  <!--     <div class="card-header bg-medical-light"> -->
+  <!--       <div class="d-flex justify-content-between align-items-center"> -->
+  <!--         <h6 class="card-title text-medical-primary mb-0"> -->
+  <!--           <i class="bi bi-calendar-event me-2"></i> -->
+  <!--           Agenda de Hoje -->
+  <!--         </h6> -->
+  <!--         <a href="#" class="btn btn-sm btn-medical-outline-green">Ver Completa</a> -->
+  <!--       </div> -->
+  <!--     </div> -->
+  <!--     <div class="card-body"> -->
+  <!--       <div class="list-group list-group-flush"> -->
+  <!--         <div class="list-group-item d-flex justify-content-between align-items-start border-0 px-0"> -->
+  <!--           <div class="d-flex"> -->
+  <!--             <div class="bg-medical-green rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 8px; height: 8px; margin-top: 8px;"></div> -->
+  <!--             <div> -->
+  <!--               <h6 class="mb-1 text-medical-primary">Consulta - Maria Santos</h6> -->
+  <!--               <small class="text-muted">Cardiologia • Sala 201</small> -->
+  <!--             </div> -->
+  <!--           </div> -->
+  <!--           <small class="text-medical-green fw-bold">09:00</small> -->
+  <!--         </div> -->
+  <!---->
+  <!--         <div class="list-group-item d-flex justify-content-between align-items-start border-0 px-0"> -->
+  <!--           <div class="d-flex"> -->
+  <!--             <div class="bg-medical-warning-orange rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 8px; height: 8px; margin-top: 8px;"></div> -->
+  <!--             <div> -->
+  <!--               <h6 class="mb-1 text-medical-primary">Cirurgia - João Silva</h6> -->
+  <!--               <small class="text-muted">Centro Cirúrgico • Sala 3</small> -->
+  <!--             </div> -->
+  <!--           </div> -->
+  <!--           <small class="text-medical-warning-orange fw-bold">11:30</small> -->
+  <!--         </div> -->
+  <!---->
+  <!--         <div class="list-group-item d-flex justify-content-between align-items-start border-0 px-0"> -->
+  <!--           <div class="d-flex"> -->
+  <!--             <div class="bg-medical-teal rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 8px; height: 8px; margin-top: 8px;"></div> -->
+  <!--             <div> -->
+  <!--               <h6 class="mb-1 text-medical-primary">Reunião de Equipe</h6> -->
+  <!--               <small class="text-muted">Sala de Reuniões • 2º Andar</small> -->
+  <!--             </div> -->
+  <!--           </div> -->
+  <!--           <small class="text-medical-teal fw-bold">14:00</small> -->
+  <!--         </div> -->
+  <!--       </div> -->
+  <!--     </div> -->
+  <!--   </div> -->
+  <!-- </div> -->
 </div>
 
 <!-- Patient Statistics Row -->
 {% include 'patients/widgets/patient_stats.html' %}
 
-<!-- Dashboard Widgets -->
-<div class="row g-4">
-  <!-- Recent Patients from Patient App -->
-  <div class="col-lg-4">
-    {% include 'patients/widgets/recent_patients.html' %}
-  </div>
-  
-  <!-- Recent Daily Notes Widget -->
-  <div class="col-lg-4">
-    {% recent_dailynotes_widget %}
-  </div>
-  
-  <!-- Today's Schedule -->
-  <div class="col-lg-6">
-    <div class="card card-medical h-100">
-      <div class="card-header bg-medical-light">
-        <div class="d-flex justify-content-between align-items-center">
-          <h6 class="card-title text-medical-primary mb-0">
-            <i class="bi bi-calendar-event me-2"></i>
-            Agenda de Hoje
-          </h6>
-          <a href="#" class="btn btn-sm btn-medical-outline-green">Ver Completa</a>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="list-group list-group-flush">
-          <div class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
-            <div class="d-flex">
-              <div class="bg-medical-green rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 8px; height: 8px; margin-top: 8px;"></div>
-              <div>
-                <h6 class="mb-1 text-medical-primary">Consulta - Maria Santos</h6>
-                <small class="text-muted">Cardiologia • Sala 201</small>
-              </div>
-            </div>
-            <small class="text-medical-green fw-bold">09:00</small>
-          </div>
-          
-          <div class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
-            <div class="d-flex">
-              <div class="bg-medical-warning-orange rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 8px; height: 8px; margin-top: 8px;"></div>
-              <div>
-                <h6 class="mb-1 text-medical-primary">Cirurgia - João Silva</h6>
-                <small class="text-muted">Centro Cirúrgico • Sala 3</small>
-              </div>
-            </div>
-            <small class="text-medical-warning-orange fw-bold">11:30</small>
-          </div>
-          
-          <div class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
-            <div class="d-flex">
-              <div class="bg-medical-teal rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 8px; height: 8px; margin-top: 8px;"></div>
-              <div>
-                <h6 class="mb-1 text-medical-primary">Reunião de Equipe</h6>
-                <small class="text-muted">Sala de Reuniões • 2º Andar</small>
-              </div>
-            </div>
-            <small class="text-medical-teal fw-bold">14:00</small>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Statistics Row -->
-<div class="row g-4 mt-4">
-  <div class="col-md-3">
-    <div class="card card-medical text-center">
-      <div class="card-body p-4">
-        <i class="bi bi-people-fill text-medical-teal display-6 mb-2"></i>
-        <h4 class="text-medical-primary mb-1">127</h4>
-        <p class="text-muted small mb-0">Pacientes Ativos</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-3">
-    <div class="card card-medical text-center">
-      <div class="card-body p-4">
-        <i class="bi bi-clipboard-check-fill text-medical-green display-6 mb-2"></i>
-        <h4 class="text-medical-primary mb-1">23</h4>
-        <p class="text-muted small mb-0">Exames Hoje</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-3">
-    <div class="card card-medical text-center">
-      <div class="card-body p-4">
-        <i class="bi bi-journal-medical text-medical-deep-blue display-6 mb-2"></i>
-        <h4 class="text-medical-primary mb-1">{% dailynotes_count_today %}</h4>
-        <p class="text-muted small mb-0">Evoluções Hoje</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-3">
-    <div class="card card-medical text-center">
-      <div class="card-body p-4">
-        <i class="bi bi-exclamation-triangle-fill text-medical-warning-orange display-6 mb-2"></i>
-        <h4 class="text-medical-primary mb-1">3</h4>
-        <p class="text-muted small mb-0">Casos Urgentes</p>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- <div class="row g-4 mt-4"> -->
+<!--   <div class="col-md-3"> -->
+<!--     <div class="card card-medical text-center"> -->
+<!--       <div class="card-body p-4"> -->
+<!--         <i class="bi bi-people-fill text-medical-teal display-6 mb-2"></i> -->
+<!--         <h4 class="text-medical-primary mb-1">127</h4> -->
+<!--         <p class="text-muted small mb-0">Pacientes Ativos</p> -->
+<!--       </div> -->
+<!--     </div> -->
+<!--   </div> -->
+<!---->
+<!--   <div class="col-md-3"> -->
+<!--     <div class="card card-medical text-center"> -->
+<!--       <div class="card-body p-4"> -->
+<!--         <i class="bi bi-clipboard-check-fill text-medical-green display-6 mb-2"></i> -->
+<!--         <h4 class="text-medical-primary mb-1">23</h4> -->
+<!--         <p class="text-muted small mb-0">Exames Hoje</p> -->
+<!--       </div> -->
+<!--     </div> -->
+<!--   </div> -->
+<!---->
+<!--   <div class="col-md-3"> -->
+<!--     <div class="card card-medical text-center"> -->
+<!--       <div class="card-body p-4"> -->
+<!--         <i class="bi bi-journal-medical text-medical-deep-blue display-6 mb-2"></i> -->
+<!--         <h4 class="text-medical-primary mb-1">{% dailynotes_count_today %}</h4> -->
+<!--         <p class="text-muted small mb-0">Evoluções Hoje</p> -->
+<!--       </div> -->
+<!--     </div> -->
+<!--   </div> -->
+<!---->
+<!--   <div class="col-md-3"> -->
+<!--     <div class="card card-medical text-center"> -->
+<!--       <div class="card-body p-4"> -->
+<!--         <i class="bi bi-exclamation-triangle-fill text-medical-warning-orange display-6 mb-2"></i> -->
+<!--         <h4 class="text-medical-primary mb-1">3</h4> -->
+<!--         <p class="text-muted small mb-0">Casos Urgentes</p> -->
+<!--       </div> -->
+<!--     </div> -->
+<!--   </div> -->
+<!-- </div> -->
 {% endblock app_content %}
