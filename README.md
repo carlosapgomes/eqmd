@@ -192,6 +192,10 @@ EquipeMed uses a simple role-based permission system:
 
 For setup assistance or feature requests, please check the project documentation in `CLAUDE.md` or create an issue.
 
+## Development Acknowledgments
+
+This project was developed with the assistance of Large Language Model (LLM) coding assistants, including Claude by Anthropic. LLM tools were used to help with code generation, architecture design, documentation, and problem-solving throughout the development process.
+
 ## License
 
 [Add your license information here]
