@@ -325,17 +325,32 @@
     </div>
 </div>
 
-<!-- Transfer Patient Modal -->
+<!-- Internal Transfer Modal -->
 <div class="modal fade" id="transfer_patientModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form method="post" action="{% url 'apps.patients:transfer_patient' patient.id %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title">Transferir Paciente</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-left-right me-2"></i>
+                        Transferência Interna
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Current Location Info -->
+                    <div class="alert alert-info mb-4">
+                        <h6 class="alert-heading mb-2">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            Localização Atual
+                        </h6>
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Ala:</strong> {{ patient.get_ward_display }}</span>
+                            <span><strong>Leito:</strong> {{ patient.bed|default:"Não definido" }}</span>
+                        </div>
+                    </div>
+                    
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -343,23 +358,36 @@
                                 <input type="text" class="form-control" value="{{ patient.name }}" readonly>
                             </div>
                             <div class="mb-3">
-                                <label for="destination" class="form-label">Destino *</label>
-                                <input type="text" class="form-control" name="destination" required placeholder="Ex: Hospital Universitário, UTI Centro">
+                                <label for="ward" class="form-label">Nova Ala *</label>
+                                <select class="form-control" name="ward" required id="ward">
+                                    <option value="">Selecione uma ala...</option>
+                                    {% for ward in wards %}
+                                        <option value="{{ ward.id }}" {% if ward == patient.ward %}disabled{% endif %}>
+                                            {{ ward.abbreviation }} - {{ ward.name }}
+                                            {% if ward == patient.ward %} (Atual){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="bed" class="form-label">Novo Leito</label>
+                                <input type="text" class="form-control" name="bed" id="bed" placeholder="Ex: 101A, UTI-02, etc.">
+                                <div class="form-text">Deixe em branco se não houver leito específico</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="reason" class="form-label">Motivo da Transferência *</label>
-                                <textarea class="form-control" name="reason" rows="3" required placeholder="Ex: Necessidade de cuidados especializados"></textarea>
+                                <label for="transfer_reason" class="form-label">Motivo da Transferência *</label>
+                                <textarea class="form-control" name="transfer_reason" rows="5" required id="transfer_reason" placeholder="Motivo da transferência interna..."></textarea>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-arrow-left-right"></i>
-                        Transferir Paciente
+                    <button type="submit" class="btn btn-medical-primary">
+                        <i class="bi bi-arrow-left-right me-1"></i>
+                        Transferir Internamente
                     </button>
                 </div>
             </form>

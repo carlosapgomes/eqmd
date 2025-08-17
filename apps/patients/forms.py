@@ -593,8 +593,44 @@ class EmergencyAdmissionForm(StatusChangeForm):
     )
 
 
+class InternalTransferForm(StatusChangeForm):
+    """Form for internal ward/bed transfers"""
+    ward = forms.ModelChoiceField(
+        queryset=None,  # Will be set in __init__
+        required=True,
+        label="Nova Ala",
+        empty_label="Selecione uma ala...",
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
+    )
+    bed = forms.CharField(
+        max_length=20,
+        required=False,
+        label="Novo Leito",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: 101A, UTI-02, etc.'
+        })
+    )
+    transfer_reason = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Motivo da transferência interna...'
+        }),
+        required=True,
+        label="Motivo da Transferência"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import Ward
+        self.fields['ward'].queryset = Ward.objects.filter(is_active=True).order_by('name')
+
+
 class TransferPatientForm(StatusChangeForm):
-    """Form for transferring patients"""
+    """Form for transferring patients (external - deprecated)"""
     destination = forms.CharField(
         max_length=200,
         required=True,

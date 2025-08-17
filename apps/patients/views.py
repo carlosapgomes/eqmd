@@ -19,7 +19,7 @@ from .forms import (
     QuickAdmissionForm, QuickDischargeForm, WardForm,
     # Status change forms
     AdmitPatientForm, DischargePatientForm, EmergencyAdmissionForm,
-    TransferPatientForm, DeclareDeathForm, SetOutpatientForm
+    InternalTransferForm, TransferPatientForm, DeclareDeathForm, SetOutpatientForm
 )
 # from apps.hospitals.models import Hospital  # Removed for single-hospital refactor
 from apps.core.permissions.utils import (
@@ -1062,22 +1062,49 @@ class EmergencyAdmissionView(PatientStatusChangeView):
 
 
 class TransferPatientView(PatientStatusChangeView):
-    """Change patient status to transferred"""
+    """Handle internal ward/bed transfers"""
     
     def handle_status_change(self, request, patient):
-        form = TransferPatientForm(request.POST)
+        form = InternalTransferForm(request.POST)
         
         if form.is_valid():
             try:
-                # Update patient status for transfer
-                patient.status = Patient.Status.TRANSFERRED
-                patient.bed = ''
+                # Store old location for event description
+                old_ward = patient.ward.name if patient.ward else "Sem ala definida"
+                old_bed = patient.bed or "Sem leito"
+                old_location = f"{old_ward} - {old_bed}"
+                
+                new_ward = form.cleaned_data['ward']
+                new_bed = form.cleaned_data['bed'] or "Sem leito"
+                new_location = f"{new_ward.name} - {new_bed}"
+                
+                # Update patient location (keep status as INPATIENT)
+                patient.ward = new_ward
+                patient.bed = new_bed
                 patient.updated_by = request.user
                 patient.save()
                 
+                # Update current admission if exists
+                current_admission = patient.get_current_admission()
+                if current_admission:
+                    current_admission.ward = new_ward
+                    current_admission.final_bed = new_bed
+                    current_admission.updated_by = request.user
+                    current_admission.save()
+                
+                # Create timeline event
+                from apps.events.models import Event
+                Event.objects.create(
+                    patient=patient,
+                    event_type=Event.TRANSFER_EVENT,
+                    description=f"Transferência interna: {old_location} → {new_location}\nMotivo: {form.cleaned_data['transfer_reason']}",
+                    event_datetime=timezone.now(),
+                    created_by=request.user
+                )
+                
                 messages.success(
                     request,
-                    f'Paciente {patient.name} foi transferido para {form.cleaned_data["destination"]}.'
+                    f'Paciente {patient.name} foi transferido para {new_ward.abbreviation} - {new_bed}.'
                 )
             except ValidationError as e:
                 messages.error(request, f'Erro na transferência: {str(e)}')

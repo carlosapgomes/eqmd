@@ -74,11 +74,10 @@
 ### Status Transitions
 ```
 New Patient → inpatient/outpatient/emergency
-inpatient → discharged/transferred/deceased
+inpatient → discharged/deceased/outpatient
 outpatient → inpatient/discharged/deceased
-emergency → inpatient/discharged/transferred/deceased
+emergency → inpatient/discharged/deceased/outpatient
 discharged → (final state, can be reopened)
-transferred → (final state, can be reopened)
 deceased → (final state, admin override only)
 ```
 
@@ -87,6 +86,40 @@ deceased → (final state, admin override only)
 - **Any Status → discharged**: Doctors/residents only
 - **Any Status → deceased**: Doctors/residents only
 - **deceased → Any Status**: Admin/superuser only (data corrections)
+
+## Internal Transfer Management
+
+### Overview
+- **Internal transfers** change ward/bed location without changing patient status
+- Available for INPATIENT and EMERGENCY patients only
+- Automatically generates timeline events
+- Updates both patient location and current admission records
+
+### Transfer Process
+1. **Access**: Transfer button available on patient details page
+2. **Ward Selection**: Choose from active hospital wards
+3. **Bed Assignment**: Optional bed/room identifier
+4. **Reason**: Required justification for transfer
+5. **Timeline Event**: Automatic event creation with transfer history
+
+### Data Updates
+- `Patient.ward` → new ward
+- `Patient.bed` → new bed identifier
+- `PatientAdmission.ward` → new ward (current admission)
+- `PatientAdmission.final_bed` → new bed (current admission)
+- `Event` → transfer timeline record
+
+### Timeline Integration
+- Event Type: `TRANSFER_EVENT` (17)
+- Description: "Transferência interna: [Old Location] → [New Location]"
+- Reason included in event description
+- Searchable in patient timeline
+
+### UI Features
+- **Current Location Display**: Shows current ward and bed
+- **Ward Dropdown**: Active wards only, current ward disabled
+- **Validation**: Prevents transfer to same location
+- **Success Message**: Confirms transfer with new location
 
 ## Search and Filtering
 
@@ -152,6 +185,7 @@ Calculates and displays patient age.
 - `/patients/<uuid>/edit/` - Edit patient
 - `/patients/<uuid>/delete/` - Delete patient (soft delete)
 - `/patients/<uuid>/history/` - Audit history
+- `/patients/<uuid>/status/transfer/` - Internal ward/bed transfer
 - `/patients/tags/` - Tag management interface
 - `/patients/search/` - Advanced search
 - `/patients/export/` - Export patient data

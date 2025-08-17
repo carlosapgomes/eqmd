@@ -51,18 +51,17 @@ def available_status_actions(user, patient):
     actions = []
     current_status = patient.status
     
-    # Define possible transitions with their display information
-    possible_transitions = [
+    # Define possible status transitions with their display information
+    status_transitions = [
         (Patient.Status.INPATIENT, 'Internar', 'hospital', 'btn-success'),
         (Patient.Status.EMERGENCY, 'Emergência', 'exclamation-triangle', 'btn-danger'),
         (Patient.Status.DISCHARGED, 'Dar Alta', 'door-open', 'btn-info'),
-        (Patient.Status.TRANSFERRED, 'Transferir', 'arrow-left-right', 'btn-primary'),
         (Patient.Status.OUTPATIENT, 'Ambulatorial', 'person-check', 'btn-secondary'),
         (Patient.Status.DECEASED, 'Declarar Óbito', 'heart-pulse', 'btn-dark'),
     ]
     
     # Check each possible status change
-    for status_value, action_label, icon, btn_class in possible_transitions:
+    for status_value, action_label, icon, btn_class in status_transitions:
         if status_value != current_status:
             if can_change_patient_status(user, patient, status_value):
                 actions.append({
@@ -72,6 +71,17 @@ def available_status_actions(user, patient):
                     'btn_class': btn_class,
                     'action_name': _get_action_name(current_status, status_value)
                 })
+    
+    # Add internal transfer action for inpatients and emergency patients
+    if current_status in [Patient.Status.INPATIENT, Patient.Status.EMERGENCY]:
+        if can_change_patient_status(user, patient, None):  # Check general permission
+            actions.append({
+                'status': 'internal_transfer',
+                'label': 'Transferir Internamente',
+                'icon': 'arrow-left-right',
+                'btn_class': 'btn-primary',
+                'action_name': 'transfer_patient'
+            })
     
     return actions
 

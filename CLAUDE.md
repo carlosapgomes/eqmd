@@ -203,7 +203,7 @@ uv run python manage.py security_report --days=30 --format=json --output=report.
 
 - **core**: Dashboard, permissions, landing page, hospital configuration
 - **accounts**: Custom user model with medical professions (Doctor, Resident, Nurse, Physiotherapist, Student)
-- **patients**: Patient management with tagging system and status tracking
+- **patients**: Patient management with tagging system, status tracking, and internal ward/bed transfer management
 - **events**: Base event model for medical records (UUID, audit trail, 24h edit window)
 - **dailynotes**: Daily evolution notes extending Event model
 - **sample_content**: Template content management for various event types
@@ -236,7 +236,7 @@ uv run python manage.py security_report --days=30 --format=json --output=report.
 
 ### Core Apps Overview
 
-- **patients**: Patient management, tagging, status tracking
+- **patients**: Patient management, tagging, status tracking, internal transfer system
 - **events**: Base event system, timeline architecture, 24h edit window
 - **dailynotes**: Medical evolution notes, duplicate functionality, performance optimizations
 - **sample_content**: Template content management, superuser-only editing
