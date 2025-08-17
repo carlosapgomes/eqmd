@@ -198,4 +198,4 @@ This project was developed with the assistance of Large Language Model (LLM) cod
 
 ## License
 
-[Add your license information here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
