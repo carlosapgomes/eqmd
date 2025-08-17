@@ -1,4 +1,6 @@
-# TODOs
+# Development TODOs
+
+This document tracks planned features, improvements, and technical debt for the EquipeMed project.
 
 ## General
 
