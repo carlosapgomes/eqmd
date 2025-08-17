@@ -4,12 +4,13 @@
 
 - [x] review use of crispy forms, consider removing it from some apps
 - [x] complete remove crispy forms from the project and update all documentation
-- [] add simplenotes app
+- [x] add simplenotes app
 - [x] brainstorm the best strategy to implement photos/photos series/video clips
+- [x] add outpatientprescriptions app
+- [x] implement internal ward/bed transfer management system
 - [] add examsresults app
 - [] add examsrequests app
 - [] add dischargereports app
-- [] add outpatientprescriptions app
 - [] add reports app
 
 ## SampleContent
@@ -33,6 +34,9 @@
 - [x] update adding hospital records from edit patient form
 - [x] cleanup patients app templates
 - [x] remove crispy forms from patients app
+- [x] implement internal ward/bed transfer system
+- [x] consolidate medical actions on patient details page
+- [x] separate personal data editing from medical status changes
 
 ## Mediafiles
 
