@@ -14,6 +14,11 @@ db.sqlite3
 # Environment variables
 .env
 
+# Permission audit files
+backup_permissions.json
+current_permissions.json
+*_permissions.json
+
 # Node modules
 node_modules/
 staticfiles/
