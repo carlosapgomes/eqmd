@@ -57,6 +57,7 @@ print_status "Stopping current container..."
 docker compose stop eqmd
 
 print_status "Fixing permissions before starting container (setting to eqmd user)..."
+mkdir -p /var/www/equipemed/static
 chown -R $EQMD_UID:$EQMD_GID /var/www/equipemed/
 
 print_status "Starting updated container..."
