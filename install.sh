@@ -186,7 +186,7 @@ print_status "Container ID: $CONTAINER_ID"
 
 # Copy static files
 print_info "Copying static files..."
-if docker exec $CONTAINER_ID sh -c "cp -rv /app/staticfiles/* /var/www/equipemed/static/"; then
+if docker exec $CONTAINER_ID sh -c "cp -rv /app/staticfiles/. /var/www/equipemed/static/"; then
   print_status "Static files copied successfully"
 else
   print_warning "Static files copy had some issues, but continuing..."
