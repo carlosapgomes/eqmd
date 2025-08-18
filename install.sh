@@ -3,7 +3,7 @@
 # EquipeMed Production First-Time Installation Script
 # This script automates the complete initial deployment process
 
-set -e  # Exit on any error
+set -e # Exit on any error
 
 echo "🚀 Starting EquipeMed production installation..."
 
@@ -16,55 +16,55 @@ NC='\033[0m' # No Color
 
 # Function to print colored output
 print_status() {
-    echo -e "${GREEN}✓${NC} $1"
+  echo -e "${GREEN}✓${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+  echo -e "${YELLOW}⚠${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+  echo -e "${RED}✗${NC} $1"
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ${NC} $1"
+  echo -e "${BLUE}ℹ${NC} $1"
 }
 
 print_prompt() {
-    echo -e "${YELLOW}?${NC} $1"
+  echo -e "${YELLOW}?${NC} $1"
 }
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
-   print_error "This script must be run as root"
-   exit 1
+  print_error "This script must be run as root"
+  exit 1
 fi
 
 # Check prerequisites
 print_info "Checking prerequisites..."
 
-if ! command -v docker &> /dev/null; then
-    print_error "docker is not installed or not in PATH"
-    print_info "Please install Docker first: https://docs.docker.com/engine/install/"
-    exit 1
+if ! command -v docker &>/dev/null; then
+  print_error "docker is not installed or not in PATH"
+  print_info "Please install Docker first: https://docs.docker.com/engine/install/"
+  exit 1
 fi
 
-if ! command -v git &> /dev/null; then
-    print_error "git is not installed or not in PATH"
-    print_info "Please install git first"
-    exit 1
+if ! command -v git &>/dev/null; then
+  print_error "git is not installed or not in PATH"
+  print_info "Please install git first"
+  exit 1
 fi
 
 print_status "Prerequisites check passed"
 
 # Create eqmd user if it doesn't exist
-if ! id eqmd &> /dev/null; then
-    print_info "Creating eqmd system user..."
-    useradd --system --no-create-home --shell /usr/sbin/nologin eqmd
-    print_status "eqmd user created"
+if ! id eqmd &>/dev/null; then
+  print_info "Creating eqmd system user..."
+  useradd --system --no-create-home --shell /usr/sbin/nologin eqmd
+  print_status "eqmd user created"
 else
-    print_status "eqmd user already exists"
+  print_status "eqmd user already exists"
 fi
 
 # Get eqmd user ID and group ID
@@ -83,29 +83,29 @@ print_status "Directories created and permissions set"
 
 # Check if .env file exists
 if [ ! -f ".env" ]; then
-    print_warning "No .env file found. Creating template..."
-    
-    # Prompt for basic configuration
-    echo ""
-    print_prompt "Enter your domain name (e.g., yourdomain.com): "
-    read -r DOMAIN_NAME
-    
-    print_prompt "Enter your hospital name: "
-    read -r HOSPITAL_NAME
-    
-    print_prompt "Enter your hospital address: "
-    read -r HOSPITAL_ADDRESS
-    
-    print_prompt "Enter your hospital phone: "
-    read -r HOSPITAL_PHONE
-    
-    print_prompt "Enter your hospital email: "
-    read -r HOSPITAL_EMAIL
-    
-    # Generate a secure secret key
-    SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
-    
-    cat > .env << EOF
+  print_warning "No .env file found. Creating template..."
+
+  # Prompt for basic configuration
+  echo ""
+  print_prompt "Enter your domain name (e.g., yourdomain.com): "
+  read -r DOMAIN_NAME
+
+  print_prompt "Enter your hospital name: "
+  read -r HOSPITAL_NAME
+
+  print_prompt "Enter your hospital address: "
+  read -r HOSPITAL_ADDRESS
+
+  print_prompt "Enter your hospital phone: "
+  read -r HOSPITAL_PHONE
+
+  print_prompt "Enter your hospital email: "
+  read -r HOSPITAL_EMAIL
+
+  # Generate a secure secret key
+  SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
+
+  cat >.env <<EOF
 DEBUG=False
 SECRET_KEY=$SECRET_KEY
 ALLOWED_HOSTS=$DOMAIN_NAME,www.$DOMAIN_NAME,localhost,127.0.0.1
@@ -115,15 +115,15 @@ HOSPITAL_PHONE=$HOSPITAL_PHONE
 HOSPITAL_EMAIL=$HOSPITAL_EMAIL
 HOSPITAL_PDF_FORMS_ENABLED=true
 EOF
-    
-    print_status ".env file created"
-    print_warning "Please review and edit .env file if needed before proceeding"
-    
-    echo ""
-    print_prompt "Press Enter to continue after reviewing .env file..."
-    read -r
+
+  print_status ".env file created"
+  print_warning "Please review and edit .env file if needed before proceeding"
+
+  echo ""
+  print_prompt "Press Enter to continue after reviewing .env file..."
+  read -r
 else
-    print_status "Using existing .env file"
+  print_status "Using existing .env file"
 fi
 
 # Set environment variables for Docker build
@@ -140,33 +140,29 @@ print_info "Running database migrations..."
 docker compose run --rm eqmd python manage.py migrate
 print_status "Database migrations completed"
 
+# Create superuser first
+echo ""
+print_info "Creating superuser account..."
+docker compose run --rm eqmd python manage.py createsuperuser
+
 # Ask about sample data
 echo ""
-print_prompt "Do you want to load sample data? This includes sample tags, wards, content templates, and PDF forms. (y/N): "
+print_prompt "Do you want to load sample data? This includes sample users, patients, medical records, and templates. (y/N): "
 read -r LOAD_SAMPLES
 
 if [[ $LOAD_SAMPLES =~ ^[Yy]$ ]]; then
-    print_info "Loading sample data..."
-    docker compose run --rm eqmd python manage.py create_sample_tags
-    docker compose run --rm eqmd python manage.py create_sample_wards
-    docker compose run --rm eqmd python manage.py create_sample_content
-    docker compose run --rm eqmd python manage.py create_sample_pdf_forms
-    print_status "Sample data loaded"
-    
-    echo ""
-    print_info "Creating superuser account..."
-    docker compose run --rm eqmd python manage.py createsuperuser
-    
+  print_info "Loading comprehensive sample data..."
+  docker compose run --rm eqmd python manage.py populate_sample_data
+  print_status "Sample data loaded (includes users, patients, medical data, and PDF forms)"
 else
-    echo ""
-    print_info "Creating superuser account..."
-    docker compose run --rm eqmd python manage.py createsuperuser
-    
-    print_info "You can load sample data later with these commands:"
-    echo "docker compose run --rm eqmd python manage.py create_sample_tags"
-    echo "docker compose run --rm eqmd python manage.py create_sample_wards"
-    echo "docker compose run --rm eqmd python manage.py create_sample_content"
-    echo "docker compose run --rm eqmd python manage.py create_sample_pdf_forms"
+  print_info "You can load comprehensive sample data later with:"
+  echo "docker compose run --rm eqmd python manage.py populate_sample_data"
+  echo ""
+  print_info "Or load individual sample data with:"
+  echo "docker compose run --rm eqmd python manage.py create_sample_tags"
+  echo "docker compose run --rm eqmd python manage.py create_sample_wards"
+  echo "docker compose run --rm eqmd python manage.py create_sample_content"
+  echo "docker compose run --rm eqmd python manage.py create_sample_pdf_forms"
 fi
 
 # Start production services
@@ -181,9 +177,9 @@ print_info "Getting container ID..."
 CONTAINER_ID=$(docker compose ps -q eqmd)
 
 if [ -z "$CONTAINER_ID" ]; then
-    print_error "Container failed to start!"
-    echo "Check logs with: docker compose logs eqmd"
-    exit 1
+  print_error "Container failed to start!"
+  echo "Check logs with: docker compose logs eqmd"
+  exit 1
 fi
 
 print_status "Container ID: $CONTAINER_ID"
@@ -191,9 +187,9 @@ print_status "Container ID: $CONTAINER_ID"
 # Copy static files
 print_info "Copying static files..."
 if docker exec $CONTAINER_ID sh -c "cp -rv /app/staticfiles/* /var/www/equipemed/static/"; then
-    print_status "Static files copied successfully"
+  print_status "Static files copied successfully"
 else
-    print_warning "Static files copy had some issues, but continuing..."
+  print_warning "Static files copy had some issues, but continuing..."
 fi
 
 # Fix static files permissions for nginx
@@ -212,32 +208,32 @@ print_info "Verifying deployment..."
 
 # Check container status
 if docker compose ps | grep -q "Up"; then
-    print_status "Container is running"
+  print_status "Container is running"
 else
-    print_error "Container is not running properly"
-    docker compose ps
+  print_error "Container is not running properly"
+  docker compose ps
 fi
 
 # Check PWA files
 if [ -f "/var/www/equipemed/static/manifest.json" ]; then
-    print_status "manifest.json found"
+  print_status "manifest.json found"
 else
-    print_warning "manifest.json not found"
+  print_warning "manifest.json not found"
 fi
 
 if [ -f "/var/www/equipemed/static/sw.js" ]; then
-    print_status "sw.js found"
+  print_status "sw.js found"
 else
-    print_warning "sw.js not found"
+  print_warning "sw.js not found"
 fi
 
 # Health check (if health endpoint exists)
-if curl -f -s http://localhost:8778/health/ > /dev/null 2>&1; then
-    print_status "Health check passed"
-elif curl -f -s http://localhost:8778/ > /dev/null 2>&1; then
-    print_status "Application is responding"
+if curl -f -s http://localhost:8778/health/ >/dev/null 2>&1; then
+  print_status "Health check passed"
+elif curl -f -s http://localhost:8778/ >/dev/null 2>&1; then
+  print_status "Application is responding"
 else
-    print_warning "Application health check failed - check logs"
+  print_warning "Application health check failed - check logs"
 fi
 
 echo ""
@@ -263,11 +259,14 @@ echo "- Static files: /var/www/equipemed/static/"
 echo ""
 
 if [[ $LOAD_SAMPLES =~ ^[Yy]$ ]]; then
-    echo -e "${BLUE}Sample data loaded:${NC}"
-    echo "- Sample patients, tags, and wards"
-    echo "- Template content for medical notes"
-    echo "- Sample PDF forms for testing"
-    echo ""
+  echo -e "${BLUE}Comprehensive sample data loaded:${NC}"
+  echo "- Sample users (doctors, nurses, residents, students) - password: samplepass123"
+  echo "- Sample patients with admission records and medical history"
+  echo "- Hospital wards, tags, and medical templates"
+  echo "- Drug templates and prescription templates"
+  echo "- Daily notes and outpatient prescriptions"
+  echo "- Sample PDF forms for testing"
+  echo ""
 fi
 
 echo -e "${YELLOW}Important security reminders:${NC}"
@@ -277,3 +276,4 @@ echo "- Keep Docker images updated"
 echo "- Monitor application logs regularly"
 echo ""
 echo "For troubleshooting, see: docs/deployment/docker-production-deployment.md"
+
