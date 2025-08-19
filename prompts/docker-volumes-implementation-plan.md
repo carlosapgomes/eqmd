@@ -47,27 +47,7 @@ volumes:
 
 ## Implementation Steps
 
-### Phase 1: Backup Current Data
-
-1. **Create backup directory**
-
-   ```bash
-   mkdir -p backups/pre-volumes-migration/$(date +%Y%m%d_%H%M%S)
-   ```
-
-2. **Backup database**
-
-   ```bash
-   cp db.sqlite3 backups/pre-volumes-migration/$(date +%Y%m%d_%H%M%S)/
-   ```
-
-3. **Backup media files**
-
-   ```bash
-   tar czf backups/pre-volumes-migration/$(date +%Y%m%d_%H%M%S)/media.tar.gz media/
-   ```
-
-### Phase 2: Update docker-compose.yml
+### Phase 1: Update docker-compose.yml (Greenfield)
 
 1. **Stop current containers**
 
@@ -77,7 +57,15 @@ volumes:
 
 2. **Update docker-compose.yml** with new volume configuration
 
-3. **Create named volumes**
+3. **Remove any existing volumes (test environment)**
+
+   ```bash
+   docker volume rm $(docker volume ls -q --filter name=eqmd) 2>/dev/null || true
+   ```
+
+### Phase 2: Initialize Fresh Volumes
+
+1. **Create named volumes**
 
    ```bash
    docker volume create eqmd_database
@@ -85,25 +73,20 @@ volumes:
    docker volume create eqmd_static_files
    ```
 
-### Phase 3: Migrate Existing Data
-
-1. **Migrate database**
+2. **Start containers with clean volumes**
 
    ```bash
-   docker run --rm -v ./db.sqlite3:/source/db.sqlite3 \
-     -v eqmd_database:/target \
-     alpine sh -c "cp /source/db.sqlite3 /target/"
+   docker-compose up -d
    ```
 
-2. **Migrate media files**
+3. **Initialize database**
 
    ```bash
-   docker run --rm -v ./media:/source \
-     -v eqmd_media_files:/target \
-     alpine sh -c "cp -r /source/* /target/"
+   docker-compose exec eqmd uv run python manage.py migrate
+   docker-compose exec eqmd uv run python manage.py createsuperuser
    ```
 
-### Phase 4: Create Backup/Restore Scripts
+### Phase 3: Create Backup/Restore Scripts
 
 #### backup-database.sh
 
@@ -169,7 +152,7 @@ docker run --rm \
 echo "Media files restored from $1"
 ```
 
-### Phase 5: Volume Management Tools
+### Phase 4: Volume Management Tools
 
 #### volume-info.sh
 
@@ -206,7 +189,7 @@ else
 fi
 ```
 
-### Phase 6: Testing and Validation
+### Phase 5: Testing and Validation
 
 1. **Start containers with new configuration**
 
@@ -263,7 +246,7 @@ fi
 
 ## Rollback Plan
 
-If issues arise during migration:
+If issues arise during implementation:
 
 1. **Stop new containers**
 
@@ -277,14 +260,13 @@ If issues arise during migration:
    git checkout HEAD~1 docker-compose.yml
    ```
 
-3. **Restore from backup if needed**
+3. **Remove problematic volumes**
 
    ```bash
-   cp backups/pre-volumes-migration/[timestamp]/db.sqlite3 .
-   tar xzf backups/pre-volumes-migration/[timestamp]/media.tar.gz
+   docker volume rm eqmd_database eqmd_media_files eqmd_static_files
    ```
 
-4. **Restart with old configuration**
+4. **Restart with host-mounted configuration**
 
    ```bash
    docker-compose up -d
@@ -320,31 +302,31 @@ If issues arise during migration:
 
 ## Success Criteria
 
-- [ ] All containers start successfully with named volumes
-- [ ] Database operations work correctly
-- [ ] Media file uploads/downloads function
-- [ ] Static files serve properly
-- [ ] Backup scripts execute without errors
-- [ ] Restore procedures validated
-- [ ] No data loss during migration
-- [ ] Improved security posture confirmed
-- [ ] Documentation updated
+- [x] All containers start successfully with named volumes
+- [x] Database operations work correctly
+- [x] Media file uploads/downloads function
+- [x] Static files serve properly
+- [x] Backup scripts execute without errors
+- [x] Restore procedures validated
+- [x] No data loss during migration
+- [x] Improved security posture confirmed
+- [x] Documentation updated
 
 ## Timeline
 
-- **Phase 1-2**: 1 hour (backup + configuration)
-- **Phase 3**: 30 minutes (data migration)
-- **Phase 4**: 2 hours (script creation + testing)
-- **Phase 5**: 1 hour (management tools)
-- **Phase 6**: 2 hours (testing + validation)
+- **Phase 1**: 15 minutes (configuration update)
+- **Phase 2**: 15 minutes (volume initialization)  
+- **Phase 3**: 2 hours (script creation + testing)
+- **Phase 4**: 1 hour (management tools)
+- **Phase 5**: 1 hour (testing + validation)
 
-**Total Estimated Time**: 6-7 hours
+**Total Estimated Time**: 4-5 hours
 
 ## Risk Mitigation
 
-- Complete backup before any changes
-- Test migration on development environment first
-- Have rollback plan ready
-- Verify data integrity at each step
+- Clean volumes eliminate migration complexity
+- Test implementation in isolated environment
+- Have rollback plan ready (revert docker-compose.yml)
+- Create comprehensive backup/restore procedures for production use
 - Document all changes for audit trail
 
