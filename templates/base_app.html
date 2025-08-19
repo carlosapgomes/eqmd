@@ -94,6 +94,16 @@
 {% endblock %}
 
 {% block content %}
+<!-- Page Navigation Loading Overlay -->
+<div id="pageLoadingOverlay" class="page-loading-overlay d-none">
+  <div class="page-loading-content">
+    <div class="spinner-border text-medical-teal" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+    <div class="mt-3 text-medical-dark-gray fw-medium">Carregando página...</div>
+  </div>
+</div>
+
 <div class="container-fluid app-layout">
   <div class="row">
     <!-- Desktop Sidebar -->
@@ -441,6 +451,19 @@
       {% hospital_header %}
       
       <div class="container-fluid py-4">
+        <!-- Django Messages Alert Container -->
+        {% if messages %}
+        <div class="messages mb-3">
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% elif message.tags == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
         {% block app_content %}
         <!-- Specific page content will be injected here -->
         {% endblock app_content %}

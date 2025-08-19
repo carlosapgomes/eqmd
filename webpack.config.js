@@ -9,7 +9,8 @@ module.exports = {
       "./assets/index.js", 
       "./assets/scss/main.scss",
       "./apps/events/static/events/js/timeline.js",
-      "./apps/events/static/events/js/accessibility.js"
+      "./apps/events/static/events/js/accessibility.js",
+      "./assets/js/page-loading.js"
     ],
     mediafiles: [
       "./apps/mediafiles/static/mediafiles/js/mediafiles.js",
