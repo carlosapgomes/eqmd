@@ -58,19 +58,23 @@ fi
 
 print_status "Prerequisites check passed"
 
-# Create eqmd user if it doesn't exist
-if ! id eqmd &>/dev/null; then
-  print_info "Creating eqmd system user..."
-  useradd --system --no-create-home --shell /usr/sbin/nologin eqmd
-  print_status "eqmd user created"
+# Create eqmd user with conflict resolution
+print_info "Setting up eqmd user..."
+if [ -f "./create_eqmd_user.sh" ]; then
+  source ./create_eqmd_user.sh
 else
-  print_status "eqmd user already exists"
+  print_error "create_eqmd_user.sh script not found"
+  exit 1
 fi
 
-# Get eqmd user ID and group ID
-EQMD_UID=$(id -u eqmd)
-EQMD_GID=$(id -g eqmd)
-print_status "Found eqmd user with UID:$EQMD_UID GID:$EQMD_GID"
+# Source the environment variables
+if [ -f "/tmp/eqmd_user_env" ]; then
+  source /tmp/eqmd_user_env
+  print_status "eqmd user configured with UID:$EQMD_UID GID:$EQMD_GID"
+else
+  print_error "Failed to get eqmd user environment variables"
+  exit 1
+fi
 
 # Create required directories and fix permissions
 print_info "Creating required directories..."
@@ -126,14 +130,27 @@ else
   print_status "Using existing .env file"
 fi
 
-# Set environment variables for Docker build
-export USER_ID=$EQMD_UID
-export GROUP_ID=$EQMD_GID
+# Registry configuration
+print_info "Configuring container registry..."
+if [ -n "$REGISTRY_TOKEN" ]; then
+    echo "$REGISTRY_TOKEN" | docker login ${REGISTRY:-ghcr.io} -u "${REGISTRY_USER:-$USER}" --password-stdin
+    print_status "Registry authentication configured"
+fi
 
-# Build Docker image
-print_info "Building Docker image..."
-docker compose build eqmd
-print_status "Docker image built successfully"
+# Pull image instead of building (or build if registry not available)
+print_info "Getting Docker image..."
+EQMD_IMAGE="${REGISTRY:-ghcr.io/yourorg/eqmd}:${TAG:-latest}"
+export EQMD_IMAGE
+
+if docker pull "$EQMD_IMAGE" 2>/dev/null; then
+    print_status "Docker image pulled from registry: $EQMD_IMAGE"
+else
+    print_warning "Failed to pull from registry, building locally..."
+    export USER_ID=$EQMD_UID
+    export GROUP_ID=$EQMD_GID
+    docker compose build eqmd
+    print_status "Docker image built locally"
+fi
 
 # Run database migrations
 print_info "Running database migrations..."
@@ -184,19 +201,13 @@ fi
 
 print_status "Container ID: $CONTAINER_ID"
 
-# Copy static files
-print_info "Copying static files..."
-if docker exec $CONTAINER_ID sh -c "cp -rv /app/staticfiles/. /var/www/equipemed/static/"; then
-  print_status "Static files copied successfully"
+# Initialize static files using init container
+print_info "Initializing static files..."
+if docker compose --profile init run --rm static-init; then
+  print_status "Static files initialized successfully"
 else
-  print_warning "Static files copy had some issues, but continuing..."
+  print_warning "Static files initialization had some issues, but continuing..."
 fi
-
-# Fix static files permissions for nginx
-print_info "Fixing static files permissions for nginx..."
-chown -R www-data:www-data /var/www/equipemed/
-chmod -R 755 /var/www/equipemed/
-print_status "Permissions set for nginx"
 
 # Setup groups and permissions
 print_info "Setting up user groups and permissions..."
@@ -214,17 +225,19 @@ else
   docker compose ps
 fi
 
-# Check PWA files
-if [ -f "/var/www/equipemed/static/manifest.json" ]; then
-  print_status "manifest.json found"
+# Check static files in volume
+print_info "Checking static files..."
+STATIC_VOLUME_PATH="/var/lib/docker/volumes/eqmd_static_files/_data"
+if [ -f "$STATIC_VOLUME_PATH/manifest.json" ]; then
+  print_status "manifest.json found in volume"
 else
-  print_warning "manifest.json not found"
+  print_warning "manifest.json not found in volume"
 fi
 
-if [ -f "/var/www/equipemed/static/sw.js" ]; then
-  print_status "sw.js found"
+if [ -f "$STATIC_VOLUME_PATH/sw.js" ]; then
+  print_status "sw.js found in volume"
 else
-  print_warning "sw.js not found"
+  print_warning "sw.js not found in volume"
 fi
 
 # Health check (if health endpoint exists)
@@ -240,11 +253,12 @@ echo ""
 echo -e "${GREEN}🎉 EquipeMed installation completed!${NC}"
 echo ""
 echo "Next steps:"
-echo "1. Configure nginx reverse proxy (see docs/deployment/docker-production-deployment.md)"
+echo "1. Configure nginx reverse proxy (see nginx.conf.example)"
 echo "2. Set up SSL certificate for your domain"
 echo "3. Configure firewall to restrict direct access to port 8778"
 echo "4. Test your application at: http://localhost:8778"
 echo "5. Access admin interface at: http://localhost:8778/admin/"
+echo "6. Static files are served from named volume: eqmd_static_files"
 echo ""
 echo "Useful commands:"
 echo "- View logs: docker compose logs -f eqmd"
@@ -255,7 +269,10 @@ echo ""
 echo "Configuration files:"
 echo "- Environment: .env"
 echo "- Docker: docker-compose.yml"
-echo "- Static files: /var/www/equipemed/static/"
+echo "- Static files volume: eqmd_static_files"
+echo "- Static files path: $STATIC_VOLUME_PATH"
+echo "- User creation: create_eqmd_user.sh"
+echo "- Nginx config: nginx.conf.example"
 echo ""
 
 if [[ $LOAD_SAMPLES =~ ^[Yy]$ ]]; then

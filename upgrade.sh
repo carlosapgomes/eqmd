@@ -50,17 +50,28 @@ EQMD_UID=$(id -u eqmd)
 EQMD_GID=$(id -g eqmd)
 print_status "Found eqmd user with UID:$EQMD_UID GID:$EQMD_GID"
 
-print_status "Building new Docker image..."
-docker compose build eqmd
+# Create deployment backup
+print_info "Creating deployment backup..."
+BACKUP_TAG="backup-$(date +%Y%m%d-%H%M%S)"
+CURRENT_IMAGE=$(docker inspect eqmd-eqmd-1 --format='{{.Config.Image}}' 2>/dev/null || echo "unknown")
+if [ "$CURRENT_IMAGE" != "unknown" ]; then
+    docker tag "$CURRENT_IMAGE" "eqmd:$BACKUP_TAG"
+    print_status "Current image backed up as eqmd:$BACKUP_TAG"
+fi
 
-print_status "Stopping current container..."
-docker compose stop eqmd
+# Pull new image instead of building
+print_info "Pulling updated Docker image..."
+NEW_IMAGE="${REGISTRY:-ghcr.io/yourorg/eqmd}:${TAG:-latest}"
+if docker pull "$NEW_IMAGE"; then
+    export EQMD_IMAGE="$NEW_IMAGE"
+    print_status "Docker image pulled: $NEW_IMAGE"
+else
+    print_warning "Failed to pull from registry, building locally..."
+    docker compose build eqmd
+    print_status "Docker image built locally"
+fi
 
-print_status "Fixing permissions before starting container (setting to eqmd user)..."
-mkdir -p /var/www/equipemed/static
-chown -R $EQMD_UID:$EQMD_GID /var/www/equipemed/
-
-print_status "Starting updated container..."
+print_status "Performing graceful update..."
 docker compose up -d eqmd
 
 print_status "Waiting for container to start..."
@@ -77,35 +88,46 @@ fi
 
 print_status "Container ID: $CONTAINER_ID"
 
-print_status "Manually copying static files..."
-if docker exec $CONTAINER_ID sh -c "cp -rv /app/staticfiles/. /var/www/equipemed/static/"; then
-    print_status "Static files copied successfully"
+# Update static files using init container
+print_status "Updating static files..."
+if docker compose --profile init run --rm static-init; then
+    print_status "Static files updated successfully"
 else
-    print_warning "Static files copy had some issues, but continuing..."
+    print_warning "Static files update had some issues, but continuing..."
 fi
 
-print_status "Fixing static files permissions for nginx..."
-chown -R www-data:www-data /var/www/equipemed/
-chmod -R 755 /var/www/equipemed/
-
-print_status "Verifying deployment..."
-if curl -f -s http://localhost:8778/health/ > /dev/null; then
-    print_status "Health check passed"
-else
-    print_warning "Health check failed - check application logs"
-fi
+# Wait and verify health with rollback capability
+print_info "Waiting for health check..."
+for i in {1..30}; do
+    if curl -f -s http://localhost:8778/health/ >/dev/null; then
+        print_status "Health check passed"
+        HEALTH_CHECK_PASSED=true
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        print_error "Health check failed - rolling back"
+        if [ "$CURRENT_IMAGE" != "unknown" ]; then
+            docker tag "eqmd:$BACKUP_TAG" eqmd:latest
+            docker compose up -d eqmd
+            print_warning "Rolled back to previous version"
+        fi
+        exit 1
+    fi
+    sleep 2
+done
 
 print_status "Checking if PWA files are accessible..."
-if [ -f "/var/www/equipemed/static/manifest.json" ]; then
-    print_status "manifest.json found"
+STATIC_VOLUME_PATH="/var/lib/docker/volumes/eqmd_static_files/_data"
+if [ -f "$STATIC_VOLUME_PATH/manifest.json" ]; then
+    print_status "manifest.json found in volume"
 else
-    print_warning "manifest.json not found"
+    print_warning "manifest.json not found in volume"
 fi
 
-if [ -f "/var/www/equipemed/static/sw.js" ]; then
-    print_status "sw.js found"
+if [ -f "$STATIC_VOLUME_PATH/sw.js" ]; then
+    print_status "sw.js found in volume"
 else
-    print_warning "sw.js not found"
+    print_warning "sw.js not found in volume"
 fi
 
 echo ""
@@ -119,4 +141,10 @@ echo ""
 echo "If there are issues:"
 echo "- Check container logs: docker compose logs eqmd"
 echo "- Check nginx logs: journalctl -u nginx"
-echo "- Verify static files: ls -la /var/www/equipemed/static/"
+echo "- Verify static files: ls -la $STATIC_VOLUME_PATH"
+echo "- Rollback if needed: docker tag eqmd:$BACKUP_TAG eqmd:latest && docker compose up -d eqmd"
+echo ""
+echo "Backup information:"
+echo "- Backup tag: $BACKUP_TAG"
+echo "- New image: ${EQMD_IMAGE:-built-locally}"
+echo "- Static files volume: eqmd_static_files"

@@ -1,6 +1,17 @@
 # Docker Production Deployment Guide
 
-**Step-by-step guide for deploying EquipeMed in production using Docker**
+**Complete guide for registry-based EquipeMed production deployment**
+
+⚠️ **This guide has been updated for registry-based deployment**
+- Faster deployments (pull vs rebuild) 
+- Improved static file handling with named volumes
+- Automated user management with UID conflict resolution
+- Built-in rollback procedures and health checks
+
+📖 **See also:**
+- [Registry Setup Guide](registry-setup.md) - Container registry configuration
+- [User Management Guide](user-management.md) - UID conflict resolution  
+- [Rollback Procedures](rollback-procedures.md) - Emergency rollback guide
 
 ## Prerequisites
 

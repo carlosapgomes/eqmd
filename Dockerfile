@@ -1,23 +1,27 @@
-# Multi-stage build for EquipeMed Django application
-FROM node:18-slim AS frontend-builder
-
-# Install frontend dependencies and build assets
+# Stage 1: Node.js build for static assets
+FROM node:18-alpine AS static-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --only=production
 COPY assets/ ./assets/
-COPY apps/ ./apps/
 COPY webpack.config.js ./
 RUN npm run build
 
-# Main application stage
-FROM python:3.12-slim
+# Stage 2: Python application
+FROM python:3.11-slim
+WORKDIR /app
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
   PYTHONUNBUFFERED=1 \
   PIP_NO_CACHE_DIR=1 \
   PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Create app user with configurable UID/GID
+ARG USER_ID=1001
+ARG GROUP_ID=1001
+RUN groupadd -r -g ${GROUP_ID} eqmd && \
+    useradd -r -u ${USER_ID} -g eqmd eqmd
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -37,14 +41,13 @@ RUN apt-get update && apt-get install -y \
   g++ \
   # Git for version control (if needed)
   git \
+  # curl for health checks
+  curl \
   # Cleanup
   && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast Python package management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
-
-# Create application directory
-WORKDIR /app
 
 # Copy Python dependency files
 COPY pyproject.toml ./
@@ -54,33 +57,24 @@ RUN uv pip install --system -r pyproject.toml
 # Install production server
 RUN uv pip install --system gunicorn
 
-# Copy built frontend assets from frontend-builder stage
-COPY --from=frontend-builder /app/static/ ./static/
-
 # Copy application code
 COPY . .
+RUN chown -R eqmd:eqmd /app
 
-# Create directories for media and static files
-RUN mkdir -p /app/media /app/staticfiles
+# Copy static files from build stage and set www-data ownership
+COPY --from=static-builder --chown=33:33 /app/static /app/staticfiles
+RUN chmod -R 755 /app/staticfiles
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --clear
-
-# Create non-root user for security
-# Allow customizing user ID to match host user
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-RUN groupadd -g $GROUP_ID appuser && \
-  useradd -u $USER_ID -g $GROUP_ID --create-home --shell /bin/bash appuser && \
-  chown -R appuser:appuser /app
-USER appuser
-
-# Expose port
-EXPOSE 8778
+# Django collectstatic (ensures all static files are gathered)
+USER eqmd
+RUN python manage.py collectstatic --noinput
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD python manage.py check --deploy || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ || exit 1
 
-# Default command
-CMD ["gunicorn", "--bind", "0.0.0.0:8778", "--workers", "3", "config.wsgi:application"]
+# Expose port
+EXPOSE 8000
+
+# Start application
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "config.wsgi:application"]

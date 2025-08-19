@@ -1,51 +1,65 @@
 services:
   eqmd:
+    image: ${EQMD_IMAGE:-eqmd:latest}
     build:
       context: .
+      dockerfile: Dockerfile
       args:
-        USER_ID: ${USER_ID:-1001}
-        GROUP_ID: ${GROUP_ID:-1001}
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn --bind 0.0.0.0:8778 --workers 3 config.wsgi:application"
-    volumes:
-      - .:/app
-      - ./media:/app/media
-      - ./staticfiles:/app/staticfiles
-      - /var/www:/var/www
+        USER_ID: ${EQMD_UID:-1001}
+        GROUP_ID: ${EQMD_GID:-1001}
     ports:
-      - "8778:8778"
+      - "8778:8000"
     env_file:
       - .env
+    volumes:
+      - ./media:/app/media
+      - ./db.sqlite3:/app/db.sqlite3
+      - static_files:/app/staticfiles
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8778/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Static file initialization container
+  static-init:
+    image: ${EQMD_IMAGE:-eqmd:latest}
+    volumes:
+      - static_files:/shared/static
+    command: |
+      sh -c "
+        echo 'Copying static files to shared volume...' &&
+        cp -r /app/staticfiles/* /shared/static/ 2>/dev/null || true &&
+        echo 'Static files copied successfully'
+      "
+    profiles: ["init"]
 
   # Development service with hot reload
   eqmd-dev:
     build:
       context: .
       args:
-        USER_ID: ${USER_ID:-1001}
-        GROUP_ID: ${GROUP_ID:-1001}
+        USER_ID: ${EQMD_UID:-1001}
+        GROUP_ID: ${EQMD_GID:-1001}
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8778"
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
       - ./media:/app/media
     ports:
-      - "8779:8778"
+      - "8779:8000"
     env_file:
       - .env
     environment:
       - DEBUG=True
     profiles:
       - dev
-# No volumes needed - using direct host mounts
+
+volumes:
+  static_files:
+    driver: local
 

@@ -1,0 +1,104 @@
+version: '3.8'
+
+# Production Docker Compose Configuration for EquipeMed
+# Registry-based deployment with named volumes
+
+services:
+  eqmd:
+    # Pull image from registry instead of building
+    image: ${EQMD_IMAGE:-ghcr.io/yourorg/eqmd:latest}
+    
+    # Build configuration (fallback if registry pull fails)
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${EQMD_UID:-1001}
+        GROUP_ID: ${EQMD_GID:-1001}
+    
+    ports:
+      # Map container port 8000 to host port 8778
+      - "8778:8000"
+    
+    env_file:
+      - .env
+    
+    volumes:
+      # Media files (persistent, host-mounted)
+      - ./media:/app/media
+      
+      # Database (persistent, host-mounted)
+      - ./db.sqlite3:/app/db.sqlite3
+      
+      # Static files (shared volume for nginx serving)
+      - static_files:/app/staticfiles
+    
+    restart: unless-stopped
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits (adjust based on server capacity)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Static file initialization container
+  # Used to copy static files from app image to shared volume
+  static-init:
+    image: ${EQMD_IMAGE:-ghcr.io/yourorg/eqmd:latest}
+    
+    volumes:
+      - static_files:/shared/static
+    
+    command: |
+      sh -c "
+        echo 'Initializing static files in shared volume...' &&
+        cp -r /app/staticfiles/* /shared/static/ 2>/dev/null || true &&
+        echo 'Static files initialized successfully' &&
+        echo 'Files copied:' && find /shared/static -type f | wc -l
+      "
+    
+    # Only run when explicitly requested
+    profiles: ["init"]
+
+# Named volumes for persistent data
+volumes:
+  # Static files volume shared between app and nginx
+  static_files:
+    driver: local
+    # Optional: specify driver options for performance
+    # driver_opts:
+    #   type: tmpfs
+    #   device: tmpfs
+    #   o: size=1G
+
+# Optional: Networks configuration
+networks:
+  default:
+    name: eqmd-network
+    driver: bridge
+
+# Environment variables documentation:
+# 
+# Required:
+#   EQMD_IMAGE          - Full image name (e.g., ghcr.io/yourorg/eqmd:latest)
+#   EQMD_UID            - User ID for eqmd user (default: 1001)
+#   EQMD_GID            - Group ID for eqmd user (default: 1001)
+# 
+# Optional:
+#   REGISTRY            - Registry hostname (default: ghcr.io)
+#   REGISTRY_USER       - Registry username
+#   REGISTRY_TOKEN      - Registry authentication token
+#
+# Application configuration should be in .env file

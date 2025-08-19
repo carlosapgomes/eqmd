@@ -23,31 +23,57 @@ A Django 5 medical team collaboration platform for single-hospital patient track
 
 ## Quick Start
 
-### 1. Clone and Setup
+### Production Deployment (Registry-based)
 
+**Minimal deployment (recommended):**
 ```bash
-git clone <repository>
+# Download deployment files
+wget https://raw.githubusercontent.com/yourorg/eqmd/main/docker-compose.yml
+wget https://raw.githubusercontent.com/yourorg/eqmd/main/install.sh
+wget https://raw.githubusercontent.com/yourorg/eqmd/main/create_eqmd_user.sh
+chmod +x install.sh create_eqmd_user.sh
+
+# Deploy
+sudo ./install.sh
+```
+
+**Full customization:**
+```bash
+# Clone repository for customization
+git clone https://github.com/yourorg/eqmd.git
+cd eqmd
+sudo ./install.sh
+```
+
+### Development Setup
+
+**Local development with Docker:**
+```bash
+git clone https://github.com/yourorg/eqmd.git
+cd eqmd
+
+# Set up development environment
+cp .env.example .env.dev
+docker compose --profile dev up -d eqmd-dev
+
+# Access at http://localhost:8779
+```
+
+**Local development without Docker:**
+```bash
+git clone https://github.com/yourorg/eqmd.git
 cd eqmd
 uv install
-```
 
-### 2. Database Setup
-
-```bash
+# Database setup
 uv run python manage.py migrate
 uv run python manage.py createsuperuser
-```
 
-### 3. Sample Data (Optional)
-
-```bash
+# Sample data (optional)
 uv run python manage.py create_sample_tags
 uv run python manage.py create_sample_content
-```
 
-### 4. Run Development Server
-
-```bash
+# Run development server
 uv run python manage.py runserver
 ```
 
@@ -61,29 +87,47 @@ After creating a superuser:
 4. Configure hospital information via environment variables
 5. Create patients and start using the system
 
+## Container Images
+
+EquipeMed uses a registry-based deployment with pre-built Docker images:
+
+**GitHub Container Registry:**
+- **Latest**: `ghcr.io/yourorg/eqmd:latest`
+- **Development**: `ghcr.io/yourorg/eqmd:dev`  
+- **Specific versions**: `ghcr.io/yourorg/eqmd:v1.0.0`
+
+**Docker Hub Alternative:**
+- **Latest**: `yourorg/eqmd:latest`
+- **Development**: `yourorg/eqmd:dev`
+
 ## Environment Configuration
 
-### Required Settings
+### Production Settings
 
 ```bash
 # Basic Django settings
-SECRET_KEY=your-secret-key
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+SECRET_KEY=your-production-secret-key
+DEBUG=False
+ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
 
-# Database (default uses SQLite)
-DATABASE_URL=sqlite:///db.sqlite3
+# Registry configuration
+REGISTRY=ghcr.io
+REGISTRY_USER=your-github-username
+EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest
+
+# User configuration (handled by create_eqmd_user.sh)
+EQMD_UID=1001
+EQMD_GID=1001
 
 # Hospital Configuration
 HOSPITAL_NAME="Your Hospital Name"
 HOSPITAL_ADDRESS="123 Medical Center Drive, City, State 12345"
 HOSPITAL_PHONE="+1-555-123-4567"
 HOSPITAL_EMAIL="info@yourhospital.com"
-HOSPITAL_WEBSITE="https://www.yourhospital.com"
-HOSPITAL_LOGO_PATH="static/images/hospital-logo.png"
+HOSPITAL_PDF_FORMS_ENABLED=true
 ```
 
-### Optional Settings
+### Development Settings
 
 ```bash
 # Email (for django-allauth)
@@ -142,42 +186,43 @@ uv run python manage.py create_sample_content     # Create sample medical templa
 - **Media Processing**: FilePond for video uploads, custom image processing
 - **Testing**: pytest + Django test runner, factory-boy
 
+## Documentation
+
+### Deployment Guides
+- **[Registry Setup](docs/deployment/registry-setup.md)** - Container registry configuration
+- **[User Management](docs/deployment/user-management.md)** - UID conflict resolution  
+- **[Rollback Procedures](docs/deployment/rollback-procedures.md)** - Emergency rollback guide
+- **[Docker Development](docs/development/docker-development.md)** - Development with Docker
+
+### Operation Guides
+- **[Production Deployment](docs/deployment/docker-production-deployment.md)** - Complete production setup
+- **[Nginx Configuration](nginx.conf.example)** - Reverse proxy setup
+- **[Upgrade Procedures](upgrade.sh)** - Automated upgrade script
+
 ## Production Deployment
+
+### Quick Registry Deployment
+
+**Features:**
+- ✅ Uses pre-built container images from registry
+- ✅ Automated user creation with UID conflict resolution
+- ✅ Named volumes for optimized static file serving
+- ✅ Health checks and automated rollback capability
+- ✅ Sub-minute deployment time
+- ✅ No repository cloning required
 
 ### Production Checklist
 
-- [ ] Set `DEBUG=False`
-- [ ] Configure production database (PostgreSQL recommended)
-- [ ] Set up email backend for notifications
-- [ ] Configure static files serving (WhiteNoise or CDN)
-- [ ] Set up SSL/HTTPS
-- [ ] Run security checks: `uv run python manage.py check --deploy`
-- [ ] Create user groups: `uv run python manage.py setup_groups`
-- [ ] Configure hospital environment variables
-
-### Environment Variables
-
-```bash
-# Production settings
-DEBUG=False
-SECRET_KEY=your-production-secret-key
-ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
-
-# Database
-DATABASE_URL=postgres://user:password@localhost/eqmd_prod
-
-# Hospital Configuration
-HOSPITAL_NAME="Your Hospital Name"
-HOSPITAL_ADDRESS="Your Hospital Address"
-HOSPITAL_PHONE="Your Hospital Phone"
-HOSPITAL_EMAIL="contact@yourhospital.com"
-HOSPITAL_WEBSITE="https://www.yourhospital.com"
-
-# Email
-EMAIL_HOST=smtp.your-provider.com
-EMAIL_HOST_USER=noreply@yourhospital.com
-EMAIL_HOST_PASSWORD=your-email-password
-```
+- [ ] Configure `.env` with production settings
+- [ ] Set up container registry authentication
+- [ ] Create eqmd system user (`./create_eqmd_user.sh`)
+- [ ] Deploy application (`./install.sh`)
+- [ ] Configure nginx reverse proxy (see `nginx.conf.example`)
+- [ ] Set up SSL certificate
+- [ ] Run security checks
+- [ ] Create user groups and permissions
+- [ ] Configure hospital information
+- [ ] Set up monitoring and backups
 
 ## Permission System
 
