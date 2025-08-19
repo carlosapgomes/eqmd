@@ -9,12 +9,14 @@ EquipeMed runs as a dedicated `eqmd` system user for security isolation. This ap
 ## Security Model
 
 ### Dedicated User Benefits
+
 - **Isolation**: Application runs with minimal privileges
 - **Security**: Separate from web server (nginx) and other services
 - **Auditing**: Clear ownership of processes and files
 - **Containment**: Limits impact of potential security breaches
 
 ### User Specifications
+
 - **Username**: `eqmd`
 - **Type**: System user (not for interactive login)
 - **Shell**: `/usr/sbin/nologin` (no shell access)
@@ -26,6 +28,7 @@ EquipeMed runs as a dedicated `eqmd` system user for security isolation. This ap
 ### Why UID Conflicts Occur
 
 UID conflicts happen when:
+
 1. **Another service** already uses UID 1001
 2. **Previous installations** left conflicting users
 3. **System users** occupy the desired UID range
@@ -34,6 +37,7 @@ UID conflicts happen when:
 ### Detection Methods
 
 #### Check for Existing UID
+
 ```bash
 # Check if UID 1001 is already in use
 if getent passwd 1001 >/dev/null; then
@@ -47,6 +51,7 @@ ps -u 1001 --no-headers 2>/dev/null | wc -l
 ```
 
 #### Find Available UIDs
+
 ```bash
 # Check available UIDs in range 1001-1099
 for uid in {1001..1099}; do
@@ -93,6 +98,7 @@ sudo ./create_eqmd_user.sh 5001
 ### Script Features
 
 The `create_eqmd_user.sh` script:
+
 - **Detects existing eqmd user** and reuses if present
 - **Handles UID conflicts** by finding alternatives automatically
 - **Creates system user** with proper security settings
@@ -175,6 +181,7 @@ docker compose build eqmd
 ### Permission Strategy
 
 Static files use a dual-ownership approach:
+
 - **Built in container**: Owned by www-data (UID 33) for nginx serving
 - **Application files**: Owned by eqmd user for security
 
@@ -189,6 +196,7 @@ RUN chmod -R 755 /app/staticfiles
 ### Volume Permissions
 
 Named volumes maintain proper permissions:
+
 - **Container creates files** with www-data ownership
 - **Nginx reads files** directly from volume
 - **No runtime permission fixes** needed
@@ -198,6 +206,7 @@ Named volumes maintain proper permissions:
 ### Common Issues
 
 #### UID Already Exists
+
 ```bash
 # Error: UID 1001 already exists
 # Solution: Let create_eqmd_user.sh find alternative
@@ -206,6 +215,7 @@ sudo ./create_eqmd_user.sh
 ```
 
 #### Permission Denied
+
 ```bash
 # Error: Permission denied when creating user
 # Solution: Run with sudo
@@ -213,6 +223,7 @@ sudo ./create_eqmd_user.sh
 ```
 
 #### Docker Build Fails
+
 ```bash
 # Error: groupadd: GID 1001 already exists
 # Solution: Check environment variables
@@ -293,7 +304,7 @@ docker build --build-arg USER_ID=$EQMD_UID --build-arg GROUP_ID=$EQMD_GID
 
 1. **Never run as root** - Always use dedicated user
 2. **Use system users** - Prevent interactive login
-3. **Limit privileges** - No unnecessary group memberships  
+3. **Limit privileges** - No unnecessary group memberships
 4. **Audit regularly** - Check user permissions periodically
 5. **Monitor processes** - Track what runs as eqmd user
 
@@ -341,3 +352,4 @@ docker compose up -d eqmd
 ```
 
 This comprehensive user management approach ensures secure, conflict-free deployment while maintaining operational flexibility and security best practices.
+
