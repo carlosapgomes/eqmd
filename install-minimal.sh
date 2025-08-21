@@ -220,6 +220,11 @@ print_info "Running database migrations..."
 docker compose run --rm eqmd python manage.py migrate
 print_status "Database migrations completed"
 
+# Collect static files
+print_info "Collecting static files..."
+docker compose run --rm eqmd python manage.py collectstatic --noinput
+print_status "Static files collected"
+
 # Create superuser
 echo ""
 print_info "Creating superuser account..."

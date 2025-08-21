@@ -66,9 +66,8 @@ RUN chown -R eqmd:eqmd /app
 COPY --from=static-builder --chown=33:33 /app/static /app/staticfiles
 RUN chmod -R 755 /app/staticfiles
 
-# Django collectstatic (ensures all static files are gathered)
+# Switch to eqmd user for runtime
 USER eqmd
-RUN python manage.py collectstatic --noinput
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
