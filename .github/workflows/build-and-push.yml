@@ -76,8 +76,16 @@ jobs:
 
     - name: Image vulnerability scan
       uses: anchore/scan-action@v3
+      id: scan
       if: github.event_name == 'push'
       with:
         image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
         fail-build: false
         severity-cutoff: high
+        acs-report-enable: true
+
+    - name: Upload vulnerability scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always() && github.event_name == 'push'
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
