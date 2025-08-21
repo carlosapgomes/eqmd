@@ -82,10 +82,17 @@ jobs:
         image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
         fail-build: false
         severity-cutoff: high
-        acs-report-enable: true
 
-    - name: Upload vulnerability scan results
+    - name: Upload vulnerability scan results to GitHub Security
       uses: github/codeql-action/upload-sarif@v3
       if: always() && github.event_name == 'push'
       with:
         sarif_file: ${{ steps.scan.outputs.sarif }}
+
+    - name: Upload SARIF as workflow artifact
+      uses: actions/upload-artifact@v4
+      if: always() && github.event_name == 'push'
+      with:
+        name: vulnerability-scan-results
+        path: ${{ steps.scan.outputs.sarif }}
+        retention-days: 30
