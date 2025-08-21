@@ -45,6 +45,19 @@ find_available_uid() {
     exit 1
 }
 
+# Function to find available GID
+find_available_gid() {
+    local start_gid=$1
+    for ((gid=start_gid; gid<start_gid+100; gid++)); do
+        if ! getent group $gid >/dev/null; then
+            echo $gid
+            return
+        fi
+    done
+    print_error "No available GID found in range $start_gid-$((start_gid+99))"
+    exit 1
+}
+
 # Function to show help
 show_help() {
     cat << EOF
@@ -139,7 +152,7 @@ if getent group $REQUESTED_GID >/dev/null 2>&1; then
         print_warning "GID $REQUESTED_GID is already used by group: $CONFLICTING_GROUP"
         
         # Find alternative GID
-        AVAILABLE_GID=$(find_available_uid $REQUESTED_GID)
+        AVAILABLE_GID=$(find_available_gid $REQUESTED_GID)
         print_info "Using alternative GID: $AVAILABLE_GID"
         REQUESTED_GID=$AVAILABLE_GID
     fi

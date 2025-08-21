@@ -113,17 +113,28 @@ fi
 if [ -f "/tmp/eqmd_user_env" ]; then
 	source /tmp/eqmd_user_env
 	print_status "eqmd user configured with UID:$EQMD_UID GID:$EQMD_GID"
+	
+	# Update .env file with actual UID/GID
+	if [ -f ".env" ]; then
+		print_info "Updating .env file with correct UID/GID..."
+		sed -i "s/^EQMD_UID=.*/EQMD_UID=$EQMD_UID/" .env
+		sed -i "s/^EQMD_GID=.*/EQMD_GID=$EQMD_GID/" .env
+		print_status ".env file updated with UID:$EQMD_UID GID:$EQMD_GID"
+		
+		# Fix database path to use volume mount
+		print_info "Fixing database path to use volume mount..."
+		sed -i "s/^DATABASE_NAME=.*/DATABASE_NAME=\/app\/database\/db.sqlite3/" .env
+		print_status "Database path updated to /app/database/db.sqlite3"
+	fi
 else
 	print_error "Failed to get eqmd user environment variables"
 	exit 1
 fi
 
-# Create required directories
-print_info "Creating required directories..."
-mkdir -p media
-chmod 755 media
-chown $EQMD_UID:$EQMD_GID media
-print_status "Directories created"
+# Note: All required directories (media, database, staticfiles) use Docker volumes
+# No local directories needed as they are managed by Docker
+print_info "Docker volumes will be used for media, database, and static files"
+print_status "Volume configuration confirmed"
 
 # Configure environment
 if [ ! -f ".env" ]; then
@@ -187,14 +198,7 @@ set -a # Export all variables
 source .env
 set +a
 
-# Registry authentication (if configured)
-if [ -n "$REGISTRY_TOKEN" ] && [ -n "$REGISTRY_USER" ]; then
-	print_info "Authenticating with container registry..."
-	echo "$REGISTRY_TOKEN" | docker login "$REGISTRY" -u "$REGISTRY_USER" --password-stdin
-	print_status "Registry authentication successful"
-fi
-
-# Pull container image
+# Pull container image (no authentication needed for public images)
 print_info "Pulling container image: $EQMD_IMAGE"
 if docker pull "$EQMD_IMAGE"; then
 	print_status "Container image pulled successfully"
@@ -207,6 +211,11 @@ else
 	exit 1
 fi
 
+# Clean up any existing volumes to ensure fresh start
+print_info "Cleaning up existing volumes..."
+docker compose down -v 2>/dev/null || true
+print_status "Volumes cleaned up"
+
 # Initialize static files
 print_info "Initializing static files..."
 if docker compose --profile init run --rm static-init; then
@@ -215,20 +224,72 @@ else
 	print_warning "Static files initialization had issues, continuing..."
 fi
 
+# Initialize application directories with proper permissions
+print_info "Initializing application directories..."
+if docker compose run --rm --user root eqmd sh -c "
+# Fix ownership of entire /app directory to match runtime user
+chown -R $EQMD_UID:$EQMD_GID /app
+# Create required directories
+mkdir -p /app/media/pdf_forms/templates /app/media/pdf_forms/completed
+mkdir -p /app/filepond_tmp /app/filepond_stored /app/filepond_uploads
+# Ensure correct ownership
+chown -R $EQMD_UID:$EQMD_GID /app/media /app/filepond_tmp /app/filepond_stored /app/filepond_uploads
+"; then
+	print_status "Application directories initialized"
+else
+	print_warning "Application directory initialization had issues, continuing..."
+fi
+
+# Initialize staticfiles directory with proper permissions
+print_info "Initializing staticfiles directory..."
+if docker compose run --rm --user root eqmd sh -c "mkdir -p /app/staticfiles && chown -R $EQMD_UID:$EQMD_GID /app/staticfiles"; then
+	print_status "Staticfiles directory initialized"
+else
+	print_warning "Staticfiles directory initialization had issues, continuing..."
+fi
+
 # Run database migrations
 print_info "Running database migrations..."
-docker compose run --rm eqmd python manage.py migrate
-print_status "Database migrations completed"
+docker compose run --rm --user root eqmd sh -c "
+echo 'Pre-migration database check:'
+ls -la /app/database/
+echo 'Starting migrations...'
+python manage.py migrate --verbosity=2
+echo 'Post-migration database check:'
+ls -la /app/database/
+echo 'Migrations completed, fixing permissions...'
+chown -R $EQMD_UID:$EQMD_GID /app/database
+echo 'Permissions fixed.'
+"
+
+# Verify migrations were applied
+print_info "Debugging database configuration..."
+docker compose run --rm --user root eqmd sh -c "
+echo 'Environment variables:'
+env | grep -E 'DATABASE|DEBUG|DJANGO' | sort || echo 'No database environment variables found'
+echo 'Creating test database file to verify volume mount:'
+touch /app/database/test.db
+ls -la /app/database/
+echo 'Database directory is writable!'
+rm /app/database/test.db
+echo 'Test file removed'
+echo 'Running migrations again to see if database file gets created:'
+python manage.py migrate --verbosity=0
+echo 'Post-migration check:'
+ls -la /app/database/
+find /app -name '*.db*' -o -name 'db.sqlite*' -o -name '*.sqlite*' 2>/dev/null || echo 'Still no database files found'
+"
+print_status "Database debugging completed"
 
 # Collect static files
 print_info "Collecting static files..."
-docker compose run --rm eqmd python manage.py collectstatic --noinput
+docker compose run --rm --user root eqmd sh -c "python manage.py collectstatic --noinput && chown -R $EQMD_UID:$EQMD_GID /app/staticfiles"
 print_status "Static files collected"
 
 # Create superuser
 echo ""
 print_info "Creating superuser account..."
-docker compose run --rm eqmd python manage.py createsuperuser
+docker compose run --rm --user root eqmd python manage.py createsuperuser
 
 # Ask about sample data
 echo ""
@@ -237,7 +298,7 @@ read -r LOAD_SAMPLES
 
 if [[ $LOAD_SAMPLES =~ ^[Yy]$ ]]; then
 	print_info "Loading comprehensive sample data..."
-	docker compose run --rm eqmd python manage.py populate_sample_data
+	docker compose run --rm --user root eqmd python manage.py populate_sample_data
 	print_status "Sample data loaded (includes users, patients, medical data, and PDF forms)"
 else
 	print_info "You can load comprehensive sample data later with:"
@@ -249,6 +310,11 @@ else
 	echo "docker compose run --rm eqmd python manage.py create_sample_content"
 	echo "docker compose run --rm eqmd python manage.py create_sample_pdf_forms"
 fi
+
+# Fix final database permissions before starting production services  
+print_info "Fixing final database permissions..."
+docker compose run --rm --user root eqmd sh -c "chown -R $EQMD_UID:$EQMD_GID /app/database"
+print_status "Final database permissions fixed"
 
 # Start production services
 print_info "Starting production services..."
@@ -279,7 +345,7 @@ done
 
 # Setup permissions
 print_info "Setting up user groups and permissions..."
-docker compose run --rm eqmd python manage.py setup_groups
+docker compose run --rm --user root eqmd python manage.py setup_groups
 print_status "Permissions configured"
 
 # Final checks

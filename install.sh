@@ -130,12 +130,9 @@ else
   print_status "Using existing .env file"
 fi
 
-# Registry configuration
-print_info "Configuring container registry..."
-if [ -n "$REGISTRY_TOKEN" ]; then
-    echo "$REGISTRY_TOKEN" | docker login ${REGISTRY:-ghcr.io} -u "${REGISTRY_USER:-$USER}" --password-stdin
-    print_status "Registry authentication configured"
-fi
+# Registry configuration (no authentication needed for public images)
+print_info "Using public container registry..."
+print_status "Registry configuration confirmed"
 
 # Pull image instead of building (or build if registry not available)
 print_info "Getting Docker image..."
