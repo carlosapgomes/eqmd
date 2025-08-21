@@ -16,6 +16,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
 
     steps:
     - name: Checkout repository
@@ -62,11 +63,15 @@ jobs:
           USER_ID=1001
           GROUP_ID=1001
 
-    - name: Run security scan
-      uses: github/codeql-action/analyze@v3
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
       if: github.event_name == 'push'
       with:
         languages: python
+
+    - name: Run CodeQL analysis
+      uses: github/codeql-action/analyze@v3
+      if: github.event_name == 'push'
 
     - name: Image vulnerability scan
       uses: anchore/scan-action@v3
