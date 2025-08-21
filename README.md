@@ -18,7 +18,7 @@ A Django 5 medical team collaboration platform for single-hospital patient track
 - **Doctors**: Full system access including patient discharge and personal data editing
 - **Residents**: Full patient access including discharge and personal data editing
 - **Nurses**: Full patient access but cannot discharge or edit personal data
-- **Physiotherapists**: Full patient access but cannot discharge or edit personal data  
+- **Physiotherapists**: Full patient access but cannot discharge or edit personal data
 - **Students**: Full patient access but cannot discharge or edit personal data
 
 ## Quick Start
@@ -26,21 +26,23 @@ A Django 5 medical team collaboration platform for single-hospital patient track
 ### Production Deployment (Registry-based)
 
 **Minimal deployment (recommended):**
+
 ```bash
 # Download deployment files
-wget https://raw.githubusercontent.com/yourorg/eqmd/main/docker-compose.yml
-wget https://raw.githubusercontent.com/yourorg/eqmd/main/install.sh
-wget https://raw.githubusercontent.com/yourorg/eqmd/main/create_eqmd_user.sh
-chmod +x install.sh create_eqmd_user.sh
+wget https://raw.githubusercontent.com/carlosapgomes/eqmd/master/docker-compose.yml
+wget https://raw.githubusercontent.com/carlosapgomes/eqmd/master/install-minimal.sh
+wget https://raw.githubusercontent.com/carlosapgomes/eqmd/master/create_eqmd_user.sh
+chmod +x install-minimal.sh create_eqmd_user.sh
 
 # Deploy
-sudo ./install.sh
+sudo ./install-minimal.sh
 ```
 
 **Full customization:**
+
 ```bash
 # Clone repository for customization
-git clone https://github.com/yourorg/eqmd.git
+git clone https://github.com/carlosapgomes/eqmd.git
 cd eqmd
 sudo ./install.sh
 ```
@@ -48,8 +50,9 @@ sudo ./install.sh
 ### Development Setup
 
 **Local development with Docker:**
+
 ```bash
-git clone https://github.com/yourorg/eqmd.git
+git clone https://github.com/carlosapgomes/eqmd.git
 cd eqmd
 
 # Set up development environment
@@ -60,8 +63,9 @@ docker compose --profile dev up -d eqmd-dev
 ```
 
 **Local development without Docker:**
+
 ```bash
-git clone https://github.com/yourorg/eqmd.git
+git clone https://github.com/carlosapgomes/eqmd.git
 cd eqmd
 uv install
 
@@ -92,13 +96,15 @@ After creating a superuser:
 EquipeMed uses a registry-based deployment with pre-built Docker images:
 
 **GitHub Container Registry:**
-- **Latest**: `ghcr.io/yourorg/eqmd:latest`
-- **Development**: `ghcr.io/yourorg/eqmd:dev`  
-- **Specific versions**: `ghcr.io/yourorg/eqmd:v1.0.0`
+
+- **Latest**: `ghcr.io/carlosapgomes/eqmd:latest`
+- **Development**: `ghcr.io/carlosapgomes/eqmd:dev`
+- **Specific versions**: `ghcr.io/carlosapgomes/eqmd:v1.0.0`
 
 **Docker Hub Alternative:**
-- **Latest**: `yourorg/eqmd:latest`
-- **Development**: `yourorg/eqmd:dev`
+
+- **Latest**: `carlosapgomes/eqmd:latest`
+- **Development**: `carlosapgomes/eqmd:dev`
 
 ## Environment Configuration
 
@@ -113,7 +119,7 @@ ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
 # Registry configuration
 REGISTRY=ghcr.io
 REGISTRY_USER=your-github-username
-EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest
+EQMD_IMAGE=ghcr.io/carlosapgomes/eqmd:latest
 
 # User configuration (handled by create_eqmd_user.sh)
 EQMD_UID=1001
@@ -189,12 +195,14 @@ uv run python manage.py create_sample_content     # Create sample medical templa
 ## Documentation
 
 ### Deployment Guides
+
 - **[Registry Setup](docs/deployment/registry-setup.md)** - Container registry configuration
-- **[User Management](docs/deployment/user-management.md)** - UID conflict resolution  
+- **[User Management](docs/deployment/user-management.md)** - UID conflict resolution
 - **[Rollback Procedures](docs/deployment/rollback-procedures.md)** - Emergency rollback guide
 - **[Docker Development](docs/development/docker-development.md)** - Development with Docker
 
 ### Operation Guides
+
 - **[Production Deployment](docs/deployment/docker-production-deployment.md)** - Complete production setup
 - **[Nginx Configuration](nginx.conf.example)** - Reverse proxy setup
 - **[Upgrade Procedures](upgrade.sh)** - Automated upgrade script
@@ -204,6 +212,7 @@ uv run python manage.py create_sample_content     # Create sample medical templa
 ### Quick Registry Deployment
 
 **Features:**
+
 - ✅ Uses pre-built container images from registry
 - ✅ Automated user creation with UID conflict resolution
 - ✅ Named volumes for optimized static file serving
@@ -244,3 +253,4 @@ This project was developed with the assistance of Large Language Model (LLM) cod
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
