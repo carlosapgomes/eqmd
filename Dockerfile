@@ -2,8 +2,9 @@
 FROM node:18-alpine AS static-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 COPY assets/ ./assets/
+COPY apps/ ./apps/
 COPY webpack.config.js ./
 RUN npm run build
 

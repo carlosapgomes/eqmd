@@ -4,7 +4,7 @@
 # This script performs minimal deployment using pre-built container images
 # No repository cloning required
 
-set -e  # Exit on any error
+set -e # Exit on any error
 
 echo "🚀 Starting EquipeMed minimal installation (registry-based)..."
 
@@ -17,30 +17,30 @@ NC='\033[0m' # No Color
 
 # Function to print colored output
 print_status() {
-    echo -e "${GREEN}✓${NC} $1"
+	echo -e "${GREEN}✓${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+	echo -e "${YELLOW}⚠${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+	echo -e "${RED}✗${NC} $1"
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ${NC} $1"
+	echo -e "${BLUE}ℹ${NC} $1"
 }
 
 print_prompt() {
-    echo -e "${YELLOW}?${NC} $1"
+	echo -e "${YELLOW}?${NC} $1"
 }
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
-    print_error "This script must be run as root"
-    print_info "Usage: sudo $0"
-    exit 1
+	print_error "This script must be run as root"
+	print_info "Usage: sudo $0"
+	exit 1
 fi
 
 print_info "EquipeMed Registry-based Minimal Installation"
@@ -55,15 +55,15 @@ echo ""
 print_info "Checking prerequisites..."
 
 if ! command -v docker &>/dev/null; then
-    print_error "docker is not installed or not in PATH"
-    print_info "Please install Docker first: https://docs.docker.com/engine/install/"
-    exit 1
+	print_error "docker is not installed or not in PATH"
+	print_info "Please install Docker first: https://docs.docker.com/engine/install/"
+	exit 1
 fi
 
 if ! command -v curl &>/dev/null; then
-    print_error "curl is not installed"
-    print_info "Please install curl: sudo apt-get install curl"
-    exit 1
+	print_error "curl is not installed"
+	print_info "Please install curl: sudo apt-get install curl"
+	exit 1
 fi
 
 print_status "Prerequisites check passed"
@@ -72,50 +72,50 @@ print_status "Prerequisites check passed"
 print_info "Checking required files..."
 
 REQUIRED_FILES=(
-    "docker-compose.yml"
-    "create_eqmd_user.sh"
+	"docker-compose.yml"
+	"create_eqmd_user.sh"
 )
 
 MISSING_FILES=()
 for file in "${REQUIRED_FILES[@]}"; do
-    if [ ! -f "$file" ]; then
-        MISSING_FILES+=("$file")
-    fi
+	if [ ! -f "$file" ]; then
+		MISSING_FILES+=("$file")
+	fi
 done
 
 if [ ${#MISSING_FILES[@]} -gt 0 ]; then
-    print_info "Downloading missing files..."
-    BASE_URL="https://raw.githubusercontent.com/yourorg/eqmd/main"
-    
-    for file in "${MISSING_FILES[@]}"; do
-        if curl -fsSL -o "$file" "$BASE_URL/$file"; then
-            print_status "Downloaded $file"
-            if [[ "$file" == *.sh ]]; then
-                chmod +x "$file"
-            fi
-        else
-            print_error "Failed to download $file"
-            exit 1
-        fi
-    done
+	print_info "Downloading missing files..."
+	BASE_URL="https://raw.githubusercontent.com/yourorg/eqmd/main"
+
+	for file in "${MISSING_FILES[@]}"; do
+		if curl -fsSL -o "$file" "$BASE_URL/$file"; then
+			print_status "Downloaded $file"
+			if [[ "$file" == *.sh ]]; then
+				chmod +x "$file"
+			fi
+		else
+			print_error "Failed to download $file"
+			exit 1
+		fi
+	done
 fi
 
 # Create eqmd user with automatic UID conflict resolution
 print_info "Setting up eqmd user..."
 if [ -f "./create_eqmd_user.sh" ]; then
-    ./create_eqmd_user.sh
+	./create_eqmd_user.sh
 else
-    print_error "create_eqmd_user.sh script not found"
-    exit 1
+	print_error "create_eqmd_user.sh script not found"
+	exit 1
 fi
 
 # Source the user environment variables
 if [ -f "/tmp/eqmd_user_env" ]; then
-    source /tmp/eqmd_user_env
-    print_status "eqmd user configured with UID:$EQMD_UID GID:$EQMD_GID"
+	source /tmp/eqmd_user_env
+	print_status "eqmd user configured with UID:$EQMD_UID GID:$EQMD_GID"
 else
-    print_error "Failed to get eqmd user environment variables"
-    exit 1
+	print_error "Failed to get eqmd user environment variables"
+	exit 1
 fi
 
 # Create required directories
@@ -127,27 +127,27 @@ print_status "Directories created"
 
 # Configure environment
 if [ ! -f ".env" ]; then
-    print_warning "No .env file found. Creating basic template..."
-    
-    # Prompt for basic configuration
-    echo ""
-    print_prompt "Enter your domain name (e.g., yourdomain.com): "
-    read -r DOMAIN_NAME
-    
-    print_prompt "Enter your hospital name: "
-    read -r HOSPITAL_NAME
-    
-    print_prompt "Enter container registry (default: ghcr.io): "
-    read -r REGISTRY
-    REGISTRY=${REGISTRY:-ghcr.io}
-    
-    print_prompt "Enter image name (e.g., yourorg/eqmd): "
-    read -r IMAGE_NAME
-    
-    # Generate secure secret key
-    SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
-    
-    cat >.env <<EOF
+	print_warning "No .env file found. Creating basic template..."
+
+	# Prompt for basic configuration
+	echo ""
+	print_prompt "Enter your domain name (e.g., yourdomain.com): "
+	read -r DOMAIN_NAME
+
+	print_prompt "Enter your hospital name: "
+	read -r HOSPITAL_NAME
+
+	print_prompt "Enter container registry (default: ghcr.io): "
+	read -r REGISTRY
+	REGISTRY=${REGISTRY:-ghcr.io}
+
+	print_prompt "Enter image name (e.g., yourorg/eqmd): "
+	read -r IMAGE_NAME
+
+	# Generate secure secret key
+	SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
+
+	cat >.env <<EOF
 # Generated by install-minimal.sh
 DEBUG=False
 SECRET_KEY=$SECRET_KEY
@@ -171,48 +171,48 @@ HOSPITAL_PDF_FORMS_ENABLED=true
 # Email (update for production)
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 EOF
-    
-    print_status ".env file created"
-    print_warning "Please review and edit .env file before proceeding"
-    
-    echo ""
-    print_prompt "Press Enter to continue after reviewing .env file..."
-    read -r
+
+	print_status ".env file created"
+	print_warning "Please review and edit .env file before proceeding"
+
+	echo ""
+	print_prompt "Press Enter to continue after reviewing .env file..."
+	read -r
 else
-    print_status "Using existing .env file"
+	print_status "Using existing .env file"
 fi
 
 # Source environment variables
-set -a  # Export all variables
+set -a # Export all variables
 source .env
 set +a
 
 # Registry authentication (if configured)
 if [ -n "$REGISTRY_TOKEN" ] && [ -n "$REGISTRY_USER" ]; then
-    print_info "Authenticating with container registry..."
-    echo "$REGISTRY_TOKEN" | docker login "$REGISTRY" -u "$REGISTRY_USER" --password-stdin
-    print_status "Registry authentication successful"
+	print_info "Authenticating with container registry..."
+	echo "$REGISTRY_TOKEN" | docker login "$REGISTRY" -u "$REGISTRY_USER" --password-stdin
+	print_status "Registry authentication successful"
 fi
 
 # Pull container image
 print_info "Pulling container image: $EQMD_IMAGE"
 if docker pull "$EQMD_IMAGE"; then
-    print_status "Container image pulled successfully"
+	print_status "Container image pulled successfully"
 else
-    print_error "Failed to pull container image: $EQMD_IMAGE"
-    print_info "Please check:"
-    print_info "- Image name is correct"
-    print_info "- Registry authentication is configured"
-    print_info "- Network connectivity to registry"
-    exit 1
+	print_error "Failed to pull container image: $EQMD_IMAGE"
+	print_info "Please check:"
+	print_info "- Image name is correct"
+	print_info "- Registry authentication is configured"
+	print_info "- Network connectivity to registry"
+	exit 1
 fi
 
 # Initialize static files
 print_info "Initializing static files..."
 if docker compose --profile init run --rm static-init; then
-    print_status "Static files initialized"
+	print_status "Static files initialized"
 else
-    print_warning "Static files initialization had issues, continuing..."
+	print_warning "Static files initialization had issues, continuing..."
 fi
 
 # Run database migrations
@@ -231,12 +231,18 @@ print_prompt "Do you want to load sample data? This includes sample users, patie
 read -r LOAD_SAMPLES
 
 if [[ $LOAD_SAMPLES =~ ^[Yy]$ ]]; then
-    print_info "Loading sample data..."
-    docker compose run --rm eqmd python manage.py create_sample_tags
-    docker compose run --rm eqmd python manage.py create_sample_wards
-    docker compose run --rm eqmd python manage.py create_sample_content
-    docker compose run --rm eqmd python manage.py create_sample_pdf_forms
-    print_status "Sample data loaded"
+	print_info "Loading comprehensive sample data..."
+	docker compose run --rm eqmd python manage.py populate_sample_data
+	print_status "Sample data loaded (includes users, patients, medical data, and PDF forms)"
+else
+	print_info "You can load comprehensive sample data later with:"
+	echo "docker compose run --rm eqmd python manage.py populate_sample_data"
+	echo ""
+	print_info "Or load individual sample data with:"
+	echo "docker compose run --rm eqmd python manage.py create_sample_tags"
+	echo "docker compose run --rm eqmd python manage.py create_sample_wards"
+	echo "docker compose run --rm eqmd python manage.py create_sample_content"
+	echo "docker compose run --rm eqmd python manage.py create_sample_pdf_forms"
 fi
 
 # Start production services
@@ -251,19 +257,19 @@ sleep 15
 # Health check
 print_info "Performing health check..."
 for i in {1..30}; do
-    if curl -f -s http://localhost:8778/health/ >/dev/null 2>&1; then
-        print_status "Health check passed"
-        break
-    elif curl -f -s http://localhost:8778/ >/dev/null 2>&1; then
-        print_status "Application is responding"
-        break
-    else
-        if [ $i -eq 30 ]; then
-            print_warning "Health check timeout - check logs manually"
-        else
-            sleep 2
-        fi
-    fi
+	if curl -f -s http://localhost:8778/health/ >/dev/null 2>&1; then
+		print_status "Health check passed"
+		break
+	elif curl -f -s http://localhost:8778/ >/dev/null 2>&1; then
+		print_status "Application is responding"
+		break
+	else
+		if [ $i -eq 30 ]; then
+			print_warning "Health check timeout - check logs manually"
+		else
+			sleep 2
+		fi
+	fi
 done
 
 # Setup permissions
@@ -276,10 +282,10 @@ print_info "Performing final checks..."
 
 # Check container status
 if docker compose ps | grep -q "Up"; then
-    print_status "Container is running"
+	print_status "Container is running"
 else
-    print_error "Container is not running properly"
-    print_info "Check logs: docker compose logs eqmd"
+	print_error "Container is not running properly"
+	print_info "Check logs: docker compose logs eqmd"
 fi
 
 echo ""
@@ -287,7 +293,7 @@ echo -e "${GREEN}🎉 EquipeMed minimal installation completed!${NC}"
 echo ""
 echo "Next steps:"
 echo "1. Configure nginx reverse proxy (download nginx.conf.example)"
-echo "2. Set up SSL certificate for your domain"  
+echo "2. Set up SSL certificate for your domain"
 echo "3. Configure firewall to block direct access to port 8778"
 echo "4. Test your application at: http://localhost:8778"
 echo "5. Access admin interface at: http://localhost:8778/admin/"
@@ -306,11 +312,11 @@ echo "- Restart: docker compose restart eqmd"
 echo ""
 
 if [[ $LOAD_SAMPLES =~ ^[Yy]$ ]]; then
-    echo -e "${BLUE}Sample data loaded:${NC}"
-    echo "- Sample users (password: samplepass123)"
-    echo "- Sample patients and medical records"
-    echo "- Hospital wards, tags, and templates"
-    echo ""
+	echo -e "${BLUE}Sample data loaded:${NC}"
+	echo "- Sample users (password: samplepass123)"
+	echo "- Sample patients and medical records"
+	echo "- Hospital wards, tags, and templates"
+	echo ""
 fi
 
 echo -e "${YELLOW}Important security reminders:${NC}"
@@ -321,3 +327,4 @@ echo "- Keep container images updated"
 echo ""
 echo "For detailed documentation, visit:"
 echo "https://github.com/yourorg/eqmd/docs"
+
