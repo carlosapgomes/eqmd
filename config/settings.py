@@ -288,9 +288,9 @@ ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory"
 LOGIN_REDIRECT_URL = "core:dashboard"
 # LOGOUT_REDIRECT_URL = 'core:landing_page' # Optional: can be added later
 
-# FilePond Configuration - use project-relative directories
-DJANGO_DRF_FILEPOND_UPLOAD_TMP = str(BASE_DIR / 'filepond_tmp')
-DJANGO_DRF_FILEPOND_FILE_STORE_PATH = str(BASE_DIR / 'filepond_stored')
+# FilePond Configuration - use media volume directories
+DJANGO_DRF_FILEPOND_UPLOAD_TMP = str(MEDIA_ROOT / 'videos' / 'tmp' / 'filepond_uploads')
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = str(MEDIA_ROOT / 'videos' / 'tmp' / 'filepond_stored')
 
 # Ensure directories exist with proper permissions
 os.makedirs(DJANGO_DRF_FILEPOND_UPLOAD_TMP, mode=0o755, exist_ok=True)
