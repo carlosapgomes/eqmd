@@ -42,6 +42,15 @@
           <i class="bi bi-shield-check text-medical-green me-2"></i>
           <small>Plataforma segura com monitoramento de auditoria</small>
         </div>
+        
+        <!-- Hospital context -->
+        {% hospital_name as hospital %}
+        {% if hospital and hospital != "Medical Center" %}
+        <div class="d-flex align-items-center text-muted mt-2">
+          <i class="bi bi-hospital text-medical-teal me-2"></i>
+          <small>{{ hospital }}</small>
+        </div>
+        {% endif %}
       </div>
       <div class="col-lg-6 text-center">
         <div class="hero-image-container">

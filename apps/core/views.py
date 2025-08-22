@@ -4,6 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView
+from django.conf import settings
 from apps.patients.models import Patient
 
 def landing_page(request):
@@ -14,6 +15,133 @@ def landing_page(request):
         'page_title': 'Bem-vindo ao EquipeMed',
     }
     return render(request, 'core/landing_page.html', context)
+
+def manifest_json(request):
+    """Serve dynamic PWA manifest with subtle hospital customization"""
+    hospital_config = getattr(settings, 'HOSPITAL_CONFIG', {})
+    short_id = hospital_config.get('short_identifier', '').lower()
+    
+    # Generate PWA short name
+    if short_id:
+        short_name = f"{short_id.capitalize()}Eqmd"
+        name = f"EquipeMed - {hospital_config.get('name', 'Plataforma Médica')}"
+    else:
+        short_name = "EquipeMed"
+        name = "EquipeMed - Plataforma Médica"
+    
+    manifest = {
+        "name": name,
+        "short_name": short_name,
+        "description": "Plataforma de colaboração médica para rastreamento de pacientes e gestão hospitalar",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#2E5BBA",  # Keep EquipeMed theme color
+        "orientation": "portrait-primary",
+        "scope": "/",
+        "categories": ["medical", "health", "productivity"],
+        "lang": "pt-BR",
+        "icons": [
+            {
+                "src": "/static/images/pwa/icon-72x72.png",
+                "sizes": "72x72",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/images/pwa/icon-72x72-maskable.png",
+                "sizes": "72x72",
+                "type": "image/png",
+                "purpose": "maskable"
+            },
+            {
+                "src": "/static/images/pwa/icon-96x96.png",
+                "sizes": "96x96",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/images/pwa/icon-96x96-maskable.png",
+                "sizes": "96x96",
+                "type": "image/png",
+                "purpose": "maskable"
+            },
+            {
+                "src": "/static/images/pwa/icon-128x128.png",
+                "sizes": "128x128",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/images/pwa/icon-128x128-maskable.png",
+                "sizes": "128x128",
+                "type": "image/png",
+                "purpose": "maskable"
+            },
+            {
+                "src": "/static/images/pwa/icon-144x144.png",
+                "sizes": "144x144",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/images/pwa/icon-144x144-maskable.png",
+                "sizes": "144x144",
+                "type": "image/png",
+                "purpose": "maskable"
+            },
+            {
+                "src": "/static/images/pwa/icon-152x152.png",
+                "sizes": "152x152",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/images/pwa/icon-152x152-maskable.png",
+                "sizes": "152x152",
+                "type": "image/png",
+                "purpose": "maskable"
+            },
+            {
+                "src": "/static/images/pwa/icon-192x192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/images/pwa/icon-192x192-maskable.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "maskable"
+            },
+            {
+                "src": "/static/images/pwa/icon-384x384.png",
+                "sizes": "384x384",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/images/pwa/icon-384x384-maskable.png",
+                "sizes": "384x384",
+                "type": "image/png",
+                "purpose": "maskable"
+            },
+            {
+                "src": "/static/images/pwa/icon-512x512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": "/static/images/pwa/icon-512x512-maskable.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "maskable"
+            }
+        ]
+    }
+    
+    return JsonResponse(manifest)
 
 @login_required
 def dashboard_view(request):

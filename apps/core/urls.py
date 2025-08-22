@@ -9,6 +9,7 @@ app_name = "apps.core"
 
 urlpatterns = [
     path("", views.landing_page, name="landing_page"),
+    path("manifest.json", views.manifest_json, name="manifest_json"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     # Permission test URLs
     path("test/permissions/", test_views.permission_test_view, name="permission_test"),
