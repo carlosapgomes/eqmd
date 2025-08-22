@@ -2,9 +2,9 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [ master, main, dev ]
+    branches: [master, main, dev]
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
 
 env:
   REGISTRY: ghcr.io
@@ -19,80 +19,80 @@ jobs:
       security-events: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
 
-    - name: Install Node.js dependencies
-      run: npm ci
+      - name: Install Node.js dependencies
+        run: npm ci
 
-    - name: Build frontend assets
-      run: npm run build
+      - name: Build frontend assets
+        run: npm run build
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha
-          type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build and push Docker image
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        build-args: |
-          USER_ID=1001
-          GROUP_ID=1001
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            USER_ID=1001
+            GROUP_ID=1001
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      if: github.event_name == 'push'
-      with:
-        languages: python
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        if: github.event_name == 'push'
+        with:
+          languages: python
 
-    - name: Run CodeQL analysis
-      uses: github/codeql-action/analyze@v3
-      if: github.event_name == 'push'
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        if: github.event_name == 'push'
 
-    - name: Image vulnerability scan
-      uses: anchore/scan-action@v3
-      id: scan
-      if: github.event_name == 'push'
-      with:
-        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
-        fail-build: false
-        severity-cutoff: high
+      - name: Image vulnerability scan
+        uses: anchore/scan-action@v3
+        id: scan
+        if: github.event_name == 'push'
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          fail-build: false
+          severity-cutoff: high
 
-    - name: Upload vulnerability scan results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v3
-      if: always() && github.event_name == 'push'
-      with:
-        sarif_file: ${{ steps.scan.outputs.sarif }}
+      - name: Upload vulnerability scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && github.event_name == 'push'
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
 
-    - name: Upload SARIF as workflow artifact
-      uses: actions/upload-artifact@v4
-      if: always() && github.event_name == 'push'
-      with:
-        name: vulnerability-scan-results
-        path: ${{ steps.scan.outputs.sarif }}
-        retention-days: 30
+      - name: Upload SARIF as workflow artifact
+        uses: actions/upload-artifact@v4
+        if: always() && github.event_name == 'push'
+        with:
+          name: vulnerability-scan-results
+          path: ${{ steps.scan.outputs.sarif }}
+          retention-days: 30
