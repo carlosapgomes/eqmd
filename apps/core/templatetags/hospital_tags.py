@@ -49,3 +49,16 @@ def hospital_header():
 def hospital_branding():
     """Get complete hospital branding info as dict"""
     return getattr(settings, 'HOSPITAL_CONFIG', {})
+
+@register.simple_tag
+def hospital_pwa_short_name():
+    """Generate PWA short name combining hospital short ID with EquipeMed brand"""
+    hospital_config = getattr(settings, 'HOSPITAL_CONFIG', {})
+    short_id = hospital_config.get('short_identifier', '').lower()
+    
+    if short_id:
+        # e.g., "hgrs" -> "HgrsEqmd"
+        return f"{short_id.capitalize()}Eqmd"
+    else:
+        # Default EquipeMed branding
+        return "EquipeMed"

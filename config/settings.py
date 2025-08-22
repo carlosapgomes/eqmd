@@ -334,6 +334,8 @@ HOSPITAL_CONFIG = {
     'website': os.getenv('HOSPITAL_WEBSITE', ''),
     'logo_path': os.getenv('HOSPITAL_LOGO_PATH', 'static/images/hospital-logo.png'),
     'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
+    # Hospital short identifier for PWA
+    'short_identifier': os.getenv('HOSPITAL_SHORT_ID', ''),
 }
 
 # PDF Forms Configuration
