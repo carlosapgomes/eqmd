@@ -58,37 +58,18 @@ This document tracks planned features, improvements, and technical debt for the 
 - try to use
   `Always use the actual code/codebase as your source of truth. Do not rely on your progress docs efforts. Your docs are pointers to what you've done, not reliable memories.`
 
-## Improve nginx static files serving
+## [x] Improve nginx static files serving Done
 
 change install-minimal.sh to copy files to a prefixed path accessible to ngnix in /var/www/
 
-Option 1: Use a Bind Mount Instead of Volume
-
-Modify your docker-compose.yml to use a bind mount to a directory nginx can access:
-
-volumes: - /var/www/eqmd/static:/app/staticfiles
-
-Then in nginx.conf:
-location /static/ {
-alias /var/www/eqmd/static/; # ... rest of config
-}
-
-2. Modify docker-compose.yml
-
-Change the static files volume from:
-volumes: - eqmd_static_files:/app/staticfiles
-
-To a bind mount:
-volumes: - /var/www/eqmd/static:/app/staticfiles
-
-3. Update nginx.conf
+Update nginx.conf
 
 location /static/ {
-alias /var/www/eqmd/static/;
+alias /var/www/eqmd_instance_id/static/;
 expires 1y;
 add_header Cache-Control "public, immutable";
 }
-Option 3: Copy Files to nginx-accessible Directory
+Copy Files to nginx-accessible Directory
 
 Add a step to copy static files to /var/www/:
 
