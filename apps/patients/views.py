@@ -49,7 +49,7 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         queryset = queryset.select_related('created_by').prefetch_related('patient_tags__allowed_tag')
         
         # Search functionality
-        search_query = self.request.GET.get('search', '').strip()
+        search_query = self.request.GET.get('q', '').strip()
         if search_query:
             queryset = queryset.filter(
                 Q(name__icontains=search_query) |
@@ -103,7 +103,7 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_query'] = self.request.GET.get('search', '')
+        context['search_query'] = self.request.GET.get('q', '')
         context['status_filter'] = self.request.GET.get('status', '')
         context['admission_filter'] = self.request.GET.get('admission', '')
         context['status_choices'] = Patient.Status.choices
