@@ -198,6 +198,16 @@ set -a # Export all variables
 source .env
 set +a
 
+# Generate unique static files directory based on image name
+INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
+STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
+print_status "Static files will be served from: $STATIC_FILES_PATH"
+
+# Create unique static files directory
+print_info "Creating unique static files directory..."
+mkdir -p "$STATIC_FILES_PATH"
+print_status "Static directory created: $STATIC_FILES_PATH"
+
 # Pull container image (no authentication needed for public images)
 print_info "Pulling container image: $EQMD_IMAGE"
 if docker pull "$EQMD_IMAGE"; then
@@ -281,10 +291,20 @@ find /app -name '*.db*' -o -name 'db.sqlite*' -o -name '*.sqlite*' 2>/dev/null |
 "
 print_status "Database debugging completed"
 
-# Collect static files
+# Collect static files to container and copy to unique directory
 print_info "Collecting static files..."
-docker compose run --rm --user root eqmd sh -c "python manage.py collectstatic --noinput && chown -R $EQMD_UID:$EQMD_GID /app/staticfiles"
-print_status "Static files collected"
+docker compose run --rm --user root eqmd sh -c "python manage.py collectstatic --noinput"
+
+print_info "Copying static files to nginx directory..."
+CONTAINER_ID=$(docker compose run --rm -d eqmd sleep 30)
+docker cp "${CONTAINER_ID}:/app/staticfiles/." "$STATIC_FILES_PATH/"
+docker stop "$CONTAINER_ID" >/dev/null 2>&1 || true
+docker rm "$CONTAINER_ID" >/dev/null 2>&1 || true
+
+# Fix permissions for nginx
+chown -R www-data:www-data "$STATIC_FILES_PATH"
+chmod -R 755 "$STATIC_FILES_PATH"
+print_status "Static files copied and permissions set"
 
 # Create superuser
 echo ""
@@ -363,7 +383,9 @@ echo ""
 echo -e "${GREEN}🎉 EquipeMed minimal installation completed!${NC}"
 echo ""
 echo "Next steps:"
-echo "1. Configure nginx reverse proxy (download nginx.conf.example)"
+echo "1. Configure nginx reverse proxy (see documentation for details)"
+echo "   - Static files path for nginx: $STATIC_FILES_PATH"
+echo "   - Download nginx.conf.example and update the static files path"
 echo "2. Set up SSL certificate for your domain"
 echo "3. Configure firewall to block direct access to port 8778"
 echo "4. Test your application at: http://localhost:8778"
@@ -372,7 +394,7 @@ echo ""
 echo "Configuration:"
 echo "- Application: $EQMD_IMAGE"
 echo "- Environment: .env"
-echo "- Static files: Docker volume eqmd_static_files"
+echo "- Static files: $STATIC_FILES_PATH (nginx-owned)"
 echo "- User: eqmd (UID:$EQMD_UID GID:$EQMD_GID)"
 echo ""
 echo "Useful commands:"
