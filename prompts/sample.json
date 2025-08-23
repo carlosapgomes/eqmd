@@ -1,0 +1,44 @@
+[
+  {
+    "patient_key": "-Kg6IzWQPALReq2dZ97m",
+    "name": "José Antonio de Souza",
+    "birth_date": "18/06/1950",
+    "gender": "Male",
+    "last_admission_date": "04/03/2017",
+    "medical_record_number": "9238007",
+    "unified_healthcare_system_number": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip": ""
+  },
+  {
+    "patient_key": "-Kh3_JbuFxnNVjO5pRiB",
+    "name": "Rita Luzia Santos de Jesus",
+    "birth_date": "12/12/1966",
+    "gender": "Female",
+    "last_admission_date": "09/03/2017",
+    "medical_record_number": "9196433",
+    "unified_healthcare_system_number": "165371748200081",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip": ""
+  },
+  {
+    "patient_key": "-Kh6TyyBHXnlrQYDuA1p",
+    "name": "Elza Maria Muniz",
+    "birth_date": "02/11/1943",
+    "gender": "Female",
+    "last_admission_date": "10/08/2018",
+    "medical_record_number": "9230629",
+    "unified_healthcare_system_number": "898003886533966",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip": ""
+  }
+]
