@@ -61,9 +61,10 @@ if [ -f ".env" ]; then
     source .env
     set +a
     
-    # Generate unique static files directory based on image name
+    # Generate unique static files directory based on container prefix and image name
+    CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
     INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
-    STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
+    STATIC_FILES_PATH="/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}"
     print_status "Static files will be updated in: $STATIC_FILES_PATH"
 else
     print_error ".env file not found - cannot determine static files path"
@@ -125,8 +126,9 @@ print_status "Static files updated and permissions set"
 
 # Wait and verify health with rollback capability
 print_info "Waiting for health check..."
+HOST_PORT=${HOST_PORT:-8778}
 for i in {1..30}; do
-    if curl -f -s http://localhost:8778/health/ >/dev/null; then
+    if curl -f -s http://localhost:$HOST_PORT/health/ >/dev/null; then
         print_status "Health check passed"
         HEALTH_CHECK_PASSED=true
         break
