@@ -26,9 +26,33 @@
     <div class="row align-items-center min-vh-50">
       <div class="col-lg-6">
         {% hospital_branding as hospital %}
-        <h1 class="display-4 fw-bold text-medical-primary mb-4">
+        <h1 class="display-4 fw-bold text-medical-primary mb-3">
           Sistema de Informação Clínica
         </h1>
+        
+        <!-- Hospital Display -->
+        {% hospital_name as hospital_name_value %}
+        {% if hospital_name_value and hospital_name_value != "Medical Center" %}
+        <div class="hospital-display mb-4 p-3 bg-white rounded-3 shadow-sm border">
+          <div class="d-flex align-items-center">
+            {% hospital_logo as hospital_logo_url %}
+            {% if hospital_logo_url %}
+              <img src="{{ hospital_logo_url }}" 
+                   alt="{{ hospital_name_value }} Logo" 
+                   class="hospital-logo me-3" 
+                   style="height: 48px; max-width: 80px; object-fit: contain;">
+            {% endif %}
+            <div>
+              <h5 class="mb-0 fw-bold text-medical-primary">{{ hospital_name_value }}</h5>
+              {% hospital_address as hospital_address_value %}
+              {% if hospital_address_value %}
+                <small class="text-muted">{{ hospital_address_value }}</small>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
         <p class="lead mb-4 text-medical-dark-gray">
           Acesse o sistema para rastrear pacientes, gerenciar eventos clínicos e colaborar com sua equipe de forma segura e eficiente.
         </p>
@@ -42,15 +66,6 @@
           <i class="bi bi-shield-check text-medical-green me-2"></i>
           <small>Plataforma segura com monitoramento de auditoria</small>
         </div>
-        
-        <!-- Hospital context -->
-        {% hospital_name as hospital %}
-        {% if hospital and hospital != "Medical Center" %}
-        <div class="d-flex align-items-center text-muted mt-2">
-          <i class="bi bi-hospital text-medical-teal me-2"></i>
-          <small>{{ hospital }}</small>
-        </div>
-        {% endif %}
       </div>
       <div class="col-lg-6 text-center">
         <div class="hero-image-container">
