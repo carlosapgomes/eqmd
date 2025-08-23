@@ -33,7 +33,7 @@
         <!-- Hospital Display -->
         {% hospital_name as hospital_name_value %}
         {% if hospital_name_value and hospital_name_value != "Medical Center" %}
-        <div class="hospital-display mb-4 p-3 bg-white rounded-3 shadow-sm border">
+        <div class="hospital-display mb-4 p-3 bg-medical-light">
           <div class="d-flex align-items-center">
             {% hospital_logo as hospital_logo_url %}
             {% if hospital_logo_url %}
@@ -44,10 +44,6 @@
             {% endif %}
             <div>
               <h5 class="mb-0 fw-bold text-medical-primary">{{ hospital_name_value }}</h5>
-              {% hospital_address as hospital_address_value %}
-              {% if hospital_address_value %}
-                <small class="text-muted">{{ hospital_address_value }}</small>
-              {% endif %}
             </div>
           </div>
         </div>
