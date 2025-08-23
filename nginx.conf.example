@@ -1,10 +1,34 @@
+# EquipeMed Nginx Configuration Example
+# 
+# IMPORTANT: Before using this configuration, replace all instances of:
+# /var/www/eqmd_static_YOUR_INSTANCE_ID/
+# 
+# With your actual static files path, which is shown during installation.
+# 
+# To determine your static files path:
+# 1. Check installation output for "Static files will be served from:"
+# 2. Or calculate it manually: 
+#    INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
+#    STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
+# 
+# Examples:
+#   Image: ghcr.io/yourorg/eqmd:latest
+#   Path:  /var/www/eqmd_static_ghcr_io_yourorg_eqmd_latest/
+#
+#   Image: registry.hospital.com/eqmd/app:v1.0.0  
+#   Path:  /var/www/eqmd_static_registry_hospital_com_eqmd_app_v1_0_0/
+
 server {
     listen 80;
     server_name yourdomain.com www.yourdomain.com;
 
-    # Static files served directly by nginx from shared volume
+    # Static files served directly by nginx from unique directory
+    # IMPORTANT: Replace with your actual path shown during installation
+    # Example paths:
+    #   /var/www/eqmd_static_ghcr_io_yourorg_eqmd_latest/
+    #   /var/www/eqmd_static_registry_hospital_com_eqmd_app_v1_0_0/
     location /static/ {
-        alias /var/lib/docker/volumes/eqmd_static_files/_data/;
+        alias /var/www/eqmd_static_YOUR_INSTANCE_ID/;
         expires 1y;
         add_header Cache-Control "public, immutable";
         add_header X-Served-By "nginx-static";
@@ -86,8 +110,9 @@ server {
     # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     
     # Same configuration as HTTP, but with HTTPS
+    # IMPORTANT: Replace with your actual path shown during installation
     location /static/ {
-        alias /var/lib/docker/volumes/eqmd_static_files/_data/;
+        alias /var/www/eqmd_static_YOUR_INSTANCE_ID/;
         expires 1y;
         add_header Cache-Control "public, immutable";
         add_header X-Served-By "nginx-static";

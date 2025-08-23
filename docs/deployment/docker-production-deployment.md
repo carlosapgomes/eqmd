@@ -126,7 +126,57 @@ curl http://localhost:8778
 
 ### 11. Setup Reverse Proxy (Recommended)
 
-Configure nginx to handle SSL and static files. The Docker setup automatically copies static files to `/var/www/equipemed/static/`:
+Configure nginx to handle SSL and static files. The deployment scripts automatically create a unique static files directory based on your image name to avoid conflicts in multi-hospital deployments.
+
+#### Step 1: Download nginx configuration template
+
+```bash
+# Download the nginx configuration template
+curl -fsSL -o /etc/nginx/sites-available/eqmd https://raw.githubusercontent.com/yourorg/eqmd/main/nginx.conf.example
+
+# Or copy the example file if you have the repository
+cp nginx.conf.example /etc/nginx/sites-available/eqmd
+```
+
+#### Step 2: Find your static files path
+
+The installation script shows your static files path. You can also determine it manually:
+
+```bash
+# Method 1: Check your .env file
+source .env
+INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
+echo "Your static files path: /var/www/eqmd_static_${INSTANCE_ID}/"
+
+# Method 2: Look for it in your file system
+ls -la /var/www/eqmd_static_*/
+```
+
+#### Step 3: Update nginx configuration
+
+```bash
+# Replace the placeholder with your actual path
+STATIC_PATH="/var/www/eqmd_static_${INSTANCE_ID}/"
+sed -i "s|/var/www/eqmd_static_YOUR_INSTANCE_ID/|$STATIC_PATH|g" /etc/nginx/sites-available/eqmd
+
+# Update server name
+sed -i 's/yourdomain.com/your-actual-domain.com/g' /etc/nginx/sites-available/eqmd
+```
+
+#### Step 4: Enable and test configuration
+
+```bash
+# Enable the site
+ln -s /etc/nginx/sites-available/eqmd /etc/nginx/sites-enabled/
+
+# Test configuration
+nginx -t
+
+# Reload nginx
+systemctl reload nginx
+```
+
+#### Example nginx configuration:
 
 ```nginx
 server {
@@ -142,7 +192,9 @@ server {
     }
 
     location /static/ {
-        alias /var/www/equipemed/static/;
+        # Replace with your actual static files path shown during installation
+        # Example: /var/www/eqmd_static_ghcr_io_yourorg_eqmd_latest/
+        alias /var/www/eqmd_static_YOUR_INSTANCE_ID/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -151,6 +203,13 @@ server {
     # No separate nginx location needed - handled by proxy_pass above
 }
 ```
+
+**Static Files Strategy**: 
+- Each deployment gets a unique directory: `/var/www/eqmd_static_${INSTANCE_ID}/`
+- Directory name is based on the container image name (sanitized)
+- Nginx owns the directory (www-data:www-data) for optimal performance
+- Updates copy fresh files without permission conflicts
+- Supports multiple hospital deployments on same server
 
 **Note**: Media files (`/media/`) are served by the Django application to enforce proper authentication and permissions. Only static files are served directly by nginx for performance.
 
@@ -165,24 +224,33 @@ sudo ./upgrade.sh
 
 **Manual update process:**
 ```bash
-# Copy updated code to server first
-docker compose build eqmd
+# Pull updated image or build locally
+docker pull your-registry/eqmd:latest
+# OR: docker compose build eqmd
 
-# Fix permissions BEFORE starting container to allow file copy
-sudo chown -R eqmd:eqmd /var/www/equipemed/
+# Start updated container
 docker compose up -d eqmd
 
-# Wait for container to start, then manually copy static files
-sleep 10
-CONTAINER_ID=$(docker compose ps -q eqmd)
-docker exec $CONTAINER_ID sh -c "cp -rv /app/staticfiles/* /var/www/equipemed/static/"
+# Update static files to unique directory
+INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
+STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
 
-# Fix static files permissions for nginx AFTER copy
-sudo chown -R www-data:www-data /var/www/equipemed/
-sudo chmod -R 755 /var/www/equipemed/
+# Collect and copy static files
+docker compose run --rm --user root eqmd python manage.py collectstatic --noinput
+TEMP_CONTAINER_ID=$(docker compose run --rm -d eqmd sleep 30)
+sudo docker cp "${TEMP_CONTAINER_ID}:/app/staticfiles/." "$STATIC_FILES_PATH/"
+docker stop "$TEMP_CONTAINER_ID" && docker rm "$TEMP_CONTAINER_ID"
+
+# Fix permissions for nginx
+sudo chown -R www-data:www-data "$STATIC_FILES_PATH"
+sudo chmod -R 755 "$STATIC_FILES_PATH"
 ```
 
-**Note**: The automatic copy during container startup may fail silently due to permission issues. The manual copy step ensures all static files (including PWA files) are properly deployed.
+**Benefits of this approach:**
+- No permission conflicts during updates
+- Nginx always has read access to static files
+- Multiple hospital deployments can coexist
+- Updates are more reliable and predictable
 
 ### Stop Services
 
@@ -288,11 +356,37 @@ sudo chown -R $(whoami):$(whoami) media
 chmod 755 media
 
 # Fix static files permissions (for nginx access)
-sudo chown -R www-data:www-data /var/www/equipemed/
-sudo chmod -R 755 /var/www/equipemed/
+# First determine your static files path:
+INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
+STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
+
+sudo chown -R www-data:www-data "$STATIC_FILES_PATH"
+sudo chmod -R 755 "$STATIC_FILES_PATH"
 
 # If static files are not updating, check container logs
-docker-compose logs eqmd | grep -i "operation not permitted"
+docker compose logs eqmd | grep -i "operation not permitted"
+
+# Verify static files directory exists and has correct permissions
+ls -la "$STATIC_FILES_PATH"
+```
+
+### Nginx Configuration Issues
+
+```bash
+# Check if nginx can access static files directory
+sudo -u www-data test -r "$STATIC_FILES_PATH" && echo "✓ Nginx can read static files" || echo "✗ Permission issue"
+
+# Test static file serving
+curl -I http://localhost/static/admin/css/base.css
+
+# Check nginx error logs
+tail -f /var/log/nginx/error.log
+
+# Verify nginx configuration includes your site
+nginx -T | grep -A 10 -B 5 "eqmd_static"
+
+# Test nginx configuration syntax
+nginx -t
 ```
 
 ### Performance Issues
@@ -312,9 +406,46 @@ docker stats
 - [ ] Environment variables set
 - [ ] Database backed up
 - [ ] Reverse proxy configured
+- [ ] Nginx static files path updated
+- [ ] Static files permissions verified
 - [ ] Firewall rules applied
 - [ ] Monitoring set up
 - [ ] Log rotation configured
 - [ ] Backup strategy implemented
 - [ ] Update procedure documented
+
+## Quick Reference
+
+### Static Files Path Determination
+
+```bash
+# Get your static files path
+source .env
+INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
+echo "Static files path: /var/www/eqmd_static_${INSTANCE_ID}/"
+```
+
+### Nginx Configuration Commands
+
+```bash
+# Download and configure nginx template
+curl -fsSL -o /etc/nginx/sites-available/eqmd https://raw.githubusercontent.com/yourorg/eqmd/main/nginx.conf.example
+STATIC_PATH="/var/www/eqmd_static_${INSTANCE_ID}/"
+sed -i "s|/var/www/eqmd_static_YOUR_INSTANCE_ID/|$STATIC_PATH|g" /etc/nginx/sites-available/eqmd
+sed -i 's/yourdomain.com/your-actual-domain.com/g' /etc/nginx/sites-available/eqmd
+ln -s /etc/nginx/sites-available/eqmd /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+```
+
+### Static Files Update (Manual)
+
+```bash
+# After container update, refresh static files
+docker compose run --rm --user root eqmd python manage.py collectstatic --noinput
+TEMP_CONTAINER_ID=$(docker compose run --rm -d eqmd sleep 30)
+sudo docker cp "${TEMP_CONTAINER_ID}:/app/staticfiles/." "$STATIC_PATH/"
+docker stop "$TEMP_CONTAINER_ID" && docker rm "$TEMP_CONTAINER_ID"
+sudo chown -R www-data:www-data "$STATIC_PATH"
+sudo chmod -R 755 "$STATIC_PATH"
+```
 
