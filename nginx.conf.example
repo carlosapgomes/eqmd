@@ -11,12 +11,18 @@
 #    INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
 #    STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
 # 
-# Examples:
-#   Image: ghcr.io/yourorg/eqmd:latest
-#   Path:  /var/www/eqmd_static_ghcr_io_yourorg_eqmd_latest/
+# Multi-deployment friendly path format:
+# /var/www/{CONTAINER_PREFIX}_static_{SANITIZED_IMAGE_NAME}/
 #
-#   Image: registry.hospital.com/eqmd/app:v1.0.0  
-#   Path:  /var/www/eqmd_static_registry_hospital_com_eqmd_app_v1_0_0/
+# Examples:
+#   Hospital A: CONTAINER_PREFIX=hospital_a, Image: ghcr.io/yourorg/eqmd:latest
+#   Path: /var/www/hospital_a_static_ghcr_io_yourorg_eqmd_latest/
+#
+#   Hospital B: CONTAINER_PREFIX=hospital_b, Image: ghcr.io/yourorg/eqmd:latest  
+#   Path: /var/www/hospital_b_static_ghcr_io_yourorg_eqmd_latest/
+#
+#   Staging: CONTAINER_PREFIX=staging, Image: ghcr.io/yourorg/eqmd:v2.0
+#   Path: /var/www/staging_static_ghcr_io_yourorg_eqmd_v2_0/
 
 server {
     listen 80;

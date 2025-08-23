@@ -1,5 +1,6 @@
 services:
   eqmd:
+    container_name: ${CONTAINER_PREFIX:-eqmd}_app
     image: ${EQMD_IMAGE:-eqmd:latest}
     build:
       context: .
@@ -9,13 +10,13 @@ services:
         GROUP_ID: ${EQMD_GID:-1001}
     user: "${EQMD_UID:-1001}:${EQMD_GID:-1001}"
     ports:
-      - "8778:8000"
+      - "${HOST_PORT:-8778}:8000"
     env_file:
       - .env
     volumes:
-      - media_files:/app/media
-      - database:/app/database
-      - static_files:/app/staticfiles
+      - eqmd_media_files:/app/media
+      - eqmd_database:/app/database
+      - eqmd_static_files:/app/staticfiles
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
@@ -26,9 +27,10 @@ services:
 
   # Static file initialization container
   static-init:
+    container_name: ${CONTAINER_PREFIX:-eqmd}_static_init
     image: ${EQMD_IMAGE:-eqmd:latest}
     volumes:
-      - static_files:/shared/static
+      - eqmd_static_files:/shared/static
     command: |
       sh -c "
         echo 'Copying static files to shared volume...' &&
@@ -39,6 +41,7 @@ services:
 
   # Development service with hot reload
   eqmd-dev:
+    container_name: ${CONTAINER_PREFIX:-eqmd}_dev
     build:
       context: .
       args:
@@ -52,7 +55,7 @@ services:
       - .:/app
       - ./media:/app/media
     ports:
-      - "8779:8000"
+      - "${DEV_PORT:-8779}:8000"
     env_file:
       - .env
     environment:
@@ -61,10 +64,13 @@ services:
       - dev
 
 volumes:
-  database:
+  eqmd_database:
+    name: ${CONTAINER_PREFIX:-eqmd}_database
     driver: local
-  media_files:
+  eqmd_media_files:
+    name: ${CONTAINER_PREFIX:-eqmd}_media_files
     driver: local
-  static_files:
+  eqmd_static_files:
+    name: ${CONTAINER_PREFIX:-eqmd}_static_files
     driver: local
 

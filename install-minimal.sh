@@ -121,6 +121,16 @@ if [ -f "/tmp/eqmd_user_env" ]; then
 		sed -i "s/^EQMD_GID=.*/EQMD_GID=$EQMD_GID/" .env
 		print_status ".env file updated with UID:$EQMD_UID GID:$EQMD_GID"
 		
+		# Add multi-deployment variables if missing
+		if ! grep -q "^CONTAINER_PREFIX=" .env; then
+			echo "" >> .env
+			echo "# Multi-deployment configuration (added by install-minimal.sh)" >> .env
+			echo "CONTAINER_PREFIX=eqmd" >> .env
+			echo "HOST_PORT=8778" >> .env  
+			echo "DEV_PORT=8779" >> .env
+			print_status "Added multi-deployment configuration to .env"
+		fi
+		
 		# Fix database path to use volume mount
 		print_info "Fixing database path to use volume mount..."
 		sed -i "s/^DATABASE_NAME=.*/DATABASE_NAME=\/app\/database\/db.sqlite3/" .env
@@ -155,6 +165,26 @@ if [ ! -f ".env" ]; then
 	print_prompt "Enter image name (e.g., yourorg/eqmd): "
 	read -r IMAGE_NAME
 
+	# Multi-deployment configuration prompts
+	print_prompt "Enter container prefix for unique naming (default: eqmd): "
+	read -r CONTAINER_PREFIX
+	CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
+
+	print_prompt "Enter host port (default: 8778): "
+	read -r HOST_PORT
+	HOST_PORT=${HOST_PORT:-8778}
+
+	# Validate port is not in use
+	if command -v netstat &>/dev/null && netstat -ln | grep -q ":$HOST_PORT "; then
+		print_error "Port $HOST_PORT is already in use"
+		print_info "Please choose a different port"
+		exit 1
+	elif command -v ss &>/dev/null && ss -ln | grep -q ":$HOST_PORT "; then
+		print_error "Port $HOST_PORT is already in use"
+		print_info "Please choose a different port"
+		exit 1
+	fi
+
 	# Generate secure secret key
 	SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
 
@@ -163,6 +193,11 @@ if [ ! -f ".env" ]; then
 DEBUG=False
 SECRET_KEY=$SECRET_KEY
 ALLOWED_HOSTS=$DOMAIN_NAME,www.$DOMAIN_NAME,localhost,127.0.0.1
+
+# Multi-deployment configuration
+CONTAINER_PREFIX=$CONTAINER_PREFIX
+HOST_PORT=$HOST_PORT
+DEV_PORT=$((HOST_PORT + 1))
 
 # Registry configuration
 REGISTRY=$REGISTRY
@@ -198,9 +233,10 @@ set -a # Export all variables
 source .env
 set +a
 
-# Generate unique static files directory based on image name
+# Generate unique static files directory based on container prefix and image name
+CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
 INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
-STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
+STATIC_FILES_PATH="/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}"
 print_status "Static files will be served from: $STATIC_FILES_PATH"
 
 # Create unique static files directory
@@ -347,11 +383,12 @@ sleep 15
 
 # Health check
 print_info "Performing health check..."
+HOST_PORT=${HOST_PORT:-8778}
 for i in {1..30}; do
-	if curl -f -s http://localhost:8778/health/ >/dev/null 2>&1; then
+	if curl -f -s http://localhost:$HOST_PORT/health/ >/dev/null 2>&1; then
 		print_status "Health check passed"
 		break
-	elif curl -f -s http://localhost:8778/ >/dev/null 2>&1; then
+	elif curl -f -s http://localhost:$HOST_PORT/ >/dev/null 2>&1; then
 		print_status "Application is responding"
 		break
 	else
@@ -387,9 +424,9 @@ echo "1. Configure nginx reverse proxy (see documentation for details)"
 echo "   - Static files path for nginx: $STATIC_FILES_PATH"
 echo "   - Download nginx.conf.example and update the static files path"
 echo "2. Set up SSL certificate for your domain"
-echo "3. Configure firewall to block direct access to port 8778"
-echo "4. Test your application at: http://localhost:8778"
-echo "5. Access admin interface at: http://localhost:8778/admin/"
+echo "3. Configure firewall to block direct access to port $HOST_PORT"
+echo "4. Test your application at: http://localhost:$HOST_PORT"
+echo "5. Access admin interface at: http://localhost:$HOST_PORT/admin/"
 echo ""
 echo "Configuration:"
 echo "- Application: $EQMD_IMAGE"

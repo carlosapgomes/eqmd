@@ -20,6 +20,63 @@
 - Domain name configured (for production use)
 - SSL certificate (recommended)
 
+## Multi-Deployment Configuration
+
+The deployment system supports multiple EquipeMed instances on the same server through configurable container prefixes and ports. This enables scenarios like:
+
+- **Hospital with staging**: `hospital_prod` and `hospital_staging`
+- **Multi-hospital server**: `hospital_a` and `hospital_b`  
+- **Version testing**: `current` and `testing`
+
+### Configuration Variables
+
+Set these in your `.env` file:
+
+```bash
+# Multi-deployment configuration
+CONTAINER_PREFIX=eqmd              # Unique identifier for this deployment
+HOST_PORT=8778                     # Host port for this instance
+DEV_PORT=8779                     # Development port (HOST_PORT + 1)
+
+# Registry configuration  
+REGISTRY=ghcr.io                  # Container registry
+EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest  # Full image path
+```
+
+### Example Multi-Deployment Scenarios
+
+#### Hospital with Staging Environment
+
+**Production (.env.prod)**:
+```bash
+CONTAINER_PREFIX=hospital_prod
+HOST_PORT=8778
+EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest
+```
+
+**Staging (.env.staging)**:
+```bash
+CONTAINER_PREFIX=hospital_staging  
+HOST_PORT=8779
+EQMD_IMAGE=ghcr.io/yourorg/eqmd:staging
+```
+
+#### Multi-Hospital Server
+
+**Hospital A (.env.hospital_a)**:
+```bash
+CONTAINER_PREFIX=hospital_a
+HOST_PORT=8778
+EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest
+```
+
+**Hospital B (.env.hospital_b)**:
+```bash
+CONTAINER_PREFIX=hospital_b
+HOST_PORT=8780
+EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest
+```
+
 ## Production Deployment Steps
 
 ### 1. Checkout Project
@@ -126,7 +183,7 @@ curl http://localhost:8778
 
 ### 11. Setup Reverse Proxy (Recommended)
 
-Configure nginx to handle SSL and static files. The deployment scripts automatically create a unique static files directory based on your image name to avoid conflicts in multi-hospital deployments.
+Configure nginx to handle SSL and static files. The deployment scripts automatically create a unique static files directory based on your container prefix and image name to avoid conflicts in multi-deployment scenarios.
 
 #### Step 1: Download nginx configuration template
 
@@ -145,18 +202,21 @@ The installation script shows your static files path. You can also determine it 
 ```bash
 # Method 1: Check your .env file
 source .env
+CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
 INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
-echo "Your static files path: /var/www/eqmd_static_${INSTANCE_ID}/"
+echo "Your static files path: /var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/"
 
 # Method 2: Look for it in your file system
-ls -la /var/www/eqmd_static_*/
+ls -la /var/www/${CONTAINER_PREFIX}_static_*/
 ```
 
 #### Step 3: Update nginx configuration
 
 ```bash
 # Replace the placeholder with your actual path
-STATIC_PATH="/var/www/eqmd_static_${INSTANCE_ID}/"
+CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
+INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
+STATIC_PATH="/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/"
 sed -i "s|/var/www/eqmd_static_YOUR_INSTANCE_ID/|$STATIC_PATH|g" /etc/nginx/sites-available/eqmd
 
 # Update server name
@@ -193,7 +253,8 @@ server {
 
     location /static/ {
         # Replace with your actual static files path shown during installation
-        # Example: /var/www/eqmd_static_ghcr_io_yourorg_eqmd_latest/
+        # Examples: /var/www/hospital_a_static_ghcr_io_yourorg_eqmd_latest/
+        #           /var/www/eqmd_static_ghcr_io_yourorg_eqmd_latest/
         alias /var/www/eqmd_static_YOUR_INSTANCE_ID/;
         expires 1y;
         add_header Cache-Control "public, immutable";
@@ -205,11 +266,12 @@ server {
 ```
 
 **Static Files Strategy**: 
-- Each deployment gets a unique directory: `/var/www/eqmd_static_${INSTANCE_ID}/`
-- Directory name is based on the container image name (sanitized)
+- Each deployment gets a unique directory: `/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/`
+- Directory name is based on container prefix + sanitized image name
 - Nginx owns the directory (www-data:www-data) for optimal performance
 - Updates copy fresh files without permission conflicts
 - Supports multiple hospital deployments on same server
+- Container prefix enables flexible deployment scenarios (staging, multi-hospital, version testing)
 
 **Note**: Media files (`/media/`) are served by the Django application to enforce proper authentication and permissions. Only static files are served directly by nginx for performance.
 
@@ -232,8 +294,9 @@ docker pull your-registry/eqmd:latest
 docker compose up -d eqmd
 
 # Update static files to unique directory
+CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
 INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
-STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
+STATIC_FILES_PATH="/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}"
 
 # Collect and copy static files
 docker compose run --rm --user root eqmd python manage.py collectstatic --noinput
@@ -357,8 +420,9 @@ chmod 755 media
 
 # Fix static files permissions (for nginx access)
 # First determine your static files path:
+CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
 INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
-STATIC_FILES_PATH="/var/www/eqmd_static_${INSTANCE_ID}"
+STATIC_FILES_PATH="/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}"
 
 sudo chown -R www-data:www-data "$STATIC_FILES_PATH"
 sudo chmod -R 755 "$STATIC_FILES_PATH"
@@ -421,16 +485,19 @@ docker stats
 ```bash
 # Get your static files path
 source .env
+CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
 INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
-echo "Static files path: /var/www/eqmd_static_${INSTANCE_ID}/"
+echo "Static files path: /var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/"
 ```
 
 ### Nginx Configuration Commands
 
 ```bash
-# Download and configure nginx template
+# Download and configure nginx template  
 curl -fsSL -o /etc/nginx/sites-available/eqmd https://raw.githubusercontent.com/yourorg/eqmd/main/nginx.conf.example
-STATIC_PATH="/var/www/eqmd_static_${INSTANCE_ID}/"
+CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
+INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
+STATIC_PATH="/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/"
 sed -i "s|/var/www/eqmd_static_YOUR_INSTANCE_ID/|$STATIC_PATH|g" /etc/nginx/sites-available/eqmd
 sed -i 's/yourdomain.com/your-actual-domain.com/g' /etc/nginx/sites-available/eqmd
 ln -s /etc/nginx/sites-available/eqmd /etc/nginx/sites-enabled/
@@ -447,5 +514,101 @@ sudo docker cp "${TEMP_CONTAINER_ID}:/app/staticfiles/." "$STATIC_PATH/"
 docker stop "$TEMP_CONTAINER_ID" && docker rm "$TEMP_CONTAINER_ID"
 sudo chown -R www-data:www-data "$STATIC_PATH"
 sudo chmod -R 755 "$STATIC_PATH"
+```
+
+## Multi-Deployment Management
+
+### Managing Multiple Deployments
+
+When running multiple EquipeMed instances, each deployment creates its own:
+- Container name: `${CONTAINER_PREFIX}_app`
+- Database volume: `${CONTAINER_PREFIX}_database` 
+- Media volume: `${CONTAINER_PREFIX}_media_files`
+- Static volume: `${CONTAINER_PREFIX}_static_files`
+- Static directory: `/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/`
+- Host port: `${HOST_PORT}`
+
+### Example: Managing Hospital with Staging
+
+**Production Environment**:
+```bash
+cd /path/to/hospital-prod
+source .env  # CONTAINER_PREFIX=hospital_prod, HOST_PORT=8778
+docker compose ps
+docker compose logs -f eqmd
+```
+
+**Staging Environment**:
+```bash
+cd /path/to/hospital-staging
+source .env  # CONTAINER_PREFIX=hospital_staging, HOST_PORT=8779  
+docker compose ps
+docker compose logs -f eqmd
+```
+
+### Multi-Deployment Nginx Configuration
+
+For multiple deployments, create separate nginx configuration files:
+
+**Production nginx config** (`/etc/nginx/sites-available/hospital-prod`):
+```nginx
+server {
+    listen 80;
+    server_name prod.yourhospital.com;
+    
+    location /static/ {
+        alias /var/www/hospital_prod_static_ghcr_io_yourorg_eqmd_latest/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location / {
+        proxy_pass http://localhost:8778;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Staging nginx config** (`/etc/nginx/sites-available/hospital-staging`):
+```nginx
+server {
+    listen 80;
+    server_name staging.yourhospital.com;
+    
+    location /static/ {
+        alias /var/www/hospital_staging_static_ghcr_io_yourorg_eqmd_staging/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location / {
+        proxy_pass http://localhost:8779;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### Multi-Deployment Commands
+
+```bash
+# List all EquipeMed containers
+docker ps --filter name="_app"
+
+# List all EquipeMed volumes
+docker volume ls --filter name="_database"
+docker volume ls --filter name="_media_files" 
+
+# List all static directories
+ls -la /var/www/*_static_*/
+
+# Cleanup unused multi-deployment resources
+docker volume prune
+docker system prune
 ```
 
