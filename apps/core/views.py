@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView
 from django.conf import settings
@@ -212,3 +212,8 @@ class PatientHistoryView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['patient'] = get_object_or_404(Patient, id=self.kwargs['patient_id'])
         return context
+
+
+def health_check(request):
+    """Simple health check endpoint for Docker health checks."""
+    return HttpResponse("OK", content_type="text/plain")
