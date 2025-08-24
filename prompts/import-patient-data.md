@@ -17,7 +17,7 @@ all patients should get a status of outpatient.
 
 id_number and fiscal_number should be empty.
 
-the fields updated_by and created_by should be set to the admin user (user name:admin, email: admin@test.com)
+the fields updated_by and created_by should be set to the admin user (user name:admin, email: <admin@test.com>)
 
 after the user and the initial record number are inserted in the system, you should create a new record number object from the
 input property "medical_record_number" and set is as the current_record_number.
@@ -32,25 +32,23 @@ ask me any clarification questions before writing this script.
 
 1. Gender mapping: You mentioned "" -> N, but looking at the Patient model in the populate_sample_data.py, I see it uses Patient.GenderChoices
    with options like MALE, FEMALE, OTHER, NOT_INFORMED. Should empty gender map to NOT_INFORMED?
-2. Admin user: You specified admin user as "admin@test.com" but in the populate_sample_data.py I see "admin@example.com". Should I use
-   "admin@test.com" or look for existing admin user?
+2. Admin user: You specified admin user as "<admin@test.com>" but in the populate_sample_data.py I see "<admin@example.com>". Should I use
+   "<admin@test.com>" or look for existing admin user?
 3. Date format: The birth_date is in DD/MM/YYYY format. Should I handle potential parsing errors gracefully?
 4. Record number sequence:
 
-
-    - First create patient with patient_key as current_record_number
-    - Then create a PatientRecordNumber object for this initial record
-    - Then create another PatientRecordNumber object from medical_record_number and set it as current
-    - Is this correct? So each patient will have 2 record number entries?
+   - First create patient with patient_key as current_record_number
+   - Then create a PatientRecordNumber object for this initial record
+   - Then create another PatientRecordNumber object from medical_record_number and set it as current
+   - Is this correct? So each patient will have 2 record number entries?
 
 5. File path: For the Docker command, should the JSON file be mounted as a volume or should I assume it's already inside the container at a
    specific path?
 6. Error handling: How should I handle:
 
-
-    - Missing required fields in JSON?
-    - Duplicate patient_key or medical_record_number values?
-    - Invalid date formats?
+   - Missing required fields in JSON?
+   - Duplicate patient_key or medical_record_number values?
+   - Invalid date formats?
 
 7. Command name: What would you like to name this management command? Something like import_patient_data?
 
@@ -67,3 +65,45 @@ Please clarify these points so I can create the most appropriate import script f
    command. Correct me if it is not possible.
 6. skip the patient insertion and generate a report listing all json objects that were not inserted
 7. yes: import_patient_data sounds good.
+
+Basic Command Structure
+
+docker compose run --rm eqmd python manage.py import_patient_data [options]
+
+Usage Examples
+
+Import from a file:
+
+docker compose run --rm eqmd python manage.py import_patient_data --file /path/to/patients.json
+
+Import from stdin (pipe JSON data):
+
+cat patients.json | docker compose run --rm --no-TTY eqmd python manage.py import_patient_data
+
+Dry run (preview what would be imported):
+
+docker compose run --rm eqmd python manage.py import_patient_data --file /path/to/patients.json --dry-run
+
+File Access Options
+
+If your JSON file is on the host system, you need to mount it into the container:
+
+Option 1: Copy file to container first
+
+# Copy file to running container
+
+docker cp patients.json $(docker compose ps -q eqmd):/app/patients.json
+
+# Then run import
+
+docker compose run --rm eqmd python manage.py import_patient_data --file /app/patients.json
+
+Option 2: Use stdin (recommended)
+
+cat /path/to/your/patients.json | docker compose run --rm --no-TTY eqmd python manage.py import_patient_data
+
+Option 3: Mount volume temporarily
+
+docker compose run --rm -v /host/path/to/data:/data eqmd python manage.py import_patient_data --file /data/patients.json
+
+The stdin approach (Option 2) is usually the most convenient for one-time imports.
