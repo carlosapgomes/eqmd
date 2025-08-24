@@ -75,28 +75,25 @@ fi
 print_info "Creating deployment backup..."
 BACKUP_TAG="backup-$(date +%Y%m%d-%H%M%S)"
 
-# Try to get current image name from running container
-CONTAINER_NAME="${CONTAINER_PREFIX:-eqmd}-eqmd-1"
-print_info "Looking for container: $CONTAINER_NAME"
+# Find the eqmd service container dynamically
+print_info "Finding eqmd service container..."
 
 # List actual running containers for debugging
 print_info "Currently running containers:"
 docker compose ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}" 2>/dev/null || docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
 
-# Try to get the current image using the expected container name first
-CURRENT_IMAGE=$(docker inspect "$CONTAINER_NAME" --format='{{.Config.Image}}' 2>/dev/null | tr -d '\n' || echo "")
-
-# If that fails, try to find the eqmd service container dynamically
-if [ -z "$CURRENT_IMAGE" ]; then
-    print_info "Container $CONTAINER_NAME not found, searching for eqmd service..."
-    ACTUAL_CONTAINER=$(docker compose ps -q eqmd 2>/dev/null | head -1)
-    if [ -n "$ACTUAL_CONTAINER" ]; then
-        CONTAINER_NAME=$(docker inspect "$ACTUAL_CONTAINER" --format='{{.Name}}' | sed 's/^//' 2>/dev/null || echo "")
-        CURRENT_IMAGE=$(docker inspect "$ACTUAL_CONTAINER" --format='{{.Config.Image}}' 2>/dev/null | tr -d '\n' || echo "")
-        if [ -n "$CONTAINER_NAME" ]; then
-            print_info "Found actual container: $CONTAINER_NAME"
-        fi
-    fi
+# Get the container ID/name for the eqmd service
+ACTUAL_CONTAINER=$(docker compose ps -q eqmd 2>/dev/null | head -1)
+if [ -n "$ACTUAL_CONTAINER" ]; then
+    # Get the actual container name
+    CONTAINER_NAME=$(docker inspect "$ACTUAL_CONTAINER" --format='{{.Name}}' | sed 's/^//' 2>/dev/null || echo "")
+    CURRENT_IMAGE=$(docker inspect "$ACTUAL_CONTAINER" --format='{{.Config.Image}}' 2>/dev/null | tr -d '\n' || echo "")
+    print_status "Found eqmd container: $CONTAINER_NAME"
+    print_status "Current image: $CURRENT_IMAGE"
+else
+    print_warning "No eqmd service container found"
+    CONTAINER_NAME=""
+    CURRENT_IMAGE=""
 fi
 
 if [ -n "$CURRENT_IMAGE" ] && [ "$CURRENT_IMAGE" != "unknown" ]; then
