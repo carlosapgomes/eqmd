@@ -60,6 +60,17 @@ class Command(BaseCommand):
             type=int,
             help='Limit the number of dailynotes to import (useful for testing)',
         )
+        parser.add_argument(
+            '--chunk-size',
+            type=int,
+            default=100,
+            help='Number of records to fetch per Firebase request (default: 100, max: 1000)',
+        )
+        parser.add_argument(
+            '--start-key',
+            type=str,
+            help='Firebase key to start from (useful for resuming interrupted imports)',
+        )
 
     def handle(self, *args, **options):
         if firebase_admin is None:
@@ -69,6 +80,8 @@ class Command(BaseCommand):
 
         self.dry_run = options['dry_run']
         self.limit = options.get('limit')
+        self.chunk_size = options.get('chunk_size', 100)
+        self.start_key = options.get('start_key')
         
         if self.dry_run:
             self.stdout.write(self.style.WARNING('DRY RUN MODE - No data will be imported'))
@@ -87,20 +100,11 @@ class Command(BaseCommand):
 
         self.stdout.write(f'Using import user: {self.import_user.username} ({self.import_user.email})')
 
-        # Fetch dailynotes from Firebase
+        # Process dailynotes in chunks
         try:
-            dailynotes_data = self.fetch_firebase_dailynotes(options['base_reference'])
+            self.process_firebase_dailynotes_chunked(options['base_reference'])
         except Exception as e:
-            raise CommandError(f'Failed to fetch dailynotes from Firebase: {e}')
-
-        if not dailynotes_data:
-            self.stdout.write(self.style.WARNING('No dailynotes found in Firebase'))
-            return
-
-        self.stdout.write(f'Found {len(dailynotes_data)} dailynotes in Firebase')
-
-        # Process dailynotes
-        self.process_dailynotes(dailynotes_data)
+            raise CommandError(f'Failed to process dailynotes from Firebase: {e}')
 
     def init_firebase(self, credentials_file, database_url):
         """Initialize Firebase Admin SDK"""
@@ -138,43 +142,128 @@ class Command(BaseCommand):
                 raise Exception('No superuser found. Please create one or specify --user-email')
             return user
 
-    def fetch_firebase_dailynotes(self, base_reference):
-        """Fetch all dailynotes from Firebase"""
+    def process_firebase_dailynotes_chunked(self, base_reference):
+        """Process dailynotes in chunks to handle large datasets"""
+        total_processed = 0
+        total_imported = 0
+        total_skipped = 0
+        total_patient_not_found = 0
+        total_errors = 0
+        
+        unmatched_patients = set()
+        errors = []
+        
+        last_key = self.start_key
+        chunk_count = 0
+        
+        self.stdout.write(f'Processing dailynotes in chunks of {self.chunk_size}...')
+        if self.start_key:
+            self.stdout.write(f'Starting from key: {self.start_key}')
+        
+        while True:
+            chunk_count += 1
+            
+            try:
+                # Fetch chunk of data
+                chunk_data, next_key = self.fetch_firebase_chunk(base_reference, last_key, self.chunk_size)
+                
+                if not chunk_data:
+                    self.stdout.write('No more data to process')
+                    break
+                
+                self.stdout.write(f'Processing chunk {chunk_count}: {len(chunk_data)} records')
+                
+                # Process this chunk
+                chunk_imported, chunk_skipped, chunk_patient_not_found, chunk_errors, chunk_unmatched, chunk_error_list = self.process_dailynotes_chunk(chunk_data)
+                
+                # Update totals
+                total_processed += len(chunk_data)
+                total_imported += chunk_imported
+                total_skipped += chunk_skipped
+                total_patient_not_found += chunk_patient_not_found
+                total_errors += chunk_errors
+                unmatched_patients.update(chunk_unmatched)
+                errors.extend(chunk_error_list)
+                
+                # Progress update
+                self.stdout.write(f'  Chunk {chunk_count} completed: {chunk_imported} imported, {chunk_patient_not_found} patient not found, {chunk_errors} errors')
+                
+                # Check if we've reached our limit
+                if self.limit and total_processed >= self.limit:
+                    self.stdout.write(f'Reached limit of {self.limit} records')
+                    break
+                
+                # Check if there's more data
+                if not next_key:
+                    self.stdout.write('Reached end of data')
+                    break
+                
+                last_key = next_key
+                
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'Error processing chunk {chunk_count}: {e}'))
+                if self.dry_run:
+                    break  # In dry run, don't continue after errors
+                # In actual import, you might want to continue or stop based on error type
+                total_errors += 1
+                break
+        
+        # Final report
+        self.display_final_report(
+            total_processed, total_imported, total_skipped,
+            total_patient_not_found, total_errors,
+            unmatched_patients, errors, last_key
+        )
+
+    def fetch_firebase_chunk(self, base_reference, start_key=None, limit=100):
+        """Fetch a chunk of dailynotes from Firebase with pagination"""
         try:
             ref = db.reference(base_reference)
-            data = ref.get()
+            
+            # Build query with pagination
+            query = ref.order_by_key()
+            
+            if start_key:
+                query = query.start_at(start_key)
+            
+            query = query.limit_to_first(limit + 1)  # +1 to get next key for pagination
+            
+            data = query.get()
             
             if not data:
-                return {}
+                return {}, None
             
-            if isinstance(data, dict):
-                return data
-            else:
+            if not isinstance(data, dict):
                 raise Exception(f'Unexpected data format: {type(data)}')
+            
+            # Convert to list for easier handling
+            items = list(data.items())
+            
+            # If we got more items than requested, the last one is for getting the next key
+            next_key = None
+            if len(items) > limit:
+                next_key = items[-1][0]  # Last item's key
+                items = items[:-1]  # Remove the extra item
+            
+            # Convert back to dict
+            chunk_data = dict(items)
+            
+            return chunk_data, next_key
                 
         except Exception as e:
-            raise Exception(f'Failed to fetch Firebase data: {e}')
+            raise Exception(f'Failed to fetch Firebase chunk: {e}')
 
-    def process_dailynotes(self, dailynotes_data):
-        """Process and import dailynotes"""
-        total_count = len(dailynotes_data)
+    def process_dailynotes_chunk(self, dailynotes_data):
+        """Process a chunk of dailynotes"""
         imported_count = 0
         skipped_count = 0
         patient_not_found_count = 0
         error_count = 0
         
-        # Apply limit if specified
-        if self.limit:
-            items = list(dailynotes_data.items())[:self.limit]
-            self.stdout.write(f'Processing limited set: {len(items)} dailynotes')
-        else:
-            items = dailynotes_data.items()
-
-        # Track unmatched patients for reporting
         unmatched_patients = set()
         errors = []
 
-        for firebase_key, dailynote_data in items:
+        for firebase_key, dailynote_data in dailynotes_data.items():
             try:
                 result = self.process_single_dailynote(firebase_key, dailynote_data)
                 if result == 'imported':
@@ -192,16 +281,13 @@ class Command(BaseCommand):
                     'patient_key': dailynote_data.get('patient', 'unknown'),
                     'error': str(e)
                 })
-                self.stdout.write(
-                    self.style.ERROR(f'Error processing {firebase_key}: {e}')
-                )
+                if not self.dry_run:  # In dry run, be more verbose about errors
+                    self.stdout.write(
+                        self.style.ERROR(f'Error processing {firebase_key}: {e}')
+                    )
+        
+        return imported_count, skipped_count, patient_not_found_count, error_count, unmatched_patients, errors
 
-        # Final report
-        self.display_final_report(
-            total_count, imported_count, skipped_count, 
-            patient_not_found_count, error_count, 
-            unmatched_patients, errors
-        )
 
     def process_single_dailynote(self, firebase_key, dailynote_data):
         """Process a single dailynote"""
@@ -293,7 +379,7 @@ class Command(BaseCommand):
         return '\n'.join(sections)
 
     def display_final_report(self, total_count, imported_count, skipped_count, 
-                           patient_not_found_count, error_count, unmatched_patients, errors):
+                           patient_not_found_count, error_count, unmatched_patients, errors, last_key=None):
         """Display final import report"""
         
         self.stdout.write('')
@@ -307,35 +393,45 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'Successfully imported {imported_count} dailynotes'))
         
         if self.limit:
-            self.stdout.write(f'Processed limited set of {len(list(total_count))} records')
+            self.stdout.write(f'Processed limited set of {total_count} records (limit: {self.limit})')
         
         # Summary statistics
         self.stdout.write('')
         self.stdout.write('Summary:')
-        self.stdout.write(f'  Total processed: {imported_count + skipped_count + patient_not_found_count + error_count}')
+        self.stdout.write(f'  Total processed: {total_count}')
         self.stdout.write(f'  Successfully imported: {imported_count}')
         self.stdout.write(f'  Patient not found: {patient_not_found_count}')
         self.stdout.write(f'  Skipped: {skipped_count}')
         self.stdout.write(f'  Errors: {error_count}')
         
+        # Resume information
+        if last_key and not self.dry_run:
+            self.stdout.write('')
+            self.stdout.write(self.style.WARNING('Resume Information:'))
+            self.stdout.write(f'  To resume from where this import stopped, use:')
+            self.stdout.write(f'  --start-key "{last_key}"')
+        
         # Report unmatched patients
         if unmatched_patients:
             self.stdout.write('')
             self.stdout.write(self.style.WARNING(f'Unmatched patient keys ({len(unmatched_patients)}):'))
-            for patient_key in sorted(unmatched_patients):
+            unmatched_list = sorted(unmatched_patients)[:20]  # Show first 20
+            for patient_key in unmatched_list:
                 self.stdout.write(f'  - {patient_key}')
+            if len(unmatched_patients) > 20:
+                self.stdout.write(f'  ... and {len(unmatched_patients) - 20} more unmatched patients')
         
         # Report errors
         if errors:
             self.stdout.write('')
             self.stdout.write(self.style.ERROR('Errors encountered:'))
-            for error in errors[:10]:  # Show first 10 errors
+            for error in errors[:5]:  # Show first 5 errors
                 self.stdout.write(f'  Firebase key: {error["firebase_key"]}')
                 self.stdout.write(f'    Patient key: {error["patient_key"]}')
                 self.stdout.write(f'    Error: {error["error"]}')
                 self.stdout.write('')
             
-            if len(errors) > 10:
-                self.stdout.write(f'  ... and {len(errors) - 10} more errors')
+            if len(errors) > 5:
+                self.stdout.write(f'  ... and {len(errors) - 5} more errors')
         
         self.stdout.write(self.style.SUCCESS('='*60))
