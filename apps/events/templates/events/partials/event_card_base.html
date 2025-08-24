@@ -23,10 +23,10 @@ Parameters expected:
                         {{ event.get_event_type_short_display }}
                     </span>
                 </h3>
-                <time datetime="{{ event.created_at|date:'c' }}" 
+                <time datetime="{{ event.event_datetime|date:'c' }}" 
                       class="text-muted small">
                     <i class="bi bi-clock me-1" aria-hidden="true"></i>
-                    {{ event.created_at|date:"d/m/Y H:i" }}
+                    {{ event.event_datetime|date:"d/m/Y H:i" }}
                 </time>
             </div>
             
