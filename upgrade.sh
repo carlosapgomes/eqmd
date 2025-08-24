@@ -74,10 +74,19 @@ fi
 # Create deployment backup
 print_info "Creating deployment backup..."
 BACKUP_TAG="backup-$(date +%Y%m%d-%H%M%S)"
-CURRENT_IMAGE=$(docker inspect eqmd-eqmd-1 --format='{{.Config.Image}}' 2>/dev/null || echo "unknown")
-if [ "$CURRENT_IMAGE" != "unknown" ]; then
-    docker tag "$CURRENT_IMAGE" "eqmd:$BACKUP_TAG"
-    print_status "Current image backed up as eqmd:$BACKUP_TAG"
+
+# Try to get current image name from running container
+CONTAINER_NAME="${CONTAINER_PREFIX:-eqmd}-eqmd-1"
+CURRENT_IMAGE=$(docker inspect "$CONTAINER_NAME" --format='{{.Config.Image}}' 2>/dev/null | tr -d '\n' || echo "")
+
+if [ -n "$CURRENT_IMAGE" ] && [ "$CURRENT_IMAGE" != "unknown" ]; then
+    if docker tag "$CURRENT_IMAGE" "eqmd:$BACKUP_TAG" 2>/dev/null; then
+        print_status "Current image backed up as eqmd:$BACKUP_TAG"
+    else
+        print_warning "Failed to create backup of current image"
+    fi
+else
+    print_warning "No existing container found to backup"
 fi
 
 # Pull new image instead of building
@@ -140,10 +149,14 @@ for i in {1..30}; do
     fi
     if [ $i -eq 30 ]; then
         print_error "Health check failed - rolling back"
-        if [ "$CURRENT_IMAGE" != "unknown" ]; then
-            docker tag "eqmd:$BACKUP_TAG" eqmd:latest
-            docker compose up -d eqmd
-            print_warning "Rolled back to previous version"
+        if [ -n "$CURRENT_IMAGE" ] && [ "$CURRENT_IMAGE" != "unknown" ]; then
+            if docker tag "eqmd:$BACKUP_TAG" eqmd:latest 2>/dev/null && docker compose up -d eqmd; then
+                print_warning "Rolled back to previous version"
+            else
+                print_error "Rollback failed - manual intervention required"
+            fi
+        else
+            print_error "No backup available - manual intervention required"
         fi
         exit 1
     fi
@@ -178,6 +191,10 @@ echo "- Verify static files: ls -la $STATIC_FILES_PATH"
 echo "- Rollback if needed: docker tag eqmd:$BACKUP_TAG eqmd:latest && docker compose up -d eqmd"
 echo ""
 echo "Backup information:"
-echo "- Backup tag: $BACKUP_TAG"
+if [ -n "$CURRENT_IMAGE" ] && [ "$CURRENT_IMAGE" != "unknown" ]; then
+    echo "- Backup tag: $BACKUP_TAG (from: $CURRENT_IMAGE)"
+else
+    echo "- Backup tag: $BACKUP_TAG (no backup created - fresh install)"
+fi
 echo "- New image: ${EQMD_IMAGE:-built-locally}"
 echo "- Static files directory: $STATIC_FILES_PATH"
