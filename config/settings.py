@@ -283,6 +283,7 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory")
+ACCOUNT_ALLOW_REGISTRATION = False  # Disable public signup
 
 # Login and Logout Configuration
 LOGIN_REDIRECT_URL = "core:dashboard"
