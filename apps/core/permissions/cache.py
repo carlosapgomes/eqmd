@@ -34,7 +34,7 @@ def generate_cache_key(user_id: int, permission_type: str, object_id: Optional[s
     # Create a hash to ensure key length limits
     key_string = ':'.join(key_parts)
     if len(key_string) > 200:  # Django cache key limit is 250 chars
-        key_hash = hashlib.md5(key_string.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_string.encode()).hexdigest()
         return f"{PERMISSION_CACHE_PREFIX}:hash:{key_hash}"
     
     return key_string

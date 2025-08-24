@@ -64,11 +64,10 @@ class PDFFormSecurity:
 
             # Sanitize value based on type
             if isinstance(value, str):
-                # Remove potential script tags and dangerous HTML
-                import re
-                value = re.sub(r'<script[^>]*>.*?</script>', '', value, flags=re.IGNORECASE | re.DOTALL)
-                value = re.sub(r'<[^>]+>', '', value)  # Remove all HTML tags
-                value = value.strip()
+                # Use proper HTML sanitization instead of regex
+                from django.utils.html import escape
+                # Escape HTML entities to prevent XSS
+                value = escape(value).strip()
             elif isinstance(value, (int, float, bool)):
                 pass  # These types are safe
             elif isinstance(value, list):
