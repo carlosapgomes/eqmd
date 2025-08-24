@@ -19,7 +19,6 @@ dependencies = [
     "pdf2image>=1.17.0",
     "pillow>=11.2.1",
     "pypdf>=5.8.0",
-    "pypdf2>=3.0.1",
     "python-dotenv>=1.0.0",
     "pytz>=2025.2",
     "reportlab>=4.4.2",
