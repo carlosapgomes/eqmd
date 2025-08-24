@@ -187,6 +187,199 @@ uv run python manage.py create_sample_wards
 uv run python manage.py create_sample_content
 uv run python manage.py create_sample_pdf_forms
 
+# Firebase Data Import
+
+## Import Dailynotes from Firebase
+
+Import dailynotes from Firebase Realtime Database to EQMD. Requires `firebase-admin` package (already installed).
+
+### Prerequisites
+1. Firebase service account credentials JSON file
+2. Patients already imported (command matches using `PatientRecordNumber.record_number`)
+3. Valid user account for import attribution
+
+### Basic Usage
+
+```bash
+# Dry run to preview import
+uv run python manage.py import_firebase_dailynotes \
+  --credentials-file /path/to/firebase-key.json \
+  --database-url https://your-project.firebaseio.com \
+  --project-name your-project \
+  --dry-run
+
+# Import with specific user
+uv run python manage.py import_firebase_dailynotes \
+  --credentials-file /path/to/firebase-key.json \
+  --database-url https://your-project.firebaseio.com \
+  --project-name your-project \
+  --user-email admin@yourcompany.com
+
+# Test import with limited records
+uv run python manage.py import_firebase_dailynotes \
+  --credentials-file /path/to/firebase-key.json \
+  --database-url https://your-project.firebaseio.com \
+  --project-name your-project \
+  --limit 10
+```
+
+### Docker Usage
+
+#### Docker Compose
+
+**Option 1: Temporary Mount (Recommended - Most Secure)**
+```bash
+# Mount as read-only temporary volume (auto-cleanup)
+docker-compose run --rm \
+  -v /path/to/firebase-key.json:/tmp/firebase-key.json:ro \
+  web uv run python manage.py import_firebase_dailynotes \
+    --credentials-file /tmp/firebase-key.json \
+    --database-url https://your-project.firebaseio.com \
+    --project-name your-project \
+    --user-email admin@yourcompany.com
+```
+
+**Option 2: Copy with Cleanup**
+```bash
+# Copy, run, and remove in one command
+docker-compose cp firebase-key.json web:/app/firebase-key.json && \
+docker-compose exec web uv run python manage.py import_firebase_dailynotes \
+  --credentials-file firebase-key.json \
+  --database-url https://your-project.firebaseio.com \
+  --project-name your-project \
+  --user-email admin@yourcompany.com && \
+docker-compose exec web rm /app/firebase-key.json
+```
+
+**Option 3: Manual Copy with Shell Cleanup**
+```bash
+# Copy credentials
+docker-compose cp firebase-key.json web:/app/firebase-key.json
+
+# Run with cleanup in single command
+docker-compose exec web bash -c "
+  uv run python manage.py import_firebase_dailynotes \
+    --credentials-file firebase-key.json \
+    --database-url https://your-project.firebaseio.com \
+    --project-name your-project \
+    --user-email admin@yourcompany.com && \
+  rm firebase-key.json
+"
+```
+
+#### Standalone Docker
+
+**Secure Mount (Recommended)**
+```bash
+# Mount credentials as read-only volume (auto-cleanup)
+docker run --rm -it \
+  -v /path/to/firebase-key.json:/tmp/firebase-key.json:ro \
+  -v /path/to/db:/app/db \
+  your-eqmd-image \
+  uv run python manage.py import_firebase_dailynotes \
+    --credentials-file /tmp/firebase-key.json \
+    --database-url https://your-project.firebaseio.com \
+    --project-name your-project \
+    --user-email admin@yourcompany.com
+```
+
+#### Production Docker (Using Secrets)
+
+**Docker Swarm Secrets**
+```bash
+# Create secret from credentials file
+echo "$(cat firebase-key.json)" | docker secret create firebase-creds -
+
+# Run service with secret (auto-cleanup)
+docker service create --rm \
+  --secret firebase-creds \
+  --mount type=tmpfs,destination=/tmp \
+  your-eqmd-image sh -c "
+    cp /run/secrets/firebase-creds /tmp/firebase-key.json && \
+    uv run python manage.py import_firebase_dailynotes \
+      --credentials-file /tmp/firebase-key.json \
+      --database-url https://your-project.firebaseio.com \
+      --project-name your-project \
+      --user-email admin@yourcompany.com
+  "
+
+# Clean up secret after use
+docker secret rm firebase-creds
+```
+
+**Kubernetes Secrets**
+```bash
+# Create secret
+kubectl create secret generic firebase-creds \
+  --from-file=firebase-key.json
+
+# Run job with secret mount
+kubectl run firebase-import --rm -i --restart=Never \
+  --image=your-eqmd-image \
+  --overrides='{
+    "spec": {
+      "containers": [{
+        "name": "firebase-import",
+        "image": "your-eqmd-image",
+        "command": ["uv", "run", "python", "manage.py", "import_firebase_dailynotes"],
+        "args": [
+          "--credentials-file", "/tmp/firebase-key.json",
+          "--database-url", "https://your-project.firebaseio.com",
+          "--project-name", "your-project",
+          "--user-email", "admin@yourcompany.com"
+        ],
+        "volumeMounts": [{
+          "name": "firebase-creds",
+          "mountPath": "/tmp",
+          "readOnly": true
+        }]
+      }],
+      "volumes": [{
+        "name": "firebase-creds",
+        "secret": {
+          "secretName": "firebase-creds",
+          "items": [{"key": "firebase-key.json", "path": "firebase-key.json"}]
+        }
+      }]
+    }
+  }'
+
+# Clean up secret
+kubectl delete secret firebase-creds
+```
+
+### Command Options
+
+- `--credentials-file`: Firebase service account JSON (required)
+- `--database-url`: Firebase Realtime Database URL (required)
+- `--project-name`: Firebase project name (required)  
+- `--base-reference`: Database reference path (default: "dailynotes")
+- `--user-email`: User email for import attribution (uses first superuser if not provided)
+- `--dry-run`: Preview without importing
+- `--limit`: Import only N records (useful for testing)
+
+### Security Best Practices
+
+**Credential Handling Priority:**
+1. **🥇 Temporary Mounts** - Credentials never persist in container (Options 1)
+2. **🥈 Docker Secrets** - Enterprise-grade secret management (Production)
+3. **🥉 Copy with Cleanup** - Manual cleanup required (Options 2-3)
+
+**Environment Recommendations:**
+- **Development**: Use temporary mount (Option 1)
+- **CI/CD Pipelines**: Use Docker/Kubernetes secrets
+- **Production**: Always use secrets management systems
+- **Quick Testing**: Copy with cleanup (Option 2)
+
+### Notes
+
+- Matches patients using Firebase `patient` field against `PatientRecordNumber.record_number`
+- Converts epoch milliseconds timestamps to Django datetime
+- Formats content as: Subjective → Objective → Exams → Assessment/Plan
+- Allows duplicate imports (creates additional dailynotes)
+- Provides detailed reporting of unmatched patients and errors
+- **Security**: Always use read-only mounts and clean up credentials after import
+
 # Security monitoring and audit history
 
 uv run python manage.py detect_suspicious_activity --comprehensive --days=7
