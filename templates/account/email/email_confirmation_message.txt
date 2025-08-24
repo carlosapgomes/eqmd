@@ -1,0 +1,32 @@
+{% load account %}{% load i18n %}{% load hospital_tags %}
+{% user_display user as user_display %}
+Olá {{ user_display }},
+
+Bem-vindo(a) ao sistema {% hospital_name %}!
+
+Para completar seu cadastro e começar a utilizar o sistema, você precisa confirmar seu endereço de email.
+
+{% if code %}
+Seu código de verificação é:
+{{ code }}
+
+Digite este código na janela do navegador que você tem aberta.
+{% else %}
+Clique no link abaixo para confirmar seu email:
+{{ activate_url }}
+{% endif %}
+
+Este código/link é válido por 3 dias.
+
+Por que precisamos confirmar seu email?
+• Para garantir a segurança do sistema
+• Para enviar notificações importantes sobre pacientes
+• Para recuperação de senha quando necessário
+
+Se você não se cadastrou no sistema {% hospital_name %}, pode ignorar este email.
+
+Atenciosamente,
+Equipe do {% hospital_name %}
+
+---
+Esta é uma mensagem automática, por favor não responda.
