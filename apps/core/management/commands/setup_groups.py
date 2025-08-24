@@ -375,7 +375,7 @@ class Command(BaseCommand):
         permissions.extend([
             'mediafiles.view_photo',
             'mediafiles.view_photoseries',
-            'mediafiles.view_video',
+            'mediafiles.view_videoclip',
             'mediafiles.add_photo',           # Document wounds, surgical sites
             'mediafiles.add_photoseries',     # Progress documentation
         ])
