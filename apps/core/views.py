@@ -148,9 +148,27 @@ def dashboard_view(request):
     """
     Renders the main dashboard page for authenticated users.
     """
+    # Import Patient model here to avoid circular imports
+    from apps.patients.models import Patient
+    
+    # Get patient statistics for dashboard
     context = {
         'page_title': 'Painel Principal',
     }
+    
+    # Only calculate stats if user has permission to view patients
+    if request.user.has_perm('patients.view_patient'):
+        try:
+            context.update({
+                'total_patients': Patient.objects.count(),
+                'inpatient_count': Patient.objects.filter(status=Patient.Status.INPATIENT).count(),
+                'outpatient_count': Patient.objects.filter(status=Patient.Status.OUTPATIENT).count(),
+                'recent_patients': Patient.objects.all().order_by('-created_at')[:5],
+            })
+        except:
+            # Handle case where database isn't set up yet
+            pass
+    
     return render(request, 'core/dashboard.html', context)
 
 
