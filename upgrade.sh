@@ -124,6 +124,11 @@ chown -R www-data:www-data "$STATIC_FILES_PATH"
 chmod -R 755 "$STATIC_FILES_PATH"
 print_status "Static files updated and permissions set"
 
+# Fix app directory permissions after update
+print_info "Fixing app directory permissions after update..."
+docker compose exec --user root eqmd chown -R $EQMD_UID:$EQMD_GID /app
+print_status "App permissions fixed"
+
 # Wait and verify health with rollback capability
 print_info "Waiting for health check..."
 HOST_PORT=${HOST_PORT:-8778}
