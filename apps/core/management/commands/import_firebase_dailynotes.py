@@ -320,9 +320,10 @@ class Command(BaseCommand):
         # Convert Firebase datetime (epoch milliseconds) to Django datetime
         try:
             datetime_ms = int(dailynote_data['datetime'])
+            # Create timezone-aware datetime directly from timestamp
             event_datetime = datetime.fromtimestamp(datetime_ms / 1000, tz=timezone.utc)
-            # Convert to Django's timezone-aware datetime
-            event_datetime = django_timezone.make_aware(event_datetime, django_timezone.utc)
+            # Convert to Django's timezone
+            event_datetime = event_datetime.astimezone(django_timezone.get_current_timezone())
         except (ValueError, TypeError) as e:
             raise ValueError(f'Invalid datetime format: {e}')
 
