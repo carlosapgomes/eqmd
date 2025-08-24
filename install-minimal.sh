@@ -372,6 +372,11 @@ print_info "Fixing final database permissions..."
 docker compose run --rm --user root eqmd sh -c "chown -R $EQMD_UID:$EQMD_GID /app/database"
 print_status "Final database permissions fixed"
 
+# Fix final permissions for all app directories before starting services
+print_info "Fixing final permissions for all app directories..."
+docker compose run --rm --user root eqmd sh -c "chown -R $EQMD_UID:$EQMD_GID /app"
+print_status "Final app permissions fixed"
+
 # Start production services
 print_info "Starting production services..."
 docker compose up -d eqmd
