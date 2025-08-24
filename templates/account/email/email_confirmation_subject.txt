@@ -1,4 +1,4 @@
 {% load i18n %}{% load hospital_tags %}
 {% autoescape off %}
-[{% hospital_name %}] Confirme seu endereço de email
+Confirme seu endereço de email
 {% endautoescape %}
