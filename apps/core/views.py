@@ -150,6 +150,7 @@ def dashboard_view(request):
     """
     # Import Patient model here to avoid circular imports
     from apps.patients.models import Patient
+    from django.db import models
     
     # Get patient statistics for dashboard
     context = {
@@ -163,7 +164,11 @@ def dashboard_view(request):
                 'total_patients': Patient.objects.count(),
                 'inpatient_count': Patient.objects.filter(status=Patient.Status.INPATIENT).count(),
                 'outpatient_count': Patient.objects.filter(status=Patient.Status.OUTPATIENT).count(),
-                'recent_patients': Patient.objects.all().order_by('-created_at')[:5],
+                'recent_patients': Patient.objects.annotate(
+                    latest_event_datetime=models.Max('event__event_datetime')
+                ).filter(
+                    latest_event_datetime__isnull=False
+                ).order_by('-latest_event_datetime')[:5],
             })
         except:
             # Handle case where database isn't set up yet
