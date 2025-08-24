@@ -631,7 +631,7 @@ class Patient(SoftDeleteModel):
         verbose_name="Sexo"
     )
     healthcard_number = models.CharField(
-        max_length=30, blank=True, verbose_name="Número do Cartão de Saúde"
+        max_length=60, blank=True, verbose_name="Número do Cartão de Saúde"
     )
     id_number = models.CharField(
         max_length=30, blank=True, verbose_name="Número de Identidade"
@@ -639,7 +639,7 @@ class Patient(SoftDeleteModel):
     fiscal_number = models.CharField(
         max_length=30, blank=True, verbose_name="Número Fiscal"
     )
-    phone = models.CharField(max_length=30, blank=True, verbose_name="Telefone")
+    phone = models.CharField(max_length=100, blank=True, verbose_name="Telefone")
 
     # Address fields
     address = models.CharField(max_length=255, blank=True, verbose_name="Endereço")
