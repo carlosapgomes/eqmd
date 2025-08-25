@@ -131,10 +131,14 @@ if [ -f "/tmp/eqmd_user_env" ]; then
 			print_status "Added multi-deployment configuration to .env"
 		fi
 		
-		# Fix database path to use volume mount
-		print_info "Fixing database path to use volume mount..."
-		sed -i "s/^DATABASE_NAME=.*/DATABASE_NAME=\/app\/database\/db.sqlite3/" .env
-		print_status "Database path updated to /app/database/db.sqlite3"
+		# Fix database path only for SQLite (check if using PostgreSQL)
+		if ! grep -q "^DATABASE_ENGINE=.*postgresql" .env; then
+			print_info "Detected SQLite database - fixing path to use volume mount..."
+			sed -i "s/^DATABASE_NAME=.*/DATABASE_NAME=\/app\/database\/db.sqlite3/" .env
+			print_status "SQLite database path updated to /app/database/db.sqlite3"
+		else
+			print_info "Detected PostgreSQL database - no path changes needed"
+		fi
 	fi
 else
 	print_error "Failed to get eqmd user environment variables"
@@ -257,10 +261,32 @@ else
 	exit 1
 fi
 
-# Clean up any existing volumes to ensure fresh start
-print_info "Cleaning up existing volumes..."
-docker compose down -v 2>/dev/null || true
-print_status "Volumes cleaned up"
+# Clean up any existing containers to ensure fresh start
+print_info "Cleaning up existing containers..."
+docker compose down 2>/dev/null || true
+print_status "Containers cleaned up"
+
+# Check if PostgreSQL is being used and start it first
+if grep -q "^DATABASE_ENGINE=.*postgresql" .env 2>/dev/null; then
+	print_info "PostgreSQL database detected - starting PostgreSQL service..."
+	docker compose up -d postgres
+	print_info "Waiting for PostgreSQL to be ready..."
+	# Wait for PostgreSQL to be healthy
+	for i in {1..30}; do
+		if docker compose exec postgres pg_isready -U "${DATABASE_USER:-eqmd_user}" -d "${DATABASE_NAME:-eqmd_db}" >/dev/null 2>&1; then
+			print_status "PostgreSQL is ready"
+			break
+		elif [ $i -eq 30 ]; then
+			print_error "PostgreSQL failed to start within timeout"
+			print_info "Check logs: docker compose logs postgres"
+			exit 1
+		else
+			sleep 2
+		fi
+	done
+else
+	print_info "SQLite database detected - no separate database service needed"
+fi
 
 # Initialize static files
 print_info "Initializing static files..."
@@ -308,24 +334,34 @@ chown -R $EQMD_UID:$EQMD_GID /app/database
 echo 'Permissions fixed.'
 "
 
-# Verify migrations were applied
-print_info "Debugging database configuration..."
-docker compose run --rm --user root eqmd sh -c "
-echo 'Environment variables:'
-env | grep -E 'DATABASE|DEBUG|DJANGO' | sort || echo 'No database environment variables found'
-echo 'Creating test database file to verify volume mount:'
-touch /app/database/test.db
-ls -la /app/database/
-echo 'Database directory is writable!'
-rm /app/database/test.db
-echo 'Test file removed'
-echo 'Running migrations again to see if database file gets created:'
-python manage.py migrate --verbosity=0
-echo 'Post-migration check:'
-ls -la /app/database/
-find /app -name '*.db*' -o -name 'db.sqlite*' -o -name '*.sqlite*' 2>/dev/null || echo 'Still no database files found'
-"
-print_status "Database debugging completed"
+# Verify database configuration based on database type
+if grep -q "^DATABASE_ENGINE=.*postgresql" .env 2>/dev/null; then
+	print_info "Verifying PostgreSQL connection..."
+	docker compose run --rm eqmd sh -c "
+	echo 'Testing PostgreSQL connection:'
+	python manage.py dbshell --command='SELECT version();' 2>/dev/null && echo 'PostgreSQL connection successful' || echo 'PostgreSQL connection failed'
+	echo 'Environment variables:'
+	env | grep -E 'DATABASE' | sort
+	"
+else
+	print_info "Verifying SQLite database setup..."
+	docker compose run --rm --user root eqmd sh -c "
+	echo 'Environment variables:'
+	env | grep -E 'DATABASE|DEBUG|DJANGO' | sort || echo 'No database environment variables found'
+	echo 'Creating test database file to verify volume mount:'
+	touch /app/database/test.db
+	ls -la /app/database/
+	echo 'Database directory is writable!'
+	rm /app/database/test.db
+	echo 'Test file removed'
+	echo 'Running migrations again to see if database file gets created:'
+	python manage.py migrate --verbosity=0
+	echo 'Post-migration check:'
+	ls -la /app/database/
+	find /app -name '*.db*' -o -name 'db.sqlite*' -o -name '*.sqlite*' 2>/dev/null || echo 'Still no database files found'
+	"
+fi
+print_status "Database verification completed"
 
 # Collect static files to container and copy to unique directory
 print_info "Collecting static files..."
@@ -377,8 +413,8 @@ if [[ $SETUP_CACHE_CRON =~ ^[Nn]$ ]]; then
 	echo "sudo crontab -u eqmd -e"
 	echo ""
 	echo "Add these lines:"
-	echo "*/5 * * * * cd $(pwd) && docker compose exec -T web python manage.py update_dashboard_stats >> /var/log/eqmd/dashboard_cache.log 2>&1"
-	echo "2-59/5 * * * * cd $(pwd) && docker compose exec -T web python manage.py update_ward_mapping_cache >> /var/log/eqmd/ward_cache.log 2>&1"
+	echo "*/5 * * * * cd $(pwd) && docker compose exec -T eqmd python manage.py update_dashboard_stats >> /var/log/eqmd/dashboard_cache.log 2>&1"
+	echo "2-59/5 * * * * cd $(pwd) && docker compose exec -T eqmd python manage.py update_ward_mapping_cache >> /var/log/eqmd/ward_cache.log 2>&1"
 	echo ""
 	print_info "For detailed information, see: docs/performance/dashboard-cache.md"
 else
@@ -415,10 +451,10 @@ else
 # Improves dashboard performance by pre-computing statistics every 5 minutes
 
 # Dashboard stats - runs at :00, :05, :10, :15, :20, :25, :30, :35, :40, :45, :50, :55
-*/5 * * * * cd $(pwd) && docker compose exec -T web python manage.py update_dashboard_stats >> /var/log/eqmd/dashboard_cache.log 2>&1
+*/5 * * * * cd $(pwd) && docker compose exec -T eqmd python manage.py update_dashboard_stats >> /var/log/eqmd/dashboard_cache.log 2>&1
 
 # Ward mapping - runs at :02, :07, :12, :17, :22, :27, :32, :37, :42, :47, :52, :57 (offset by 2 minutes)
-2-59/5 * * * * cd $(pwd) && docker compose exec -T web python manage.py update_ward_mapping_cache >> /var/log/eqmd/ward_cache.log 2>&1
+2-59/5 * * * * cd $(pwd) && docker compose exec -T eqmd python manage.py update_ward_mapping_cache >> /var/log/eqmd/ward_cache.log 2>&1
 EOF
 		
 		# Install the new crontab for eqmd user
@@ -436,13 +472,13 @@ EOF
 		
 		# Populate initial cache data
 		print_info "Populating initial cache data..."
-		if docker compose exec -T web python manage.py update_dashboard_stats; then
+		if docker compose exec -T eqmd python manage.py update_dashboard_stats; then
 			print_status "Dashboard cache initialized"
 		else
 			print_warning "Dashboard cache initialization failed (will retry via cron)"
 		fi
 		
-		if docker compose exec -T web python manage.py update_ward_mapping_cache; then
+		if docker compose exec -T eqmd python manage.py update_ward_mapping_cache; then
 			print_status "Ward mapping cache initialized"
 		else
 			print_warning "Ward mapping cache initialization failed (will retry via cron)"
@@ -450,7 +486,7 @@ EOF
 		
 		# Verify cache health
 		print_info "Verifying cache health..."
-		if docker compose exec -T web python manage.py check_cache_health; then
+		if docker compose exec -T eqmd python manage.py check_cache_health; then
 			print_status "Cache system is healthy and ready"
 		else
 			print_warning "Cache health check failed - check logs for details"
@@ -532,7 +568,7 @@ echo "- User: eqmd (UID:$EQMD_UID GID:$EQMD_GID)"
 echo ""
 echo "Useful commands:"
 echo "- View logs: docker compose logs -f eqmd"
-echo "- Cache status: docker compose exec web python manage.py check_cache_health"
+echo "- Cache status: docker compose exec eqmd python manage.py check_cache_health"
 echo "- Update: curl -sSL URL/upgrade.sh | sudo bash"
 echo "- Stop: docker compose stop eqmd"
 echo "- Restart: docker compose restart eqmd"
@@ -551,7 +587,7 @@ if [[ ! $SETUP_CACHE_CRON =~ ^[Nn]$ ]]; then
 	echo "- Dashboard cache system active (90%+ performance improvement)"
 	echo "- Automated cache refresh every 5 minutes"
 	echo "- Cache logs: /var/log/eqmd/"
-	echo "- Health check: docker compose exec web python manage.py check_cache_health"
+	echo "- Health check: docker compose exec eqmd python manage.py check_cache_health"
 	echo ""
 fi
 
