@@ -144,8 +144,8 @@ if [ -f "db.sqlite3" ]; then
 fi
 
 # PostgreSQL backup (if using PostgreSQL)
-if [ -n "$DATABASE_URL" ] && [[ "$DATABASE_URL" == postgres* ]]; then
-    pg_dump "$DATABASE_URL" > "$BACKUP_DIR/database.sql"
+if [ "$DATABASE_ENGINE" = "django.db.backends.postgresql" ] && [ -n "$DATABASE_HOST" ]; then
+    PGPASSWORD="$DATABASE_PASSWORD" pg_dump -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" > "$BACKUP_DIR/database.sql"
     echo "✅ PostgreSQL database backed up to $BACKUP_DIR/database.sql"
 fi
 
@@ -187,11 +187,11 @@ fi
 
 # PostgreSQL restore
 if [ -f "$BACKUP_PATH/database.sql" ]; then
-    if [ -n "$DATABASE_URL" ]; then
-        psql "$DATABASE_URL" < "$BACKUP_PATH/database.sql"
+    if [ "$DATABASE_ENGINE" = "django.db.backends.postgresql" ] && [ -n "$DATABASE_HOST" ]; then
+        PGPASSWORD="$DATABASE_PASSWORD" psql -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" < "$BACKUP_PATH/database.sql"
         echo "✅ PostgreSQL database restored"
     else
-        echo "❌ DATABASE_URL not configured for PostgreSQL restore"
+        echo "❌ DATABASE_* variables not configured for PostgreSQL restore"
         exit 1
     fi
 fi

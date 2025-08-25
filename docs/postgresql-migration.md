@@ -44,8 +44,7 @@ services:
     # ... existing configuration ...
     depends_on:
       - postgres
-    environment:
-      - DATABASE_URL=postgresql://eqmd_user:${POSTGRES_PASSWORD}@postgres:5432/eqmd_db
+    # Database configuration handled via .env file with DATABASE_* variables
 
   postgres:
     image: postgres:15-alpine
@@ -81,12 +80,13 @@ Add to your `.env` file:
 POSTGRES_PASSWORD=your_secure_password_here_at_least_32_chars
 POSTGRES_PORT=5432
 
-# Database Configuration (replaces SQLite DATABASE_NAME)
-DATABASE_URL=postgresql://eqmd_user:${POSTGRES_PASSWORD}@postgres:5432/eqmd_db
-
-# Optional: External access port (for development/administration)
-# Remove or comment out for production
-POSTGRES_EXTERNAL_PORT=5432
+# Django Database Configuration (replaces SQLite settings)
+DATABASE_ENGINE=django.db.backends.postgresql
+DATABASE_NAME=eqmd_db
+DATABASE_USER=eqmd_user
+DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+DATABASE_HOST=postgres
+DATABASE_PORT=5432
 ```
 
 **Step 3: Install PostgreSQL Dependencies**
@@ -344,8 +344,9 @@ postgres:
 **3. Connection Security**
 
 ```bash
-# Add to .env for SSL connections (if needed)
-DATABASE_URL=postgresql://eqmd_user:password@postgres:5432/eqmd_db?sslmode=require
+# For SSL connections, modify DATABASE_* variables (if needed)
+# DATABASE_HOST=postgres (with SSL configuration)
+# Additional SSL options would be configured in Django settings
 ```
 
 ## Troubleshooting
@@ -419,7 +420,12 @@ if [[ $USE_POSTGRES =~ ^[Yy]$ ]]; then
 
 # PostgreSQL Configuration (added by install-minimal.sh)
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-DATABASE_URL=postgresql://eqmd_user:$POSTGRES_PASSWORD@postgres:5432/eqmd_db
+DATABASE_ENGINE=django.db.backends.postgresql
+DATABASE_NAME=eqmd_db
+DATABASE_USER=eqmd_user
+DATABASE_PASSWORD=$POSTGRES_PASSWORD
+DATABASE_HOST=postgres
+DATABASE_PORT=5432
 EOF
 
     print_status "PostgreSQL configuration added to .env"
