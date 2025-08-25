@@ -18,6 +18,8 @@ services:
       - eqmd_database:/app/database
       - eqmd_static_files:/app/staticfiles
     restart: unless-stopped
+    depends_on:
+      - postgres
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 30s
@@ -60,8 +62,29 @@ services:
       - .env
     environment:
       - DEBUG=True
+    depends_on:
+      - postgres
     profiles:
       - dev
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: ${CONTAINER_PREFIX:-eqmd}_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-eqmd_db}
+      POSTGRES_USER: ${POSTGRES_USER:-eqmd_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eqmd_user} -d ${POSTGRES_DB:-eqmd_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   eqmd_database:
@@ -72,5 +95,8 @@ volumes:
     driver: local
   eqmd_static_files:
     name: ${CONTAINER_PREFIX:-eqmd}_static_files
+    driver: local
+  postgres_data:
+    name: ${CONTAINER_PREFIX:-eqmd}_postgres_data
     driver: local
 
