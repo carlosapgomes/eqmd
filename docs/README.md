@@ -33,9 +33,14 @@
 - **[Testing Guide](TESTING.md)** - Comprehensive testing approach
 - **[Styling Guidelines](styling.md)** - CSS and frontend standards
 
+## ⚡ Performance
+
+- **[Dashboard Cache System](performance/dashboard-cache.md)** - High-performance caching for dashboards and ward mapping
+
 ## 🚀 Deployment
 
 - **[Hospital Configuration](deployment/hospital-configuration.md)** - Environment setup
+- **[PostgreSQL Migration](postgresql-migration.md)** - Upgrade from SQLite for better performance
 - **[Sample Data Population](sample-data-population.md)** - Initial data setup
 
 ## 📋 Maintenance

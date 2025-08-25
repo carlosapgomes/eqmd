@@ -5,6 +5,7 @@
 Incrementally sync patients and dailynotes from Firebase Realtime Database to EQMD. Includes both initial bulk import and ongoing daily sync capabilities. Requires `firebase-admin` package (already installed).
 
 ### Prerequisites
+
 1. Firebase service account credentials JSON file
 2. Valid user account for import attribution
 
@@ -68,6 +69,7 @@ uv run python manage.py sync_firebase_data \
 #### Docker Compose
 
 **Option 1: Temporary Mount (Recommended - Most Secure)**
+
 ```bash
 # Initial sync with dry run
 docker-compose run --rm --user root \
@@ -92,6 +94,7 @@ docker-compose run --rm --user root \
 ```
 
 **Option 2: Copy with Cleanup**
+
 ```bash
 # Daily sync with copy and cleanup
 docker-compose cp firebase-key.json web:/app/firebase-key.json && \
@@ -105,6 +108,7 @@ docker-compose exec web rm /app/firebase-key.json
 ```
 
 **Option 3: Manual Copy with Shell Cleanup**
+
 ```bash
 # Copy credentials
 docker-compose cp firebase-key.json web:/app/firebase-key.json
@@ -124,6 +128,7 @@ docker-compose exec web bash -c "
 #### Standalone Docker
 
 **Secure Mount (Recommended)**
+
 ```bash
 # Daily sync with secure mount
 docker run --rm -it \
@@ -141,6 +146,7 @@ docker run --rm -it \
 #### Production Docker (Using Secrets)
 
 **Docker Swarm Secrets**
+
 ```bash
 # Create secret from credentials file
 echo "$(cat firebase-key.json)" | docker secret create firebase-creds -
@@ -164,6 +170,7 @@ docker secret rm firebase-creds
 ```
 
 **Kubernetes Secrets**
+
 ```bash
 # Create secret
 kubectl create secret generic firebase-creds \
@@ -208,6 +215,7 @@ kubectl delete secret firebase-creds
 ### Automated Daily Sync with Cron
 
 **Linux Cron Example**
+
 ```bash
 # Add to crontab (runs daily at 2 AM)
 0 2 * * * cd /path/to/eqmd && docker-compose run --rm --user root \
@@ -237,6 +245,7 @@ kubectl delete secret firebase-creds
 ### Sync Process
 
 1. **Patient Import**:
+
    - Filters patients by `registrationDt` >= since-date timestamp
    - Creates dual PatientRecordNumbers (Firebase key + ptRecN)
    - Skips test patients containing "teste" or "paciente" (case-insensitive)
@@ -244,6 +253,7 @@ kubectl delete secret firebase-creds
    - Maps Firebase fields to EQMD Patient model
 
 2. **Dailynote Import**:
+
    - Filters dailynotes by `datetime` >= since-date timestamp
    - Matches patients using Firebase `patient` field against `PatientRecordNumber.record_number`
    - Skips duplicate dailynotes (by patient, datetime, and Firebase ID)
@@ -253,31 +263,33 @@ kubectl delete secret firebase-creds
 
 ### Patient Field Mapping
 
-| Firebase Field | EQMD Field | Notes |
-|---------------|------------|--------|
-| Object Key | PatientRecordNumber (old) | Firebase key, non-current |
-| `ptRecN` | PatientRecordNumber (current) | Hospital number, current |
-| `birthDt` | Patient.birthday | Epoch milliseconds → date |
-| `gender` | Patient.gender | 1→M, 2→F, 9→O, ""→NOT_INFORMED |
-| `name` | Patient.name | |
-| `registrationDt` | Patient.created_at | Epoch milliseconds → datetime |
-| `address` | Patient.address | |
-| `city` | Patient.city | |
-| `phone` | Patient.phone | |
-| `state` | Patient.state | |
-| `zip` | Patient.zip_code | |
-| `unifiedHealthCareSystemNumber` | Patient.healthcard_number | |
-| `lastAdmissionDate` | Patient.last_admission_date | Epoch milliseconds → date |
-| `status` | Patient.status | inpatient→INPATIENT, outpatient→OUTPATIENT, deceased→DECEASED |
+| Firebase Field                  | EQMD Field                    | Notes                                                         |
+| ------------------------------- | ----------------------------- | ------------------------------------------------------------- |
+| Object Key                      | PatientRecordNumber (old)     | Firebase key, non-current                                     |
+| `ptRecN`                        | PatientRecordNumber (current) | Hospital number, current                                      |
+| `birthDt`                       | Patient.birthday              | Epoch milliseconds → date                                     |
+| `gender`                        | Patient.gender                | 1→M, 2→F, 9→O, ""→NOT_INFORMED                                |
+| `name`                          | Patient.name                  |                                                               |
+| `registrationDt`                | Patient.created_at            | Epoch milliseconds → datetime                                 |
+| `address`                       | Patient.address               |                                                               |
+| `city`                          | Patient.city                  |                                                               |
+| `phone`                         | Patient.phone                 |                                                               |
+| `state`                         | Patient.state                 |                                                               |
+| `zip`                           | Patient.zip_code              |                                                               |
+| `unifiedHealthCareSystemNumber` | Patient.healthcard_number     |                                                               |
+| `lastAdmissionDate`             | Patient.last_admission_date   | Epoch milliseconds → date                                     |
+| `status`                        | Patient.status                | inpatient→INPATIENT, outpatient→OUTPATIENT, deceased→DECEASED |
 
 ### Security Best Practices
 
 **Credential Handling Priority:**
+
 1. **🥇 Temporary Mounts** - Credentials never persist in container (Options 1)
 2. **🥈 Docker Secrets** - Enterprise-grade secret management (Production)
 3. **🥉 Copy with Cleanup** - Manual cleanup required (Options 2-3)
 
 **Environment Recommendations:**
+
 - **Development**: Use temporary mount (Option 1)
 - **CI/CD Pipelines**: Use Docker/Kubernetes secrets
 - **Production**: Always use secrets management systems + automated cron
@@ -286,15 +298,18 @@ kubectl delete secret firebase-creds
 ### Troubleshooting
 
 **Patient Import Issues:**
+
 - Check Firebase patient structure matches expected fields
 - Verify patient names don't contain test data keywords
 - Test patients are automatically skipped
 
 **Dailynote Import Issues:**
+
 - Ensure patients exist before importing dailynotes
 - Check Firebase `patient` field matches PatientRecordNumber values
 
 **Date/Time Issues:**
+
 - Firebase timestamps are in epoch milliseconds
 - EQMD stores in local timezone
 - Use `--dry-run` to verify date parsing
@@ -304,6 +319,7 @@ kubectl delete secret firebase-creds
 Import dailynotes from Firebase Realtime Database to EQMD. Requires `firebase-admin` package (already installed).
 
 ### Prerequisites
+
 1. Firebase service account credentials JSON file
 2. Patients already imported (command matches using `PatientRecordNumber.record_number`)
 3. Valid user account for import attribution
@@ -352,6 +368,7 @@ uv run python manage.py import_firebase_dailynotes \
 #### Docker Compose
 
 **Option 1: Temporary Mount (Recommended - Most Secure)**
+
 ```bash
 # Mount as read-only temporary volume (auto-cleanup)
 docker-compose run --rm --user root \
@@ -364,6 +381,7 @@ docker-compose run --rm --user root \
 ```
 
 **Option 2: Copy with Cleanup**
+
 ```bash
 # Copy, run, and remove in one command
 docker-compose cp firebase-key.json web:/app/firebase-key.json && \
@@ -376,6 +394,7 @@ docker-compose exec web rm /app/firebase-key.json
 ```
 
 **Option 3: Manual Copy with Shell Cleanup**
+
 ```bash
 # Copy credentials
 docker-compose cp firebase-key.json web:/app/firebase-key.json
@@ -394,6 +413,7 @@ docker-compose exec web bash -c "
 #### Standalone Docker
 
 **Secure Mount (Recommended)**
+
 ```bash
 # Mount credentials as read-only volume (auto-cleanup)
 docker run --rm -it \
@@ -410,6 +430,7 @@ docker run --rm -it \
 #### Production Docker (Using Secrets)
 
 **Docker Swarm Secrets**
+
 ```bash
 # Create secret from credentials file
 echo "$(cat firebase-key.json)" | docker secret create firebase-creds -
@@ -432,6 +453,7 @@ docker secret rm firebase-creds
 ```
 
 **Kubernetes Secrets**
+
 ```bash
 # Create secret
 kubectl create secret generic firebase-creds \
@@ -476,7 +498,7 @@ kubectl delete secret firebase-creds
 
 - `--credentials-file`: Firebase service account JSON (required)
 - `--database-url`: Firebase Realtime Database URL (required)
-- `--project-name`: Firebase project name (required)  
+- `--project-name`: Firebase project name (required)
 - `--base-reference`: Database reference path (default: "dailynotes")
 - `--user-email`: User email for import attribution (uses first superuser if not provided)
 - `--dry-run`: Preview without importing
@@ -496,11 +518,13 @@ The command automatically handles datasets larger than Firebase's 256MB payload 
 ### Security Best Practices
 
 **Credential Handling Priority:**
+
 1. **🥇 Temporary Mounts** - Credentials never persist in container (Options 1)
 2. **🥈 Docker Secrets** - Enterprise-grade secret management (Production)
 3. **🥉 Copy with Cleanup** - Manual cleanup required (Options 2-3)
 
 **Environment Recommendations:**
+
 - **Development**: Use temporary mount (Option 1)
 - **CI/CD Pipelines**: Use Docker/Kubernetes secrets
 - **Production**: Always use secrets management systems
@@ -511,36 +535,42 @@ The command automatically handles datasets larger than Firebase's 256MB payload 
 1. **Patient Matching**: Matches patients using Firebase `patient` field against `PatientRecordNumber.record_number`
 2. **Timestamp Conversion**: Converts epoch milliseconds timestamps to Django datetime
 3. **Content Formatting**: Formats content as structured sections:
+
    ```
    Evolução importada do Firebase
-   
+
    [Subjective content]
-   
+
    [Objective content]
-   
+
    [Exams List content]
-   
+
    [Assessment/Plan content]
-   
+
    Médico: [username]
    ```
+
 4. **Duplicate Handling**: Allows duplicate imports (creates additional dailynotes)
 5. **Error Reporting**: Provides detailed reporting of unmatched patients and errors
 
 ### Troubleshooting
 
 **"Payload is too large" Error:**
+
 - Use `--chunk-size` parameter to reduce chunk size (try 50 or 25)
 - The command automatically handles large datasets with chunking
 
 **Permission Errors:**
+
 - Use `--user root` in Docker commands to avoid permission issues with uv cache
 
 **Patient Not Found:**
+
 - Ensure patients are already imported using the patient import command
 - Check that Firebase `patient` field matches values in `PatientRecordNumber.record_number`
 
 **Interrupted Import:**
+
 - Use the `--start-key` parameter with the key provided in the final report to resume
 
 ### Security Notes
@@ -549,3 +579,4 @@ The command automatically handles datasets larger than Firebase's 256MB payload 
 - **Never commit** Firebase credentials to version control
 - **Use secrets management** for production environments
 - **Rotate credentials** regularly following security best practices
+

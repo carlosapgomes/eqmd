@@ -1456,6 +1456,7 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from apps.core.utils.cache import get_cached_ward_mapping
 
         # Get filter parameters
         search_query = self.request.GET.get('q', '').strip()
@@ -1471,102 +1472,26 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
         if tag_filter:
             active_filters['tag'] = tag_filter
 
-        # Get all active wards for dropdown (always show all wards)
-        all_wards = Ward.objects.filter(is_active=True).order_by('name')
+        # Get cached ward mapping data with filters applied
+        filters = {
+            'q': search_query,
+            'ward': ward_filter,
+            'tag': tag_filter
+        } if any([search_query, ward_filter, tag_filter]) else None
         
-        # Get wards to process (filtered if ward parameter provided)
-        wards_to_process = all_wards
-        if ward_filter:
-            try:
-                # Ward IDs are UUIDs, not integers
-                wards_to_process = all_wards.filter(id=ward_filter)
-            except (ValueError, TypeError):
-                pass
-
-        ward_data = []
-        total_patients = 0
-
-        for ward in wards_to_process:
-            # Base queryset for patients in this ward
-            patients_qs = Patient.objects.filter(
-                ward=ward,
-                status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY],
-                is_deleted=False
-            ).select_related('ward').prefetch_related('patient_tags__allowed_tag')
-            
-            # Apply search query filter
-            if search_query:
-                patients_qs = patients_qs.filter(
-                    Q(name__icontains=search_query) |
-                    Q(bed__icontains=search_query)
-                )
-            
-            # Apply tag filter if specified
-            if tag_filter:
-                try:
-                    tag_id = int(tag_filter)
-                    patients_qs = patients_qs.filter(
-                        patient_tags__allowed_tag_id=tag_id
-                    ).distinct()
-                except (ValueError, TypeError):
-                    pass
-            
-            patients = patients_qs.order_by('bed', 'name')
-            
-            # Skip wards that have no patients after filtering
-            if not patients.exists():
-                continue
-
-            patient_list = []
-            for patient in patients:
-                # Get current admission for duration info
-                current_admission = patient.get_current_admission()
-                admission_duration = None
-                if current_admission:
-                    admission_duration = current_admission.duration_display
-
-                patient_list.append({
-                    'patient': patient,
-                    'bed': patient.bed or 'Sem leito',
-                    'tags': patient.patient_tags.all(),
-                    'admission_duration': admission_duration,
-                    'status_display': patient.get_status_display(),
-                })
-
-            ward_info = {
-                'ward': ward,
-                'patient_count': len(patient_list),
-                'capacity_estimate': ward.capacity_estimate,
-                'patients': patient_list,
-                'utilization_percentage': None
-            }
-
-            # Calculate utilization if capacity is known
-            if ward.capacity_estimate and ward.capacity_estimate > 0:
-                ward_info['utilization_percentage'] = round(
-                    (len(patient_list) / ward.capacity_estimate) * 100, 1
-                )
-
-            ward_data.append(ward_info)
-            total_patients += len(patient_list)
+        ward_mapping_data = get_cached_ward_mapping(filters)
 
         context.update({
-            'ward_data': ward_data,
-            'all_wards': all_wards,  # For dropdown options
-            'total_patients': total_patients,
-            'total_wards': len(ward_data),
+            'ward_data': ward_mapping_data['ward_data'],
+            'all_wards': ward_mapping_data['all_wards'],
+            'available_tags': ward_mapping_data['available_tags'],
+            'total_patients': ward_mapping_data['total_patients'],
+            'total_wards': ward_mapping_data['total_wards'],
             'page_title': 'Mapa de Pacientes',
             'active_filters': active_filters,
+            'from_cache': ward_mapping_data['from_cache'],
+            'updating': ward_mapping_data.get('updating', False),
         })
-
-        # Add tag context
-        context['available_tags'] = AllowedTag.objects.filter(
-            is_active=True,
-            tag_instances__patient__status__in=[
-                Patient.Status.INPATIENT, 
-                Patient.Status.EMERGENCY
-            ]
-        ).distinct().order_by('name')
         
         context['selected_tag'] = tag_filter
 

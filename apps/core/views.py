@@ -148,31 +148,48 @@ def dashboard_view(request):
     """
     Renders the main dashboard page for authenticated users.
     """
-    # Import Patient model here to avoid circular imports
-    from apps.patients.models import Patient
-    from django.db import models
+    from apps.core.utils.cache import get_cached_dashboard_stats
     
     # Get patient statistics for dashboard
     context = {
         'page_title': 'Painel Principal',
     }
     
-    # Only calculate stats if user has permission to view patients
+    # Only show stats if user has permission to view patients
     if request.user.has_perm('patients.view_patient'):
         try:
+            # Get cached dashboard data
+            dashboard_data = get_cached_dashboard_stats()
+            
+            if dashboard_data['from_cache']:
+                # Use cached data
+                stats = dashboard_data['stats']
+                context.update({
+                    'total_patients': stats['total_patients'],
+                    'inpatient_count': stats['inpatients'],
+                    'outpatient_count': stats['outpatients'],
+                    'recent_patients': dashboard_data['recent_patients'][:5],  # Show only 5 in dashboard
+                    'cache_used': True,
+                })
+            else:
+                # Show updating message
+                context.update({
+                    'total_patients': '...',
+                    'inpatient_count': '...',
+                    'outpatient_count': '...',
+                    'recent_patients': [],
+                    'updating': dashboard_data['updating'],
+                    'cache_used': False,
+                })
+        except Exception as e:
+            # Handle case where cache isn't available
             context.update({
-                'total_patients': Patient.objects.count(),
-                'inpatient_count': Patient.objects.filter(status=Patient.Status.INPATIENT).count(),
-                'outpatient_count': Patient.objects.filter(status=Patient.Status.OUTPATIENT).count(),
-                'recent_patients': Patient.objects.annotate(
-                    latest_event_datetime=models.Max('event__event_datetime')
-                ).filter(
-                    latest_event_datetime__isnull=False
-                ).order_by('-latest_event_datetime')[:5],
+                'total_patients': 'N/A',
+                'inpatient_count': 'N/A',
+                'outpatient_count': 'N/A',
+                'recent_patients': [],
+                'cache_error': True,
             })
-        except:
-            # Handle case where database isn't set up yet
-            pass
     
     return render(request, 'core/dashboard.html', context)
 
