@@ -204,6 +204,12 @@ uv run python manage.py import_firebase_dailynotes \
   --project-name your-project
 ```
 
+# Cache management (performance)
+
+uv run python manage.py update_dashboard_stats
+uv run python manage.py update_ward_mapping_cache
+uv run python manage.py check_cache_health --verbose
+
 # Security monitoring and audit history
 
 uv run python manage.py detect_suspicious_activity --comprehensive --days=7
