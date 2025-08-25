@@ -177,6 +177,9 @@ class Ward(models.Model):
         ordering = ["name"]
         verbose_name = "Ala"
         verbose_name_plural = "Alas"
+        indexes = [
+            models.Index(fields=['is_active', 'name']),  # For active ward queries
+        ]
 
     def __str__(self):
         return f"{self.abbreviation} - {self.name}"
@@ -445,6 +448,8 @@ class PatientAdmission(models.Model):
             models.Index(fields=["admission_datetime"]),
             models.Index(fields=["discharge_datetime"]),
             models.Index(fields=["admission_type"]),
+            models.Index(fields=["patient", "admission_datetime"]),  # For patient timeline queries
+            models.Index(fields=["ward", "admission_datetime"]),  # For ward-based queries
         ]
 
     def __str__(self):
@@ -726,6 +731,12 @@ class Patient(SoftDeleteModel):
         indexes = [
             models.Index(fields=['is_deleted', 'status']),
             models.Index(fields=['is_deleted', 'created_at']),
+            models.Index(fields=['status', 'ward']),
+            models.Index(fields=['name']),  # For search
+            models.Index(fields=['current_record_number']),  # For record number searches
+            models.Index(fields=['current_admission_id']),  # For admission lookups
+            models.Index(fields=['last_admission_date']),  # For date-based queries
+            models.Index(fields=['last_discharge_date']),  # For date-based queries
         ]
 
     def __str__(self):

@@ -76,6 +76,19 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-eqmd_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    # Conservative performance tuning for shared 6GB system (4 containers running)
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c effective_cache_size=2GB
+      -c maintenance_work_mem=32MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=8MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=2MB
+      -c max_connections=50
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
