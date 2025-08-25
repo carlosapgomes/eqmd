@@ -19,6 +19,7 @@ dependencies = [
     "markdown>=3.8.2",
     "pdf2image>=1.17.0",
     "pillow>=11.2.1",
+    "psycopg2-binary>=2.9.10",
     "pypdf>=5.8.0",
     "python-dotenv>=1.0.0",
     "pytz>=2025.2",
