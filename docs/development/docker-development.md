@@ -404,7 +404,7 @@ DEBUG=True
 SECRET_KEY=dev-secret-key-not-for-production
 
 # Database (use local SQLite for development)
-DATABASE_URL=sqlite:///db_dev.sqlite3
+# No DATABASE_* variables needed - SQLite is default
 
 # Registry settings (for testing)
 REGISTRY=ghcr.io
@@ -426,7 +426,8 @@ HOSPITAL_EMAIL=dev@localhost
 # Test-specific settings
 DEBUG=False
 SECRET_KEY=test-secret-key
-DATABASE_URL=sqlite:///test_db.sqlite3
+# Database (use test SQLite database)
+DATABASE_NAME=test_db.sqlite3
 
 # Disable external services in tests
 REGISTRY=
