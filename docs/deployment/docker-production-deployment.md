@@ -3,14 +3,16 @@
 **Complete guide for registry-based EquipeMed production deployment**
 
 ⚠️ **This guide has been updated for registry-based deployment**
-- Faster deployments (pull vs rebuild) 
+
+- Faster deployments (pull vs rebuild)
 - Improved static file handling with named volumes
 - Automated user management with UID conflict resolution
 - Built-in rollback procedures and health checks
 
 📖 **See also:**
+
 - [Registry Setup Guide](registry-setup.md) - Container registry configuration
-- [User Management Guide](user-management.md) - UID conflict resolution  
+- [User Management Guide](user-management.md) - UID conflict resolution
 - [Rollback Procedures](rollback-procedures.md) - Emergency rollback guide
 
 ## Prerequisites
@@ -25,7 +27,7 @@
 The deployment system supports multiple EquipeMed instances on the same server through configurable container prefixes and ports. This enables scenarios like:
 
 - **Hospital with staging**: `hospital_prod` and `hospital_staging`
-- **Multi-hospital server**: `hospital_a` and `hospital_b`  
+- **Multi-hospital server**: `hospital_a` and `hospital_b`
 - **Version testing**: `current` and `testing`
 
 ### Configuration Variables
@@ -38,7 +40,7 @@ CONTAINER_PREFIX=eqmd              # Unique identifier for this deployment
 HOST_PORT=8778                     # Host port for this instance
 DEV_PORT=8779                     # Development port (HOST_PORT + 1)
 
-# Registry configuration  
+# Registry configuration
 REGISTRY=ghcr.io                  # Container registry
 EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest  # Full image path
 ```
@@ -48,6 +50,7 @@ EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest  # Full image path
 #### Hospital with Staging Environment
 
 **Production (.env.prod)**:
+
 ```bash
 CONTAINER_PREFIX=hospital_prod
 HOST_PORT=8778
@@ -55,8 +58,9 @@ EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest
 ```
 
 **Staging (.env.staging)**:
+
 ```bash
-CONTAINER_PREFIX=hospital_staging  
+CONTAINER_PREFIX=hospital_staging
 HOST_PORT=8779
 EQMD_IMAGE=ghcr.io/yourorg/eqmd:staging
 ```
@@ -64,6 +68,7 @@ EQMD_IMAGE=ghcr.io/yourorg/eqmd:staging
 #### Multi-Hospital Server
 
 **Hospital A (.env.hospital_a)**:
+
 ```bash
 CONTAINER_PREFIX=hospital_a
 HOST_PORT=8778
@@ -71,6 +76,7 @@ EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest
 ```
 
 **Hospital B (.env.hospital_b)**:
+
 ```bash
 CONTAINER_PREFIX=hospital_b
 HOST_PORT=8780
@@ -103,7 +109,7 @@ id eqmd
 mkdir -p media staticfiles
 chmod 755 media staticfiles
 
-# Fix ownership for Docker compatibility  
+# Fix ownership for Docker compatibility
 sudo chown -R eqmd:eqmd .
 sudo chown -R eqmd:eqmd /var/www/equipemed/
 ```
@@ -236,7 +242,7 @@ nginx -t
 systemctl reload nginx
 ```
 
-#### Example nginx configuration:
+#### Example nginx configuration
 
 ```nginx
 server {
@@ -265,7 +271,8 @@ server {
 }
 ```
 
-**Static Files Strategy**: 
+**Static Files Strategy**:
+
 - Each deployment gets a unique directory: `/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/`
 - Directory name is based on container prefix + sanitized image name
 - Nginx owns the directory (www-data:www-data) for optimal performance
@@ -285,6 +292,7 @@ sudo ./upgrade.sh
 ```
 
 **Manual update process:**
+
 ```bash
 # Pull updated image or build locally
 docker pull your-registry/eqmd:latest
@@ -310,6 +318,7 @@ sudo chmod -R 755 "$STATIC_FILES_PATH"
 ```
 
 **Benefits of this approach:**
+
 - No permission conflicts during updates
 - Nginx always has read access to static files
 - Multiple hospital deployments can coexist
@@ -493,7 +502,7 @@ echo "Static files path: /var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/"
 ### Nginx Configuration Commands
 
 ```bash
-# Download and configure nginx template  
+# Download and configure nginx template
 curl -fsSL -o /etc/nginx/sites-available/eqmd https://raw.githubusercontent.com/yourorg/eqmd/main/nginx.conf.example
 CONTAINER_PREFIX=${CONTAINER_PREFIX:-eqmd}
 INSTANCE_ID="${EQMD_IMAGE//[^a-zA-Z0-9]/_}"
@@ -521,8 +530,9 @@ sudo chmod -R 755 "$STATIC_PATH"
 ### Managing Multiple Deployments
 
 When running multiple EquipeMed instances, each deployment creates its own:
+
 - Container name: `${CONTAINER_PREFIX}_app`
-- Database volume: `${CONTAINER_PREFIX}_database` 
+- Database volume: `${CONTAINER_PREFIX}_database`
 - Media volume: `${CONTAINER_PREFIX}_media_files`
 - Static volume: `${CONTAINER_PREFIX}_static_files`
 - Static directory: `/var/www/${CONTAINER_PREFIX}_static_${INSTANCE_ID}/`
@@ -531,6 +541,7 @@ When running multiple EquipeMed instances, each deployment creates its own:
 ### Example: Managing Hospital with Staging
 
 **Production Environment**:
+
 ```bash
 cd /path/to/hospital-prod
 source .env  # CONTAINER_PREFIX=hospital_prod, HOST_PORT=8778
@@ -539,9 +550,10 @@ docker compose logs -f eqmd
 ```
 
 **Staging Environment**:
+
 ```bash
 cd /path/to/hospital-staging
-source .env  # CONTAINER_PREFIX=hospital_staging, HOST_PORT=8779  
+source .env  # CONTAINER_PREFIX=hospital_staging, HOST_PORT=8779
 docker compose ps
 docker compose logs -f eqmd
 ```
@@ -551,17 +563,18 @@ docker compose logs -f eqmd
 For multiple deployments, create separate nginx configuration files:
 
 **Production nginx config** (`/etc/nginx/sites-available/hospital-prod`):
+
 ```nginx
 server {
     listen 80;
     server_name prod.yourhospital.com;
-    
+
     location /static/ {
         alias /var/www/hospital_prod_static_ghcr_io_yourorg_eqmd_latest/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     location / {
         proxy_pass http://localhost:8778;
         proxy_set_header Host $host;
@@ -573,17 +586,18 @@ server {
 ```
 
 **Staging nginx config** (`/etc/nginx/sites-available/hospital-staging`):
+
 ```nginx
 server {
     listen 80;
     server_name staging.yourhospital.com;
-    
+
     location /static/ {
         alias /var/www/hospital_staging_static_ghcr_io_yourorg_eqmd_staging/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     location / {
         proxy_pass http://localhost:8779;
         proxy_set_header Host $host;
@@ -602,7 +616,7 @@ docker ps --filter name="_app"
 
 # List all EquipeMed volumes
 docker volume ls --filter name="_database"
-docker volume ls --filter name="_media_files" 
+docker volume ls --filter name="_media_files"
 
 # List all static directories
 ls -la /var/www/*_static_*/
@@ -611,4 +625,3 @@ ls -la /var/www/*_static_*/
 docker volume prune
 docker system prune
 ```
-
