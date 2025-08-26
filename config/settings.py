@@ -91,6 +91,7 @@ AUTH_USER_MODEL = "accounts.EqmdCustomUser"
 # Site ID required by django-allauth
 SITE_ID = int(os.getenv("SITE_ID", "1"))
 
+
 # Authentication backends
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
