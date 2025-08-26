@@ -50,6 +50,10 @@ HOSPITAL_LOGO_URL="https://cdn.yourhospital.com/logo.png"
 
 # PWA Customization (optional)
 HOSPITAL_SHORT_ID="hgrs"  # Creates PWA short name "HgrsEqmd"
+
+# Django Site Framework (for email templates and django-allauth)
+SITE_DOMAIN="yourhospital.com"  # Your actual domain name
+SITE_NAME="Your Hospital Name"  # Name shown in email templates
 ```
 
 ## Configuration Examples
@@ -63,6 +67,10 @@ HOSPITAL_PHONE="+1-555-MEDICAL"
 HOSPITAL_EMAIL="contact@stmarysmc.org"
 HOSPITAL_WEBSITE="https://www.stmarysmc.org"
 HOSPITAL_LOGO_URL="https://cdn.stmarysmc.org/logo-header.png"
+
+# Django Site Framework
+SITE_DOMAIN="stmarysmc.org"
+SITE_NAME="St. Mary's Medical Center"
 ```
 
 ### Development Setup
@@ -73,6 +81,10 @@ HOSPITAL_ADDRESS="123 Dev Street, Test City, TC 12345"
 HOSPITAL_PHONE="+1-555-DEV-TEST"
 HOSPITAL_EMAIL="dev@localhost"
 HOSPITAL_LOGO_PATH="static/images/dev-logo.png"
+
+# Django Site Framework (for development)
+SITE_DOMAIN="localhost:8778"
+SITE_NAME="Development Hospital"
 ```
 
 ## Usage in Templates
@@ -163,3 +175,48 @@ HOSPITAL_ADDRESS="Rua Central, 456, Salvador, BA"
 - ✅ PWA installations show hospital context
 - ✅ Backward compatible (works without configuration)
 - ✅ No visual design changes required
+
+## Django Site Framework Configuration
+
+EquipeMed automatically configures Django's Site Framework for proper email templates and django-allauth integration.
+
+### Email Template Configuration
+
+The `SITE_DOMAIN` and `SITE_NAME` environment variables control how emails appear:
+
+- **SITE_DOMAIN**: Your actual domain name (e.g., `yourhospital.com`)
+- **SITE_NAME**: Hospital name shown in email templates
+
+### Automatic Configuration
+
+The system automatically updates the Django Site object when the container starts:
+
+1. **On container startup**: Checks if `SITE_DOMAIN` or `SITE_NAME` are set
+2. **Updates database**: Creates or updates the Site object with ID=1
+3. **Email templates**: Django-allauth uses the Site object for email subjects and content
+
+### Before/After Email Examples
+
+**Before configuration** (shows "example.com"):
+```
+Subject: [example.com] Confirme seu endereço de email
+```
+
+**After configuration** with `SITE_DOMAIN=yourhospital.com`:
+```
+Subject: [yourhospital.com] Confirme seu endereço de email
+```
+
+### Manual Override (if needed)
+
+If automatic configuration doesn't work, you can manually set the site via Django admin:
+
+1. Go to `/admin/sites/site/1/change/`
+2. Update "Domain name" and "Display name"
+3. Save changes
+
+### Troubleshooting
+
+- **Emails still show example.com**: Check that `SITE_DOMAIN` is set in `.env` and container was restarted
+- **Site not updating**: Check Django logs for database errors during startup
+- **Multiple sites**: Ensure `SITE_ID=1` in environment (default)
