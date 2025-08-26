@@ -155,6 +155,11 @@ print_info "Fixing app directory permissions after update..."
 docker compose exec --user root eqmd chown -R $EQMD_UID:$EQMD_GID /app
 print_status "App permissions fixed"
 
+# Configure Django Site Framework (in case environment variables changed)
+print_info "Updating Django Site Framework configuration..."
+docker compose exec -T eqmd python manage.py configure_django_site
+print_status "Django Site Framework configuration updated"
+
 # Wait and verify health with rollback capability
 print_info "Waiting for health check..."
 HOST_PORT=${HOST_PORT:-8778}
