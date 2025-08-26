@@ -2,16 +2,41 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, dev]
   pull_request:
-    branches: [master, main]
+    branches: [master, main, dev]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # Quick validation for dev branch
+  validate:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install Node.js dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Validate Python syntax
+        run: python -m py_compile $(find . -name "*.py" | head -20)
+
+  # Full pipeline for production branches only
   build-and-push:
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -85,13 +110,13 @@ jobs:
 
       - name: Upload vulnerability scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && github.event_name == 'push'
+        if: always() && github.event_name == 'push' && steps.scan.outputs.sarif != ''
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
 
       - name: Upload SARIF as workflow artifact
         uses: actions/upload-artifact@v4
-        if: always() && github.event_name == 'push'
+        if: always() && github.event_name == 'push' && steps.scan.outputs.sarif != ''
         with:
           name: vulnerability-scan-results
           path: ${{ steps.scan.outputs.sarif }}
