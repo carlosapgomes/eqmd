@@ -74,16 +74,20 @@ class Command(BaseCommand):
             help="Limit the number of records to sync (useful for testing)",
         )
         parser.add_argument(
-            "--sync-patients",
+            "--no-sync-patients",
             action="store_true",
-            default=True,
-            help="Sync new patients (default: True)",
+            help="Skip syncing patients (default: sync patients)",
         )
         parser.add_argument(
-            "--sync-dailynotes",
-            action="store_true", 
-            default=True,
-            help="Sync new dailynotes (default: True)",
+            "--no-sync-dailynotes",
+            action="store_true",
+            help="Skip syncing dailynotes (default: sync dailynotes)",
+        )
+        parser.add_argument(
+            "--chunk-size",
+            type=int,
+            default=1000,
+            help="Number of records to fetch from Firebase in each chunk (default: 1000)",
         )
 
     def handle(self, *args, **options):
@@ -94,6 +98,7 @@ class Command(BaseCommand):
 
         self.dry_run = options["dry_run"]
         self.limit = options.get("limit")
+        self.chunk_size = options.get("chunk_size", 1000)
 
         if self.dry_run:
             self.stdout.write(
@@ -123,22 +128,27 @@ class Command(BaseCommand):
             f"Using import user: {self.import_user.username} ({self.import_user.email})"
         )
         self.stdout.write(f"Syncing data since: {since_date.date()} ({self.sync_since_timestamp})")
+        self.stdout.write(f"Using chunk size: {self.chunk_size} records per Firebase query")
 
         # Sync patients first (so they exist for dailynotes)
         patients_synced = 0
-        if options.get("sync_patients", True):
+        if not options.get("no_sync_patients", False):
             try:
                 patients_synced = self.sync_patients(options["patients_reference"])
             except Exception as e:
                 raise CommandError(f"Failed to sync patients: {e}")
+        else:
+            self.stdout.write("Skipping patient sync (--no-sync-patients specified)")
 
         # Sync dailynotes
         dailynotes_synced = 0
-        if options.get("sync_dailynotes", True):
+        if not options.get("no_sync_dailynotes", False):
             try:
                 dailynotes_synced = self.sync_dailynotes(options["dailynotes_reference"])
             except Exception as e:
                 raise CommandError(f"Failed to sync dailynotes: {e}")
+        else:
+            self.stdout.write("Skipping dailynote sync (--no-sync-dailynotes specified)")
 
         # Final report with next cutoff date
         self.display_sync_report(patients_synced, dailynotes_synced)
@@ -178,53 +188,96 @@ class Command(BaseCommand):
             return user
 
     def sync_patients(self, patients_reference):
-        """Sync new patients from Firebase"""
+        """Sync new patients from Firebase using chunked queries"""
         self.stdout.write(f"\n=== SYNCING PATIENTS ===")
+        self.stdout.write(f"Using chunk size: {self.chunk_size}")
         
         try:
-            # Fetch all patients from Firebase
-            ref = db.reference(patients_reference)
-            patients_data = ref.get()
-            
-            if not patients_data:
-                self.stdout.write("No patients data found in Firebase")
-                return 0
-
-            # Filter patients by registrationDt
-            new_patients = {}
-            for firebase_key, patient_data in patients_data.items():
-                registration_timestamp = patient_data.get('registrationDt')
-                
-                if registration_timestamp and int(registration_timestamp) >= self.sync_since_timestamp:
-                    new_patients[firebase_key] = patient_data
-
-            self.stdout.write(f"Found {len(new_patients)} patients to sync (out of {len(patients_data)} total)")
-
-            if not new_patients:
-                return 0
-
             imported_count = 0
             error_count = 0
             skipped_count = 0
-
-            for firebase_key, patient_data in new_patients.items():
-                try:
-                    result = self.process_firebase_patient(firebase_key, patient_data)
-                    if result == "imported":
-                        imported_count += 1
-                    elif result == "skipped":
-                        skipped_count += 1
+            total_processed = 0
+            
+            # Use chunked querying to avoid payload limits
+            ref = db.reference(patients_reference)
+            
+            # Get total count first (for progress reporting)
+            try:
+                # Quick count query - just get keys
+                all_keys = ref.shallow().get()
+                total_patients = len(all_keys) if all_keys else 0
+                self.stdout.write(f"Total patients in Firebase: {total_patients}")
+            except Exception as e:
+                self.stdout.write(f"Could not get total count: {e}")
+                total_patients = "unknown"
+            
+            last_key = None
+            chunk_num = 0
+            
+            while True:
+                chunk_num += 1
+                self.stdout.write(f"\n--- Processing chunk {chunk_num} ---")
+                
+                # Query this chunk
+                query = ref.order_by_key().limit_to_first(self.chunk_size)
+                if last_key:
+                    query = query.start_at(last_key)
+                
+                chunk_data = query.get()
+                
+                if not chunk_data:
+                    self.stdout.write("No more data to process")
+                    break
+                
+                # Filter patients by registrationDt and process
+                chunk_new_patients = {}
+                for firebase_key, patient_data in chunk_data.items():
+                    if firebase_key == last_key:
+                        continue  # Skip the overlap key
+                    
+                    registration_timestamp = patient_data.get('registrationDt')
+                    if registration_timestamp and int(registration_timestamp) >= self.sync_since_timestamp:
+                        chunk_new_patients[firebase_key] = patient_data
+                
+                self.stdout.write(f"Found {len(chunk_new_patients)} new patients in this chunk (out of {len(chunk_data)})")
+                
+                # Process patients in this chunk
+                for firebase_key, patient_data in chunk_new_patients.items():
+                    try:
+                        result = self.process_firebase_patient(firebase_key, patient_data)
+                        if result == "imported":
+                            imported_count += 1
+                        elif result == "skipped":
+                            skipped_count += 1
                         
-                    # Respect limit
-                    if self.limit and imported_count >= self.limit:
-                        self.stdout.write(f"Reached import limit of {self.limit}")
-                        break
+                        total_processed += 1
                         
-                except Exception as e:
-                    error_count += 1
-                    self.stdout.write(
-                        self.style.ERROR(f"Error syncing patient {firebase_key}: {e}")
-                    )
+                        # Respect limit
+                        if self.limit and imported_count >= self.limit:
+                            self.stdout.write(f"Reached import limit of {self.limit}")
+                            break
+                            
+                    except Exception as e:
+                        error_count += 1
+                        self.stdout.write(
+                            self.style.ERROR(f"Error syncing patient {firebase_key}: {e}")
+                        )
+                
+                # Check if we should continue
+                if self.limit and imported_count >= self.limit:
+                    break
+                
+                if len(chunk_data) < self.chunk_size:
+                    self.stdout.write("Reached end of data")
+                    break
+                
+                # Set up for next chunk
+                last_key = max(chunk_data.keys())  # Get the last key for pagination
+                
+                # Progress report
+                if isinstance(total_patients, int):
+                    progress = (total_processed / total_patients) * 100
+                    self.stdout.write(f"Progress: {total_processed}/{total_patients} ({progress:.1f}%)")
 
             self.stdout.write(f"Patients: {imported_count} imported, {skipped_count} skipped, {error_count} errors")
             return imported_count
@@ -356,56 +409,99 @@ class Command(BaseCommand):
         return "imported"
 
     def sync_dailynotes(self, dailynotes_reference):
-        """Sync new dailynotes from Firebase"""
+        """Sync new dailynotes from Firebase using chunked queries"""
         self.stdout.write(f"\n=== SYNCING DAILYNOTES ===")
+        self.stdout.write(f"Using chunk size: {self.chunk_size}")
         
         try:
-            # Query Firebase for dailynotes
-            ref = db.reference(dailynotes_reference)
-            dailynotes_data = ref.get()
-            
-            if not dailynotes_data:
-                self.stdout.write("No dailynotes data found in Firebase")
-                return 0
-
-            # Filter dailynotes by datetime
-            new_dailynotes = {}
-            for note_key, note_data in dailynotes_data.items():
-                note_timestamp = note_data.get('datetime')
-                
-                if note_timestamp and int(note_timestamp) >= self.sync_since_timestamp:
-                    new_dailynotes[note_key] = note_data
-
-            self.stdout.write(f"Found {len(new_dailynotes)} dailynotes to sync (out of {len(dailynotes_data)} total)")
-
-            if not new_dailynotes:
-                return 0
-
             imported_count = 0
             error_count = 0
             skipped_count = 0
             patient_not_found_count = 0
-
-            for note_key, note_data in new_dailynotes.items():
-                try:
-                    result = self.process_firebase_dailynote(note_key, note_data)
-                    if result == "imported":
-                        imported_count += 1
-                    elif result == "skipped":
-                        skipped_count += 1
-                    elif result == "patient_not_found":
-                        patient_not_found_count += 1
+            total_processed = 0
+            
+            # Use chunked querying to avoid payload limits
+            ref = db.reference(dailynotes_reference)
+            
+            # Get total count first (for progress reporting)
+            try:
+                # Quick count query - just get keys
+                all_keys = ref.shallow().get()
+                total_dailynotes = len(all_keys) if all_keys else 0
+                self.stdout.write(f"Total dailynotes in Firebase: {total_dailynotes}")
+            except Exception as e:
+                self.stdout.write(f"Could not get total count: {e}")
+                total_dailynotes = "unknown"
+            
+            last_key = None
+            chunk_num = 0
+            
+            while True:
+                chunk_num += 1
+                self.stdout.write(f"\n--- Processing dailynotes chunk {chunk_num} ---")
+                
+                # Query this chunk
+                query = ref.order_by_key().limit_to_first(self.chunk_size)
+                if last_key:
+                    query = query.start_at(last_key)
+                
+                chunk_data = query.get()
+                
+                if not chunk_data:
+                    self.stdout.write("No more dailynotes data to process")
+                    break
+                
+                # Filter dailynotes by datetime and process
+                chunk_new_dailynotes = {}
+                for note_key, note_data in chunk_data.items():
+                    if note_key == last_key:
+                        continue  # Skip the overlap key
+                    
+                    note_timestamp = note_data.get('datetime')
+                    if note_timestamp and int(note_timestamp) >= self.sync_since_timestamp:
+                        chunk_new_dailynotes[note_key] = note_data
+                
+                self.stdout.write(f"Found {len(chunk_new_dailynotes)} new dailynotes in this chunk (out of {len(chunk_data)})")
+                
+                # Process dailynotes in this chunk
+                for note_key, note_data in chunk_new_dailynotes.items():
+                    try:
+                        result = self.process_firebase_dailynote(note_key, note_data)
+                        if result == "imported":
+                            imported_count += 1
+                        elif result == "skipped":
+                            skipped_count += 1
+                        elif result == "patient_not_found":
+                            patient_not_found_count += 1
                         
-                    # Respect limit
-                    if self.limit and imported_count >= self.limit:
-                        self.stdout.write(f"Reached import limit of {self.limit}")
-                        break
+                        total_processed += 1
                         
-                except Exception as e:
-                    error_count += 1
-                    self.stdout.write(
-                        self.style.ERROR(f"Error syncing dailynote {note_key}: {e}")
-                    )
+                        # Respect limit
+                        if self.limit and imported_count >= self.limit:
+                            self.stdout.write(f"Reached import limit of {self.limit}")
+                            break
+                            
+                    except Exception as e:
+                        error_count += 1
+                        self.stdout.write(
+                            self.style.ERROR(f"Error syncing dailynote {note_key}: {e}")
+                        )
+                
+                # Check if we should continue
+                if self.limit and imported_count >= self.limit:
+                    break
+                
+                if len(chunk_data) < self.chunk_size:
+                    self.stdout.write("Reached end of dailynotes data")
+                    break
+                
+                # Set up for next chunk
+                last_key = max(chunk_data.keys())  # Get the last key for pagination
+                
+                # Progress report
+                if isinstance(total_dailynotes, int):
+                    progress = (total_processed / total_dailynotes) * 100
+                    self.stdout.write(f"Progress: {total_processed}/{total_dailynotes} ({progress:.1f}%)")
 
             self.stdout.write(f"Dailynotes: {imported_count} imported, {patient_not_found_count} patient not found, {skipped_count} skipped, {error_count} errors")
             return imported_count
@@ -538,6 +634,8 @@ class Command(BaseCommand):
 
         if self.limit:
             self.stdout.write(f"  Limited to: {self.limit} records per type")
+        
+        self.stdout.write(f"  Chunk size: {self.chunk_size} records per Firebase query")
 
         # Calculate next cutoff date (today's date for next sync)
         next_cutoff = datetime.now().strftime("%Y-%m-%d")
