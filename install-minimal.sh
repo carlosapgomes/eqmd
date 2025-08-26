@@ -363,6 +363,11 @@ else
 fi
 print_status "Database verification completed"
 
+# Configure Django Site Framework
+print_info "Configuring Django Site Framework..."
+docker compose run --rm eqmd python manage.py configure_django_site
+print_status "Django Site Framework configured"
+
 # Collect static files to container and copy to unique directory
 print_info "Collecting static files..."
 docker compose run --rm --user root eqmd sh -c "python manage.py collectstatic --noinput"
