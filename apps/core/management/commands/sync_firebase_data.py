@@ -324,8 +324,8 @@ class Command(BaseCommand):
             raise ValueError("Patient birthDt is required")
 
         # Skip test patients
-        # if 'teste' in name.lower() or 'paciente' in name.lower():
-        # return "skipped"
+        if "teste" in name.lower() or "paciente" in name.lower():
+            return "skipped"
 
         # Check if patient already exists by either firebase key or ptRecN
         existing_firebase_record = PatientRecordNumber.objects.filter(
@@ -693,4 +693,3 @@ class Command(BaseCommand):
         self.stdout.write(f"  Use --since-date {next_cutoff} for the next sync")
 
         self.stdout.write(self.style.SUCCESS("=" * 60))
-
