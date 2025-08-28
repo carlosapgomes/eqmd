@@ -356,15 +356,29 @@ class Command(BaseCommand):
             str(patient_data.get("gender", "")), Patient.GenderChoices.NOT_INFORMED
         )
 
-        # Parse status
+        # Parse status with two-step logic for proper timeline event creation
         status_mapping = {
             "inpatient": Patient.Status.INPATIENT,
             "outpatient": Patient.Status.OUTPATIENT,
             "deceased": Patient.Status.DECEASED,
         }
-        status = status_mapping.get(
+        original_status = status_mapping.get(
             patient_data.get("status"), Patient.Status.OUTPATIENT
         )
+        
+        # Determine creation approach based on original status
+        if original_status in [Patient.Status.INPATIENT, Patient.Status.EMERGENCY]:
+            # Two-step process: create as outpatient, then admit via PatientAdmission
+            status = Patient.Status.OUTPATIENT
+            will_create_admission = True
+        elif original_status == Patient.Status.DECEASED:
+            # Deceased patients: create with final status, no admission needed
+            status = Patient.Status.DECEASED
+            will_create_admission = False
+        else:
+            # Outpatient, discharged, transferred: create with original status
+            status = original_status
+            will_create_admission = False
 
         # Parse registration date for created_at
         registration_timestamp = patient_data.get("registrationDt")
@@ -440,8 +454,8 @@ class Command(BaseCommand):
                 updated_by=self.import_user,
             )
 
-            # Create PatientAdmission for inpatient status
-            if status == Patient.Status.INPATIENT and last_admission_date:
+            # Create PatientAdmission for patients who should have active admissions
+            if will_create_admission and last_admission_date:
                 # Convert last_admission_date to datetime for admission_datetime
                 admission_datetime = django_timezone.datetime.combine(
                     last_admission_date,
