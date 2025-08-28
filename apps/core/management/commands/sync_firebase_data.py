@@ -12,7 +12,7 @@ try:
 except ImportError:
     firebase_admin = None
 
-from apps.patients.models import Patient, PatientRecordNumber
+from apps.patients.models import Patient, PatientRecordNumber, PatientAdmission
 from apps.dailynotes.models import DailyNote
 
 User = get_user_model()
@@ -439,6 +439,25 @@ class Command(BaseCommand):
                 created_by=self.import_user,
                 updated_by=self.import_user,
             )
+
+            # Create PatientAdmission for inpatient status
+            if status == Patient.Status.INPATIENT and last_admission_date:
+                # Convert last_admission_date to datetime for admission_datetime
+                admission_datetime = django_timezone.datetime.combine(
+                    last_admission_date,
+                    django_timezone.datetime.min.time()
+                ).replace(tzinfo=django_timezone.get_current_timezone())
+                
+                PatientAdmission.objects.create(
+                    patient=patient,
+                    admission_datetime=admission_datetime,
+                    admission_type=PatientAdmission.AdmissionType.EMERGENCY,
+                    initial_bed="",  # Empty bed
+                    ward=None,  # Empty ward
+                    admission_diagnosis="Admissão importada do sistema antigo",
+                    created_by=self.import_user,
+                    updated_by=self.import_user,
+                )
 
             self.stdout.write(
                 f"  ✓ Imported patient: {name} (ptRecN: {pt_rec_n}, firebase: {firebase_key})"
