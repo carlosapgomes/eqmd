@@ -248,7 +248,7 @@
     <!-- Related Data Sections -->
     <div class="row">
       <!-- Metadata Card -->
-      <div class="col-lg-4 mb-4">
+      <div class="col-lg-8 mb-4">
         <div class="card card-medical">
           <div class="card-header">
             <h5 class="card-title mb-0">
@@ -257,47 +257,44 @@
             </h5>
           </div>
           <div class="card-body">
-            <div class="mb-3">
-              <label class="form-label text-medical-gray">Criado em</label>
-              <p class="form-control-plaintext text-medical-dark-gray">
-                <i class="bi bi-calendar3 me-2"></i>
-                {{ patient.created_at|date:"d/m/Y à\s H:i" }}
-              </p>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Criado em</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <i class="bi bi-calendar3 me-2"></i>
+                  {{ patient.created_at|date:"d/m/Y à\s H:i" }}
+                </p>
+              </div>
+              
+              {% if patient.created_by %}
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Criado por</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <i class="bi bi-person me-2"></i>
+                  {{ patient.created_by.profile.display_name|default:patient.created_by.username }}
+                </p>
+              </div>
+              {% endif %}
             </div>
             
-            {% if patient.created_by %}
-            <div class="mb-3">
-              <label class="form-label text-medical-gray">Criado por</label>
-              <p class="form-control-plaintext text-medical-dark-gray">
-                <i class="bi bi-person me-2"></i>
-                {{ patient.created_by.profile.display_name|default:patient.created_by.username }}
-              </p>
-            </div>
-            {% endif %}
-            
-            <div class="mb-3">
-              <label class="form-label text-medical-gray">Última atualização</label>
-              <p class="form-control-plaintext text-medical-dark-gray">
-                <i class="bi bi-clock me-2"></i>
-                {{ patient.updated_at|date:"d/m/Y à\s H:i" }}
-              </p>
-            </div>
-            
-            {% if patient.updated_by %}
-            <div class="mb-3">
-              <label class="form-label text-medical-gray">Atualizado por</label>
-              <p class="form-control-plaintext text-medical-dark-gray">
-                <i class="bi bi-person me-2"></i>
-                {{ patient.updated_by.profile.display_name|default:patient.updated_by.username }}
-              </p>
-            </div>
-            {% endif %}
-            
-            <div class="mb-0">
-              <label class="form-label text-medical-gray">ID Único</label>
-              <p class="form-control-plaintext text-medical-gray" style="font-family: monospace; font-size: 0.875rem;">
-                {{ patient.id }}
-              </p>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-medical-gray">Última atualização</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <i class="bi bi-clock me-2"></i>
+                  {{ patient.updated_at|date:"d/m/Y à\s H:i" }}
+                </p>
+              </div>
+              
+              {% if patient.updated_by %}
+              <div class="col-md-6 mb-0">
+                <label class="form-label text-medical-gray">Atualizado por</label>
+                <p class="form-control-plaintext text-medical-dark-gray">
+                  <i class="bi bi-person me-2"></i>
+                  {{ patient.updated_by.profile.display_name|default:patient.updated_by.username }}
+                </p>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>
