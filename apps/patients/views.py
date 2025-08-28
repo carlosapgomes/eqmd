@@ -1099,7 +1099,8 @@ class TransferPatientView(PatientStatusChangeView):
                     event_type=Event.TRANSFER_EVENT,
                     description=f"Transferência interna: {old_location} → {new_location}\nMotivo: {form.cleaned_data['transfer_reason']}",
                     event_datetime=timezone.now(),
-                    created_by=request.user
+                    created_by=request.user,
+                    updated_by=request.user
                 )
                 
                 messages.success(
