@@ -897,6 +897,7 @@
                                 RecordNumberChange events (event_type=12) get the specialized template with record number display
                                 Admission events (event_type=13) get the specialized template with admission details
                                 Discharge events (event_type=14) get the specialized template with discharge details
+                                Transfer events (event_type=17) get the specialized template for internal transfers
                                 All other events use the default template
                                 {% endcomment %}
                                 {% if event.event_type == 0 %}
@@ -919,6 +920,8 @@
                                     {% include "events/partials/event_card_admission.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 14 %}
                                     {% include "events/partials/event_card_discharge.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 17 %}
+                                    {% include "events/partials/event_card_transfer.html" with event=event event_data=event_data %}
                                 {% else %}
                                     {% include "events/partials/event_card_default.html" with event=event event_data=event_data %}
                                 {% endif %}

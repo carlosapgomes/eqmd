@@ -211,10 +211,29 @@ class Event(SoftDeleteModel):
 
     def get_absolute_url(self):
         """Return the absolute URL for this event.
-        Should be overridden by derived classes.
+        Should be overridden by derived classes. For timeline-only events,
+        returns the patient timeline URL as a fallback.
         """
         from django.urls import reverse
         from django.core.exceptions import ImproperlyConfigured
+        
+        # Timeline-only events that don't have detail pages
+        timeline_only_events = [
+            self.TRANSFER_EVENT,
+            self.STATUS_CHANGE_EVENT, 
+            self.RECORD_NUMBER_CHANGE_EVENT,
+            self.ADMISSION_EVENT,
+            self.DISCHARGE_EVENT,
+            self.DEATH_DECLARATION_EVENT,
+            self.OUTPATIENT_STATUS_EVENT,
+            self.TAG_ADDED_EVENT,
+            self.TAG_REMOVED_EVENT,
+            self.TAG_BULK_REMOVE_EVENT,
+        ]
+        
+        if self.event_type in timeline_only_events:
+            # Redirect to patient timeline for informational events
+            return reverse('apps.patients:patient_events_timeline', kwargs={'patient_id': self.patient.pk})
 
         raise ImproperlyConfigured(
             f"The {self.__class__.__name__} model must define a get_absolute_url() method."
