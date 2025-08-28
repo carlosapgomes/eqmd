@@ -241,10 +241,29 @@ class Event(SoftDeleteModel):
 
     def get_edit_url(self):
         """Return the edit URL for this event.
-        Should be overridden by derived classes.
+        Should be overridden by derived classes. Timeline-only events
+        return None since they're typically not editable.
         """
         from django.urls import reverse
         from django.core.exceptions import ImproperlyConfigured
+        
+        # Timeline-only events that don't have edit pages
+        timeline_only_events = [
+            self.TRANSFER_EVENT,
+            self.STATUS_CHANGE_EVENT, 
+            self.RECORD_NUMBER_CHANGE_EVENT,
+            self.ADMISSION_EVENT,
+            self.DISCHARGE_EVENT,
+            self.DEATH_DECLARATION_EVENT,
+            self.OUTPATIENT_STATUS_EVENT,
+            self.TAG_ADDED_EVENT,
+            self.TAG_REMOVED_EVENT,
+            self.TAG_BULK_REMOVE_EVENT,
+        ]
+        
+        if self.event_type in timeline_only_events:
+            # Timeline-only events are not editable
+            return None
 
         raise ImproperlyConfigured(
             f"The {self.__class__.__name__} model must define a get_edit_url() method."
