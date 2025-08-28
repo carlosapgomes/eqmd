@@ -18,8 +18,8 @@ No detail view since transfers are informational timeline events
 
 {% block event_actions %}
 <div class="btn-group btn-group-sm">
-    <!-- Transfer events are informational only - no detail view needed -->
-    {% if event_data.can_edit %}
+    <!-- Transfer events are informational only - typically not editable -->
+    {% if event_data.can_edit and event.get_edit_url %}
         <a href="{{ event.get_edit_url }}" 
            class="btn btn-outline-warning btn-sm"
            aria-label="Editar transferência"
@@ -29,6 +29,12 @@ No detail view since transfers are informational timeline events
             <i class="bi bi-pencil" aria-hidden="true"></i>
             <span class="visually-hidden">Editar</span>
         </a>
+    {% else %}
+        <!-- Show a disabled state or message for non-editable events -->
+        <small class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Evento informativo
+        </small>
     {% endif %}
 </div>
 {% endblock event_actions %}
