@@ -12,6 +12,11 @@ urlpatterns = [
     path("health/", views.health_check, name="health_check"),
     path("manifest.json", views.manifest_json, name="manifest_json"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
+    path(
+        "password-change-required/", 
+        views.PasswordChangeRequiredView.as_view(), 
+        name="password_change_required"
+    ),
     # Permission test URLs
     path("test/permissions/", test_views.permission_test_view, name="permission_test"),
     path("test/doctor-only/", test_views.doctor_only_view, name="doctor_only_test"),

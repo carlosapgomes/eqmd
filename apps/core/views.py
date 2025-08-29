@@ -1,14 +1,19 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, TemplateView
+from django.contrib import messages
+from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
+from django.urls import reverse_lazy
 from django.conf import settings
 from django.urls import reverse
 from urllib.parse import urlparse
 import logging
 from apps.patients.models import Patient
+from allauth.account.views import PasswordChangeView
 
 logger = logging.getLogger(__name__)
 
@@ -359,3 +364,52 @@ class SignupBlockedView(TemplateView):
             'return_url': get_safe_return_url(self.request),
         })
         return context
+
+
+@method_decorator(login_required, name='dispatch')
+class PasswordChangeRequiredView(PasswordChangeView):
+    """
+    Custom password change view that clears the password_change_required flag.
+    
+    Extends allauth's PasswordChangeView to integrate with our security flow.
+    """
+    template_name = 'core/password_change_required.html'
+    success_url = reverse_lazy('core:dashboard')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'title': _('Alteração de Senha Obrigatória'),
+            'subtitle': _('Por segurança, você deve escolher uma nova senha'),
+            'is_required_change': True,
+        })
+        return context
+    
+    def form_valid(self, form):
+        """Clear the password change flag and log the security event."""
+        response = super().form_valid(form)
+        
+        # Clear the flag with history tracking
+        self.request.user.password_change_required = False
+        self.request.user._change_reason = 'Mandatory password change completed'
+        self.request.user.save(update_fields=['password_change_required'])
+        
+        # Security logging
+        from .history import get_client_ip
+        logger.info(
+            f'Mandatory password change completed for user {self.request.user.username} '
+            f'from IP {get_client_ip(self.request)}'
+        )
+        
+        # Success message
+        messages.success(
+            self.request,
+            _('Senha alterada com sucesso! Bem-vindo ao sistema.')
+        )
+        
+        return response
+    
+    def get_form_kwargs(self):
+        """Add any additional form configuration."""
+        kwargs = super().get_form_kwargs()
+        return kwargs

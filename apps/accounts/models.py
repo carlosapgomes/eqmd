@@ -27,6 +27,12 @@ class EqmdCustomUser(AbstractUser):
     fiscal_number = models.CharField(max_length=20, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     
+    # Security: Force password change for admin-created users
+    password_change_required = models.BooleanField(
+        default=True,  # New users must change password
+        help_text="User must change password before accessing the system"
+    )
+    
     # History tracking
     history = HistoricalRecords(
         history_change_reason_field=models.TextField(null=True),
