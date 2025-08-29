@@ -88,6 +88,15 @@ uv run python manage.py create_sample_tags
 uv run python manage.py populate_sample_data
 ```
 
+### Step 8: Backup Your Ward Configuration (Optional)
+
+After setting up your wards, create a backup to easily restore them later:
+
+```bash
+# Backup current wards to JSON file
+uv run python manage.py ward_backup backup --output my_wards_backup.json
+```
+
 ## Option 2: Database-Only Reset
 
 This keeps your migration files but resets all data.
@@ -116,7 +125,14 @@ uv run python manage.py migrate
 ```bash
 uv run python manage.py createsuperuser
 uv run python manage.py setup_groups
+
+# Option A: Create sample wards
 uv run python manage.py create_sample_wards
+
+# Option B: Restore wards from backup (if you have one)
+uv run python manage.py ward_backup restore --input my_wards_backup.json
+
+# Create sample tags (optional)
 uv run python manage.py create_sample_tags
 ```
 
@@ -223,6 +239,73 @@ uv run python manage.py migrate app_name zero
 # Show SQL for migrations
 uv run python manage.py sqlmigrate app_name migration_number
 ```
+
+## Ward Backup and Restore
+
+The `ward_backup` management command helps preserve your ward configuration across database resets.
+
+### Backup Wards
+
+```bash
+# Backup all wards to default file (ward_backup.json)
+uv run python manage.py ward_backup backup
+
+# Backup to specific file
+uv run python manage.py ward_backup backup --output my_wards.json
+
+# Backup only active wards
+uv run python manage.py ward_backup backup --active-only --output active_wards.json
+```
+
+### Restore Wards
+
+```bash
+# Restore from default file (ward_backup.json)
+uv run python manage.py ward_backup restore
+
+# Restore from specific file
+uv run python manage.py ward_backup restore --input my_wards.json
+
+# Clear all existing wards before restore (dangerous!)
+uv run python manage.py ward_backup restore --clear-existing --input my_wards.json
+
+# Update existing wards with same abbreviation
+uv run python manage.py ward_backup restore --update-existing --input my_wards.json
+```
+
+### Ward Backup Best Practices
+
+1. **Regular Backups**: Create ward backups after configuring your hospital's ward structure
+2. **Version Control**: Consider adding backup files to version control for team sharing
+3. **Before Reset**: Always backup before database resets to avoid manual reconfiguration
+4. **Safe Restore**: Default restore mode skips existing wards to prevent accidental overwrites
+
+### Ward Backup File Format
+
+The backup creates a JSON file with ward data and metadata:
+
+```json
+{
+  "metadata": {
+    "created_at": "2025-08-29T07:32:41.248656",
+    "total_wards": 6,
+    "active_only": false,
+    "version": "1.0"
+  },
+  "wards": [
+    {
+      "name": "Unidade de Terapia Intensiva",
+      "abbreviation": "UTI",
+      "description": "Unidade de cuidados intensivos para pacientes críticos",
+      "is_active": true,
+      "floor": "3º Andar",
+      "capacity_estimate": 12
+    }
+  ]
+}
+```
+
+**Note**: UUID identifiers and user references are excluded for portability across different environments.
 
 ## Getting Help
 
