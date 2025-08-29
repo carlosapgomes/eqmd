@@ -201,13 +201,15 @@
         </ul>
       </div>
       
-      <div class="form-check mb-4">
-        <input class="form-check-input" type="checkbox" id="confirmDelete" required>
-        <label class="form-check-label" for="confirmDelete">
-          <strong>Sim, eu entendo que esta ação é irreversível e desejo excluir esta receita permanentemente.</strong>
-        </label>
-        <div class="invalid-feedback">
-          Você deve confirmar que entende as consequências desta ação.
+      <div class="card border-warning bg-warning bg-opacity-10 mb-4 p-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="confirmDelete" required style="transform: scale(1.2);">
+          <label class="form-check-label fs-5 fw-bold text-warning-emphasis" for="confirmDelete" style="cursor: pointer;">
+            <strong>Sim, eu entendo que esta ação é irreversível e desejo excluir esta receita permanentemente.</strong>
+          </label>
+          <div class="invalid-feedback">
+            Você deve confirmar que entende as consequências desta ação.
+          </div>
         </div>
       </div>
       
