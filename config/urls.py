@@ -20,6 +20,12 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView, TemplateView
+from allauth.account.views import (
+    LoginView, LogoutView, PasswordChangeView, PasswordResetView, 
+    PasswordResetDoneView, PasswordResetFromKeyView, PasswordResetFromKeyDoneView,
+    EmailView, ConfirmEmailView
+)
+from apps.core.views import SignupBlockedView
 
 urlpatterns = [
     path(
@@ -31,7 +37,19 @@ urlpatterns = [
     ),
     path("", include("apps.core.urls", namespace="core")),
     path("admin/", admin.site.urls),
-    path("accounts/", include("allauth.account.urls")),
+    # Explicit allauth URLs without signup
+    path("accounts/login/", LoginView.as_view(), name="account_login"),
+    path("accounts/logout/", LogoutView.as_view(), name="account_logout"),
+    path("accounts/password/change/", PasswordChangeView.as_view(), name="account_change_password"),
+    path("accounts/password/reset/", PasswordResetView.as_view(), name="account_reset_password"),
+    path("accounts/password/reset/done/", PasswordResetDoneView.as_view(), name="account_reset_password_done"),
+    path("accounts/password/reset/key/<uidb36>-<key>/", PasswordResetFromKeyView.as_view(), name="account_reset_password_from_key"),
+    path("accounts/password/reset/key/done/", PasswordResetFromKeyDoneView.as_view(), name="account_reset_password_from_key_done"),
+    path("accounts/email/", EmailView.as_view(), name="account_email"),
+    path("accounts/confirm-email/", TemplateView.as_view(template_name="account/verification_sent.html"), name="account_email_verification_sent"),
+    path("accounts/confirm-email/<key>/", ConfirmEmailView.as_view(), name="account_confirm_email"),
+    # Block signup attempts with custom view
+    path("accounts/signup/", SignupBlockedView.as_view(), name="account_signup"),
     path("profiles/", include("apps.accounts.urls", namespace="apps.accounts")),
     path("patients/", include("apps.patients.urls", namespace="patients")),
     path("events/", include("apps.events.urls", namespace="events")),
@@ -57,6 +75,11 @@ urlpatterns = [
     path("pdf/", include("apps.pdfgenerator.urls", namespace="pdfgenerator")),
     path("pdf-forms/", include("apps.pdf_forms.urls", namespace="pdf_forms")),
 ]
+
+# Custom error handlers
+handler403 = 'apps.core.views.custom_permission_denied_view'
+handler404 = 'apps.core.views.custom_page_not_found_view'
+handler500 = 'apps.core.views.custom_server_error_view'
 
 # Serve media and static files during development
 if settings.DEBUG:

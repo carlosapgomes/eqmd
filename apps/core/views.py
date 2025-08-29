@@ -3,9 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
-from django.views.generic import ListView
+from django.views.generic import ListView, TemplateView
 from django.conf import settings
+from django.urls import reverse
+from urllib.parse import urlparse
+import logging
 from apps.patients.models import Patient
+
+logger = logging.getLogger(__name__)
 
 def landing_page(request):
     """
@@ -257,3 +262,100 @@ class PatientHistoryView(LoginRequiredMixin, ListView):
 def health_check(request):
     """Simple health check endpoint for Docker health checks."""
     return HttpResponse("OK", content_type="text/plain")
+
+
+def custom_permission_denied_view(request, exception):
+    """Custom 403 error handler with medical theme styling."""
+    logger.warning(f"Permission denied for user {request.user} accessing {request.path}")
+    
+    # Determine safe return URL
+    return_url = get_safe_return_url(request)
+    
+    context = {
+        'return_url': return_url,
+        'page_title': 'Acesso Negado - EquipeMed',
+    }
+    
+    return render(request, '403.html', context, status=403)
+
+
+def custom_page_not_found_view(request, exception):
+    """Custom 404 error handler with medical theme styling."""
+    logger.info(f"Page not found: {request.path} for user {request.user}")
+    
+    # Determine safe return URL
+    return_url = get_safe_return_url(request)
+    
+    context = {
+        'return_url': return_url,
+        'page_title': 'Página Não Encontrada - EquipeMed',
+    }
+    
+    return render(request, '404.html', context, status=404)
+
+
+def custom_server_error_view(request):
+    """Custom 500 error handler with medical theme styling."""
+    logger.error(f"Server error for user {request.user if hasattr(request, 'user') else 'Unknown'} accessing {request.path}")
+    
+    # Minimal context for server errors (no dynamic content)
+    context = {
+        'page_title': 'Erro do Servidor - EquipeMed',
+    }
+    
+    return render(request, '500.html', context, status=500)
+
+
+def get_safe_return_url(request):
+    """
+    Determine a safe return URL for error pages.
+    Priority: safe referer → dashboard → login → landing page
+    """
+    # Check HTTP_REFERER for safe same-domain URLs
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        try:
+            referer_parsed = urlparse(referer)
+            request_parsed = urlparse(request.build_absolute_uri())
+            
+            # Only use referer if it's from the same domain
+            if referer_parsed.netloc == request_parsed.netloc:
+                return referer
+        except Exception:
+            pass  # Invalid referer, continue to fallbacks
+    
+    # Fallback hierarchy based on authentication
+    try:
+        if hasattr(request, 'user') and request.user.is_authenticated:
+            return reverse('core:dashboard')
+        else:
+            return reverse('account_login')
+    except Exception:
+        # Final fallback if URL reversal fails
+        return reverse('core:landing_page')
+
+
+class SignupBlockedView(TemplateView):
+    """
+    Custom view that blocks all signup attempts with professional medical messaging.
+    Returns 403 Forbidden status and renders a professional error page.
+    """
+    template_name = 'account/signup.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Log signup attempt and return 403 status."""
+        logger.warning(f"Signup attempt blocked for IP {request.META.get('REMOTE_ADDR')} accessing {request.path}")
+        
+        # Set 403 status for all methods (GET, POST, etc.)
+        response = super().dispatch(request, *args, **kwargs)
+        response.status_code = 403
+        return response
+    
+    def get_context_data(self, **kwargs):
+        """Add context for the signup blocked template."""
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'page_title': 'Registro Fechado - EquipeMed',
+            'return_url': get_safe_return_url(self.request),
+        })
+        return context

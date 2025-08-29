@@ -278,10 +278,23 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
 
 # django-allauth configuration
 
+# Django-allauth Configuration
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory")
-ACCOUNT_ALLOW_REGISTRATION = False  # Disable public signup
+
+# Comprehensive signup blocking
+ACCOUNT_ALLOW_REGISTRATION = False
+ACCOUNT_OPEN_SIGNUP = False
+ACCOUNT_REGISTRATION_CLOSED = True
+ACCOUNT_SIGNUP_ENABLED = False
+
+# Additional security measures
+ACCOUNT_PREVENT_ENUMERATION = True
+ACCOUNT_RATE_LIMITS = {
+    'login_failed': '5/m',
+    'signup': '0/m',  # Block all signup attempts
+}
 
 # Login and Logout Configuration
 LOGIN_REDIRECT_URL = "core:dashboard"
