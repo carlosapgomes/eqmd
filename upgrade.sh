@@ -155,6 +155,11 @@ print_info "Fixing app directory permissions after update..."
 docker compose exec --user root eqmd chown -R $EQMD_UID:$EQMD_GID /app
 print_status "App permissions fixed"
 
+# Run database migrations
+print_info "Running database migrations..."
+docker compose exec -T eqmd python manage.py migrate --noinput
+print_status "Database migrations completed"
+
 # Configure Django Site Framework (in case environment variables changed)
 print_info "Updating Django Site Framework configuration..."
 docker compose exec -T eqmd python manage.py configure_django_site
