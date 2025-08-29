@@ -4,7 +4,7 @@
 const CACHE_NAME = 'eqmd-static-v1';
 const STATIC_ASSETS = [
   '/',
-  '/static/css/main.css',
+  '/static/main.css',
   '/static/js/bootstrap.min.js',
   '/static/js/popper.min.js',
   '/static/css/bootstrap-icons.min.css',
