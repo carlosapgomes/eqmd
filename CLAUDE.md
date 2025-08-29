@@ -64,6 +64,19 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/pdf_forms/tests/ 
 - **Use Django test runner** for specific apps that have import issues
 - **Set DJANGO_SETTINGS_MODULE** when using pytest to avoid configuration errors
 
+### Password Change Security Tests
+
+```bash
+# Test forced password change functionality
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/accounts/tests/test_password_change_required.py
+
+# Test password change middleware
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/core/tests/test_password_change_middleware.py
+
+# Test complete password security flow
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/accounts/tests/test_password_change_required.py apps/core/tests/test_password_change_middleware.py
+```
+
 # Frontend
 
 npm install && npm run build
