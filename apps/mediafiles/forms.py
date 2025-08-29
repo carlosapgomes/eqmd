@@ -130,7 +130,10 @@ class PhotoCreateFormNew(BaseEventForm):
     )
     
     caption = forms.CharField(
-        widget=forms.Textarea(attrs={'rows': 3}),
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Legenda opcional'
+        }),
         required=False,
         label="Legenda"
     )
@@ -150,12 +153,7 @@ class PhotoCreateFormNew(BaseEventForm):
                     'class': 'form-control'
                 },
                 format='%Y-%m-%dT%H:%M'
-            ),
-            'caption': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Legenda opcional para a foto'
-            })
+            )
         }
     
     def clean_upload_id(self):
@@ -239,7 +237,10 @@ class PhotoSeriesCreateFormNew(BaseEventForm):
     )
     
     caption = forms.CharField(
-        widget=forms.Textarea(attrs={'rows': 3}),
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Legenda opcional da série'
+        }),
         required=False,
         label="Legenda da Série"
     )
@@ -259,12 +260,7 @@ class PhotoSeriesCreateFormNew(BaseEventForm):
                     'class': 'form-control'
                 },
                 format='%Y-%m-%dT%H:%M'
-            ),
-            'caption': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Legenda opcional para a série de fotos'
-            })
+            )
         }
     
     def clean_upload_ids(self):
@@ -383,9 +379,8 @@ class PhotoCreateForm(BaseMediaForm, forms.ModelForm):
                 },
                 format='%Y-%m-%dT%H:%M'
             ),
-            'caption': forms.Textarea(attrs={
+            'caption': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
                 'placeholder': 'Legenda opcional para a foto'
             })
         }
@@ -506,9 +501,8 @@ class PhotoUpdateForm(BaseMediaForm, forms.ModelForm):
                 },
                 format='%Y-%m-%dT%H:%M'
             ),
-            'caption': forms.Textarea(attrs={
+            'caption': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
                 'placeholder': 'Legenda opcional para a foto'
             })
         }
@@ -579,9 +573,8 @@ class PhotoSeriesCreateForm(BaseMediaForm, forms.ModelForm):
                 },
                 format='%Y-%m-%dT%H:%M'
             ),
-            'caption': forms.Textarea(attrs={
+            'caption': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
                 'placeholder': 'Legenda opcional para a série de fotos'
             })
         }
@@ -735,9 +728,8 @@ class PhotoSeriesUpdateForm(BaseMediaForm, forms.ModelForm):
                 },
                 format='%Y-%m-%dT%H:%M'
             ),
-            'caption': forms.Textarea(attrs={
+            'caption': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
                 'placeholder': 'Legenda opcional para a série de fotos'
             })
         }
@@ -883,9 +875,8 @@ class VideoClipCreateForm(BaseMediaForm, forms.ModelForm):
                 },
                 format='%Y-%m-%dT%H:%M'
             ),
-            'caption': forms.Textarea(attrs={
+            'caption': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
                 'placeholder': 'Legenda opcional para o vídeo'
             })
         }
@@ -1027,9 +1018,8 @@ class VideoClipCreateFormOld(BaseMediaForm, forms.ModelForm):
                 },
                 format='%Y-%m-%dT%H:%M'
             ),
-            'caption': forms.Textarea(attrs={
+            'caption': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
                 'placeholder': 'Legenda opcional para o vídeo'
             })
         }
@@ -1161,9 +1151,8 @@ class VideoClipUpdateForm(BaseMediaForm, forms.ModelForm):
                 },
                 format='%Y-%m-%dT%H:%M'
             ),
-            'caption': forms.Textarea(attrs={
+            'caption': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': 3,
                 'placeholder': 'Legenda opcional para o vídeo'
             })
         }
