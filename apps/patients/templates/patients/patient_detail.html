@@ -146,32 +146,48 @@
               </div>
             </div>
 
+            {% if patient.address or patient.city or patient.state or patient.zip_code %}
+            <div class="row">
+              <div class="col-12 mb-3">
+                <label class="form-label text-medical-gray">Endereço</label>
+                <div class="text-medical-dark-gray">
+                  <i class="bi bi-geo-alt me-2"></i>
+                  {% if patient.address %}
+                    <div>{{ patient.address }}</div>
+                  {% endif %}
+                  {% if patient.city or patient.state or patient.zip_code %}
+                    <div>
+                      {% if patient.city %}{{ patient.city }}{% endif %}{% if patient.city and patient.state %}, {% endif %}{% if patient.state %}{{ patient.state }}{% endif %}{% if patient.zip_code %} - {{ patient.zip_code }}{% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <div class="row">
+              <div class="col-12 mb-3">
+                <label class="form-label text-medical-gray">Endereço</label>
+                <p class="form-control-plaintext text-muted">-</p>
+              </div>
+            </div>
+            {% endif %}
+
             <!-- Tags section moved to tag management component -->
           </div>
         </div>
       </div>
 
-      <!-- Hospital Information Card -->
+      <!-- Ward Information Card -->
       <div class="col-lg-6 mb-4">
         <div class="card card-medical">
           <div class="card-header">
             <h5 class="card-title mb-0">
-              <i class="bi bi-building me-2 text-medical-primary"></i>
-              Informações Hospitalares
+              <i class="bi bi-geo-alt me-2 text-medical-primary"></i>
+              Localização
             </h5>
           </div>
           <div class="card-body">
             <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label text-medical-gray">Hospital Atual</label>
-                <p class="form-control-plaintext text-medical-dark-gray">
-                  {% if patient.current_hospital %}
-                    <i class="bi bi-building me-2"></i>{{ patient.current_hospital.name }}
-                  {% else %}
-                    <span class="text-muted">-</span>
-                  {% endif %}
-                </p>
-              </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label text-medical-gray">Ala</label>
                 <p class="form-control-plaintext text-medical-dark-gray">
@@ -206,32 +222,6 @@
                 {% endif %}
               </div>
             </div>
-
-            {% if patient.address or patient.city or patient.state or patient.zip_code %}
-            <div class="row">
-              <div class="col-12 mb-3">
-                <label class="form-label text-medical-gray">Endereço</label>
-                <div class="text-medical-dark-gray">
-                  <i class="bi bi-geo-alt me-2"></i>
-                  {% if patient.address %}
-                    <div>{{ patient.address }}</div>
-                  {% endif %}
-                  {% if patient.city or patient.state or patient.zip_code %}
-                    <div>
-                      {% if patient.city %}{{ patient.city }}{% endif %}{% if patient.city and patient.state %}, {% endif %}{% if patient.state %}{{ patient.state }}{% endif %}{% if patient.zip_code %} - {{ patient.zip_code }}{% endif %}
-                    </div>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-            {% else %}
-            <div class="row">
-              <div class="col-12 mb-3">
-                <label class="form-label text-medical-gray">Endereço</label>
-                <p class="form-control-plaintext text-muted">-</p>
-              </div>
-            </div>
-            {% endif %}
           </div>
         </div>
       </div>
