@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Erro do Servidor - EquipeMed{% endblock title %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center bg-medical-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        <div class="card shadow-lg border-0">
+          <div class="card-header bg-danger text-white text-center py-4">
+            <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
+            <h1 class="h3 fw-bold mb-0 mt-3">Erro do Servidor</h1>
+          </div>
+          <div class="card-body p-5 text-center">
+            <div class="mb-4">
+              <h2 class="h5 text-medical-primary fw-bold mb-3">
+                Falha Temporária do Sistema
+              </h2>
+              <p class="text-muted mb-4">
+                Ocorreu um erro interno no sistema EquipeMed. Nossa equipe técnica foi notificada 
+                automaticamente e está trabalhando para resolver o problema.
+              </p>
+              
+              <div class="alert alert-warning d-flex align-items-center">
+                <i class="bi bi-clock me-2 text-warning"></i>
+                <small>
+                  Tente novamente em alguns minutos. Se o problema persistir, contate o suporte técnico.
+                </small>
+              </div>
+            </div>
+            
+            <!-- System Status Info -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <div class="card bg-light border-0">
+                  <div class="card-body py-3">
+                    <i class="bi bi-tools text-medical-teal" style="font-size: 1.5rem;"></i>
+                    <div class="mt-2">
+                      <small class="fw-bold">Manutenção Temporária</small><br>
+                      <small class="text-muted">O sistema será restaurado em breve</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Return Options (Simple - no JavaScript due to potential server issues) -->
+            <div class="d-grid gap-2">
+              <a href="/core/dashboard/" class="btn btn-medical-primary btn-lg">
+                <i class="bi bi-house me-2"></i>
+                Voltar ao Dashboard
+              </a>
+              <a href="/accounts/login/" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                Tentar Novamente
+              </a>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="card-footer bg-light text-center py-3">
+            <small class="text-muted d-flex align-items-center justify-content-center">
+              <i class="bi bi-headset text-medical-green me-2"></i>
+              Suporte técnico disponível 24/7
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_head %}
+<style>
+  .btn-medical-primary:focus {
+    box-shadow: 0 0 0 0.25rem rgba(46, 91, 186, 0.25);
+  }
+  
+  .card {
+    border-radius: 15px;
+    overflow: hidden;
+  }
+  
+  .card-header {
+    border-bottom: none;
+  }
+  
+  /* Pulsing animation for maintenance indicator */
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+  
+  .card.bg-light {
+    animation: pulse 2s infinite ease-in-out;
+  }
+</style>
+{% endblock extra_head %}

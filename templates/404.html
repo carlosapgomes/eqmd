@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Página Não Encontrada - EquipeMed{% endblock title %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center bg-medical-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        <div class="card shadow-lg border-0">
+          <div class="card-header bg-medical-primary text-white text-center py-4">
+            <i class="bi bi-file-earmark-x" style="font-size: 3rem;"></i>
+            <h1 class="h3 fw-bold mb-0 mt-3">Página Não Encontrada</h1>
+          </div>
+          <div class="card-body p-5 text-center">
+            <div class="mb-4">
+              <h2 class="h5 text-medical-primary fw-bold mb-3">
+                Recurso Indisponível
+              </h2>
+              <p class="text-muted mb-4">
+                A página ou recurso solicitado não foi encontrado no sistema EquipeMed. 
+                Pode ter sido movida, removida ou o endereço foi digitado incorretamente.
+              </p>
+              
+              <div class="alert alert-warning d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+                <small>
+                  Verifique o endereço digitado ou use a navegação abaixo para acessar outras áreas do sistema.
+                </small>
+              </div>
+            </div>
+            
+            <!-- Navigation Suggestions -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <div class="card bg-light border-0">
+                  <div class="card-body py-3">
+                    <i class="bi bi-people text-medical-teal" style="font-size: 1.5rem;"></i>
+                    <div class="mt-2">
+                      <small class="fw-bold">Pacientes</small><br>
+                      <small class="text-muted">Gerenciar pacientes</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card bg-light border-0">
+                  <div class="card-body py-3">
+                    <i class="bi bi-clipboard-pulse text-medical-teal" style="font-size: 1.5rem;"></i>
+                    <div class="mt-2">
+                      <small class="fw-bold">Eventos</small><br>
+                      <small class="text-muted">Registros médicos</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Return Options -->
+            <div class="d-grid gap-2 d-md-block">
+              <a href="{% url 'core:dashboard' %}" class="btn btn-medical-primary btn-lg me-md-2">
+                <i class="bi bi-house me-2"></i>
+                Dashboard
+              </a>
+              <button onclick="goBack()" class="btn btn-outline-medical-primary btn-lg">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar
+              </button>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="card-footer bg-light text-center py-3">
+            <small class="text-muted d-flex align-items-center justify-content-center">
+              <i class="bi bi-search text-medical-green me-2"></i>
+              Sistema de gestão hospitalar EquipeMed
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_head %}
+<style>
+  .btn-medical-primary:focus {
+    box-shadow: 0 0 0 0.25rem rgba(46, 91, 186, 0.25);
+  }
+  
+  .card {
+    border-radius: 15px;
+    overflow: hidden;
+  }
+  
+  .card-header {
+    border-bottom: none;
+  }
+  
+  .card.bg-light:hover {
+    background-color: #f8f9fa !important;
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+  }
+</style>
+
+<script>
+function goBack() {
+  // Check if there's a previous page in history and it's from the same domain
+  if (document.referrer && document.referrer.includes(window.location.host)) {
+    window.history.back();
+  } else {
+    // Fallback to dashboard
+    window.location.href = "{% url 'core:dashboard' %}";
+  }
+}
+</script>
+{% endblock extra_head %}

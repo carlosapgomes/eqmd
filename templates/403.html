@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Acesso Negado - EquipeMed{% endblock title %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center bg-medical-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        <div class="card shadow-lg border-0">
+          <div class="card-header bg-medical-primary text-white text-center py-4">
+            <i class="bi bi-shield-x" style="font-size: 3rem;"></i>
+            <h1 class="h3 fw-bold mb-0 mt-3">Acesso Negado</h1>
+          </div>
+          <div class="card-body p-5 text-center">
+            <div class="mb-4">
+              <h2 class="h5 text-medical-primary fw-bold mb-3">
+                Permissão Insuficiente
+              </h2>
+              <p class="text-muted mb-4">
+                Você não possui as permissões necessárias para acessar este recurso do sistema médico. 
+                Esta restrição garante a segurança e privacidade dos dados hospitalares.
+              </p>
+              
+              <div class="alert alert-info d-flex align-items-center">
+                <i class="bi bi-info-circle me-2 text-medical-teal"></i>
+                <small>
+                  Se você acredita que deveria ter acesso, entre em contato com o administrador do sistema.
+                </small>
+              </div>
+            </div>
+            
+            <!-- Return Options -->
+            <div class="d-grid gap-2 d-md-block">
+              <button onclick="goBack()" class="btn btn-medical-primary btn-lg me-md-2">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar
+              </button>
+              <a href="{% url 'core:dashboard' %}" class="btn btn-outline-medical-primary btn-lg">
+                <i class="bi bi-house me-2"></i>
+                Dashboard
+              </a>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="card-footer bg-light text-center py-3">
+            <small class="text-muted d-flex align-items-center justify-content-center">
+              <i class="bi bi-shield-lock text-medical-green me-2"></i>
+              Sistema seguro para profissionais de saúde
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_head %}
+<style>
+  .btn-medical-primary:focus {
+    box-shadow: 0 0 0 0.25rem rgba(46, 91, 186, 0.25);
+  }
+  
+  .card {
+    border-radius: 15px;
+    overflow: hidden;
+  }
+  
+  .card-header {
+    border-bottom: none;
+  }
+</style>
+
+<script>
+function goBack() {
+  // Check if there's a previous page in history and it's from the same domain
+  if (document.referrer && document.referrer.includes(window.location.host)) {
+    window.history.back();
+  } else {
+    // Fallback to dashboard
+    window.location.href = "{% url 'core:dashboard' %}";
+  }
+}
+</script>
+{% endblock extra_head %}

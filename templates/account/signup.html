@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Registro Fechado - EquipeMed{% endblock title %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center bg-medical-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        <div class="card shadow-lg border-0">
+          <div class="card-header bg-warning text-dark text-center py-4">
+            <i class="bi bi-person-lock" style="font-size: 3rem;"></i>
+            <h1 class="h3 fw-bold mb-0 mt-3">Registro Fechado</h1>
+          </div>
+          <div class="card-body p-5 text-center">
+            <div class="mb-4">
+              <h2 class="h5 text-medical-primary fw-bold mb-3">
+                Cadastro Não Disponível
+              </h2>
+              <p class="text-muted mb-4">
+                O registro de novos usuários está fechado para manter a segurança do sistema médico EquipeMed. 
+                Apenas administradores autorizados podem criar novas contas de usuário.
+              </p>
+              
+              <div class="alert alert-info d-flex align-items-center">
+                <i class="bi bi-info-circle me-2 text-medical-teal"></i>
+                <small>
+                  <strong>Profissionais de saúde:</strong> Entre em contato com o administrador do sistema para solicitar acesso ao EquipeMed.
+                </small>
+              </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <div class="card bg-light border-0">
+                  <div class="card-body py-3">
+                    <i class="bi bi-person-gear text-medical-teal" style="font-size: 1.5rem;"></i>
+                    <div class="mt-2">
+                      <small class="fw-bold">Administrador do Sistema</small><br>
+                      <small class="text-muted">Contate a equipe de TI para obter acesso</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Return Options -->
+            <div class="d-grid gap-2 d-md-block">
+              <a href="{% url 'account_login' %}" class="btn btn-medical-primary btn-lg me-md-2">
+                <i class="bi bi-box-arrow-in-right me-2"></i>
+                Fazer Login
+              </a>
+              <a href="{% url 'core:dashboard' %}" class="btn btn-outline-medical-primary btn-lg">
+                <i class="bi bi-house me-2"></i>
+                Página Inicial
+              </a>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="card-footer bg-light text-center py-3">
+            <small class="text-muted d-flex align-items-center justify-content-center">
+              <i class="bi bi-shield-check text-medical-green me-2"></i>
+              Sistema seguro para profissionais de saúde
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_head %}
+<style>
+  .btn-medical-primary:focus {
+    box-shadow: 0 0 0 0.25rem rgba(46, 91, 186, 0.25);
+  }
+  
+  .card {
+    border-radius: 15px;
+    overflow: hidden;
+  }
+  
+  .card-header {
+    border-bottom: none;
+  }
+  
+  .card.bg-light:hover {
+    background-color: #f8f9fa !important;
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+  }
+  
+  /* Professional warning styling */
+  .bg-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+  }
+</style>
+{% endblock extra_head %}
