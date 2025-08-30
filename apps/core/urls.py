@@ -11,6 +11,8 @@ urlpatterns = [
     path("", views.landing_page, name="landing_page"),
     path("health/", views.health_check, name="health_check"),
     path("manifest.json", views.manifest_json, name="manifest_json"),
+    path("terms-of-use/", views.terms_of_use, name="terms_of_use"),
+    path("accept-terms/", views.accept_terms, name="accept_terms"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path(
         "password-change-required/", 

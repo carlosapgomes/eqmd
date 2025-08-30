@@ -109,6 +109,7 @@ MIDDLEWARE = [
     "simple_history.middleware.HistoryRequestMiddleware",  # Built-in history tracking
     "apps.core.middleware.EnhancedHistoryMiddleware",      # Our IP tracking enhancement
     "apps.core.middleware.PasswordChangeRequiredMiddleware",  # Force password change
+    "apps.core.middleware.TermsAcceptanceRequiredMiddleware",  # Force terms acceptance
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

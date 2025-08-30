@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% load static %}
+{% load hospital_tags %}
+
+{% block title %}Aceitar Termos de Uso - {% hospital_name %}{% endblock title %}
+
+{% block header %}
+<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold text-medical-primary d-flex align-items-center" href="{% url 'core:landing_page' %}">
+      <img src="{% static 'images/logo.png' %}" alt="{% hospital_name %} Logo" height="32" class="me-2" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1))">
+      {% hospital_name %}
+    </a>
+    <div class="d-flex ms-auto">
+      <a href="{% url 'account_logout' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-box-arrow-right me-2"></i>
+        Sair
+      </a>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center bg-medical-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-xl-7">
+        <div class="card card-medical shadow-lg">
+          <div class="card-body p-5">
+            <!-- Header -->
+            <div class="text-center mb-4">
+              <div class="mb-3">
+                <i class="bi bi-clipboard-check text-medical-primary" style="font-size: 3rem;"></i>
+              </div>
+              <h1 class="h3 text-medical-primary fw-bold mb-3">Aceite dos Termos de Uso</h1>
+              <p class="text-muted">Para continuar usando o sistema, você deve aceitar nossos termos de uso</p>
+            </div>
+
+            <!-- Important Notice -->
+            <div class="alert alert-medical-info mb-4">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              <strong>Obrigatório:</strong> O aceite dos termos é necessário para garantir o uso adequado e seguro da plataforma EquipeMed.
+            </div>
+
+            <!-- Terms Summary -->
+            <div class="terms-summary mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-list-check me-2"></i>
+                Resumo dos Termos
+              </h2>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="card bg-light border-0 h-100">
+                    <div class="card-body p-3">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-shield-lock text-medical-teal me-2"></i>
+                        <h6 class="mb-0 fw-semibold">Confidencialidade</h6>
+                      </div>
+                      <small class="text-muted">
+                        Manter sigilo absoluto de informações de pacientes conforme LGPD
+                      </small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card bg-light border-0 h-100">
+                    <div class="card-body p-3">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-person-check text-medical-teal me-2"></i>
+                        <h6 class="mb-0 fw-semibold">Uso Profissional</h6>
+                      </div>
+                      <small class="text-muted">
+                        Utilizar o sistema apenas para finalidades médicas legítimas
+                      </small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card bg-light border-0 h-100">
+                    <div class="card-body p-3">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-eye text-medical-teal me-2"></i>
+                        <h6 class="mb-0 fw-semibold">Monitoramento</h6>
+                      </div>
+                      <small class="text-muted">
+                        Todas as atividades são registradas para auditoria
+                      </small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card bg-light border-0 h-100">
+                    <div class="card-body p-3">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-exclamation-triangle text-medical-teal me-2"></i>
+                        <h6 class="mb-0 fw-semibold">Responsabilidade</h6>
+                      </div>
+                      <small class="text-muted">
+                        Uso inadequado pode resultar em sanções disciplinares
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Full Terms Link -->
+            <div class="text-center mb-4">
+              <a href="{% url 'core:terms_of_use' %}" target="_blank" class="btn btn-outline-medical-primary">
+                <i class="bi bi-file-text me-2"></i>
+                Ler Termos Completos
+                <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.9rem;"></i>
+              </a>
+            </div>
+
+            <!-- Acceptance Form -->
+            <form method="post" class="terms-acceptance-form">
+              {% csrf_token %}
+              
+              <!-- Checkbox for agreement -->
+              <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox" id="terms-agreement" name="terms_agreement" required>
+                <label class="form-check-label" for="terms-agreement">
+                  <strong>Eu li, compreendi e aceito todos os 
+                  <a href="{% url 'core:terms_of_use' %}" target="_blank" class="text-medical-primary">
+                    termos de uso
+                  </a>
+                  do sistema</strong>
+                </label>
+              </div>
+
+              <!-- Legal Notice -->
+              <div class="alert alert-medical-warning mb-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <small>
+                  <strong>Aviso Legal:</strong> Ao aceitar estes termos, você confirma estar ciente de suas responsabilidades profissionais e legais no uso da plataforma EquipeMed. O não cumprimento pode resultar em consequências disciplinares e legais.
+                </small>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <button type="submit" class="btn btn-medical-primary w-100" id="accept-button" disabled>
+                    <i class="bi bi-check-lg me-2"></i>
+                    Aceitar e Continuar
+                  </button>
+                </div>
+                <div class="col-md-6">
+                  <a href="{% url 'account_logout' %}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-x-lg me-2"></i>
+                    Cancelar e Sair
+                  </a>
+                </div>
+              </div>
+            </form>
+
+            <!-- Footer Info -->
+            <div class="text-center border-top pt-4 mt-4">
+              <small class="text-muted">
+                <i class="bi bi-calendar3 text-medical-teal me-1"></i>
+                Última atualização: {{ last_updated|date:"d/m/Y" }}
+                <br>
+                EquipeMed - Sistema de Informação Clínica
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .min-vh-100 {
+    min-height: 100vh !important;
+  }
+  
+  .card-medical:hover {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+    transition: box-shadow 0.15s ease-in-out;
+  }
+  
+  .alert-medical-info {
+    background-color: rgba(8, 145, 178, 0.1);
+    border-color: #0891b2;
+    color: #0e7490;
+  }
+  
+  .alert-medical-warning {
+    background-color: rgba(217, 119, 6, 0.1);
+    border-color: #d97706;
+    color: #92400e;
+  }
+  
+  .btn-outline-medical-primary {
+    color: #1e3a8a;
+    border-color: #1e3a8a;
+  }
+  
+  .btn-outline-medical-primary:hover {
+    background-color: #1e3a8a;
+    color: white;
+  }
+  
+  .btn-medical-primary:focus {
+    box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.5);
+  }
+  
+  .terms-summary .card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+  }
+  
+  .form-check-input:checked {
+    background-color: #1e3a8a;
+    border-color: #1e3a8a;
+  }
+  
+  .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
+  }
+  
+  @media (max-width: 768px) {
+    .card-body {
+      padding: 2rem !important;
+    }
+    
+    .row.g-3 .col-md-6 {
+      margin-bottom: 0.5rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('terms-agreement');
+    const acceptButton = document.getElementById('accept-button');
+    
+    checkbox.addEventListener('change', function() {
+        acceptButton.disabled = !this.checked;
+    });
+    
+    // Smooth scroll behavior for terms link
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('a[href*="#"]')) {
+            e.preventDefault();
+            const targetId = e.target.closest('a').getAttribute('href').split('#')[1];
+            if (targetId) {
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

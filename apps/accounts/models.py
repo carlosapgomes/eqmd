@@ -33,6 +33,16 @@ class EqmdCustomUser(AbstractUser):
         help_text="User must change password before accessing the system"
     )
     
+    # Terms acceptance for legal compliance
+    terms_accepted = models.BooleanField(
+        default=False,
+        help_text="User has accepted the terms of use"
+    )
+    terms_accepted_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the user accepted the terms"
+    )
+    
     # History tracking
     history = HistoricalRecords(
         history_change_reason_field=models.TextField(null=True),
