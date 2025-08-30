@@ -247,6 +247,14 @@ uv run python manage.py detect_suspicious_activity --comprehensive --days=7
 uv run python manage.py security_alert_monitor --continuous --critical-only
 uv run python manage.py security_report --days=30 --format=json --output=report.json
 
+# User lifecycle management commands
+
+docker compose exec eqmd python manage.py check_user_expiration --dry-run
+docker compose exec eqmd python manage.py send_expiration_notifications --dry-run
+docker compose exec eqmd python manage.py cleanup_inactive_users --format table
+docker compose exec eqmd python manage.py extend_user_access username --days 90 --reason "Extension reason"
+docker compose exec eqmd python manage.py lifecycle_report --output-file report.csv
+
 ````
 
 ## Project Architecture
@@ -269,6 +277,7 @@ uv run python manage.py security_report --days=30 --format=json --output=report.
 - **Authentication**: django-allauth with email-based login
 - **Frontend**: Bootstrap 5.3 (user-facing only), Webpack, Portuguese localization
 - **Security**: UUID identifiers, CSRF protection, role-based permissions, comprehensive audit history
+- **User Lifecycle Management**: Automated account expiration, activity tracking, and renewal workflows for residents/students
 - **Testing**: pytest + Django test runner, factory-boy, comprehensive coverage
 - **Hospital Configuration**: Environment-based single hospital setup
 - **Permission System**: Simple role-based access control for medical staff
@@ -285,6 +294,32 @@ uv run python manage.py security_report --days=30 --format=json --output=report.
 - Patient history: `/patients/<patient_id>/history/`
 
 **📖 Detailed documentation**: See [docs/security/audit-history.md](docs/security/audit-history.md)
+
+## User Lifecycle Management
+
+**EquipeMed includes automated user lifecycle management for account expiration and renewal.**
+
+### Quick Reference
+- Automated account expiration for residents and students
+- Simple activity tracking and status management
+- Self-service renewal workflows with administrative approval
+- Management commands for daily automation and reporting
+- Email notifications for expiration warnings
+
+### Key Commands
+
+```bash
+docker compose exec eqmd python manage.py check_user_expiration --dry-run
+docker compose exec eqmd python manage.py send_expiration_notifications
+docker compose exec eqmd python manage.py extend_user_access username --days 90 --reason "reason"
+docker compose exec eqmd python manage.py bulk_user_operations set-expiration --role resident --months 12
+docker compose exec eqmd python manage.py lifecycle_report --output-file report.csv
+```
+
+**📖 Detailed documentation**: 
+- [docs/security/user-lifecycle-management.md](docs/security/user-lifecycle-management.md) - Complete system overview
+- [docs/security/user-lifecycle-admin-setup.md](docs/security/user-lifecycle-admin-setup.md) - Admin configuration guide
+- [docs/security/user-lifecycle-cronjobs.md](docs/security/user-lifecycle-cronjobs.md) - Automated scheduling setup
 
 ## App Details
 
