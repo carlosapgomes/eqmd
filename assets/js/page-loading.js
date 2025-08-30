@@ -86,7 +86,31 @@
         return true;
     }
     
-    // Add click event listeners to navigation links
+    // Check if form should trigger loading indicator
+    function shouldShowFormLoading(form) {
+        // Skip forms that explicitly opt out
+        if (form.hasAttribute('data-no-loading') || form.classList.contains('no-loading')) {
+            return false;
+        }
+        
+        // Skip AJAX forms
+        if (form.hasAttribute('data-ajax') || form.classList.contains('ajax-form')) {
+            return false;
+        }
+        
+        // Skip forms that stay on same page (method=GET with no action change)
+        const method = form.method?.toLowerCase() || 'get';
+        const action = form.action;
+        
+        // Skip GET forms that don't change URL (like search/filter forms)
+        if (method === 'get' && (!action || action === window.location.href || action === window.location.pathname)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Add click event listeners to navigation links and form submissions
     function initializeNavLoading() {
         // Listen to all link clicks
         document.addEventListener('click', function(event) {
@@ -98,6 +122,18 @@
             
             // Show loading with small delay to avoid flicker on fast responses
             setTimeout(showLoading, 100);
+        });
+        
+        // Listen to form submissions
+        document.addEventListener('submit', function(event) {
+            const form = event.target;
+            
+            if (!shouldShowFormLoading(form)) {
+                return;
+            }
+            
+            // Show loading immediately for form submissions
+            showLoading();
         });
         
         // Hide loading when page starts to unload (navigation is happening)
@@ -122,9 +158,17 @@
             loadingTimeout = setTimeout(hideLoading, 15000); // 15 second max
         }
         
+        // Reset timeout for both link clicks and form submissions
         document.addEventListener('click', function(event) {
             const link = event.target.closest('a');
             if (link && shouldShowLoading(link)) {
+                resetLoadingTimeout();
+            }
+        });
+        
+        document.addEventListener('submit', function(event) {
+            const form = event.target;
+            if (shouldShowFormLoading(form)) {
                 resetLoadingTimeout();
             }
         });
