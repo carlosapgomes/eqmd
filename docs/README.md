@@ -25,6 +25,7 @@
 ## 🔒 Security & Permissions
 
 - **[Audit History](security/audit-history.md)** - Change tracking and monitoring
+- **[Terms of Use System](security/terms-of-use.md)** - Legal compliance and user consent management
 - **[Permissions](permissions/)** - Role-based access control system
 
 ## 🛠️ Development

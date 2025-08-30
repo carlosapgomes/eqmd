@@ -7,7 +7,7 @@
 All model changes are automatically tracked in dedicated history tables:
 
 - **Patient changes**: `patients_historicalpatient`
-- **User account changes**: `accounts_historicaleqmdcustomuser`
+- **User account changes**: `accounts_historicaleqmdcustomuser` (includes terms acceptance)
 - **Medical events**: `events_historicalevent`
 - **System configuration**: `patients_historicalallowedtag`
 
@@ -116,3 +116,10 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/te
 - Include meaningful change reasons: `obj._change_reason = "Reason for change"`
 - Test history functionality with comprehensive test suites
 - Respect audit trail data - never modify history tables directly
+
+## Related Security Features
+
+- **[Terms of Use System](terms-of-use.md)**: Legal compliance with audit trail for user consent
+- **Password Change Requirements**: Forced password changes for admin-created users
+- **IP Address Tracking**: Enhanced history middleware with client IP logging
+- **Security Monitoring**: Comprehensive detection and alerting system

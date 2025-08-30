@@ -33,9 +33,17 @@ def terms_of_use(request):
     """
     Renders the terms of use page for the medical platform.
     """
+    # Determine the appropriate return URL
+    referer = request.META.get('HTTP_REFERER', '')
+    if 'accept-terms' in referer:
+        return_url = reverse('core:accept_terms')
+    else:
+        return_url = reverse('account_login')
+    
     context = {
         'page_title': 'Termos de Uso',
         'last_updated': datetime(2024, 1, 1),  # Update this when terms change
+        'return_url': return_url,
     }
     return render(request, 'core/terms_of_use.html', context)
 
