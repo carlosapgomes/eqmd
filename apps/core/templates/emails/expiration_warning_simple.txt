@@ -1,0 +1,31 @@
+Aviso de Expiração de Acesso - EquipeMed
+=========================================
+
+Olá {{ user.get_full_name|default:user.username }},
+
+Seu acesso ao sistema EquipeMed expirará em {{ days_left }} dia{{ days_left|pluralize }}.
+
+Detalhes:
+---------
+Data de Expiração: {{ expiration_date|date:"d/m/Y" }}
+Dias Restantes: {{ days_left }}
+
+O que fazer:
+------------
+Para continuar usando o sistema após esta data, você precisa solicitar a renovação do seu acesso.
+
+1. Acesse o sistema e vá para a página de renovação:
+   {{ renewal_url }}
+
+2. Preencha o formulário com suas informações atuais
+
+3. Aguarde a aprovação do administrador
+
+Caso tenha dúvidas ou precise de ajuda, entre em contato com:
+{{ contact_email }}
+
+Importante: Após a data de expiração, você não conseguirá mais acessar o sistema até que a renovação seja aprovada.
+
+---
+Sistema EquipeMed
+Enviado automaticamente em {{ "now"|date:"d/m/Y H:i" }}

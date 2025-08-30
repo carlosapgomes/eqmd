@@ -135,3 +135,200 @@ class TermsAcceptanceRequiredMiddleware:
             pass
         
         return redirect('core:accept_terms')
+
+
+class UserLifecycleMiddleware:
+    """
+    Simplified middleware that enforces essential user lifecycle rules.
+    
+    Checks for:
+    - Account expiration
+    - Administrative suspension
+    - Departed user status
+    
+    Integrates with existing security flow (after terms, before password change).
+    """
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.logger = logging.getLogger('security.user_lifecycle')
+    
+    def __call__(self, request):
+        # Skip middleware for unauthenticated users
+        if not request.user.is_authenticated:
+            return self.get_response(request)
+        
+        # Skip middleware for superusers (admin access)
+        if request.user.is_superuser:
+            return self.get_response(request)
+        
+        # Update simple activity tracking
+        self._update_user_activity(request)
+        
+        # Check lifecycle status and enforce restrictions
+        lifecycle_response = self._check_lifecycle_status(request)
+        if lifecycle_response:
+            return lifecycle_response
+        
+        return self.get_response(request)
+    
+    def _update_user_activity(self, request):
+        """Update simple user activity tracking"""
+        user = request.user
+        
+        # Only update for meaningful activities (not static files, etc.)
+        if self._is_meaningful_activity(request):
+            user.update_activity_timestamp()
+            
+            # Update status if user was previously inactive
+            if user.account_status == 'inactive':
+                user.account_status = 'active'
+                user._change_reason = 'User reactivated due to activity'
+                user.save(update_fields=['account_status', 'last_meaningful_activity'])
+            else:
+                user.save(update_fields=['last_meaningful_activity'])
+    
+    def _is_meaningful_activity(self, request):
+        """Determine if request represents meaningful user activity"""
+        # Skip static files and basic endpoints
+        if (request.path_info.startswith('/static/') or 
+            request.path_info.startswith('/media/') or
+            request.path_info in ['/health/', '/manifest.json']):
+            return False
+        
+        # Skip AJAX polling requests
+        if request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
+            if request.path_info.endswith('/status/') or 'poll' in request.path_info:
+                return False
+        
+        return True
+    
+    def _check_lifecycle_status(self, request):
+        """Check user lifecycle status and return appropriate response"""
+        user = request.user
+        
+        # Update user status if needed (simplified)
+        self._update_user_status(user)
+        
+        # Check for blocking conditions
+        if user.is_expired:
+            return self._handle_expired_user(request, user)
+        
+        if user.account_status == 'suspended':
+            return self._handle_suspended_user(request, user)
+        
+        if user.account_status == 'departed':
+            return self._handle_departed_user(request, user)
+        
+        if user.account_status == 'renewal_required':
+            return self._handle_renewal_required(request, user)
+        
+        # Allow lifecycle management URLs
+        lifecycle_urls = [
+            reverse('core:account_expired'),
+            reverse('core:account_suspended'), 
+            reverse('core:account_renewal_required'),
+            reverse('account_logout'),
+            '/admin/logout/',
+        ]
+        
+        if request.path_info in lifecycle_urls:
+            return None
+        
+        # No blocking conditions - allow access
+        return None
+    
+    def _update_user_status(self, user):
+        """Update user status based on current conditions (simplified)"""
+        old_status = user.account_status
+        new_status = None
+        
+        # Simple status updates based on expiration only
+        if user.is_expired and user.account_status != 'expired':
+            new_status = 'expired'
+        elif user.is_expiring_soon and user.account_status == 'active':
+            new_status = 'expiring_soon'
+        elif user.is_inactive and user.account_status in ['active', 'expiring_soon']:
+            new_status = 'inactive'
+        
+        # Update status if changed
+        if new_status and new_status != old_status:
+            user.account_status = new_status
+            user._change_reason = f'Status auto-updated from {old_status} to {new_status}'
+            user.save(update_fields=['account_status'])
+            
+            # Log status change
+            self.logger.info(
+                f'User lifecycle status updated: {user.username} '
+                f'from {old_status} to {new_status}'
+            )
+    
+    def _handle_expired_user(self, request, user):
+        """Handle expired user access attempt"""
+        self.logger.warning(
+            f'Expired user access attempt: {user.username} '
+            f'(expired: {user.access_expires_at}) '
+            f'accessing {request.path_info}'
+        )
+        
+        try:
+            messages.error(
+                request,
+                f'Sua conta expirou em {user.access_expires_at.strftime("%d/%m/%Y")}. '
+                'Entre em contato com o administrador para renovar o acesso.'
+            )
+        except Exception:
+            pass
+        
+        return redirect('core:account_expired')
+    
+    def _handle_suspended_user(self, request, user):
+        """Handle suspended user access attempt"""
+        self.logger.warning(
+            f'Suspended user access attempt: {user.username} '
+            f'accessing {request.path_info}'
+        )
+        
+        try:
+            messages.error(
+                request,
+                'Sua conta foi suspensa. Entre em contato com o administrador.'
+            )
+        except Exception:
+            pass
+        
+        return redirect('core:account_suspended')
+    
+    def _handle_departed_user(self, request, user):
+        """Handle departed user access attempt"""
+        self.logger.error(
+            f'Departed user access attempt: {user.username} '
+            f'accessing {request.path_info}'
+        )
+        
+        try:
+            messages.error(
+                request,
+                'Esta conta foi desativada permanentemente.'
+            )
+        except Exception:
+            pass
+        
+        return redirect('core:account_departed')
+    
+    def _handle_renewal_required(self, request, user):
+        """Handle user requiring access renewal"""
+        self.logger.info(
+            f'User requiring renewal: {user.username} '
+            f'accessing {request.path_info}'
+        )
+        
+        try:
+            messages.warning(
+                request,
+                'Seu acesso requer renovação. Confirme suas informações para continuar.'
+            )
+        except Exception:
+            pass
+        
+        return redirect('core:account_renewal_required')

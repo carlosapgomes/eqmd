@@ -16,6 +16,8 @@ import logging
 from datetime import datetime
 from apps.patients.models import Patient
 from allauth.account.views import PasswordChangeView
+from django.contrib.auth import logout
+from .services.simple_notifications import send_simple_renewal_notification
 
 logger = logging.getLogger(__name__)
 
@@ -501,3 +503,69 @@ class PasswordChangeRequiredView(PasswordChangeView):
         """Add any additional form configuration."""
         kwargs = super().get_form_kwargs()
         return kwargs
+
+
+# User Lifecycle Status Views
+
+@login_required
+def account_expired(request):
+    """Handle expired account access"""
+    context = {
+        'page_title': 'Conta Expirada',
+        'user': request.user,
+        'expiration_date': request.user.access_expires_at,
+        'contact_admin': True,
+    }
+    return render(request, 'core/account_expired.html', context)
+
+
+@login_required  
+def account_suspended(request):
+    """Handle suspended account access"""
+    context = {
+        'page_title': 'Conta Suspensa',
+        'user': request.user,
+        'contact_admin': True,
+    }
+    return render(request, 'core/account_suspended.html', context)
+
+
+@login_required
+def account_renewal_required(request):
+    """Handle account requiring renewal (simplified)"""
+    if request.method == 'POST':
+        from .forms import SimplifiedAccountRenewalForm
+        form = SimplifiedAccountRenewalForm(request.POST, user=request.user)
+        if form.is_valid():
+            # Create renewal request
+            renewal_request = form.save()
+            
+            # Send basic email notification to admin
+            send_simple_renewal_notification(renewal_request)
+            
+            messages.success(
+                request,
+                'Solicitação de renovação enviada. Você receberá uma resposta em breve.'
+            )
+            return redirect('core:dashboard')
+    else:
+        from .forms import SimplifiedAccountRenewalForm
+        form = SimplifiedAccountRenewalForm(user=request.user)
+    
+    context = {
+        'page_title': 'Renovação de Acesso',
+        'form': form,
+        'user': request.user,
+    }
+    return render(request, 'core/account_renewal_required.html', context)
+
+
+def account_departed(request):
+    """Handle departed user access attempt - force logout"""
+    logout(request)
+    
+    context = {
+        'page_title': 'Acesso Negado',
+        'message': 'Esta conta foi desativada permanentemente.',
+    }
+    return render(request, 'core/account_departed.html', context)

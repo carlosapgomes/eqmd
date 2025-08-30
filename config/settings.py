@@ -110,6 +110,7 @@ MIDDLEWARE = [
     "apps.core.middleware.EnhancedHistoryMiddleware",      # Our IP tracking enhancement
     "apps.core.middleware.PasswordChangeRequiredMiddleware",  # Force password change
     "apps.core.middleware.TermsAcceptanceRequiredMiddleware",  # Force terms acceptance
+    "apps.core.middleware.UserLifecycleMiddleware",  # User lifecycle management
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -390,4 +391,41 @@ PDF_CONFIG = {
 # Django Simple History Configuration
 SIMPLE_HISTORY_HISTORY_ID_USE_UUID = True
 SIMPLE_HISTORY_EDIT = True
+
+# User Lifecycle Management (Simplified)
+USER_LIFECYCLE_CONFIG = {
+    'ENABLE_ACTIVITY_TRACKING': True,
+    'ENABLE_AUTO_STATUS_UPDATES': True,
+    'INACTIVITY_THRESHOLD_DAYS': 90,
+    'EXPIRATION_WARNING_DAYS': [30, 14, 7, 3, 1],
+}
+
+# Logging for lifecycle events
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'equipemd.log',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'security.password_change': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'security.user_lifecycle': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
 

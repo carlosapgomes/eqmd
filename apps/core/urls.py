@@ -19,6 +19,12 @@ urlpatterns = [
         views.PasswordChangeRequiredView.as_view(), 
         name="password_change_required"
     ),
+    
+    # Essential user lifecycle status pages
+    path("account/expired/", views.account_expired, name="account_expired"),
+    path("account/suspended/", views.account_suspended, name="account_suspended"),
+    path("account/renewal-required/", views.account_renewal_required, name="account_renewal_required"),
+    path("account/departed/", views.account_departed, name="account_departed"),
     # Permission test URLs
     path("test/permissions/", test_views.permission_test_view, name="permission_test"),
     path("test/doctor-only/", test_views.doctor_only_view, name="doctor_only_test"),
