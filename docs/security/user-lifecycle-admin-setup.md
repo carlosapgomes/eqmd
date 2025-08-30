@@ -7,7 +7,7 @@ This guide provides detailed instructions for administrators to set up, configur
 Before setting up user lifecycle management, ensure:
 
 - ✅ Phase 1 database migrations have been applied
-- ✅ Phase 2 middleware is configured and active  
+- ✅ Phase 2 middleware is configured and active
 - ✅ Phase 3 management commands are available
 - ✅ Email system is configured for notifications
 - ✅ Django admin access is available
@@ -27,10 +27,11 @@ docker compose exec eqmd python manage.py showmigrations accounts
 ```
 
 Expected output should show lifecycle migrations as applied:
+
 ```
 accounts
  [X] 0001_initial
- [X] 0002_add_profession_fields  
+ [X] 0002_add_profession_fields
  [X] 0003_add_terms_acceptance
  [X] 0004_add_essential_lifecycle_fields
  [X] 0005_populate_essential_lifecycle_data
@@ -50,6 +51,7 @@ MIDDLEWARE = [
 ```
 
 Test middleware functionality:
+
 ```bash
 # Check that middleware loads without errors
 docker compose exec eqmd python manage.py check --deploy
@@ -79,6 +81,7 @@ docker compose exec eqmd python manage.py help | grep -E "(check_user|send_expir
 ```
 
 Expected commands:
+
 - `check_user_expiration`
 - `send_expiration_notifications`
 - `cleanup_inactive_users`
@@ -110,7 +113,7 @@ docker compose exec eqmd python manage.py bulk_user_operations set-expiration \
   --months 12 \
   --reason "Standard residency duration"
 
-# Set all students to expire in 6 months  
+# Set all students to expire in 6 months
 docker compose exec eqmd python manage.py bulk_user_operations set-expiration \
   --role student \
   --months 6 \
@@ -184,12 +187,13 @@ uv run python manage.py check_user_expiration --role resident
 ```
 
 Example output:
+
 ```
 Starting simplified expiration check (dry_run=False)
 Found 4 users to check
 
 2 users expiring soon:
-  - sample_res_ana (Residente) - 25 days left  
+  - sample_res_ana (Residente) - 25 days left
   - sample_res_carlos (Residente) - 28 days left
 
 0 users newly expired:
@@ -248,6 +252,7 @@ uv run python manage.py extend_user_access expired_user \
 ```
 
 Example session:
+
 ```
 Current user status:
   Username: sample_res_ana
@@ -256,7 +261,7 @@ Current user status:
 
 Proposed extension:
   Extension period: 90 days
-  New expiration: 27/05/2026 00:00  
+  New expiration: 27/05/2026 00:00
   Reason: Performance review completed
 
 Confirm extension? (y/N): y
@@ -268,6 +273,7 @@ Successfully extended access for sample_res_ana
 #### Bulk Access Extension
 
 Create a CSV file with extension data:
+
 ```csv
 username,days,reason
 sample_res_ana,90,Performance review completed
@@ -276,13 +282,14 @@ sample_est_paula,60,Rotation extension
 ```
 
 Apply bulk extensions:
+
 ```bash
 # Test with dry run first
 uv run python manage.py bulk_user_operations extend \
   --csv-file extensions.csv \
   --dry-run
 
-# Apply actual changes  
+# Apply actual changes
 uv run python manage.py bulk_user_operations extend \
   --csv-file extensions.csv
 ```
@@ -432,13 +439,16 @@ print(f'Users needing new notifications: {old_notifications.count()}')
 ### Common Issues
 
 #### Issue: Commands not found
+
 ```bash
 # Verify Django can find the commands
 uv run python manage.py help | grep lifecycle
 ```
+
 **Solution**: Ensure migrations are applied and Django can import the commands module.
 
 #### Issue: Email notifications not sending
+
 ```bash
 # Test email configuration
 uv run python manage.py shell -c "
@@ -446,9 +456,11 @@ from django.core.mail import send_mail
 send_mail('Test', 'Test message', 'from@example.com', ['to@example.com'])
 "
 ```
+
 **Solution**: Check email backend configuration and SMTP settings.
 
 #### Issue: Users not being blocked despite expired status
+
 ```bash
 # Check middleware configuration
 uv run python manage.py shell -c "
@@ -462,7 +474,9 @@ else:
 ```
 
 #### Issue: Activity tracking not updating
+
 Check that middleware is processing requests:
+
 ```bash
 # Monitor logs for middleware activity
 tail -f /var/log/django/security.log | grep user_lifecycle
@@ -572,7 +586,7 @@ for admin in admins:
 After completing the initial setup:
 
 1. **Set up automated cronjobs** - See [Cronjob Setup Guide](user-lifecycle-cronjobs.md)
-2. **Configure monitoring** - Set up log monitoring for lifecycle events  
+2. **Configure monitoring** - Set up log monitoring for lifecycle events
 3. **Train administrators** - Ensure admins understand renewal request workflows
 4. **Document procedures** - Create internal procedures for common scenarios
 5. **Plan rollback strategy** - Prepare rollback procedures in case of issues
@@ -580,7 +594,9 @@ After completing the initial setup:
 ## Support
 
 For additional help:
+
 - Review management command help: `uv run python manage.py COMMAND_NAME --help`
-- Check application logs: `/var/log/django/` 
+- Check application logs: `/var/log/django/`
 - Monitor audit history via Django Admin
 - Consult main [User Lifecycle Documentation](user-lifecycle-management.md)
+
