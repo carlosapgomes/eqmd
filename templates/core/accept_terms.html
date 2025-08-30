@@ -118,8 +118,8 @@
               {% csrf_token %}
               
               <!-- Checkbox for agreement -->
-              <div class="form-check mb-4">
-                <input class="form-check-input" type="checkbox" id="terms-agreement" name="terms_agreement" required>
+              <div class="form-check mb-4 ms-4">
+                <input class="form-check-input border-primary" type="checkbox" id="terms-agreement" name="terms_agreement" required>
                 <label class="form-check-label" for="terms-agreement">
                   <strong>Eu li, compreendi e aceito todos os 
                   <a href="{% url 'core:terms_of_use' %}" class="text-medical-primary">
