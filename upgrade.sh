@@ -172,7 +172,7 @@ print_status "Django Site Framework configuration updated"
 # Check for missing infrastructure and set it up if needed
 print_info "Checking for missing infrastructure setup..."
 
-# Check and setup log directory
+# Check and setup log directory for cronjob output
 if [ ! -d "/var/log/eqmd" ]; then
     print_info "Creating missing log directory..."
     mkdir -p /var/log/eqmd
