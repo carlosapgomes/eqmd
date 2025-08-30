@@ -12,9 +12,9 @@
       {% hospital_name %}
     </a>
     <div class="d-flex ms-auto">
-      <a href="{% url 'account_login' %}" class="btn btn-outline-secondary">
+      <a href="{{ return_url }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-2"></i>
-        Voltar ao Login
+        Voltar
       </a>
     </div>
   </div>
@@ -203,6 +203,19 @@
                 <i class="bi bi-check-circle-fill me-2"></i>
                 <strong>Confirmação:</strong> Ao utilizar este sistema, você confirma que leu, compreendeu e concorda com todos os termos acima.
               </div>
+              
+              <!-- Bottom Navigation -->
+              <div class="d-flex justify-content-center gap-3 mb-4">
+                <a href="{{ return_url }}" class="btn btn-outline-medical-primary">
+                  <i class="bi bi-arrow-left me-2"></i>
+                  Voltar
+                </a>
+                <a href="{% url 'account_login' %}" class="btn btn-medical-primary">
+                  <i class="bi bi-box-arrow-in-right me-2"></i>
+                  Ir para Login
+                </a>
+              </div>
+              
               <p class="text-muted small mb-0">
                 EquipeMed - Sistema de Informação Clínica
                 <br>
@@ -267,3 +280,4 @@
   }
 </style>
 {% endblock %}
+

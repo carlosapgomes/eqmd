@@ -77,6 +77,24 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/core/tests/test_p
 DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/accounts/tests/test_password_change_required.py apps/core/tests/test_password_change_middleware.py
 ```
 
+### Terms of Use System Tests
+
+```bash
+# Test terms acceptance functionality (when tests are available)
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/accounts/tests/test_terms_acceptance.py
+
+# Test terms acceptance middleware (when tests are available)  
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/core/tests/test_terms_middleware.py
+
+# Manual verification of terms system
+uv run python manage.py shell -c "
+from apps.accounts.models import EqmdCustomUser
+users = EqmdCustomUser.objects.all()
+print(f'Users without terms accepted: {users.filter(terms_accepted=False).count()}')
+print(f'Users with terms accepted: {users.filter(terms_accepted=True).count()}')
+"
+```
+
 # Frontend
 
 npm install && npm run build
