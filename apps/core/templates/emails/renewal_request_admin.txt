@@ -1,0 +1,38 @@
+Nova Solicitação de Renovação de Acesso - EquipeMed
+================================================================
+
+Um usuário solicitou renovação de acesso ao sistema EquipeMed.
+
+Detalhes do Usuário:
+-------------------
+Nome de Usuário: {{ user.username }}
+Nome Completo: {{ user.get_full_name|default:"N/A" }}
+Email: {{ user.email }}
+Profissão: {{ user.get_profession_type_display|default:"N/A" }}
+Status Atual: {{ user.account_status|default:"N/A" }}
+
+Detalhes da Solicitação:
+------------------------
+Posição/Cargo Atual: {{ renewal_request.current_position }}
+Supervisor: {{ renewal_request.supervisor_name }}
+Email do Supervisor: {{ renewal_request.supervisor_email }}
+Duração Esperada: {{ renewal_request.expected_duration_months }} meses
+Data da Solicitação: {{ renewal_request.created_at|date:"d/m/Y H:i" }}
+
+Motivo da Renovação:
+-------------------
+{{ renewal_request.renewal_reason }}
+
+Ações Necessárias:
+------------------
+1. Revisar a solicitação de renovação
+2. Verificar as informações com o supervisor mencionado
+3. Aprovar ou rejeitar a solicitação no painel administrativo
+
+Link para Administração:
+-----------------------
+{{ admin_url }}
+
+---
+Sistema EquipeMed
+Enviado automaticamente em {{ "now"|date:"d/m/Y H:i" }}

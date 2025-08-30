@@ -1,0 +1,51 @@
+{% extends "base_public.html" %}
+{% load static %}
+
+{% block page_title %}{{ page_title }}{% endblock page_title %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-times me-2"></i>
+                        Acesso Negado
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-door-closed text-dark" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <h5 class="text-dark mb-3">Conta Desativada</h5>
+                    
+                    <p class="text-muted mb-4">
+                        {{ message|default:"Esta conta foi desativada permanentemente e não pode mais acessar o sistema." }}
+                    </p>
+                    
+                    <div class="alert alert-secondary">
+                        <h6 class="alert-heading">Informação</h6>
+                        <p class="mb-0">
+                            Se você acredita que isso é um erro, entre em contato com o administrador do sistema
+                            para esclarecimentos.
+                        </p>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-block">
+                        <a href="{% url 'core:landing_page' %}" class="btn btn-primary">
+                            <i class="fas fa-home me-2"></i>
+                            Página Inicial
+                        </a>
+                        <a href="{% url 'account_login' %}" class="btn btn-secondary">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
