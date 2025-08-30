@@ -11,7 +11,9 @@ from django.urls import reverse_lazy
 from django.conf import settings
 from django.urls import reverse
 from urllib.parse import urlparse
+from django.utils import timezone
 import logging
+from datetime import datetime
 from apps.patients.models import Patient
 from allauth.account.views import PasswordChangeView
 
@@ -25,6 +27,60 @@ def landing_page(request):
         'page_title': 'Bem-vindo ao EquipeMed',
     }
     return render(request, 'core/landing_page.html', context)
+
+
+def terms_of_use(request):
+    """
+    Renders the terms of use page for the medical platform.
+    """
+    context = {
+        'page_title': 'Termos de Uso',
+        'last_updated': datetime(2024, 1, 1),  # Update this when terms change
+    }
+    return render(request, 'core/terms_of_use.html', context)
+
+
+@login_required
+def accept_terms(request):
+    """
+    Handles terms acceptance for authenticated users.
+    
+    GET: Shows the terms acceptance page
+    POST: Records the terms acceptance and redirects to dashboard
+    """
+    if request.method == 'POST':
+        # Record terms acceptance
+        request.user.terms_accepted = True
+        request.user.terms_accepted_at = timezone.now()
+        request.user._change_reason = 'Terms of use accepted'
+        request.user.save(update_fields=['terms_accepted', 'terms_accepted_at'])
+        
+        # Log the acceptance for security audit
+        from .history import get_client_ip
+        logger.info(
+            f'Terms accepted by user {request.user.username} '
+            f'from IP {get_client_ip(request)} '
+            f'at {timezone.now()}'
+        )
+        
+        # Success message
+        messages.success(
+            request,
+            _('Termos de uso aceitos com sucesso! Bem-vindo ao sistema.')
+        )
+        
+        # Redirect to dashboard or intended destination
+        next_url = request.GET.get('next')
+        if next_url and next_url.startswith('/'):
+            return redirect(next_url)
+        return redirect('core:dashboard')
+    
+    # GET request - show terms acceptance form
+    context = {
+        'page_title': 'Aceitar Termos de Uso',
+        'last_updated': datetime(2024, 1, 1),  # Update this when terms change
+    }
+    return render(request, 'core/accept_terms.html', context)
 
 def manifest_json(request):
     """Serve dynamic PWA manifest with subtle hospital customization"""

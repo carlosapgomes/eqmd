@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% load static %}
+{% load hospital_tags %}
+
+{% block title %}Termos de Uso - {% hospital_name %}{% endblock title %}
+
+{% block header %}
+<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold text-medical-primary d-flex align-items-center" href="{% url 'core:landing_page' %}">
+      <img src="{% static 'images/logo.png' %}" alt="{% hospital_name %} Logo" height="32" class="me-2" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1))">
+      {% hospital_name %}
+    </a>
+    <div class="d-flex ms-auto">
+      <a href="{% url 'account_login' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar ao Login
+      </a>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+      <div class="card card-medical shadow">
+        <div class="card-body p-5">
+          <!-- Header -->
+          <div class="text-center mb-5">
+            <div class="mb-3">
+              <i class="bi bi-shield-check text-medical-primary" style="font-size: 3rem;"></i>
+            </div>
+            <h1 class="h3 text-medical-primary fw-bold mb-3">Termos de Uso</h1>
+            <p class="text-muted">EquipeMed - Sistema de Informação Clínica</p>
+            <p class="text-muted small">Última atualização: {{ last_updated|date:"d/m/Y" }}</p>
+          </div>
+
+          <!-- Terms Content -->
+          <div class="terms-content">
+            <section class="mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                1. Aceite dos Termos
+              </h2>
+              <p>
+                Ao acessar e utilizar a plataforma EquipeMed, você concorda em cumprir e estar legalmente vinculado a estes Termos de Uso. Se você não concordar com qualquer parte destes termos, não deve utilizar este sistema.
+              </p>
+            </section>
+
+            <section class="mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-hospital me-2"></i>
+                2. Finalidade do Sistema
+              </h2>
+              <p>
+                O EquipeMed é um sistema de informação clínica desenvolvido para facilitar o trabalho da equipe médica através de:
+              </p>
+              <ul class="ps-3">
+                <li>Organização de informações de pacientes</li>
+                <li>Registro e acompanhamento de evolução clínica</li>
+                <li>Facilitar coordenação entre equipes médicas</li>
+                <li>Documentação de procedimentos e observações médicas</li>
+                <li>Controle de informações sobre leitos e transferências</li>
+              </ul>
+              <p class="mt-3">
+                <strong>Importante:</strong> O EquipeMed é uma ferramenta de apoio independente e não substitui os sistemas oficiais da instituição onde você trabalha.
+              </p>
+            </section>
+
+            <section class="mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-shield-lock me-2"></i>
+                3. Confidencialidade e Privacidade
+              </h2>
+              <p>
+                <strong>Você se compromete a:</strong>
+              </p>
+              <ul class="ps-3">
+                <li>Manter absoluta confidencialidade de todas as informações de pacientes</li>
+                <li>Não divulgar dados médicos fora do contexto profissional necessário</li>
+                <li>Utilizar informações apenas para finalidades médicas legítimas</li>
+                <li>Não compartilhar credenciais de acesso com terceiros</li>
+                <li>Reportar qualquer suspeita de vazamento de dados imediatamente</li>
+              </ul>
+              <div class="alert alert-medical-danger mt-3">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>ATENÇÃO:</strong> O acesso não autorizado ou uso inadequado de dados médicos pode resultar em sanções disciplinares, civis e criminais conforme a Lei Geral de Proteção de Dados (LGPD) e legislação médica vigente. Sua instituição de trabalho também pode aplicar medidas disciplinares cabíveis.
+              </div>
+            </section>
+
+            <section class="mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-person-check me-2"></i>
+                4. Responsabilidades do Usuário
+              </h2>
+              <p>
+                Como usuário autorizado, você é responsável por:
+              </p>
+              <ul class="ps-3">
+                <li>Manter suas credenciais de acesso seguras e confidenciais</li>
+                <li>Utilizar o sistema apenas durante seu horário de trabalho ou plantão</li>
+                <li>Inserir informações precisas e atualizadas</li>
+                <li>Seguir os protocolos médicos e administrativos do hospital</li>
+                <li>Fazer logout adequadamente após o uso</li>
+                <li>Não tentar acessar áreas ou funcionalidades não autorizadas</li>
+              </ul>
+            </section>
+
+            <section class="mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-clipboard-data me-2"></i>
+                5. Uso Adequado do Sistema
+              </h2>
+              <p>
+                <strong>Usos permitidos:</strong>
+              </p>
+              <ul class="ps-3">
+                <li>Consulta de informações de pacientes sob seus cuidados</li>
+                <li>Registro de evoluções médicas e procedimentos</li>
+                <li>Coordenação de cuidados entre equipes</li>
+                <li>Geração de relatórios para finalidades médicas</li>
+              </ul>
+              <p class="mt-3">
+                <strong>Usos proibidos:</strong>
+              </p>
+              <ul class="ps-3">
+                <li>Acesso a dados de pacientes sem necessidade clínica</li>
+                <li>Compartilhamento de informações com pessoas não autorizadas</li>
+                <li>Uso para finalidades não médicas ou pessoais</li>
+                <li>Tentativas de burlar sistemas de segurança</li>
+                <li>Download ou impressão desnecessária de dados</li>
+              </ul>
+            </section>
+
+            <section class="mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-eye me-2"></i>
+                6. Monitoramento e Auditoria
+              </h2>
+              <p>
+                O sistema registra todas as atividades dos usuários, incluindo:
+              </p>
+              <ul class="ps-3">
+                <li>Horários de acesso e logout</li>
+                <li>Pacientes acessados e modificações realizadas</li>
+                <li>Tentativas de acesso não autorizado</li>
+                <li>Downloads e impressões de documentos</li>
+              </ul>
+              <p class="mt-2">
+                Estes registros podem ser auditados pela administração do hospital e autoridades competentes quando necessário.
+              </p>
+            </section>
+
+            <section class="mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                7. Consequências do Uso Inadequado
+              </h2>
+              <p>
+                O uso inadequado do sistema pode resultar em:
+              </p>
+              <ul class="ps-3">
+                <li>Suspensão imediata do acesso ao sistema</li>
+                <li>Medidas disciplinares conforme regulamento interno</li>
+                <li>Comunicação ao Conselho Regional de Medicina (CRM)</li>
+                <li>Responsabilização civil e criminal conforme a lei</li>
+              </ul>
+            </section>
+
+            <section class="mb-4">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-telephone me-2"></i>
+                8. Suporte e Contato
+              </h2>
+              <p>
+                Para questões técnicas, dúvidas sobre o sistema ou reportar problemas de segurança:
+              </p>
+              <div class="alert alert-medical-info">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong>Suporte EquipeMed:</strong> Entre em contato através dos canais oficiais de suporte
+                <br>
+                <strong>Questões de Segurança:</strong> Reporte imediatamente qualquer suspeita de acesso não autorizado
+                <br>
+                <strong>Questões Institucionais:</strong> Consulte também a equipe de TI de sua instituição quando apropriado
+              </div>
+            </section>
+
+            <section class="mb-5">
+              <h2 class="h5 text-medical-primary fw-semibold mb-3">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                9. Atualizações dos Termos
+              </h2>
+              <p>
+                Estes termos podem ser atualizados periodicamente. Usuários serão notificados de mudanças significativas e o uso continuado do sistema após as atualizações constitui aceite dos novos termos.
+              </p>
+            </section>
+
+            <!-- Agreement Section -->
+            <div class="border-top pt-4 text-center">
+              <div class="alert alert-medical-success">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Confirmação:</strong> Ao utilizar este sistema, você confirma que leu, compreendeu e concorda com todos os termos acima.
+              </div>
+              <p class="text-muted small mb-0">
+                EquipeMed - Sistema de Informação Clínica
+                <br>
+                Documento válido para todos os usuários autorizados
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .terms-content {
+    line-height: 1.7;
+  }
+  
+  .terms-content h2 {
+    color: #1e3a8a;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+  }
+  
+  .terms-content ul li {
+    margin-bottom: 0.5rem;
+  }
+  
+  .alert-medical-info {
+    background-color: rgba(8, 145, 178, 0.1);
+    border-color: #0891b2;
+    color: #0e7490;
+  }
+  
+  .alert-medical-danger {
+    background-color: rgba(220, 38, 38, 0.1);
+    border-color: #dc2626;
+    color: #991b1b;
+  }
+  
+  .alert-medical-success {
+    background-color: rgba(34, 197, 94, 0.1);
+    border-color: #22c55e;
+    color: #15803d;
+  }
+  
+  .card-medical:hover {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+    transition: box-shadow 0.15s ease-in-out;
+  }
+  
+  @media (max-width: 768px) {
+    .card-body {
+      padding: 2rem !important;
+    }
+    
+    .terms-content h2 {
+      font-size: 1.1rem;
+    }
+  }
+</style>
+{% endblock %}
