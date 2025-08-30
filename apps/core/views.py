@@ -32,6 +32,16 @@ def landing_page(request):
     return render(request, "core/landing_page.html", context)
 
 
+def about_page(request):
+    """
+    Renders the about page with open source information.
+    """
+    context = {
+        "page_title": "Sobre o EquipeMed",
+    }
+    return render(request, "core/about_page.html", context)
+
+
 def terms_of_use(request):
     """
     Renders the terms of use page for the medical platform.

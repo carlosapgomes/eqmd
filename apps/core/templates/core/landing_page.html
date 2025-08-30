@@ -9,7 +9,10 @@
       <img src="{% static 'images/logo.png' %}" alt="EquipeMed Logo" height="36" class="me-2" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1))">
       EquipeMed
     </a>
-    <div class="d-flex ms-auto">
+    <div class="d-flex ms-auto gap-2">
+      <a href="{% url 'apps.core:about_page' %}" class="btn btn-link text-medical-primary">
+        Sobre
+      </a>
       <a href="{% url 'account_login' %}" class="btn btn-outline-primary d-flex align-items-center">
         <i class="bi bi-box-arrow-in-right me-2"></i>
         Entrar
@@ -171,7 +174,7 @@
     </div>
     
     <div class="row g-4 text-center">
-      <div class="col-md-3">
+      <div class="col-md-2 col-lg-2">
         <div class="p-3">
           <i class="bi bi-shield-fill-check text-medical-teal display-5 mb-3"></i>
           <h6 class="text-medical-primary fw-bold">Auditoria Completa</h6>
@@ -179,7 +182,7 @@
         </div>
       </div>
       
-      <div class="col-md-3">
+      <div class="col-md-2 col-lg-2">
         <div class="p-3">
           <i class="bi bi-lock-fill text-medical-teal display-5 mb-3"></i>
           <h6 class="text-medical-primary fw-bold">Criptografia Avançada</h6>
@@ -187,7 +190,7 @@
         </div>
       </div>
       
-      <div class="col-md-3">
+      <div class="col-md-2 col-lg-2">
         <div class="p-3">
           <i class="bi bi-cloud-check-fill text-medical-teal display-5 mb-3"></i>
           <h6 class="text-medical-primary fw-bold">Backup Automático</h6>
@@ -195,7 +198,15 @@
         </div>
       </div>
       
-      <div class="col-md-3">
+      <div class="col-md-2 col-lg-2">
+        <div class="p-3">
+          <i class="bi bi-code-slash text-medical-teal display-5 mb-3"></i>
+          <h6 class="text-medical-primary fw-bold">Código Aberto</h6>
+          <p class="text-muted small mb-0">Código fonte público e auditável</p>
+        </div>
+      </div>
+      
+      <div class="col-md-2 col-lg-2">
         <div class="p-3">
           <i class="bi bi-headset text-medical-teal display-5 mb-3"></i>
           <h6 class="text-medical-primary fw-bold">Suporte</h6>
