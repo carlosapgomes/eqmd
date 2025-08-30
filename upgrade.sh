@@ -31,6 +31,10 @@ print_info() {
     echo -e "${BLUE}ℹ${NC} $1"
 }
 
+print_prompt() {
+    echo -e "${YELLOW}?${NC} $1"
+}
+
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
    print_error "This script must be run as root"
@@ -165,6 +169,133 @@ print_info "Updating Django Site Framework configuration..."
 docker compose exec -T eqmd python manage.py configure_django_site
 print_status "Django Site Framework configuration updated"
 
+# Check for missing infrastructure and set it up if needed
+print_info "Checking for missing infrastructure setup..."
+
+# Check and setup log directory
+if [ ! -d "/var/log/eqmd" ]; then
+    print_info "Creating missing log directory..."
+    mkdir -p /var/log/eqmd
+    chown eqmd:eqmd /var/log/eqmd
+    chmod 755 /var/log/eqmd
+    print_status "Log directory created: /var/log/eqmd"
+else
+    print_status "Log directory exists: /var/log/eqmd"
+fi
+
+# Check for cache management cronjobs
+print_info "Checking cache management automation..."
+CACHE_CRON_EXISTS=false
+if crontab -u eqmd -l 2>/dev/null | grep -q "update_dashboard_stats"; then
+    CACHE_CRON_EXISTS=true
+    print_status "Cache management cronjobs found"
+else
+    print_warning "Cache management cronjobs missing"
+    print_prompt "Do you want to set up automated cache management? (Y/n): "
+    read -r SETUP_CACHE_CRON
+    
+    if [[ ! $SETUP_CACHE_CRON =~ ^[Nn]$ ]]; then
+        print_info "Setting up cache management cronjobs..."
+        
+        # Ensure eqmd user has Docker access
+        usermod -aG docker eqmd || print_warning "Could not add eqmd to docker group (may already exist)"
+        
+        # Create temporary cron file
+        TEMP_CRON="/tmp/eqmd_cache_cron_$$"
+        crontab -u eqmd -l 2>/dev/null > "$TEMP_CRON" || echo "" > "$TEMP_CRON"
+        
+        # Add cache management jobs
+        cat >> "$TEMP_CRON" << EOF
+
+# EquipeMed Dashboard Cache Management (added by upgrade.sh)
+# Improves dashboard performance by pre-computing statistics every 5 minutes
+
+# Dashboard stats - runs every 5 minutes
+*/5 * * * * cd $(pwd) && docker compose exec -T eqmd python manage.py update_dashboard_stats >> /var/log/eqmd/dashboard_cache.log 2>&1
+
+# Ward mapping - runs every 5 minutes (offset by 2 minutes)
+2-59/5 * * * * cd $(pwd) && docker compose exec -T eqmd python manage.py update_ward_mapping_cache >> /var/log/eqmd/ward_cache.log 2>&1
+EOF
+        
+        if crontab -u eqmd "$TEMP_CRON"; then
+            print_status "Cache management cronjobs installed"
+            CACHE_CRON_EXISTS=true
+        else
+            print_error "Failed to install cache cronjobs"
+        fi
+        
+        rm -f "$TEMP_CRON"
+    fi
+fi
+
+# Check for user lifecycle management cronjobs  
+print_info "Checking user lifecycle management automation..."
+LIFECYCLE_CRON_EXISTS=false
+if crontab -u eqmd -l 2>/dev/null | grep -q "check_user_expiration"; then
+    LIFECYCLE_CRON_EXISTS=true
+    print_status "User lifecycle cronjobs found"
+else
+    print_warning "User lifecycle cronjobs missing"
+    
+    # Check if lifecycle commands are available
+    if docker compose exec -T eqmd python manage.py help | grep -q "check_user_expiration"; then
+        print_prompt "Do you want to set up automated user lifecycle management? (Y/n): "
+        read -r SETUP_LIFECYCLE_CRON
+        
+        if [[ ! $SETUP_LIFECYCLE_CRON =~ ^[Nn]$ ]]; then
+            print_info "Setting up user lifecycle management cronjobs..."
+            
+            # Create temporary cron file
+            TEMP_CRON="/tmp/eqmd_lifecycle_cron_$$"
+            crontab -u eqmd -l 2>/dev/null > "$TEMP_CRON" || echo "" > "$TEMP_CRON"
+            
+            # Add lifecycle management jobs
+            cat >> "$TEMP_CRON" << EOF
+
+# EquipeMed User Lifecycle Management (added by upgrade.sh)
+# Automated expiration checking and notifications
+
+# Daily expiration check (6:00 AM)
+0 6 * * * cd $(pwd) && /usr/bin/flock -n /tmp/check_expiration.lock docker compose exec -T eqmd python manage.py check_user_expiration >> /var/log/eqmd/expiration_check.log 2>&1
+
+# Daily notifications (8:00 AM)
+0 8 * * * cd $(pwd) && /usr/bin/flock -n /tmp/send_notifications.lock docker compose exec -T eqmd python manage.py send_expiration_notifications >> /var/log/eqmd/notifications.log 2>&1
+
+# Weekly reports (Sundays 7:00 AM)
+0 7 * * 0 cd $(pwd) && docker compose exec -T eqmd python manage.py lifecycle_report --output-file /tmp/lifecycle_report_\$(date +%Y%m%d).csv >> /var/log/eqmd/reports.log 2>&1
+EOF
+            
+            if crontab -u eqmd "$TEMP_CRON"; then
+                print_status "User lifecycle cronjobs installed"
+                LIFECYCLE_CRON_EXISTS=true
+            else
+                print_error "Failed to install lifecycle cronjobs"
+            fi
+            
+            rm -f "$TEMP_CRON"
+            
+            # Test lifecycle system
+            print_info "Testing lifecycle system..."
+            if docker compose exec -T eqmd python manage.py check_user_expiration --dry-run >/dev/null 2>&1; then
+                print_status "Lifecycle system test passed"
+            else
+                print_warning "Lifecycle system test failed - check manually"
+            fi
+        fi
+    else
+        print_info "User lifecycle commands not available in this version"
+    fi
+fi
+
+# Initialize caches if cronjobs were just set up
+if [[ $CACHE_CRON_EXISTS == true ]]; then
+    print_info "Initializing cache data..."
+    docker compose exec -T eqmd python manage.py update_dashboard_stats >/dev/null 2>&1 || print_warning "Dashboard cache init failed"
+    docker compose exec -T eqmd python manage.py update_ward_mapping_cache >/dev/null 2>&1 || print_warning "Ward cache init failed"
+fi
+
+print_status "Infrastructure check completed"
+
 # Wait and verify health with rollback capability
 print_info "Waiting for health check..."
 HOST_PORT=${HOST_PORT:-8778}
@@ -206,17 +337,49 @@ fi
 echo ""
 echo -e "${GREEN}🎉 Upgrade completed!${NC}"
 echo ""
+
+# Show what infrastructure was set up
+if [[ $CACHE_CRON_EXISTS == true ]] || [[ $LIFECYCLE_CRON_EXISTS == true ]]; then
+    echo -e "${BLUE}📋 Infrastructure configured during upgrade:${NC}"
+    if [[ $CACHE_CRON_EXISTS == true ]]; then
+        echo "✓ Dashboard cache management (performance optimization)"
+    fi
+    if [[ $LIFECYCLE_CRON_EXISTS == true ]]; then
+        echo "✓ User lifecycle management (automated expiration checking)"
+    fi
+    echo "- Log directory: /var/log/eqmd/"
+    echo "- Cronjobs installed for user: eqmd"
+    echo ""
+fi
+
 echo "Next steps:"
 echo "1. Test your application at your domain"
 echo "2. Check PWA functionality (install button)"
 echo "3. Monitor logs: docker compose logs -f eqmd"
+if [[ $CACHE_CRON_EXISTS == true ]] || [[ $LIFECYCLE_CRON_EXISTS == true ]]; then
+    echo "4. Check automation logs: ls -la /var/log/eqmd/"
+fi
 echo ""
 echo "If there are issues:"
 echo "- Check container logs: docker compose logs eqmd"
 echo "- Check nginx logs: journalctl -u nginx"
 echo "- Verify static files: ls -la $STATIC_FILES_PATH"
+if [[ $CACHE_CRON_EXISTS == true ]] || [[ $LIFECYCLE_CRON_EXISTS == true ]]; then
+    echo "- Check cronjobs: crontab -u eqmd -l"
+fi
 echo "- Rollback if needed: docker tag eqmd:$BACKUP_TAG eqmd:latest && docker compose up -d eqmd"
 echo ""
+
+echo "Useful commands:"
+echo "- Application logs: docker compose logs -f eqmd"
+if [[ $CACHE_CRON_EXISTS == true ]]; then
+    echo "- Cache status: docker compose exec eqmd python manage.py check_cache_health"
+fi
+if [[ $LIFECYCLE_CRON_EXISTS == true ]]; then
+    echo "- Lifecycle status: docker compose exec eqmd python manage.py check_user_expiration --dry-run"
+fi
+echo ""
+
 echo "Backup information:"
 if [ -n "$CURRENT_IMAGE" ] && [ "$CURRENT_IMAGE" != "unknown" ]; then
     echo "- Backup tag: $BACKUP_TAG (from: $CURRENT_IMAGE)"
