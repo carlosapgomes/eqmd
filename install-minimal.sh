@@ -85,7 +85,7 @@ done
 
 if [ ${#MISSING_FILES[@]} -gt 0 ]; then
 	print_info "Downloading missing files..."
-	BASE_URL="https://raw.githubusercontent.com/carlosapgomes/eqmd/main"
+	BASE_URL="https://raw.githubusercontent.com/carlosapgomes/eqmd/master"
 
 	for file in "${MISSING_FILES[@]}"; do
 		if curl -fsSL -o "$file" "$BASE_URL/$file"; then
