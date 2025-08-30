@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% load static %}
+{% load hospital_tags %}
+
+{% block header %}
+<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold d-flex align-items-center" href="{% url 'apps.core:landing_page' %}">
+      <img src="{% static 'images/logo.png' %}" alt="EquipeMed Logo" height="36" class="me-2" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1))">
+      EquipeMed
+    </a>
+    <div class="d-flex ms-auto">
+      <a href="{% url 'account_login' %}" class="btn btn-outline-primary d-flex align-items-center">
+        <i class="bi bi-box-arrow-in-right me-2"></i>
+        Entrar
+      </a>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- About Hero Section -->
+<section class="bg-medical-light py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto text-center">
+        <h1 class="display-4 fw-bold text-medical-primary mb-3">
+          Sobre o EquipeMed
+        </h1>
+        <p class="lead text-medical-dark-gray">
+          Plataforma de colaboração médica desenvolvida para facilitar o trabalho das equipes hospitalares
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Mission Section -->
+<section class="py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <h2 class="text-medical-primary mb-4">Nossa Missão</h2>
+        <p class="text-medical-gray mb-4">
+          O EquipeMed foi desenvolvido para melhorar a colaboração entre equipes médicas e 
+          simplificar o rastreamento de pacientes em ambiente hospitalar. Nossa plataforma 
+          oferece ferramentas especializadas que permitem aos profissionais de saúde 
+          focarem no que realmente importa: o cuidado ao paciente.
+        </p>
+        
+        <h3 class="text-medical-primary mb-3">Principais Benefícios</h3>
+        <div class="row">
+          <div class="col-md-6">
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <i class="bi bi-check-circle-fill text-medical-teal me-2"></i>
+                Rastreamento completo do histórico de pacientes
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle-fill text-medical-teal me-2"></i>
+                Colaboração eficiente entre equipes multidisciplinares
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle-fill text-medical-teal me-2"></i>
+                Interface intuitiva e otimizada para dispositivos móveis
+              </li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <i class="bi bi-check-circle-fill text-medical-teal me-2"></i>
+                Segurança avançada com auditoria completa
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle-fill text-medical-teal me-2"></i>
+                Gestão de eventos clínicos organizados
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle-fill text-medical-teal me-2"></i>
+                Relatórios e análises baseadas em dados
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Open Source Section -->
+<section class="bg-medical-light py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <h2 class="text-medical-primary mb-4">Desenvolvimento Transparente</h2>
+        
+        <div class="card card-medical border-0 shadow-sm">
+          <div class="card-body p-4">
+            <div class="row align-items-center">
+              <div class="col-md-2 text-center mb-3 mb-md-0">
+                <i class="bi bi-github text-medical-teal" style="font-size: 3rem;"></i>
+              </div>
+              <div class="col-md-10">
+                <h4 class="text-medical-primary mb-3">Código Aberto e Auditável</h4>
+                <p class="text-medical-gray mb-3">
+                  O EquipeMed é desenvolvido com total transparência através de código aberto. 
+                  Isso significa que o código fonte pode ser revisado, auditado e verificado 
+                  por profissionais de TI e segurança, garantindo maior confiança e segurança 
+                  para dados médicos sensíveis.
+                </p>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <h6 class="text-medical-primary mb-2">Benefícios da Transparência:</h6>
+                    <ul class="list-unstyled small text-medical-gray">
+                      <li class="mb-1">
+                        <i class="bi bi-shield-check text-medical-teal me-2"></i>
+                        Auditoria completa do código por especialistas
+                      </li>
+                      <li class="mb-1">
+                        <i class="bi bi-eye text-medical-teal me-2"></i>
+                        Verificação independente de segurança
+                      </li>
+                      <li class="mb-1">
+                        <i class="bi bi-people text-medical-teal me-2"></i>
+                        Revisão por comunidade médica e técnica
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="text-medical-primary mb-2">Vantagens Técnicas:</h6>
+                    <ul class="list-unstyled small text-medical-gray">
+                      <li class="mb-1">
+                        <i class="bi bi-unlock text-medical-teal me-2"></i>
+                        Sem dependência de fornecedor único
+                      </li>
+                      <li class="mb-1">
+                        <i class="bi bi-arrow-repeat text-medical-teal me-2"></i>
+                        Evolução contínua da plataforma
+                      </li>
+                      <li class="mb-1">
+                        <i class="bi bi-gear text-medical-teal me-2"></i>
+                        Personalização para necessidades específicas
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div class="mt-3">
+                  <a href="https://github.com/carlosapgomes/eqmd" 
+                     class="btn btn-outline-medical-primary" 
+                     target="_blank" 
+                     rel="noopener">
+                    <i class="bi bi-github me-2"></i>
+                    Visualizar Código Fonte
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Technology Section -->
+<section class="py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <h2 class="text-medical-primary mb-4">Tecnologia Confiável</h2>
+        
+        <p class="text-medical-gray mb-4">
+          O EquipeMed é construído sobre tecnologias robustas e comprovadas no ambiente médico:
+        </p>
+        
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="d-flex align-items-center p-3 bg-light rounded">
+              <i class="bi bi-server text-medical-teal me-3 fs-4"></i>
+              <div>
+                <h6 class="mb-1 text-medical-primary">Django Framework</h6>
+                <small class="text-muted">Framework web seguro e escalável</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex align-items-center p-3 bg-light rounded">
+              <i class="bi bi-shield-lock text-medical-teal me-3 fs-4"></i>
+              <div>
+                <h6 class="mb-1 text-medical-primary">Segurança Integrada</h6>
+                <small class="text-muted">Criptografia e proteção de dados</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex align-items-center p-3 bg-light rounded">
+              <i class="bi bi-database text-medical-teal me-3 fs-4"></i>
+              <div>
+                <h6 class="mb-1 text-medical-primary">PostgreSQL</h6>
+                <small class="text-muted">Banco de dados robusto e confiável</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex align-items-center p-3 bg-light rounded">
+              <i class="bi bi-phone text-medical-teal me-3 fs-4"></i>
+              <div>
+                <h6 class="mb-1 text-medical-primary">PWA Responsivo</h6>
+                <small class="text-muted">Acesso móvel e desktop otimizado</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Contact Section -->
+<section class="bg-medical-light py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-6 mx-auto text-center">
+        <h2 class="text-medical-primary mb-4">Precisa de Mais Informações?</h2>
+        <p class="text-medical-gray mb-4">
+          Entre em contato com nossa equipe para saber como o EquipeMed pode 
+          beneficiar sua instituição de saúde.
+        </p>
+        
+        <div class="d-flex justify-content-center gap-3">
+          <a href="{% url 'account_login' %}" class="btn btn-medical-primary">
+            <i class="bi bi-box-arrow-in-right me-2"></i>
+            Acessar Plataforma
+          </a>
+          <a href="https://github.com/carlosapgomes/eqmd" 
+             class="btn btn-outline-medical-primary" 
+             target="_blank" 
+             rel="noopener">
+            <i class="bi bi-github me-2"></i>
+            Código Fonte
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

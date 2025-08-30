@@ -9,6 +9,7 @@ app_name = "apps.core"
 
 urlpatterns = [
     path("", views.landing_page, name="landing_page"),
+    path("about/", views.about_page, name="about_page"),
     path("health/", views.health_check, name="health_check"),
     path("manifest.json", views.manifest_json, name="manifest_json"),
     path("terms-of-use/", views.terms_of_use, name="terms_of_use"),
