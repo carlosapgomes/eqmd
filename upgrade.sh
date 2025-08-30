@@ -112,7 +112,7 @@ fi
 
 # Pull new image instead of building
 print_info "Pulling updated Docker image..."
-NEW_IMAGE="${EQMD_IMAGE:-${REGISTRY:-ghcr.io/yourorg/eqmd}:${TAG:-latest}}"
+NEW_IMAGE="${EQMD_IMAGE:-${REGISTRY:-ghcr.io/carlosapgomes/eqmd}:${TAG:-latest}}"
 if docker pull "$NEW_IMAGE"; then
     export EQMD_IMAGE="$NEW_IMAGE"
     print_status "Docker image pulled: $NEW_IMAGE"
