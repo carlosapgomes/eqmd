@@ -35,7 +35,8 @@ def get_cached_dashboard_stats():
 def apply_client_side_filters(ward_data, filters):
     """Apply filters to ward data on the client side"""
     if not filters:
-        return ward_data
+        # Default behavior: hide empty wards unless explicitly requested
+        return [ward_info for ward_info in ward_data if ward_info['patient_count'] > 0]
         
     filtered_data = []
     
@@ -69,11 +70,13 @@ def apply_client_side_filters(ward_data, filters):
             ward_info_copy['patients'] = filtered_patients
             ward_info_copy['patient_count'] = len(filtered_patients)
             
-            # Only include wards that have patients after filtering
-            if filtered_patients or not (filters.get('tag') or filters.get('q')):
+            # Only include wards that have patients after filtering (unless showing empty wards)
+            if filtered_patients or (not (filters.get('tag') or filters.get('q')) and filters.get('show_empty_wards')):
                 filtered_data.append(ward_info_copy)
         else:
-            filtered_data.append(ward_info)
+            # If not filtering by tag/search, apply empty ward filter
+            if filters.get('show_empty_wards', False) or ward_info['patient_count'] > 0:
+                filtered_data.append(ward_info)
     
     return filtered_data
 
