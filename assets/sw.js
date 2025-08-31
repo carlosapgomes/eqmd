@@ -9,7 +9,7 @@ const STATIC_ASSETS = [
   '/static/js/popper.min.js',
   '/static/css/bootstrap-icons.min.css',
   '/static/images/logo.png',
-  '/static/manifest.json'
+  '/manifest.json'
 ];
 
 // Install event - cache static assets

@@ -229,7 +229,9 @@ def manifest_json(request):
         ],
     }
 
-    return JsonResponse(manifest)
+    response = JsonResponse(manifest)
+    response['Content-Type'] = 'application/manifest+json'
+    return response
 
 
 @login_required
