@@ -9,54 +9,66 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
     add_form = EqmdCustomUserCreationForm
     form = EqmdCustomUserChangeForm
     model = EqmdCustomUser
-    list_display = ['username', 'email', 'first_name', 'last_name',
-                    'is_active', 'profession_type', 'password_change_required', 'is_staff']
+    
+    # Add account_status and access_expires_at to the main list view
+    list_display = [
+        'username', 'email', 'first_name', 'last_name',
+        'account_status', 'access_expires_at', 'is_active', 'is_staff'
+    ]
     history_list_display = ['username', 'email', 'profession_type', 'history_change_reason']
 
-    # Custom fieldsets for editing existing users
+    # Add supervisor to search fields
+    search_fields = UserAdmin.search_fields + ('supervisor__username',)
+
+    # Define read-only fields for the detail view
+    readonly_fields = UserAdmin.readonly_fields + ('last_meaningful_activity', 'expiration_warning_sent')
+
+    # Reorganize fieldsets to include a new "Lifecycle Management" section
     fieldsets = (
         (None, {'fields': ('username', 'email')}),
         ('Personal info', {'fields': ('first_name', 'last_name')}),
-        ('Permissions', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
-        }),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
-        (_('Segurança'), {
-            'fields': (
-                'password_change_required',
-            ),
-            'description': _('Configurações de segurança para usuários do hospital')
-        }),
         ('Professional Information', {
             'fields': ('profession_type', 'professional_registration_number',
                       'country_id_number', 'fiscal_number', 'phone')
         }),
-    )
-
-    # Custom add_fieldsets for creating new users
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2'),
+        # New Lifecycle Management Section
+        (_('Lifecycle Management'), {
+            'classes': ('collapse',), # Start collapsed to save space
+            'fields': (
+                'account_status',
+                'supervisor',
+                'access_expires_at',
+                'expiration_reason',
+                'internship_start_date',
+                'expected_duration_months',
+                'last_meaningful_activity',
+                'expiration_warning_sent',
+            ),
         }),
-        ('Personal info', {
-            'fields': ('first_name', 'last_name')
+        ('Permissions', {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         (_('Segurança'), {
-            'fields': (
-                'password_change_required',
-            ),
-            'description': _('Configurações de segurança para usuários do hospital')
+            'fields': ('password_change_required', 'terms_accepted', 'terms_accepted_at'),
         }),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+    )
+
+    # Keep add_fieldsets simple for new user creation
+    add_fieldsets = UserAdmin.add_fieldsets + (
         ('Professional Information', {
             'fields': ('profession_type', 'professional_registration_number',
                       'country_id_number', 'fiscal_number', 'phone')
         }),
     )
     
+    # Add new filters to the sidebar
     list_filter = UserAdmin.list_filter + (
-        'password_change_required',
+        'account_status',
         'profession_type',
+        'expiration_reason',
+        'password_change_required',
+        'terms_accepted',
     )
     
     def save_model(self, request, obj, form, change):
