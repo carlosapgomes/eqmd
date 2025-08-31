@@ -17,7 +17,14 @@ from datetime import datetime, timedelta
 import re
 from .models import Event
 from apps.patients.models import Patient
-from apps.core.permissions.utils import can_access_patient, can_edit_event
+from apps.core.permissions.utils import (
+    can_access_patient, 
+    can_edit_event,
+    can_edit_admission_data,
+    can_edit_discharge_data,
+    can_cancel_discharge,
+    can_discharge_patient
+)
 
 User = get_user_model()
 
@@ -200,6 +207,17 @@ class PatientEventsTimelineView(ListView):
                 'can_delete': edit_permissions.get(event.pk, False),
                 'excerpt': event.get_excerpt(150)
             }
+            
+            # Add admission-specific permissions for admission/discharge events
+            if hasattr(event, 'admission') and event.admission:
+                admission = event.admission
+                event_data['admission_permissions'] = {
+                    'can_edit_admission': can_edit_admission_data(self.request.user, admission),
+                    'can_edit_discharge': can_edit_discharge_data(self.request.user, admission),
+                    'can_cancel_discharge': can_cancel_discharge(self.request.user, admission),
+                    'can_discharge': can_discharge_patient(self.request.user, admission),
+                }
+            
             events_with_permissions.append(event_data)
         
         return events_with_permissions

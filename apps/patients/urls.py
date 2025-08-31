@@ -64,6 +64,22 @@ urlpatterns = [
         views.QuickDischargeView.as_view(),
         name="quick_discharge_patient",
     ),
+    # Admission/Discharge Edit URLs
+    path(
+        "<uuid:patient_id>/admissions/<uuid:admission_id>/edit/",
+        views.edit_admission_data,
+        name="edit_admission_data",
+    ),
+    path(
+        "<uuid:patient_id>/admissions/<uuid:admission_id>/edit-discharge/",
+        views.edit_discharge_data,
+        name="edit_discharge_data",
+    ),
+    path(
+        "<uuid:patient_id>/admissions/<uuid:admission_id>/cancel-discharge/",
+        views.cancel_discharge,
+        name="cancel_discharge",
+    ),
     # Status Change URLs
     path(
         "<uuid:pk>/status/admit/",
