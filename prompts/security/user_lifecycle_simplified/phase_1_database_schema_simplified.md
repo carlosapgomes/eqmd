@@ -360,21 +360,21 @@ STATUS_TRANSITIONS = {
 
 class AccountRenewalRequest(models.Model):
     """Track user account renewal requests (simplified)"""
-    
+
     user = models.ForeignKey(
         'accounts.EqmdCustomUser',
         on_delete=models.CASCADE,
         related_name='renewal_requests'
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     # User-provided information
     current_position = models.CharField(max_length=200)
     supervisor_name = models.CharField(max_length=200)
     supervisor_email = models.EmailField()
     renewal_reason = models.TextField()
     expected_duration_months = models.PositiveIntegerField()
-    
+
     # Simple request status
     STATUS_CHOICES = [
         ('pending', 'Pending Review'),
@@ -386,7 +386,7 @@ class AccountRenewalRequest(models.Model):
         choices=STATUS_CHOICES,
         default='pending'
     )
-    
+
     # Administrative response (simplified)
     reviewed_by = models.ForeignKey(
         'accounts.EqmdCustomUser',
@@ -396,37 +396,37 @@ class AccountRenewalRequest(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     admin_notes = models.TextField(blank=True)
-    
+
     class Meta:
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"Renewal request for {self.user.username} - {self.status}"
-    
+
     def approve(self, reviewed_by_user, duration_months, admin_notes=''):
         """Approve renewal request and extend user access"""
         from django.utils import timezone
         from datetime import timedelta
-        
+
         self.status = 'approved'
         self.reviewed_by = reviewed_by_user
         self.reviewed_at = timezone.now()
         self.admin_notes = admin_notes
-        
+
         # Calculate new expiration date
         current_expiration = self.user.access_expires_at or timezone.now()
         extension = timedelta(days=duration_months * 30)  # Approximate months
         new_expiration = current_expiration + extension
-        
+
         # Update user account
         self.user.access_expires_at = new_expiration
         self.user.account_status = 'active'
         self.user._change_reason = f'Access renewed via request #{self.id}'
-        
+
         # Save changes
         self.save()
         self.user.save()
-    
+
     def deny(self, reviewed_by_user, admin_notes):
         """Deny renewal request"""
         self.status = 'denied'
@@ -487,11 +487,13 @@ class SimplifiedLifecycleTests(TestCase):
 ## Security Considerations (Simplified)
 
 ### Data Protection
+
 - **Audit Trail**: All lifecycle changes tracked in existing history tables
 - **Privacy**: Activity tracking uses simple timestamps (no detailed patient interaction data)
 - **Access Controls**: Supervisor relationships require proper admin access
 
 ### Performance Optimization
+
 - **Database Indexes**: Added on frequently queried fields (status, expiration date)
 - **Simple Queries**: Properties use efficient date calculations
 - **Minimal Overhead**: No complex scoring algorithms or frequent updates
@@ -499,6 +501,7 @@ class SimplifiedLifecycleTests(TestCase):
 ## Rollback Plan
 
 ### Migration Rollback
+
 ```bash
 # If issues occur, rollback migration
 uv run python manage.py migrate accounts 0003_add_terms_acceptance
@@ -512,14 +515,16 @@ EqmdCustomUser.objects.update(account_status='active')
 
 ## What Was Simplified
 
-### ❌ Removed from Original Plan:
+### ❌ Removed from Original Plan
+
 - **Access Review Fields**: `last_access_review`, `reviewed_by`, `next_review_due` (can be added later)
 - **Complex Activity Scoring**: `activity_score` field and scoring algorithms
 - **Advanced Notification Tracking**: `renewal_reminder_count` and complex notification state
 - **Department Field**: Can be added later if needed
 - **Complex Status Calculation**: Simplified to basic time-based checks
 
-### ✅ Kept (Essential):
+### ✅ Kept (Essential)
+
 - Core expiration fields for automated blocking
 - Simple activity timestamp for basic inactivity detection
 - Role-specific fields for automatic expiration calculation
@@ -529,11 +534,13 @@ EqmdCustomUser.objects.update(account_status='active')
 ## Success Metrics (Simplified)
 
 ### Technical Metrics
+
 - ✅ **Migration Success**: All existing users migrated without data loss
 - ✅ **Performance Impact**: Minimal impact on authentication flow
 - ✅ **Essential Function**: Core expiration blocking works correctly
 
 ### Functional Metrics
+
 - ✅ **Role Coverage**: Residents and students have appropriate expiration rules
 - ✅ **Activity Tracking**: Basic activity timestamps recorded
 - ✅ **Status Management**: Core account statuses function correctly
@@ -541,3 +548,4 @@ EqmdCustomUser.objects.update(account_status='active')
 ---
 
 **Next Phase**: [Phase 2: Simplified Middleware and Core Logic](phase_2_middleware_core_logic_simplified.md)
+
