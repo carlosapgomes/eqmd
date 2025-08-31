@@ -65,6 +65,9 @@ def apply_client_side_filters(ward_data, filters):
                 
                 filtered_patients.append(patient_info)
             
+            # Sort filtered patients by bed
+            filtered_patients.sort(key=lambda p: p['bed'])
+            
             # Update ward info with filtered patients
             ward_info_copy = ward_info.copy()
             ward_info_copy['patients'] = filtered_patients
