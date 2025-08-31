@@ -1,7 +1,8 @@
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
+from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,12 +20,15 @@ from .forms import (
     QuickAdmissionForm, QuickDischargeForm, WardForm,
     # Status change forms
     AdmitPatientForm, DischargePatientForm, EmergencyAdmissionForm,
-    InternalTransferForm, TransferPatientForm, DeclareDeathForm, SetOutpatientForm
+    InternalTransferForm, TransferPatientForm, DeclareDeathForm, SetOutpatientForm,
+    # Edit forms
+    EditAdmissionForm, EditDischargeForm
 )
 # from apps.hospitals.models import Hospital  # Removed for single-hospital refactor
 from apps.core.permissions.utils import (
     can_access_patient, can_change_patient_personal_data,
-    can_manage_patient_tags, can_add_patient_tag, can_remove_patient_tag, can_view_patient_tags
+    can_manage_patient_tags, can_add_patient_tag, can_remove_patient_tag, can_view_patient_tags,
+    can_edit_admission_data, can_edit_discharge_data, can_cancel_discharge
 )
 from apps.core.permissions.decorators import doctor_required
 
@@ -1526,5 +1530,106 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
             context = self.get_context_data()
             return render(request, 'patients/ward_patient_map_tree_only.html', context)
         return super().get(request, *args, **kwargs)
+
+
+# Admission/Discharge Edit Views
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def edit_admission_data(request, patient_id, admission_id):
+    """Edit admission data for active admission"""
+    patient = get_object_or_404(Patient, pk=patient_id)
+    admission = get_object_or_404(PatientAdmission, pk=admission_id, patient=patient)
+    
+    # Permission check
+    if not can_access_patient(request.user, patient):
+        raise PermissionDenied("You don't have permission to access this patient.")
+    
+    if not can_edit_admission_data(request.user, admission):
+        raise PermissionDenied("You don't have permission to edit this admission data.")
+    
+    if request.method == 'POST':
+        form = EditAdmissionForm(request.POST, instance=admission, user=request.user)
+        if form.is_valid():
+            admission = form.save()
+            messages.success(request, 'Dados da internação atualizados com sucesso!')
+            return redirect('patients:detail', pk=patient.pk)
+        else:
+            messages.error(request, 'Erro ao atualizar dados da internação. Verifique os campos.')
+    else:
+        form = EditAdmissionForm(instance=admission, user=request.user)
+    
+    return render(request, 'patients/modals/edit_admission.html', {
+        'form': form,
+        'patient': patient,
+        'admission': admission,
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def edit_discharge_data(request, patient_id, admission_id):
+    """Edit discharge data for completed admission"""
+    patient = get_object_or_404(Patient, pk=patient_id)
+    admission = get_object_or_404(PatientAdmission, pk=admission_id, patient=patient)
+    
+    # Permission check
+    if not can_access_patient(request.user, patient):
+        raise PermissionDenied("You don't have permission to access this patient.")
+    
+    if not can_edit_discharge_data(request.user, admission):
+        raise PermissionDenied("You don't have permission to edit this discharge data.")
+    
+    if request.method == 'POST':
+        form = EditDischargeForm(request.POST, instance=admission, user=request.user)
+        if form.is_valid():
+            admission = form.save()
+            messages.success(request, 'Dados da alta atualizados com sucesso!')
+            return redirect('patients:detail', pk=patient.pk)
+        else:
+            messages.error(request, 'Erro ao atualizar dados da alta. Verifique os campos.')
+    else:
+        form = EditDischargeForm(instance=admission, user=request.user)
+    
+    return render(request, 'patients/modals/edit_discharge.html', {
+        'form': form,
+        'patient': patient,
+        'admission': admission,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def cancel_discharge(request, patient_id, admission_id):
+    """Cancel discharge and reactivate admission"""
+    patient = get_object_or_404(Patient, pk=patient_id)
+    admission = get_object_or_404(PatientAdmission, pk=admission_id, patient=patient)
+    
+    # Permission check
+    if not can_access_patient(request.user, patient):
+        raise PermissionDenied("You don't have permission to access this patient.")
+    
+    if not can_cancel_discharge(request.user, admission):
+        raise PermissionDenied("You don't have permission to cancel this discharge.")
+    
+    try:
+        # Clear discharge data to reactivate admission
+        admission.discharge_datetime = None
+        admission.discharge_type = None
+        admission.final_bed = None
+        admission.discharge_diagnosis = None
+        admission.updated_by = request.user
+        admission.save()
+        
+        # Update patient status back to inpatient
+        patient.status = Patient.Status.INPATIENT
+        patient.updated_by = request.user
+        patient.save()
+        
+        messages.success(request, 'Alta cancelada com sucesso! Paciente retornou ao status de internação.')
+    except Exception as e:
+        messages.error(request, f'Erro ao cancelar alta: {str(e)}')
+    
+    return redirect('patients:detail', pk=patient.pk)
 
 
