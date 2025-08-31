@@ -59,7 +59,7 @@ class Command(BaseCommand):
                 utilization_percentage = None
                 
                 patients_data = []
-                for patient in inpatients:
+                for patient in inpatients.order_by('bed'):
                     # Get patient tags
                     tags_data = []
                     for patient_tag in patient.patient_tags.all():
