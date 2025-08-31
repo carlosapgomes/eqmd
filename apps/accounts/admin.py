@@ -55,7 +55,20 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
     )
 
     # Keep add_fieldsets simple for new user creation
-    add_fieldsets = UserAdmin.add_fieldsets + (
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2'),
+        }),
+        ('Personal info', {
+            'fields': ('first_name', 'last_name')
+        }),
+        (_('Segurança'), {
+            'fields': (
+                'password_change_required',
+            ),
+            'description': _('Configurações de segurança para usuários do hospital')
+        }),
         ('Professional Information', {
             'fields': ('profession_type', 'professional_registration_number',
                       'country_id_number', 'fiscal_number', 'phone')
