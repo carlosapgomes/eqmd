@@ -125,6 +125,7 @@
                   <th>Data de Nascimento</th>
                   <th>Status</th>
                   <th>Ala</th>
+                  <th>Leito</th>
                   <th>Tags</th>
                   <th>Ações</th>
                 </tr>
@@ -144,7 +145,14 @@
                   <td>
                     {% if patient.ward %}
                       <span class="badge bg-secondary">{{ patient.ward.abbreviation }}</span>
-                      <small class="text-muted">{{ patient.ward.name }}</small>
+                      <!-- <small class="text-muted">{{ patient.ward.name }}</small> -->
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if patient.bed %}
+                      <span class="text-dark">{{ patient.bed }}</span>
                     {% else %}
                       <span class="text-muted">-</span>
                     {% endif %}
