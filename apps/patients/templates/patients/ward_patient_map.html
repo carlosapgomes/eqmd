@@ -128,6 +128,21 @@
                 </button>
               </div>
             </div>
+            
+            <!-- Empty Wards Toggle -->
+            <div class="col-12 mt-3">
+              <div class="form-check">
+                <input class="form-check-input border-primary" 
+                       type="checkbox" 
+                       id="show-empty-wards" 
+                       {% if show_empty_wards %}checked{% endif %}
+                       onchange="toggleEmptyWards()">
+                <label class="form-check-label" for="show-empty-wards">
+                  <i class="bi bi-building me-1"></i>
+                  Mostrar alas vazias
+                </label>
+              </div>
+            </div>
           </form>
 
           <!-- Active Filters -->

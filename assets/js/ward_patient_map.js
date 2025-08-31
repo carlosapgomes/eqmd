@@ -103,7 +103,7 @@ class WardPatientMap {
     checkIfFiltersCleared() {
         // Check if any filters are active by examining URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const hasActiveFilters = urlParams.get('q') || urlParams.get('ward') || urlParams.get('tag');
+        const hasActiveFilters = urlParams.get('q') || urlParams.get('ward') || urlParams.get('tag') || urlParams.get('show_empty_wards');
         
         // If no filters are active, clear ward states to return to initial state
         if (!hasActiveFilters) {
@@ -150,6 +150,21 @@ class WardPatientMap {
             }
         }
     }
+}
+
+// Global function for checkbox toggle
+function toggleEmptyWards() {
+    const checkbox = document.getElementById('show-empty-wards');
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (checkbox.checked) {
+        urlParams.set('show_empty_wards', 'true');
+    } else {
+        urlParams.delete('show_empty_wards');
+    }
+    
+    // Redirect to the new URL
+    window.location.search = urlParams.toString();
 }
 
 document.addEventListener("DOMContentLoaded", function() {

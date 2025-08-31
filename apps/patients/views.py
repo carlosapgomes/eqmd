@@ -1463,6 +1463,7 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
         search_query = self.request.GET.get('q', '').strip()
         ward_filter = self.request.GET.get('ward', '').strip()
         tag_filter = self.request.GET.get('tag', '').strip()
+        show_empty_wards = self.request.GET.get('show_empty_wards', 'false').lower() == 'true'
 
         # Build active filters for display
         active_filters = {}
@@ -1472,13 +1473,16 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
             active_filters['ward'] = ward_filter
         if tag_filter:
             active_filters['tag'] = tag_filter
+        if show_empty_wards:
+            active_filters['show_empty_wards'] = 'true'
 
         # Get cached ward mapping data with filters applied
         filters = {
             'q': search_query,
             'ward': ward_filter,
-            'tag': tag_filter
-        } if any([search_query, ward_filter, tag_filter]) else None
+            'tag': tag_filter,
+            'show_empty_wards': show_empty_wards
+        } if any([search_query, ward_filter, tag_filter, show_empty_wards]) else {'show_empty_wards': show_empty_wards}
         
         ward_mapping_data = get_cached_ward_mapping(filters)
 
@@ -1490,6 +1494,7 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
             'total_wards': ward_mapping_data['total_wards'],
             'page_title': 'Mapa de Pacientes',
             'active_filters': active_filters,
+            'show_empty_wards': show_empty_wards,
             'from_cache': ward_mapping_data['from_cache'],
             'updating': ward_mapping_data.get('updating', False),
         })
