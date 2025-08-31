@@ -95,6 +95,22 @@ print(f'Users with terms accepted: {users.filter(terms_accepted=True).count()}')
 "
 ```
 
+### Admission Edit Permissions Tests
+
+```bash
+# Test admission edit permissions functionality
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/test_admission_permissions.py
+
+# Test admission edit views integration
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/test_admission_edit_views.py
+
+# Test specific permission scenarios
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/test_admission_permissions.py::AdmissionEditPermissionTests
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/test_admission_permissions.py::DischargePatientPermissionTests
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/test_admission_permissions.py::EditDischargeDataPermissionTests
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/test_admission_permissions.py::CancelDischargePermissionTests
+```
+
 # Frontend
 
 npm install && npm run build
