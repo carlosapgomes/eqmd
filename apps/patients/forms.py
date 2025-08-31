@@ -715,3 +715,118 @@ class SetOutpatientForm(StatusChangeForm):
         required=False,
         label="Orientações de Acompanhamento"
     )
+
+
+class EditAdmissionForm(forms.ModelForm):
+    """Form for editing admission data only"""
+    
+    class Meta:
+        model = PatientAdmission
+        fields = [
+            'admission_datetime', 'admission_type', 'initial_bed',
+            'ward', 'admission_diagnosis'
+        ]
+        widgets = {
+            'admission_datetime': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'admission_type': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'initial_bed': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: A101, UTI-02, etc.'
+            }),
+            'ward': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'admission_diagnosis': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Diagnóstico principal da internação...'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filter only active wards
+        self.fields['ward'].queryset = Ward.objects.filter(is_active=True)
+        self.fields['ward'].required = True
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Prevent editing discharge fields for admission-only form
+        if getattr(self.instance, 'discharge_datetime', None):
+            raise ValidationError("Não é possível editar dados de internação após a alta")
+        
+        return cleaned_data
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user:
+            instance.updated_by = self.user
+        
+        if commit:
+            instance.save()
+        return instance
+
+
+class EditDischargeForm(forms.ModelForm):
+    """Form for editing discharge data only"""
+    
+    class Meta:
+        model = PatientAdmission
+        fields = [
+            'discharge_datetime', 'discharge_type', 'final_bed',
+            'discharge_diagnosis'
+        ]
+        widgets = {
+            'discharge_datetime': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'discharge_type': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'final_bed': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: A101, UTI-02, etc.'
+            }),
+            'discharge_diagnosis': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Diagnóstico final e condições da alta...'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Ensure this is only used for discharged admissions
+        if not getattr(self.instance, 'discharge_datetime', None):
+            raise ValidationError("Não é possível editar dados de alta de internação ativa")
+        
+        # Ensure discharge datetime is not before admission datetime
+        discharge_datetime = cleaned_data.get('discharge_datetime')
+        if discharge_datetime and self.instance.admission_datetime:
+            if discharge_datetime < self.instance.admission_datetime:
+                raise ValidationError("Data de alta não pode ser anterior à data de internação")
+        
+        return cleaned_data
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user:
+            instance.updated_by = self.user
+        
+        if commit:
+            instance.save()
+        return instance
