@@ -625,3 +625,185 @@ ls -la /var/www/*_static_*/
 docker volume prune
 docker system prune
 ```
+
+## PWA (Progressive Web App) Deployment
+
+**EquipeMed includes PWA functionality that requires special nginx configuration in production.**
+
+### PWA Issue: Shows "Open" Instead of "Install"
+
+**Problem**: In development, the PWA shows "Install to Home Screen" option, but in production it only shows "Open EquipeMed".
+
+**Root Cause**: The issue occurs because:
+1. **Manifest served incorrectly**: nginx serves static files directly, but the manifest is now dynamic (`/manifest.json`)
+2. **Service Worker caching fails**: nginx doesn't set the correct `Content-Type` headers for PWA files
+3. **HTTPS requirements**: PWAs require HTTPS in production (except localhost)
+
+### PWA Nginx Configuration Fix
+
+Add these location blocks to your nginx configuration **BEFORE** the general `location /` block:
+
+```nginx
+# PWA Manifest - must be served by Django with correct Content-Type
+location = /manifest.json {
+    proxy_pass http://localhost:8778;  # Adjust port for your deployment
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    
+    # Prevent caching of manifest in nginx
+    add_header Cache-Control "no-cache, must-revalidate";
+    expires off;
+}
+
+# Service Worker - needs special headers for PWA
+location = /static/sw.js {
+    alias /var/www/eqmd_static_YOUR_INSTANCE_ID/sw.js;  # Replace with your path
+    
+    # Service Worker specific headers
+    add_header Content-Type "text/javascript; charset=utf-8";
+    add_header Cache-Control "no-cache, must-revalidate";
+    add_header Service-Worker-Allowed "/";
+    expires off;
+}
+```
+
+### Complete PWA-Compatible Nginx Configuration
+
+Here's a complete nginx server block with PWA support:
+
+```nginx
+server {
+    listen 443 ssl http2;  # HTTPS required for PWA
+    server_name yourdomain.com www.yourdomain.com;
+    
+    # SSL configuration (required for PWA installation)
+    ssl_certificate /path/to/your/certificate.crt;
+    ssl_certificate_key /path/to/your/private.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    
+    # PWA Manifest - served by Django
+    location = /manifest.json {
+        proxy_pass http://localhost:8778;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        add_header Cache-Control "no-cache, must-revalidate";
+        expires off;
+    }
+    
+    # Service Worker - special handling
+    location = /static/sw.js {
+        alias /var/www/eqmd_static_YOUR_INSTANCE_ID/sw.js;
+        add_header Content-Type "text/javascript; charset=utf-8";
+        add_header Cache-Control "no-cache, must-revalidate";
+        add_header Service-Worker-Allowed "/";
+        expires off;
+    }
+    
+    # Regular static files
+    location /static/ {
+        alias /var/www/eqmd_static_YOUR_INSTANCE_ID/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Served-By "nginx-static";
+        
+        gzip on;
+        gzip_vary on;
+        gzip_types
+            text/css
+            text/javascript
+            application/javascript
+            application/json;
+    }
+    
+    # Application requests
+    location / {
+        proxy_pass http://localhost:8778;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+    
+    # Security headers for PWA
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}
+
+# Redirect HTTP to HTTPS (required for PWA)
+server {
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+    return 301 https://$server_name$request_uri;
+}
+```
+
+### PWA Requirements Checklist
+
+✅ **HTTPS**: Required for PWA installation (except localhost)  
+✅ **Manifest**: Must be served with `application/manifest+json` Content-Type  
+✅ **Service Worker**: Must be served with correct headers and scope  
+✅ **Icons**: Multiple sizes (192x192 and 512x512 minimum) must be accessible  
+✅ **Scope**: Service worker scope must cover the app's start URL  
+
+### PWA Troubleshooting
+
+#### Check PWA Status in Browser DevTools
+
+1. **Open DevTools** → **Application** tab
+2. **Manifest section**: Verify manifest loads without errors
+3. **Service Workers section**: Verify service worker registers successfully
+4. **Install prompt**: Check if installability criteria are met
+
+#### Common Issues and Solutions
+
+**"Open" instead of "Install"**:
+- ❌ **Issue**: Browser thinks PWA is already installed or criteria not met
+- ✅ **Fix**: Clear browser data, check HTTPS, verify manifest Content-Type
+
+**Service Worker fails to register**:
+- ❌ **Issue**: nginx serving service worker with wrong Content-Type
+- ✅ **Fix**: Add service worker location block with correct headers
+
+**Manifest not loading**:
+- ❌ **Issue**: nginx serves `/static/manifest.json` but app requests `/manifest.json`
+- ✅ **Fix**: Use dynamic manifest served by Django with proper Content-Type
+
+#### Testing PWA Installation
+
+```bash
+# Test manifest endpoint
+curl -I https://yourdomain.com/manifest.json
+# Should return: Content-Type: application/manifest+json
+
+# Test service worker
+curl -I https://yourdomain.com/static/sw.js
+# Should return: Content-Type: text/javascript
+
+# Test PWA icons
+curl -I https://yourdomain.com/static/images/pwa/icon-192x192.png
+# Should return: Content-Type: image/png
+```
+
+### Alternative: Django-Only Static Files
+
+If nginx configuration is complex, you can disable nginx static file serving and let Django handle everything:
+
+```nginx
+# Remove /static/ location block and let Django handle all static files
+location / {
+    proxy_pass http://localhost:8778;
+    # ... proxy headers
+}
+```
+
+This is less efficient but simpler for PWA compatibility.
