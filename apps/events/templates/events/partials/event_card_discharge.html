@@ -34,11 +34,44 @@
 {% endblock %}
 
 {% block event_actions %}
-{% if perms.patients.change_patientadmission %}
-    <a href="{% url 'patients:admission_update' event.admission.pk %}" 
-       class="btn btn-outline-secondary btn-sm" title="Editar">
-        <i class="fas fa-edit"></i>
+<div class="btn-group btn-group-sm">
+    <!-- View button (always visible) -->
+    <a href="{{ event.get_absolute_url }}" 
+       class="btn btn-outline-primary btn-sm"
+       aria-label="Visualizar alta completa"
+       data-bs-toggle="tooltip" 
+       data-bs-placement="top" 
+       title="Ver detalhes">
+        <i class="bi bi-eye" aria-hidden="true"></i>
+        <span class="visually-hidden">Visualizar</span>
     </a>
-{% endif %}
-{{ block.super }}
-{% endblock %}
+    
+    <!-- Edit Discharge button - show if can edit discharge data -->
+    {% if admission_permissions.can_edit_discharge %}
+    <button class="btn btn-outline-warning btn-sm"
+            data-bs-toggle="modal" 
+            data-bs-target="#editDischargeModal"
+            data-admission-id="{{ event.admission.id }}"
+            data-patient-id="{{ event.patient.id }}"
+            aria-label="Editar dados da alta"
+            title="Editar Alta">
+        <i class="bi bi-pencil" aria-hidden="true"></i>
+        <span class="visually-hidden">Editar Alta</span>
+    </button>
+    {% endif %}
+    
+    <!-- Cancel Discharge button - show if can cancel discharge -->
+    {% if admission_permissions.can_cancel_discharge %}
+    <button class="btn btn-outline-danger btn-sm"
+            data-bs-toggle="modal" 
+            data-bs-target="#cancelDischargeModal"
+            data-admission-id="{{ event.admission.id }}"
+            data-patient-id="{{ event.patient.id }}"
+            aria-label="Cancelar alta"
+            title="Cancelar Alta">
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        <span class="visually-hidden">Cancelar Alta</span>
+    </button>
+    {% endif %}
+</div>
+{% endblock event_actions %}
