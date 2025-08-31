@@ -19,6 +19,8 @@ from .constants import (
     DISCHARGED,
     DECEASED,
     EVENT_EDIT_TIME_LIMIT,
+    ADMISSION_EDIT_TIME_LIMIT,
+    DISCHARGE_EDIT_TIME_LIMIT,
 )
 
 
@@ -513,3 +515,144 @@ def can_view_patient_tags(user: Any, patient: Any) -> bool:
         bool: True if tag viewing is allowed, False otherwise
     """
     return can_access_patient(user, patient)
+
+
+def can_edit_admission_data(user: Any, admission: Any) -> bool:
+    """
+    Edit admission info for active admissions.
+    
+    Rules:
+    - Admission must be active (not discharged)
+    - Creator has 24h window OR doctors/residents always can
+    
+    Args:
+        user: The user requesting to edit
+        admission: The PatientAdmission object
+        
+    Returns:
+        bool: True if editing is allowed, False otherwise
+    """
+    if user is None or admission is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    
+    # Check if admission is active (not discharged)
+    if getattr(admission, 'discharge_datetime', None):
+        return False
+    
+    # Doctors/residents always can edit active admissions
+    if is_doctor_or_resident(user):
+        return True
+    
+    # Creator has 24h window
+    admission_creator = getattr(admission, 'created_by', None)
+    if admission_creator == user:
+        created_at = getattr(admission, 'created_at', None)
+        if created_at:
+            time_limit = timedelta(hours=ADMISSION_EDIT_TIME_LIMIT)
+            return timezone.now() - created_at <= time_limit
+    
+    return False
+
+
+def can_discharge_patient(user: Any, admission: Any) -> bool:
+    """
+    Add discharge information to active admission.
+    
+    Rules:
+    - Admission must be active
+    - Only doctors/residents can discharge
+    
+    Args:
+        user: The user requesting to discharge
+        admission: The PatientAdmission object
+        
+    Returns:
+        bool: True if discharge is allowed, False otherwise
+    """
+    if user is None or admission is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    
+    # Check if admission is active (not discharged)
+    if getattr(admission, 'discharge_datetime', None):
+        return False
+    
+    # Only doctors/residents can discharge
+    return is_doctor_or_resident(user)
+
+
+def can_edit_discharge_data(user: Any, admission: Any) -> bool:
+    """
+    Edit discharge info after discharge.
+    
+    Rules:
+    - Admission must be completed (discharged)
+    - Only doctors/residents can edit
+    - Within 24h of discharge datetime
+    
+    Args:
+        user: The user requesting to edit
+        admission: The PatientAdmission object
+        
+    Returns:
+        bool: True if editing is allowed, False otherwise
+    """
+    if user is None or admission is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    
+    # Check if admission is discharged
+    discharge_datetime = getattr(admission, 'discharge_datetime', None)
+    if not discharge_datetime:
+        return False
+    
+    # Only doctors/residents can edit
+    if not is_doctor_or_resident(user):
+        return False
+    
+    # Within 24h of discharge datetime
+    time_limit = timedelta(hours=DISCHARGE_EDIT_TIME_LIMIT)
+    return timezone.now() - discharge_datetime <= time_limit
+
+
+def can_cancel_discharge(user: Any, admission: Any) -> bool:
+    """
+    Cancel discharge and reactivate admission.
+    
+    Rules:
+    - Admission must be completed (discharged)
+    - Only doctors/residents can cancel
+    - Within 24h of discharge datetime
+    
+    Args:
+        user: The user requesting to cancel discharge
+        admission: The PatientAdmission object
+        
+    Returns:
+        bool: True if cancellation is allowed, False otherwise
+    """
+    if user is None or admission is None:
+        return False
+    
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    
+    # Check if admission is discharged
+    discharge_datetime = getattr(admission, 'discharge_datetime', None)
+    if not discharge_datetime:
+        return False
+    
+    # Only doctors/residents can cancel
+    if not is_doctor_or_resident(user):
+        return False
+    
+    # Within 24h of discharge datetime
+    time_limit = timedelta(hours=DISCHARGE_EDIT_TIME_LIMIT)
+    return timezone.now() - discharge_datetime <= time_limit

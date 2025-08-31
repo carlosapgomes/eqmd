@@ -47,6 +47,8 @@ PERM_DISCHARGE_PATIENT = 'discharge_patient'
 
 # Time-based permission settings (in hours)
 EVENT_EDIT_TIME_LIMIT = 24  # Events can be edited for 24 hours after creation
+ADMISSION_EDIT_TIME_LIMIT = 24  # Admission data can be edited for 24 hours after creation
+DISCHARGE_EDIT_TIME_LIMIT = 24  # Discharge data can be edited for 24 hours after discharge
 
 # Cache settings for permission system
 PERMISSION_CACHE_TIMEOUT = 300  # 5 minutes cache timeout for permission checks

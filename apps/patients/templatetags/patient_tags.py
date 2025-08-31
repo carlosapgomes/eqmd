@@ -227,3 +227,54 @@ def tag_assignment_history(patient, limit=5):
     """
     # This would require an audit log system - placeholder for future enhancement
     return []
+
+
+@register.simple_tag
+def get_admission_edit_actions(user, patient, admission):
+    """
+    Generate edit actions for specific admission.
+    
+    Usage: {% get_admission_edit_actions user patient admission as actions %}
+    """
+    from apps.core.permissions.utils import (
+        can_edit_admission_data,
+        can_edit_discharge_data,
+        can_cancel_discharge,
+        can_discharge_patient
+    )
+    
+    actions = []
+    
+    if can_edit_admission_data(user, admission):
+        actions.append({
+            'action_name': 'edit_admission',
+            'label': 'Editar Internação',
+            'icon': 'edit',
+            'btn_class': 'btn-outline-primary'
+        })
+    
+    if can_edit_discharge_data(user, admission):
+        actions.append({
+            'action_name': 'edit_discharge',
+            'label': 'Editar Alta',
+            'icon': 'edit',
+            'btn_class': 'btn-outline-warning'
+        })
+    
+    if can_cancel_discharge(user, admission):
+        actions.append({
+            'action_name': 'cancel_discharge',
+            'label': 'Cancelar Alta',
+            'icon': 'arrow-clockwise',
+            'btn_class': 'btn-outline-danger'
+        })
+    
+    if can_discharge_patient(user, admission):
+        actions.append({
+            'action_name': 'discharge_patient',
+            'label': 'Dar Alta',
+            'icon': 'door-open',
+            'btn_class': 'btn-outline-success'
+        })
+    
+    return actions
