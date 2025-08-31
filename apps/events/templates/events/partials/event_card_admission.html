@@ -29,11 +29,5 @@
 {% endblock %}
 
 {% block event_actions %}
-{% if perms.patients.change_patientadmission %}
-    <a href="{% url 'patients:admission_update' event.admission.pk %}" 
-       class="btn btn-outline-secondary btn-sm" title="Editar">
-        <i class="fas fa-edit"></i>
-    </a>
-{% endif %}
 {{ block.super }}
 {% endblock %}

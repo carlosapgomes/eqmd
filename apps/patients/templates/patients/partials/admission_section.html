@@ -199,6 +199,11 @@
                                 <input type="text" class="form-control" value="{{ patient.name }}" readonly>
                             </div>
                             <div class="mb-3">
+                                <label for="admission_datetime" class="form-label">Data/Hora da Internação *</label>
+                                <input type="datetime-local" class="form-control" name="admission_datetime" required
+                                       value="{% now 'Y-m-d\TH:i' %}">
+                            </div>
+                            <div class="mb-3">
                                 <label for="ward" class="form-label">Ala *</label>
                                 <select class="form-control" name="ward" required>
                                     <option value="">Selecione uma ala</option>
@@ -210,12 +215,22 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
+                                <label for="admission_type" class="form-label">Tipo de Internação *</label>
+                                <select class="form-control" name="admission_type" required>
+                                    <option value="">Selecione um tipo</option>
+                                    <option value="scheduled">Programada</option>
+                                    <option value="emergency">Emergência</option>
+                                    <option value="transfer">Transferência</option>
+                                    <option value="readmission">Reinternação</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
                                 <label for="bed" class="form-label">Leito</label>
                                 <input type="text" class="form-control" name="bed" placeholder="Ex: A101, UTI-02">
                             </div>
                             <div class="mb-3">
                                 <label for="reason" class="form-label">Motivo da Internação *</label>
-                                <textarea class="form-control" name="reason" rows="3" required></textarea>
+                                <textarea class="form-control" name="reason" rows="2" required></textarea>
                             </div>
                         </div>
                     </div>
@@ -301,11 +316,27 @@
                                 <input type="text" class="form-control" value="{{ patient.name }}" readonly>
                             </div>
                             <div class="mb-3">
-                                <label for="discharge_reason" class="form-label">Motivo da Alta *</label>
-                                <textarea class="form-control" name="discharge_reason" rows="3" required placeholder="Ex: Paciente recuperado, melhora clínica"></textarea>
+                                <label for="discharge_datetime" class="form-label">Data/Hora da Alta *</label>
+                                <input type="datetime-local" class="form-control" name="discharge_datetime" required
+                                       value="{% now 'Y-m-d\TH:i' %}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="discharge_type" class="form-label">Tipo de Alta *</label>
+                                <select class="form-control" name="discharge_type" required>
+                                    <option value="">Selecione um tipo</option>
+                                    <option value="medical">Alta Médica</option>
+                                    <option value="administrative">Alta Administrativa</option>
+                                    <option value="transfer_out">Transferência</option>
+                                    <option value="request">A Pedido</option>
+                                    <option value="evasion">Evasão</option>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="discharge_reason" class="form-label">Motivo da Alta *</label>
+                                <textarea class="form-control" name="discharge_reason" rows="3" required placeholder="Ex: Paciente recuperado, melhora clínica"></textarea>
+                            </div>
                             <div class="mb-3">
                                 <label for="reason" class="form-label">Observações</label>
                                 <textarea class="form-control" name="reason" rows="3" placeholder="Observações adicionais"></textarea>
@@ -362,12 +393,13 @@
                                 <select class="form-control" name="ward" required id="ward">
                                     <option value="">Selecione uma ala...</option>
                                     {% for ward in wards %}
-                                        <option value="{{ ward.id }}" {% if ward == patient.ward %}disabled{% endif %}>
+                                        <option value="{{ ward.id }}" {% if ward == patient.ward %}selected{% endif %}>
                                             {{ ward.abbreviation }} - {{ ward.name }}
                                             {% if ward == patient.ward %} (Atual){% endif %}
                                         </option>
                                     {% endfor %}
                                 </select>
+                                <div class="form-text">Selecione a mesma ala para transferir apenas de leito</div>
                             </div>
                             <div class="mb-3">
                                 <label for="bed" class="form-label">Novo Leito</label>

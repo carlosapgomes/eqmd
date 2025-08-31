@@ -988,9 +988,17 @@ class AdmitPatientView(PatientStatusChangeView):
         
         if form.is_valid():
             try:
-                # Update patient status and related fields
-                patient.status = Patient.Status.INPATIENT
-                patient.ward = form.cleaned_data['ward']
+                # Create admission record using patient.admit_patient method
+                admission = patient.admit_patient(
+                    admission_datetime=form.cleaned_data['admission_datetime'],
+                    admission_type=form.cleaned_data['admission_type'],
+                    user=request.user,
+                    ward=form.cleaned_data['ward'],
+                    initial_bed=form.cleaned_data.get('bed', ''),
+                    admission_diagnosis=form.cleaned_data.get('reason', '')
+                )
+                
+                # Update patient bed from form
                 patient.bed = form.cleaned_data.get('bed', '')
                 patient.updated_by = request.user
                 patient.save()
@@ -1015,8 +1023,16 @@ class DischargePatientView(PatientStatusChangeView):
         
         if form.is_valid():
             try:
-                # Update patient status and clear bed/ward
-                patient.status = Patient.Status.DISCHARGED
+                # Discharge patient using patient.discharge_patient method
+                patient.discharge_patient(
+                    discharge_datetime=form.cleaned_data['discharge_datetime'],
+                    discharge_type=form.cleaned_data['discharge_type'],
+                    user=request.user,
+                    final_bed=patient.bed,  # Use current bed as final bed
+                    discharge_diagnosis=form.cleaned_data.get('discharge_reason', '')
+                )
+                
+                # Update patient fields
                 patient.bed = ''
                 patient.updated_by = request.user
                 patient.save()

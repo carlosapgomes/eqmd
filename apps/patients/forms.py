@@ -544,6 +544,20 @@ class StatusChangeForm(forms.Form):
 
 class AdmitPatientForm(StatusChangeForm):
     """Form for admitting patients (changing to inpatient status)"""
+    admission_datetime = forms.DateTimeField(
+        required=True,
+        label="Data/Hora da Internação",
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local'
+        })
+    )
+    admission_type = forms.ChoiceField(
+        choices=PatientAdmission.AdmissionType.choices,
+        required=True,
+        label="Tipo de Internação",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     ward = forms.ModelChoiceField(
         queryset=Ward.objects.filter(is_active=True),
         required=True,
@@ -563,6 +577,20 @@ class AdmitPatientForm(StatusChangeForm):
 
 class DischargePatientForm(StatusChangeForm):
     """Form for discharging patients"""
+    discharge_datetime = forms.DateTimeField(
+        required=True,
+        label="Data/Hora da Alta",
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local'
+        })
+    )
+    discharge_type = forms.ChoiceField(
+        choices=PatientAdmission.DischargeType.choices,
+        required=True,
+        label="Tipo de Alta",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
     discharge_reason = forms.CharField(
         widget=forms.Textarea(attrs={
             'class': 'form-control',
