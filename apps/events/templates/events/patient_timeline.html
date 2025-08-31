@@ -1193,6 +1193,318 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+    
+    // Admission/Discharge Edit Modal Functionality
+    setupAdmissionEditModals();
 });
+
+function setupAdmissionEditModals() {
+    // Edit Admission Modal Handler
+    document.querySelectorAll('[data-bs-target="#editAdmissionModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const admissionId = this.dataset.admissionId;
+            const patientId = this.dataset.patientId;
+            populateEditAdmissionModal(patientId, admissionId);
+        });
+    });
+
+    // Edit Discharge Modal Handler  
+    document.querySelectorAll('[data-bs-target="#editDischargeModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const admissionId = this.dataset.admissionId;
+            const patientId = this.dataset.patientId;
+            populateEditDischargeModal(patientId, admissionId);
+        });
+    });
+    
+    // Cancel Discharge Modal Handler
+    document.querySelectorAll('[data-bs-target="#cancelDischargeModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const admissionId = this.dataset.admissionId;
+            const patientId = this.dataset.patientId;
+            setupCancelDischargeModal(patientId, admissionId);
+        });
+    });
+    
+    // Discharge Patient Modal Handler
+    document.querySelectorAll('[data-bs-target="#dischargePatientModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const admissionId = this.dataset.admissionId;
+            const patientId = this.dataset.patientId;
+            populateDischargePatientModal(patientId, admissionId);
+        });
+    });
+}
+
+function populateEditAdmissionModal(patientId, admissionId) {
+    const modalBody = document.querySelector('#editAdmissionForm');
+    
+    // Show loading state
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Carregando dados da internação...</p>
+        </div>
+    `;
+    
+    // Fetch form via AJAX
+    const url = `/patients/${patientId}/admissions/${admissionId}/edit/`;
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            modalBody.innerHTML = html;
+            
+            // Setup form submission
+            const form = modalBody.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitEditForm(this, 'editAdmissionModal');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading edit admission form:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Erro ao carregar o formulário. Tente novamente.
+                </div>
+            `;
+        });
+}
+
+function populateEditDischargeModal(patientId, admissionId) {
+    const modalBody = document.querySelector('#editDischargeForm');
+    
+    // Show loading state
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-warning" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Carregando dados da alta...</p>
+        </div>
+    `;
+    
+    // Fetch form via AJAX
+    const url = `/patients/${patientId}/admissions/${admissionId}/edit-discharge/`;
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            modalBody.innerHTML = html;
+            
+            // Setup form submission
+            const form = modalBody.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitEditForm(this, 'editDischargeModal');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading edit discharge form:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Erro ao carregar o formulário. Tente novamente.
+                </div>
+            `;
+        });
+}
+
+function setupCancelDischargeModal(patientId, admissionId) {
+    const form = document.querySelector('#cancelDischargeForm');
+    if (form) {
+        form.action = `/patients/${patientId}/admissions/${admissionId}/cancel-discharge/`;
+    }
+}
+
+function populateDischargePatientModal(patientId, admissionId) {
+    const modalBody = document.querySelector('#dischargePatientForm');
+    
+    // Show loading state
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Carregando formulário de alta...</p>
+        </div>
+    `;
+    
+    // For discharge, we can use existing discharge modal functionality
+    // This would typically load a discharge form
+    modalBody.innerHTML = `
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            Funcionalidade de alta será implementada usando o modal de alta existente.
+        </div>
+    `;
+}
+
+function submitEditForm(form, modalId) {
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    
+    // Disable submit button and show loading
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => {
+        if (response.redirected) {
+            // Success - redirect to patient detail
+            window.location.href = response.url;
+        } else {
+            return response.text();
+        }
+    })
+    .then(html => {
+        if (html) {
+            // Form returned with errors, update modal content
+            const modalBody = document.querySelector(`#${modalId.replace('Modal', 'Form')}`);
+            modalBody.innerHTML = html;
+            
+            // Re-setup form submission
+            const newForm = modalBody.querySelector('form');
+            if (newForm) {
+                newForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitEditForm(this, modalId);
+                });
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting form:', error);
+        // Re-enable submit button
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+        
+        // Show error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger mt-2';
+        errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Erro ao salvar. Tente novamente.';
+        form.appendChild(errorDiv);
+        
+        // Remove error after 3 seconds
+        setTimeout(() => errorDiv.remove(), 3000);
+    });
+}
 </script>
+
+<!-- Edit Admission Modal -->
+<div class="modal fade" id="editAdmissionModal" tabindex="-1" aria-labelledby="editAdmissionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAdmissionModalLabel">
+                    <i class="bi bi-pencil me-2"></i>Editar Dados da Internação
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="editAdmissionForm">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Carregando dados da internação...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Discharge Modal -->
+<div class="modal fade" id="editDischargeModal" tabindex="-1" aria-labelledby="editDischargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editDischargeModalLabel">
+                    <i class="bi bi-pencil me-2"></i>Editar Dados da Alta
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="editDischargeForm">
+                    <div class="text-center">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Carregando dados da alta...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Discharge Modal -->
+<div class="modal fade" id="cancelDischargeModal" tabindex="-1" aria-labelledby="cancelDischargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelDischargeModalLabel">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Cancelar Alta
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Atenção!</strong> Esta ação cancelará a alta e reativará a internação do paciente.
+                </div>
+                <p class="mb-0">Tem certeza que deseja cancelar a alta deste paciente?</p>
+                <small class="text-muted">O paciente retornará ao status de "Internado".</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="cancelDischargeForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Confirmar Cancelamento
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Discharge Patient Modal (for active admissions) -->
+<div class="modal fade" id="dischargePatientModal" tabindex="-1" aria-labelledby="dischargePatientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dischargePatientModalLabel">
+                    <i class="bi bi-door-open me-2"></i>Dar Alta ao Paciente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="dischargePatientForm">
+                    <div class="text-center">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Carregando formulário de alta...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

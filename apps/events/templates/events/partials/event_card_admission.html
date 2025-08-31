@@ -29,5 +29,44 @@
 {% endblock %}
 
 {% block event_actions %}
-{{ block.super }}
-{% endblock %}
+<div class="btn-group btn-group-sm">
+    <!-- View button (always visible) -->
+    <a href="{{ event.get_absolute_url }}" 
+       class="btn btn-outline-primary btn-sm"
+       aria-label="Visualizar internação completa"
+       data-bs-toggle="tooltip" 
+       data-bs-placement="top" 
+       title="Ver detalhes">
+        <i class="bi bi-eye" aria-hidden="true"></i>
+        <span class="visually-hidden">Visualizar</span>
+    </a>
+    
+    <!-- Edit Admission button - show if can edit admission data -->
+    {% if admission_permissions.can_edit_admission %}
+    <button class="btn btn-outline-warning btn-sm"
+            data-bs-toggle="modal" 
+            data-bs-target="#editAdmissionModal"
+            data-admission-id="{{ event.admission.id }}"
+            data-patient-id="{{ event.patient.id }}"
+            aria-label="Editar dados da internação"
+            title="Editar Internação">
+        <i class="bi bi-pencil" aria-hidden="true"></i>
+        <span class="visually-hidden">Editar Internação</span>
+    </button>
+    {% endif %}
+    
+    <!-- Discharge button - show if can discharge (active admission) -->
+    {% if admission_permissions.can_discharge %}
+    <button class="btn btn-outline-success btn-sm"
+            data-bs-toggle="modal" 
+            data-bs-target="#dischargePatientModal"
+            data-admission-id="{{ event.admission.id }}"
+            data-patient-id="{{ event.patient.id }}"
+            aria-label="Dar alta ao paciente"
+            title="Dar Alta">
+        <i class="bi bi-door-open" aria-hidden="true"></i>
+        <span class="visually-hidden">Dar Alta</span>
+    </button>
+    {% endif %}
+</div>
+{% endblock event_actions %}
