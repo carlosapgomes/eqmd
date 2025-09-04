@@ -42,7 +42,12 @@
 
 - **[Hospital Configuration](deployment/hospital-configuration.md)** - Environment setup
 - **[PostgreSQL Migration](postgresql-migration.md)** - Upgrade from SQLite for better performance
+
+## 📊 Data Management
+
+- **[Data Export for Research](data-export.md)** - Export anonymized data for analysis
 - **[Sample Data Population](sample-data-population.md)** - Initial data setup
+- **[Firebase Import](firebase-import.md)** - Import data from Firebase
 
 ## 📋 Maintenance
 
