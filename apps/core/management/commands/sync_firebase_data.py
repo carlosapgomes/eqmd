@@ -615,10 +615,14 @@ class Command(BaseCommand):
         datetime_ms = int(dailynote_data["datetime"])
         event_datetime = datetime.fromtimestamp(datetime_ms / 1000, tz=timezone.utc)
 
+        # Extract core medical content to check for content-based duplicates
+        core_content = self.extract_core_content(dailynote_data["content"])
+
+        # Check if any existing note for this patient/datetime contains this core content
         existing_note = DailyNote.objects.filter(
             patient=patient,
             event_datetime=event_datetime,
-            content__icontains=f"Firebase ID: {firebase_key}",
+            content__icontains=core_content.strip(),
         ).first()
 
         if existing_note:
@@ -659,6 +663,31 @@ class Command(BaseCommand):
             f"  ✓ Synced dailynote for patient: {patient.name} (record: {patient_key})"
         )
         return "imported"
+
+    def extract_core_content(self, content):
+        """Extract core medical content in same format as format_dailynote_content but without header/footer"""
+        subjective = content.get("subjective", "").strip()
+        objective = content.get("objective", "").strip()
+        exams_list = content.get("examsList", "").strip()
+        assess_plan = content.get("assessplan", "").strip()
+
+        sections = []
+        if subjective:
+            sections.append(subjective)
+        if objective:
+            if sections:  # Add empty line if there was previous content
+                sections.append("")
+            sections.append(objective)
+        if exams_list:
+            if sections:
+                sections.append("")
+            sections.append(exams_list)
+        if assess_plan:
+            if sections:
+                sections.append("")
+            sections.append(assess_plan)
+
+        return "\n".join(sections)
 
     def format_dailynote_content(self, content, username, firebase_key):
         """Format the dailynote content according to specifications"""
