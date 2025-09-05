@@ -479,6 +479,25 @@ class Command(BaseCommand):
 
         return "imported"
 
+    def get_current_dailynote_keys(self):
+        """Get all current dailynote keys from patients to exclude drafts"""
+        try:
+            # Get all patients to check for currentdailynotekey
+            patients_ref = db.reference("patients")
+            all_patients = patients_ref.get()
+            
+            current_keys = set()
+            if all_patients:
+                for patient_key, patient_data in all_patients.items():
+                    current_dailynote_key = patient_data.get("currentdailynotekey")
+                    if current_dailynote_key:
+                        current_keys.add(current_dailynote_key)
+            
+            return current_keys
+        except Exception as e:
+            self.stdout.write(f"Warning: Could not fetch current dailynote keys: {e}")
+            return set()
+
     def sync_dailynotes(self, dailynotes_reference):
         """Sync new dailynotes from Firebase using chunked queries"""
         self.stdout.write(f"\n=== SYNCING DAILYNOTES ===")
@@ -489,7 +508,12 @@ class Command(BaseCommand):
             error_count = 0
             skipped_count = 0
             patient_not_found_count = 0
+            draft_skipped_count = 0
             total_processed = 0
+
+            # Get all current dailynote keys from patients to exclude drafts
+            current_dailynote_keys = self.get_current_dailynote_keys()
+            self.stdout.write(f"Found {len(current_dailynote_keys)} current dailynote keys (drafts) to exclude")
 
             # Use chunked querying to avoid payload limits
             ref = db.reference(dailynotes_reference)
@@ -542,6 +566,14 @@ class Command(BaseCommand):
                 # Process dailynotes in this chunk
                 for note_key, note_data in chunk_new_dailynotes.items():
                     try:
+                        # Skip if this is a current dailynote (draft)
+                        if note_key in current_dailynote_keys:
+                            if self.dry_run:
+                                self.stdout.write(f"  Would skip draft dailynote: {note_key}")
+                            draft_skipped_count += 1
+                            total_processed += 1
+                            continue
+                        
                         result = self.process_firebase_dailynote(note_key, note_data)
                         if result == "imported":
                             imported_count += 1
@@ -582,7 +614,7 @@ class Command(BaseCommand):
                     )
 
             self.stdout.write(
-                f"Dailynotes: {imported_count} imported, {patient_not_found_count} patient not found, {skipped_count} skipped, {error_count} errors"
+                f"Dailynotes: {imported_count} imported, {patient_not_found_count} patient not found, {skipped_count} skipped, {draft_skipped_count} drafts skipped, {error_count} errors"
             )
             return imported_count
 
@@ -611,18 +643,10 @@ class Command(BaseCommand):
 
         patient = patient_record.patient
 
-        # Check if this dailynote already exists (to avoid duplicates)
-        datetime_ms = int(dailynote_data["datetime"])
-        event_datetime = datetime.fromtimestamp(datetime_ms / 1000, tz=timezone.utc)
-
-        # Extract core medical content to check for content-based duplicates
-        core_content = self.extract_core_content(dailynote_data["content"])
-
-        # Check if any existing note for this patient/datetime contains this core content
+        # Check if this dailynote already exists using Firebase key (more reliable than content matching)
         existing_note = DailyNote.objects.filter(
             patient=patient,
-            event_datetime=event_datetime,
-            content__icontains=core_content.strip(),
+            content__icontains=f"Firebase ID: {firebase_key}",
         ).first()
 
         if existing_note:
@@ -663,31 +687,6 @@ class Command(BaseCommand):
             f"  ✓ Synced dailynote for patient: {patient.name} (record: {patient_key})"
         )
         return "imported"
-
-    def extract_core_content(self, content):
-        """Extract core medical content in same format as format_dailynote_content but without header/footer"""
-        subjective = content.get("subjective", "").strip()
-        objective = content.get("objective", "").strip()
-        exams_list = content.get("examsList", "").strip()
-        assess_plan = content.get("assessplan", "").strip()
-
-        sections = []
-        if subjective:
-            sections.append(subjective)
-        if objective:
-            if sections:  # Add empty line if there was previous content
-                sections.append("")
-            sections.append(objective)
-        if exams_list:
-            if sections:
-                sections.append("")
-            sections.append(exams_list)
-        if assess_plan:
-            if sections:
-                sections.append("")
-            sections.append(assess_plan)
-
-        return "\n".join(sections)
 
     def format_dailynote_content(self, content, username, firebase_key):
         """Format the dailynote content according to specifications"""
