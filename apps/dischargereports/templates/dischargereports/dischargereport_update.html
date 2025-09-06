@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Relatório de Alta{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3>
+            <i class="bi bi-file-earmark-text me-2"></i>
+            Editar Relatório de Alta
+          </h3>
+          <a href="{% url 'apps.dischargereports:dischargereport_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+          </a>
+        </div>
+        <div class="card-body">
+          <!-- Form Errors -->
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger" role="alert">
+            <h6 class="alert-heading">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Erro no formulário
+            </h6>
+            {% for error in form.non_field_errors %}
+              <p class="mb-0">{{ error }}</p>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+
+            <!-- Basic Info -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.patient.id_for_label }}" class="form-label">
+                    <i class="bi bi-person me-1"></i>
+                    {{ form.patient.label }}
+                  </label>
+                  {{ form.patient }}
+                  {% if form.patient.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.patient.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.event_datetime.id_for_label }}" class="form-label">
+                    <i class="bi bi-calendar-event me-1"></i>
+                    {{ form.event_datetime.label }}
+                  </label>
+                  {{ form.event_datetime }}
+                  {% if form.event_datetime.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.event_datetime.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.description.id_for_label }}" class="form-label">
+                <i class="bi bi-card-text me-1"></i>
+                {{ form.description.label }}
+              </label>
+              {{ form.description }}
+              {% if form.description.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.description.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Date Fields -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.admission_date.id_for_label }}" class="form-label">
+                    <i class="bi bi-calendar-plus me-1"></i>
+                    {{ form.admission_date.label }}
+                  </label>
+                  {{ form.admission_date }}
+                  {% if form.admission_date.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.admission_date.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.discharge_date.id_for_label }}" class="form-label">
+                    <i class="bi bi-calendar-check me-1"></i>
+                    {{ form.discharge_date.label }}
+                  </label>
+                  {{ form.discharge_date }}
+                  {% if form.discharge_date.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.discharge_date.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Specialty -->
+            <div class="mb-3">
+              <label for="{{ form.medical_specialty.id_for_label }}" class="form-label">
+                <i class="bi bi-hospital me-1"></i>
+                {{ form.medical_specialty.label }}
+              </label>
+              {{ form.medical_specialty }}
+              {% if form.medical_specialty.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.medical_specialty.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Content Sections -->
+            <div class="mb-3">
+              <label for="{{ form.problems_and_diagnosis.id_for_label }}" class="form-label">
+                <i class="bi bi-clipboard-pulse me-1"></i>
+                {{ form.problems_and_diagnosis.label }}
+              </label>
+              {{ form.problems_and_diagnosis }}
+              {% if form.problems_and_diagnosis.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.problems_and_diagnosis.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.admission_history.id_for_label }}" class="form-label">
+                <i class="bi bi-journal-medical me-1"></i>
+                {{ form.admission_history.label }}
+              </label>
+              {{ form.admission_history }}
+              {% if form.admission_history.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.admission_history.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.exams_list.id_for_label }}" class="form-label">
+                <i class="bi bi-clipboard2-pulse me-1"></i>
+                {{ form.exams_list.label }}
+              </label>
+              {{ form.exams_list }}
+              {% if form.exams_list.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.exams_list.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.procedures_list.id_for_label }}" class="form-label">
+                <i class="bi bi-scissors me-1"></i>
+                {{ form.procedures_list.label }}
+              </label>
+              {{ form.procedures_list }}
+              {% if form.procedures_list.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.procedures_list.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.inpatient_medical_history.id_for_label }}" class="form-label">
+                <i class="bi bi-journal-text me-1"></i>
+                {{ form.inpatient_medical_history.label }}
+              </label>
+              {{ form.inpatient_medical_history }}
+              {% if form.inpatient_medical_history.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.inpatient_medical_history.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.discharge_status.id_for_label }}" class="form-label">
+                <i class="bi bi-activity me-1"></i>
+                {{ form.discharge_status.label }}
+              </label>
+              {{ form.discharge_status }}
+              {% if form.discharge_status.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.discharge_status.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ form.discharge_recommendations.id_for_label }}" class="form-label">
+                <i class="bi bi-check-circle me-1"></i>
+                {{ form.discharge_recommendations.label }}
+              </label>
+              {{ form.discharge_recommendations }}
+              {% if form.discharge_recommendations.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.discharge_recommendations.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2 mt-4">
+              {% if report.is_draft %}
+                <button type="submit" name="save_draft" class="btn btn-warning">
+                  <i class="bi bi-pencil-square"></i> Salvar Rascunho
+                </button>
+                <button type="submit" name="save_final" class="btn btn-success">
+                  <i class="bi bi-check-circle"></i> Salvar Definitivo
+                </button>
+              {% else %}
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-pencil-square"></i> Atualizar
+                </button>
+              {% endif %}
+              <a href="{% url 'apps.dischargereports:dischargereport_list' %}" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

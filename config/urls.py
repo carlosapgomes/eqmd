@@ -74,6 +74,7 @@ urlpatterns = [
     ),
     path("pdf/", include("apps.pdfgenerator.urls", namespace="pdfgenerator")),
     path("pdf-forms/", include("apps.pdf_forms.urls", namespace="pdf_forms")),
+    path("dischargereports/", include("apps.dischargereports.urls")),
 ]
 
 # Custom error handlers
