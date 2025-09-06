@@ -227,25 +227,239 @@ All templates extend `base.html` and use Bootstrap 5.3 styling:
 - **0001_initial.py**: Creates DischargeReport table with proper indexes
 - **Indexes**: Optimized for common queries (dates, draft status, specialty)
 
-## Testing
+## Phase 7: Testing & Documentation
 
-### Model Testing
-```bash
-# Test model functionality
-DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/test_models.py
+**Comprehensive test suite and complete documentation for discharge reports feature.**
+
+### Overview
+
+Phase 7 completes the discharge reports implementation with comprehensive testing coverage and enhanced documentation. The test suite covers all aspects of the application including models, views, Firebase import functionality, and integration workflows.
+
+### Test Suite Structure
+
+#### Test Directory Structure
+```
+apps/dischargereports/
+└── tests/
+    ├── __init__.py
+    ├── test_models.py          # Model behavior and validation
+    ├── test_views.py          # View functionality and permissions  
+    ├── test_firebase_import.py # Firebase import functionality
+    └── test_integration.py    # Complete workflow testing
 ```
 
-### View Testing  
-```bash
-# Test CRUD operations and permissions
-DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/test_views.py
+### Model Tests (`test_models.py`)
+
+#### Coverage Areas
+- **Event Type Setting**: Verifies `save()` sets correct event type
+- **Draft Default Behavior**: Confirms `is_draft` defaults to `True`
+- **String Representation**: Tests `__str__` method formatting
+- **Permission Methods**: Validates edit/delete permission logic
+- **Status Display**: Tests status properties and badge classes
+- **Date Validation**: Ensures discharge date after admission date
+- **24-hour Edit Window**: Verifies time-based editing restrictions
+
+#### Key Test Scenarios
+```python
+def test_can_be_edited_by_user_draft(self):
+    """Test that drafts can be edited by creator"""
+    # Tests draft editing permissions
+    
+def test_can_be_deleted_by_user_draft_only(self):
+    """Test that only drafts can be deleted"""
+    # Tests delete restrictions for final reports
+    
+def test_status_display_properties(self):
+    """Test status display properties"""
+    # Tests status text and CSS class generation
 ```
 
-### Form Testing
-```bash
-# Test form validation
-DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/test_forms.py
+### View Tests (`test_views.py`)
+
+#### Coverage Areas
+- **Authentication Requirements**: All views require login
+- **CRUD Operations**: Create, read, update, delete functionality
+- **Draft vs Final Logic**: Different behavior for draft/final reports
+- **Permission Enforcement**: Proper access control implementation
+- **Form Validation**: Server-side validation and error handling
+- **Template Rendering**: Correct template selection and context data
+
+#### Key Test Scenarios
+```python
+def test_create_view_saves_draft_by_default(self):
+    """Test that create view saves as draft by default"""
+    # Tests draft creation workflow
+    
+def test_update_view_blocks_non_editable(self):
+    """Test that update view blocks non-editable reports"""
+    # Tests 24-hour edit window enforcement
+    
+def test_delete_view_allows_drafts_only(self):
+    """Test that delete view only allows draft deletion"""
+    # Tests delete permission restrictions
 ```
+
+### Firebase Import Tests (`test_firebase_import.py`)
+
+#### Coverage Areas
+- **Command Interface**: Proper argument parsing and validation
+- **Firebase Connection**: Authentication and data retrieval
+- **Data Mapping**: Firebase to Django model field mapping
+- **Patient Matching**: Record number to patient lookup
+- **Duplicate Prevention**: Skip already imported records
+- **Error Handling**: Graceful handling of various error conditions
+- **Dry Run Mode**: Preview functionality without database changes
+
+#### Key Test Scenarios
+```python
+def test_successful_import(self):
+    """Test successful Firebase import"""
+    # Tests import with dry run mode
+    
+def test_actual_import_creates_objects(self):
+    """Test that actual import creates DischargeReport and PatientAdmission objects"""
+    # Tests real import with database changes
+    
+def test_import_with_nonexistent_patient(self):
+    """Test import with patient that doesn't exist"""
+    # Tests error handling for missing patients
+```
+
+### Integration Tests (`test_integration.py`)
+
+#### Coverage Areas
+- **Complete Workflows**: End-to-end draft to final workflows
+- **Timeline Integration**: Reports appearing in patient timelines
+- **Multiple Reports**: Handling multiple reports per patient
+- **Cross-User Permissions**: Unauthorized user access prevention
+- **Form Validation Integration**: Server-side validation in context
+- **Template Integration**: Permission-based UI elements
+
+#### Key Test Scenarios
+```python
+def test_complete_draft_to_final_workflow(self):
+    """Test creating draft, editing, and finalizing"""
+    # Tests complete report lifecycle
+    
+def test_multiple_reports_for_same_patient(self):
+    """Test creating multiple reports for the same patient"""
+    # Tests patient-report relationships
+    
+def test_timeline_integration(self):
+    """Test that discharge reports appear in patient timeline"""
+    # Tests event system integration
+```
+
+### Running Tests
+
+#### Test Commands
+```bash
+# All tests with coverage
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/ --cov=apps.dischargereports --cov-report=term-missing -v
+
+# All tests without coverage
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/ -v
+
+# Specific test files
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/test_models.py -v
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/test_views.py -v
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/test_firebase_import.py -v
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/test_integration.py -v
+
+# With coverage reports
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/ --cov=apps.dischargereports --cov-report=html --cov-report=term-missing -v
+```
+
+#### Test Coverage Goals
+- **Overall Coverage**: >80% code coverage
+- **Model Coverage**: 100% of model methods and properties
+- **View Coverage**: All view classes and methods tested
+- **Import Coverage**: Firebase import command thoroughly tested
+- **Integration Coverage**: Key user workflows validated
+
+### Testing Best Practices
+
+#### Mock Usage
+- **Firebase Services**: Mock Firebase Admin SDK for import tests
+- **User Authentication**: Mock user authentication for view tests
+- **Database Operations**: Use Django's test database for isolated testing
+- **External Services**: Mock all external service calls
+
+#### Test Data Management
+- **Factory Pattern**: Use factory-boy or direct object creation
+- **Test Isolation**: Each test runs with clean database state
+- **Data Relationships**: Proper patient-report relationships maintained
+- **Edge Cases**: Test boundary conditions and error scenarios
+
+#### Performance Testing
+- **Query Efficiency**: Monitor database query counts
+- **Load Testing**: Test with large datasets for import functionality
+- **Memory Usage**: Ensure tests don't leak memory
+- **Response Times**: View response times within acceptable limits
+
+### Test Documentation
+
+#### Test Case Documentation
+Each test includes:
+- **Clear Description**: What the test validates
+- **Setup Steps**: How test data is prepared
+- **Expected Results**: What the test should verify
+- **Error Conditions**: How failures are handled
+
+#### Integration with CI/CD
+- **Automated Testing**: Tests run on every commit
+- **Coverage Reports**: Coverage reports generated and monitored
+- **Test Failures**: Failed tests block deployment
+- **Performance Metrics**: Test performance tracked over time
+
+### Verification Checklist
+
+#### Test Implementation Verification
+✅ **Test Structure**: Proper test directory and file organization
+✅ **Model Coverage**: All model methods and properties tested
+✅ **View Coverage**: All CRUD operations and permissions tested
+✅ **Import Coverage**: Firebase import thoroughly tested with mocking
+✅ **Integration Coverage**: Complete workflows and user scenarios tested
+✅ **Error Handling**: Comprehensive error condition testing
+✅ **Edge Cases**: Boundary conditions and unusual scenarios covered
+✅ **Performance**: Test efficiency and resource usage monitored
+
+#### Documentation Verification
+✅ **Test Commands**: Clear instructions for running tests
+✅ **Coverage Goals**: Defined coverage targets and metrics
+✅ **Best Practices**: Testing guidelines and standards documented
+✅ **Troubleshooting**: Common test issues and solutions documented
+✅ **CI/CD Integration**: Automated testing process documented
+
+### Troubleshooting Tests
+
+#### Common Test Issues
+
+**Import Errors**:
+```bash
+# Check for missing dependencies
+uv run python -c "import pytest, factory_boy, firebase_admin"
+
+# Verify test settings
+DJANGO_SETTINGS_MODULE=config.test_settings uv run python manage.py check
+```
+
+**Permission Test Failures**:
+- Verify user authentication setup
+- Check permission groups and user assignments
+- Validate permission method implementations
+
+**Firebase Mock Issues**:
+- Confirm mock setup for Firebase Admin SDK
+- Verify mock return values and method calls
+- Check patch decorators and import paths
+
+**Database Test Issues**:
+- Ensure test database migrations are current
+- Check test data setup and cleanup
+- Verify test isolation between test cases
+
+This completes the Phase 7 implementation, providing comprehensive test coverage and documentation for the discharge reports feature, ensuring reliability and maintainability for production use.
 
 ## Troubleshooting
 
