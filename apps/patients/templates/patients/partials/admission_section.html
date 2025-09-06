@@ -421,7 +421,7 @@
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <div class="mb-3">
                                 <label class="form-label">Paciente</label>
                                 <input type="text" class="form-control" value="{{ patient.name }}" readonly>
@@ -444,11 +444,9 @@
                                 <input type="text" class="form-control" name="bed" id="bed" placeholder="Ex: 101A, UTI-02, etc.">
                                 <div class="form-text">Deixe em branco se não houver leito específico</div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="transfer_reason" class="form-label">Motivo da Transferência *</label>
-                                <textarea class="form-control" name="transfer_reason" rows="5" required id="transfer_reason" placeholder="Motivo da transferência interna..."></textarea>
+                                <input type="text" class="form-control" name="transfer_reason" required id="transfer_reason" placeholder="Motivo da transferência interna...">
                             </div>
                         </div>
                     </div>
