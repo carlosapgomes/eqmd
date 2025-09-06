@@ -1,151 +1,182 @@
-{% load static %}
-{% load hospital_tags %}
+{% load static %} {% load hospital_tags %}
 <!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Relatório de Alta - {{ report.patient.name }}</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        line-height: 1.4;
-      }
-      .header {
-        text-align: center;
-        margin-bottom: 30px;
-        border-bottom: 2px solid #ddd;
-        padding-bottom: 20px;
-      }
-      .hospital-name {
-        font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 5px;
-      }
-      .report-title {
-        font-size: 16px;
-        margin-top: 10px;
-      }
-      .patient-info {
-        margin-bottom: 20px;
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 5px;
-      }
-      .patient-info p {
-        margin: 5px 0;
-      }
-      .content-section {
-        margin-bottom: 20px;
-      }
-      .content-section h3 {
-        border-bottom: 1px solid #ccc;
-        padding-bottom: 5px;
-        margin-bottom: 10px;
-        color: #333;
-      }
-      .content-section p {
-        margin: 10px 0;
-        text-align: justify;
-      }
-      .signature-section {
-        margin-top: 40px;
-        text-align: center;
-      }
-      .signature-line {
-        border-top: 1px solid #000;
-        width: 300px;
-        margin: 30px auto 10px;
-      }
-      @media print {
-        .no-print {
-          display: none;
-        }
-        body {
-          margin: 0;
-        }
-      }
-    </style>
+    <title>
+      Relatório de Alta - {{ report.patient.name }} - {{
+      report.discharge_date|date:"d/m/Y" }}
+    </title>
+    <link
+      rel="stylesheet"
+      href="{% static 'dischargereports/css/print.css' %}"
+    />
   </head>
   <body>
-    <button class="no-print" onclick="window.print()">🖨️ Imprimir</button>
+    <button class="print-button no-print" onclick="window.print()">
+      🖨️ Imprimir
+    </button>
 
+    <!-- Header (appears on every page) -->
     <div class="header">
-      <div class="hospital-name">{% hospital_name %}</div>
-      <div class="report-title">Relatório de Alta - {{ report.medical_specialty }}</div>
+      <div class="hospital-branding">
+        {% hospital_logo as logo_url %} {% if logo_url %}
+        <img
+          src="{{ logo_url }}"
+          alt="Logo do Hospital"
+          class="hospital-logo"
+        />
+        {% endif %}
+        <div class="hospital-info">
+          <div class="hospital-name">{% hospital_name %}</div>
+          <div class="hospital-details">
+            {% hospital_address %} | {% hospital_phone %} | {% hospital_email %}
+          </div>
+        </div>
+      </div>
+      <div class="document-title">
+        <h1>Relatório de Alta</h1>
+        <h2>{{ report.medical_specialty }}</h2>
+      </div>
     </div>
 
-    <div class="patient-info">
-      <p><strong>Paciente:</strong> {{ report.patient.name }}</p>
-      {% if report.patient.fiscal_number %}
-      <p><strong>CPF:</strong> {{ report.patient.fiscal_number }}</p>
-      {% endif %}
-      {% if report.patient.health_card_number %}
-      <p><strong>Cartão SUS:</strong> {{ report.patient.health_card_number }}</p>
-      {% endif %}
-      <p><strong>Data de Admissão:</strong> {{ report.admission_date|date:"d/m/Y" }}</p>
-      <p><strong>Data de Alta:</strong> {{ report.discharge_date|date:"d/m/Y" }}</p>
-      {% if report.ward %}
-      <p><strong>Enfermaria:</strong> {{ report.ward }}</p>
-      {% endif %}
+    <!-- Patient Information -->
+    <div class="patient-info-section">
+      <h3>Identificação do Paciente</h3>
+      <div class="patient-info-grid">
+        <div class="info-row">
+          <div class="info-cell">
+            <span class="info-label">Nome:</span>
+            <span class="info-value">{{ report.patient.name }}</span>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Prontuário:</span>
+            <span class="info-value"
+              >{{ report.patient.current_record_number|default:"—" }}</span
+            >
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-cell">
+            <span class="info-label">Data de Nascimento:</span>
+            <span class="info-value"
+              >{{ report.patient.birthday|date:"d/m/Y"|default:"—" }}</span
+            >
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Gênero:</span>
+            <span class="info-value"
+              >{{ report.patient.get_gender_display|default:"—" }}</span
+            >
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Idade:</span>
+            <span class="info-value">{{ report.patient.age }} anos</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-cell">
+            <span class="info-label">Data de Admissão:</span>
+            <span class="info-value"
+              >{{ report.admission_date|date:"d/m/Y" }}</span
+            >
+          </div>
+          <div class="info-cell">
+            <span class="info-label">Data de Alta:</span>
+            <span class="info-value"
+              >{{ report.discharge_date|date:"d/m/Y" }}</span
+            >
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- Medical Content Sections -->
     {% if report.problems_and_diagnosis %}
     <div class="content-section">
       <h3>Problemas e Diagnósticos</h3>
-      <p>{{ report.problems_and_diagnosis|linebreaks }}</p>
+      <div class="content-text">
+        {{ report.problems_and_diagnosis|linebreaks }}
+      </div>
     </div>
     {% endif %}
 
-    {% if report.clinical_history %}
+    {% if report.admission_history %}
     <div class="content-section">
-      <h3>História Clínica</h3>
-      <p>{{ report.clinical_history|linebreaks }}</p>
+      <h3>História da Admissão</h3>
+      <div class="content-text">{{ report.admission_history|linebreaks }}</div>
     </div>
     {% endif %}
 
-    {% if report.physical_examination %}
+    {% if report.exams_list %}
     <div class="content-section">
-      <h3>Exame Físico</h3>
-      <p>{{ report.physical_examination|linebreaks }}</p>
+      <h3>Lista de Exames</h3>
+      <div class="content-text">{{ report.exams_list|linebreaks }}</div>
     </div>
     {% endif %}
 
-    {% if report.laboratory_exams %}
+    {% if report.procedures_list %}
     <div class="content-section">
-      <h3>Exames Laboratoriais</h3>
-      <p>{{ report.laboratory_exams|linebreaks }}</p>
+      <h3>Lista de Procedimentos</h3>
+      <div class="content-text">{{ report.procedures_list|linebreaks }}</div>
     </div>
     {% endif %}
 
-    {% if report.treatment_performed %}
+    {% if report.inpatient_medical_history %}
     <div class="content-section">
-      <h3>Tratamento Realizado</h3>
-      <p>{{ report.treatment_performed|linebreaks }}</p>
+      <h3>História Médica da Internação</h3>
+      <div class="content-text">
+        {{ report.inpatient_medical_history|linebreaks }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if report.discharge_status %}
+    <div class="content-section">
+      <h3>Status da Alta</h3>
+      <div class="content-text">{{ report.discharge_status|linebreaks }}</div>
     </div>
     {% endif %}
 
     {% if report.discharge_recommendations %}
     <div class="content-section">
       <h3>Recomendações de Alta</h3>
-      <p>{{ report.discharge_recommendations|linebreaks }}</p>
+      <div class="content-text">
+        {{ report.discharge_recommendations|linebreaks }}
+      </div>
     </div>
     {% endif %}
 
-    {% if report.follow_up %}
-    <div class="content-section">
-      <h3>Seguimento</h3>
-      <p>{{ report.follow_up|linebreaks }}</p>
-    </div>
-    {% endif %}
+    <!-- Footer (appears on every page) -->
+    <div class="page-footer">
+      <div class="generation-info">
+        <p>
+          <strong>Relatório gerado em:</strong> {{ now|date:"d/m/Y às H:i" }}
+        </p>
+        <p>
+          <strong>Gerado por:</strong> {{
+          user.get_full_name|default:user.username }}
+        </p>
+      </div>
 
-    <div class="signature-section">
-      <div class="signature-line"></div>
-      <p><strong>{{ report.updated_by.get_full_name }}</strong></p>
-      <p>{{ report.updated_by.profession|default:"Médico" }}</p>
-      <p>Data: {{ now|date:"d/m/Y H:i" }}</p>
+      <div class="hospital-footer">
+        <div class="hospital-footer-info">
+          {% hospital_name %} - {% hospital_address %}<br />
+          Tel: {% hospital_phone %} | Email: {% hospital_email %}
+        </div>
+        <div class="sistema-credit">criado por EquipeMed</div>
+      </div>
     </div>
 
+    <script>
+      // Auto-print functionality
+      document.addEventListener("DOMContentLoaded", function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("print") === "true") {
+          window.print();
+        }
+      });
+    </script>
   </body>
 </html>
