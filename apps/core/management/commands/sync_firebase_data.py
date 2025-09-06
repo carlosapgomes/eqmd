@@ -660,6 +660,8 @@ class Command(BaseCommand):
 
         # Convert Firebase datetime to Django datetime
         try:
+            datetime_ms = int(dailynote_data["datetime"])
+            event_datetime = datetime.fromtimestamp(datetime_ms / 1000, tz=timezone.utc)
             event_datetime = event_datetime.astimezone(
                 django_timezone.get_current_timezone()
             )
