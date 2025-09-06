@@ -34,18 +34,14 @@ Extends the base event card for discharge report events
     <span class="visually-hidden">Imprimir</span>
   </a>
 
-  <!-- Edit Button - Show if draft or within 24h window -->
-  {% if event.is_draft or event_data.can_edit %}
+  <!-- Edit Button -->
+  {% if event.can_be_edited_by_user:request.user %}
   <a
     href="{{ event.get_edit_url }}"
     class="btn btn-outline-warning btn-sm"
-    aria-label="Editar relatório"
-    data-bs-toggle="tooltip"
-    data-bs-placement="top"
-    title="Editar relatório"
+    title="{% if event.is_draft %}Editar rascunho{% else %}Editar relatório{% endif %}"
   >
-    <i class="bi bi-pencil" aria-hidden="true"></i>
-    <span class="visually-hidden">Editar</span>
+    <i class="bi bi-pencil"></i>
   </a>
   {% endif %}
 

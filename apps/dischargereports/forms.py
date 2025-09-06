@@ -12,7 +12,7 @@ class DischargeReportForm(forms.ModelForm):
             'admission_date', 'discharge_date', 'medical_specialty',
             'admission_history', 'problems_and_diagnosis', 'exams_list',
             'procedures_list', 'inpatient_medical_history',
-            'discharge_status', 'discharge_recommendations'
+            'discharge_status', 'discharge_recommendations', 'is_draft'
         ]
         widgets = {
             'patient': forms.Select(attrs={'class': 'form-select'}),
@@ -52,6 +52,7 @@ class DischargeReportForm(forms.ModelForm):
             'discharge_recommendations': forms.Textarea(
                 attrs={'class': 'form-control', 'rows': 4}
             ),
+            'is_draft': forms.HiddenInput(),  # Hide from form, controlled by buttons
         }
 
     def clean(self):
