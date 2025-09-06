@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load dischargereport_tags %}
+
+{% block title %}{{ report.patient.name }} - Relatório de Alta{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <h3>Relatório de Alta - {{ report.patient.name }}</h3>
+            {% if report.is_draft %}
+              <span class="badge bg-warning text-dark">
+                <i class="bi bi-pencil-square"></i> Rascunho
+              </span>
+            {% else %}
+              <span class="badge bg-success">
+                <i class="bi bi-check-circle"></i> Finalizado
+              </span>
+            {% endif %}
+          </div>
+          <div class="btn-group">
+            {% can_edit_discharge_report_tag user report as can_edit %}
+            {% if can_edit %}
+              <a href="{% url 'apps.dischargereports:dischargereport_update' report.pk %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Editar
+              </a>
+            {% endif %}
+            <a href="{% url 'apps.dischargereports:dischargereport_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Basic Information -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <h6 class="fw-bold text-muted">INFORMAÇÕES BÁSICAS</h6>
+              <div class="border rounded p-3 bg-light">
+                <p><strong>Paciente:</strong> {{ report.patient.name }}</p>
+                <p><strong>Data do Evento:</strong> {{ report.event_datetime|date:"d/m/Y H:i" }}</p>
+                <p><strong>Descrição:</strong> {{ report.description|default:"Não informado" }}</p>
+                <p><strong>Especialidade Médica:</strong> {{ report.medical_specialty }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-bold text-muted">DATAS</h6>
+              <div class="border rounded p-3 bg-light">
+                <p><strong>Data de Admissão:</strong> {{ report.admission_date|date:"d/m/Y" }}</p>
+                <p><strong>Data de Alta:</strong> {{ report.discharge_date|date:"d/m/Y" }}</p>
+                <p><strong>Duração da Internação:</strong> 
+                  {% with days=report.discharge_date|timeuntil:report.admission_date %}
+                    {{ days }}
+                  {% endwith %}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Medical Content -->
+          <div class="row">
+            <div class="col-12">
+              <h6 class="fw-bold text-muted mb-3">CONTEÚDO MÉDICO</h6>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Problemas e Diagnósticos</h6>
+                </div>
+                <div class="card-body">
+                  <pre class="mb-0">{{ report.problems_and_diagnosis|default:"Não informado" }}</pre>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">História da Admissão</h6>
+                </div>
+                <div class="card-body">
+                  <pre class="mb-0">{{ report.admission_history|default:"Não informado" }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Lista de Exames</h6>
+                </div>
+                <div class="card-body">
+                  <pre class="mb-0">{{ report.exams_list|default:"Não informado" }}</pre>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Lista de Procedimentos</h6>
+                </div>
+                <div class="card-body">
+                  <pre class="mb-0">{{ report.procedures_list|default:"Não informado" }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">História Médica da Internação</h6>
+                </div>
+                <div class="card-body">
+                  <pre class="mb-0">{{ report.inpatient_medical_history|default:"Não informado" }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Status da Alta</h6>
+                </div>
+                <div class="card-body">
+                  <pre class="mb-0">{{ report.discharge_status|default:"Não informado" }}</pre>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Recomendações de Alta</h6>
+                </div>
+                <div class="card-body">
+                  <pre class="mb-0">{{ report.discharge_recommendations|default:"Não informado" }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metadata -->
+          <div class="row mt-4">
+            <div class="col-12">
+              <h6 class="fw-bold text-muted mb-3">METADADOS</h6>
+              <div class="border rounded p-3 bg-light">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p><small><strong>Criado em:</strong> {{ report.created_at|date:"d/m/Y H:i" }}</small></p>
+                    <p><small><strong>Criado por:</strong> {{ report.created_by.get_full_name|default:report.created_by.email }}</small></p>
+                  </div>
+                  <div class="col-md-6">
+                    <p><small><strong>Última atualização:</strong> {{ report.updated_at|date:"d/m/Y H:i" }}</small></p>
+                    <p><small><strong>Atualizado por:</strong> {{ report.updated_by.get_full_name|default:report.updated_by.email }}</small></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
