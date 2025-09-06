@@ -1,0 +1,116 @@
+{% extends "events/partials/event_card_base.html" %}
+{% load permission_tags %}
+{% comment %}
+DischargeReport-specific event card template
+Extends the base event card for discharge report events
+{% endcomment %}
+
+{% block event_actions %}
+<div class="btn-group btn-group-sm">
+  <!-- View Button -->
+  <a
+    href="{{ event.get_absolute_url }}"
+    class="btn btn-outline-primary btn-sm"
+    aria-label="Visualizar relatório de alta"
+    data-bs-toggle="tooltip"
+    data-bs-placement="top"
+    title="Ver relatório completo"
+  >
+    <i class="bi bi-eye" aria-hidden="true"></i>
+    <span class="visually-hidden">Visualizar</span>
+  </a>
+
+  <!-- Print Button -->
+  <a
+    href="{% url 'apps.dischargereports:dischargereport_print' pk=event.pk %}"
+    class="btn btn-outline-secondary btn-sm"
+    target="_blank"
+    aria-label="Imprimir relatório"
+    data-bs-toggle="tooltip"
+    data-bs-placement="top"
+    title="Imprimir relatório"
+  >
+    <i class="bi bi-printer" aria-hidden="true"></i>
+    <span class="visually-hidden">Imprimir</span>
+  </a>
+
+  <!-- Edit Button - Show if draft or within 24h window -->
+  {% if event.is_draft or event_data.can_edit %}
+  <a
+    href="{{ event.get_edit_url }}"
+    class="btn btn-outline-warning btn-sm"
+    aria-label="Editar relatório"
+    data-bs-toggle="tooltip"
+    data-bs-placement="top"
+    title="Editar relatório"
+  >
+    <i class="bi bi-pencil" aria-hidden="true"></i>
+    <span class="visually-hidden">Editar</span>
+  </a>
+  {% endif %}
+
+  <!-- Delete Button - Only for drafts -->
+  {% if event.is_draft and perms.events.delete_event %}
+  <a
+    href="{% url 'apps.dischargereports:dischargereport_delete' pk=event.pk %}"
+    class="btn btn-outline-danger btn-sm"
+    aria-label="Excluir rascunho"
+    data-bs-toggle="tooltip"
+    data-bs-placement="top"
+    title="Excluir rascunho"
+  >
+    <i class="bi bi-trash" aria-hidden="true"></i>
+    <span class="visually-hidden">Excluir</span>
+  </a>
+  {% endif %}
+</div>
+{% endblock event_actions %}
+
+{% block event_content %}
+<div class="discharge-report-summary">
+  <div class="mb-2 d-flex justify-content-between align-items-start">
+    <div>
+      <strong class="text-primary">{{ event.medical_specialty }}</strong>
+      {% if event.is_draft %}
+      <span class="badge bg-warning text-dark ms-2">
+        <i class="bi bi-pencil-square"></i> Rascunho
+      </span>
+      {% endif %}
+    </div>
+    <small class="text-muted">
+      {{ event.event_datetime|date:"d/m/Y H:i" }}
+    </small>
+  </div>
+
+  <div class="text-muted small mb-2">
+    <div class="d-flex align-items-center">
+      <i class="bi bi-calendar-plus me-1"></i>
+      <span>{{ event.admission_date|date:"d/m/Y" }}</span>
+      <i class="bi bi-arrow-right mx-2"></i>
+      <i class="bi bi-door-open me-1"></i>
+      <span>{{ event.discharge_date|date:"d/m/Y" }}</span>
+      <span class="ms-2 text-secondary">
+        ({{ event.discharge_date|timeuntil:event.admission_date }})
+      </span>
+    </div>
+  </div>
+
+  {% if event.problems_and_diagnosis %}
+  <div class="mt-2">
+    <small class="text-secondary">
+      <strong>Problemas:</strong>
+      {{ event.problems_and_diagnosis|truncatewords:15|striptags }}
+    </small>
+  </div>
+  {% endif %}
+
+  {% if event.discharge_recommendations %}
+  <div class="mt-1">
+    <small class="text-secondary">
+      <strong>Recomendações:</strong>
+      {{ event.discharge_recommendations|truncatewords:10|striptags }}
+    </small>
+  </div>
+  {% endif %}
+</div>
+{% endblock event_content %}
