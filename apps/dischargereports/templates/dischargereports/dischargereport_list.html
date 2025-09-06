@@ -42,33 +42,20 @@
                       <td>{{ report.admission_date|date:"d/m/Y" }}</td>
                       <td>{{ report.discharge_date|date:"d/m/Y" }}</td>
                       <td>
-                        {% if report.is_draft %}
-                          <span class="badge bg-warning text-dark">
-                            <i class="bi bi-pencil-square"></i> Rascunho
-                          </span>
-                        {% else %}
-                          <span class="badge bg-success">
-                            <i class="bi bi-check-circle"></i> Finalizado
-                          </span>
-                        {% endif %}
+                        <span class="{{ report.status_badge_class }}">
+                          {{ report.status_display }}
+                        </span>
                       </td>
                       <td>{{ report.created_at|date:"d/m/Y H:i" }}</td>
                       <td>
                         <div class="btn-group btn-group-sm" role="group">
-                          <a href="{% url 'apps.dischargereports:dischargereport_detail' report.pk %}" class="btn btn-outline-info" title="Visualizar">
+                          <a href="{{ report.get_absolute_url }}" class="btn btn-outline-primary">
                             <i class="bi bi-eye"></i>
                           </a>
-                          {% can_edit_discharge_report_tag user report as can_edit %}
-                          {% if can_edit %}
-                            <a href="{% url 'apps.dischargereports:dischargereport_update' report.pk %}" class="btn btn-outline-primary" title="Editar">
-                              <i class="bi bi-pencil"></i>
-                            </a>
-                          {% endif %}
-                          {% can_delete_discharge_report_tag user report as can_delete %}
-                          {% if can_delete %}
-                            <a href="{% url 'apps.dischargereports:dischargereport_delete' report.pk %}" class="btn btn-outline-danger" title="Excluir">
-                              <i class="bi bi-trash"></i>
-                            </a>
+                          {% if report.can_be_edited_by_user:request.user %}
+                          <a href="{{ report.get_edit_url }}" class="btn btn-outline-warning">
+                            <i class="bi bi-pencil"></i>
+                          </a>
                           {% endif %}
                         </div>
                       </td>

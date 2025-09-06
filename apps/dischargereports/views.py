@@ -109,21 +109,29 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_object(self):
         obj = super().get_object()
-        # Check edit permission (drafts: unlimited for doctors/residents, final: 24h system standards)
-        if not can_edit_discharge_report(self.request.user, obj):
+        # Check if user can edit this specific report
+        if not obj.can_be_edited_by_user(self.request.user):
             if obj.is_draft:
-                raise PermissionDenied("Apenas médicos e residentes podem editar relatórios de alta.")
+                raise PermissionDenied("Você não tem permissão para editar este rascunho.")
             else:
-                raise PermissionDenied("Você não tem permissão para editar este relatório de alta finalizado.")
+                raise PermissionDenied("Este relatório não pode mais ser editado.")
         return obj
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_finalize'] = self.object.is_draft
+        return context
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
 
         # Handle draft vs final save
-        if 'save_final' in self.request.POST:
+        if 'save_final' in self.request.POST and self.object.is_draft:
             form.instance.is_draft = False
-            messages.success(self.request, 'Relatório de alta finalizado.')
+            messages.success(self.request, 'Relatório de alta finalizado com sucesso.')
+        elif 'save_draft' in self.request.POST:
+            form.instance.is_draft = True
+            messages.success(self.request, 'Rascunho do relatório atualizado.')
         else:
             messages.success(self.request, 'Relatório de alta atualizado.')
 
@@ -131,25 +139,19 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
-    """Delete discharge report (drafts: unlimited for doctors/residents, final: 24h system standards)"""
+    """Delete discharge report (drafts only)"""
     model = DischargeReport
     template_name = 'dischargereports/dischargereport_confirm_delete.html'
     success_url = reverse_lazy('apps.dischargereports:dischargereport_list')
 
     def get_object(self):
         obj = super().get_object()
-        # Check delete permission (drafts: unlimited for doctors/residents, final: 24h system standards)
-        if not can_delete_discharge_report(self.request.user, obj):
-            if obj.is_draft:
-                raise PermissionDenied("Apenas médicos e residentes podem excluir relatórios de alta.")
-            else:
-                raise PermissionDenied("Você não tem permissão para excluir este relatório de alta finalizado.")
+        if not obj.can_be_deleted_by_user(self.request.user):
+            raise PermissionDenied("Este relatório não pode ser excluído.")
         return obj
 
     def delete(self, request, *args, **kwargs):
-        discharge_report = self.get_object()
-        patient_name = discharge_report.patient.name
-        messages.success(request, f'Relatório de alta para {patient_name} excluído com sucesso.')
+        messages.success(request, 'Rascunho do relatório de alta excluído com sucesso.')
         return super().delete(request, *args, **kwargs)
 
 

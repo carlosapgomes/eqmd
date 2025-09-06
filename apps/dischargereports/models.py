@@ -85,6 +85,33 @@ class DischargeReport(Event):
         from django.urls import reverse
         return reverse('apps.dischargereports:dischargereport_update', kwargs={'pk': self.pk})
 
+    def can_be_edited_by_user(self, user):
+        """Check if report can be edited by specific user"""
+        if self.is_draft:
+            # Drafts can be edited by creator or users with edit permissions
+            return self.created_by == user or user.has_perm('events.change_event')
+        else:
+            # Finalized reports follow 24h rule
+            return self.can_be_edited and (self.created_by == user or user.has_perm('events.change_event'))
+
+    def can_be_deleted_by_user(self, user):
+        """Check if report can be deleted by specific user"""
+        # Only drafts can be deleted
+        return self.is_draft and (self.created_by == user or user.has_perm('events.delete_event'))
+
+    @property
+    def status_display(self):
+        """Get display text for report status"""
+        if self.is_draft:
+            return "Rascunho"
+        else:
+            return "Finalizado"
+
+    @property
+    def status_badge_class(self):
+        """Get CSS class for status badge"""
+        return "badge bg-warning text-dark" if self.is_draft else "badge bg-success"
+
     def __str__(self):
         """String representation of the discharge report."""
         draft_text = " (Rascunho)" if self.is_draft else ""
