@@ -1,6 +1,8 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, UpdateView, DetailView, ListView, DeleteView
@@ -70,6 +72,19 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
     form_class = DischargeReportForm
     template_name = 'dischargereports/dischargereport_create.html'
 
+    def get_initial(self):
+        initial = super().get_initial()
+        # If patient_id is provided in URL, set the patient
+        patient_id = self.kwargs.get('patient_id')
+        if patient_id:
+            from apps.patients.models import Patient
+            try:
+                patient = Patient.objects.get(pk=patient_id)
+                initial['patient'] = patient
+            except Patient.DoesNotExist:
+                pass
+        return initial
+
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
@@ -136,3 +151,15 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
         patient_name = discharge_report.patient.name
         messages.success(request, f'Relatório de alta para {patient_name} excluído com sucesso.')
         return super().delete(request, *args, **kwargs)
+
+
+class DischargeReportPrintView(LoginRequiredMixin, DetailView):
+    """Print-friendly view for discharge reports"""
+    model = DischargeReport
+    template_name = 'dischargereports/dischargereport_print.html'
+    context_object_name = 'report'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['now'] = timezone.now()
+        return context

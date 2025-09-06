@@ -1,0 +1,151 @@
+{% load static %}
+{% load hospital_tags %}
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Relatório de Alta - {{ report.patient.name }}</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        line-height: 1.4;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 20px;
+      }
+      .hospital-name {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .report-title {
+        font-size: 16px;
+        margin-top: 10px;
+      }
+      .patient-info {
+        margin-bottom: 20px;
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .patient-info p {
+        margin: 5px 0;
+      }
+      .content-section {
+        margin-bottom: 20px;
+      }
+      .content-section h3 {
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+        color: #333;
+      }
+      .content-section p {
+        margin: 10px 0;
+        text-align: justify;
+      }
+      .signature-section {
+        margin-top: 40px;
+        text-align: center;
+      }
+      .signature-line {
+        border-top: 1px solid #000;
+        width: 300px;
+        margin: 30px auto 10px;
+      }
+      @media print {
+        .no-print {
+          display: none;
+        }
+        body {
+          margin: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button class="no-print" onclick="window.print()">🖨️ Imprimir</button>
+
+    <div class="header">
+      <div class="hospital-name">{% hospital_name %}</div>
+      <div class="report-title">Relatório de Alta - {{ report.medical_specialty }}</div>
+    </div>
+
+    <div class="patient-info">
+      <p><strong>Paciente:</strong> {{ report.patient.name }}</p>
+      {% if report.patient.fiscal_number %}
+      <p><strong>CPF:</strong> {{ report.patient.fiscal_number }}</p>
+      {% endif %}
+      {% if report.patient.health_card_number %}
+      <p><strong>Cartão SUS:</strong> {{ report.patient.health_card_number }}</p>
+      {% endif %}
+      <p><strong>Data de Admissão:</strong> {{ report.admission_date|date:"d/m/Y" }}</p>
+      <p><strong>Data de Alta:</strong> {{ report.discharge_date|date:"d/m/Y" }}</p>
+      {% if report.ward %}
+      <p><strong>Enfermaria:</strong> {{ report.ward }}</p>
+      {% endif %}
+    </div>
+
+    {% if report.problems_and_diagnosis %}
+    <div class="content-section">
+      <h3>Problemas e Diagnósticos</h3>
+      <p>{{ report.problems_and_diagnosis|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    {% if report.clinical_history %}
+    <div class="content-section">
+      <h3>História Clínica</h3>
+      <p>{{ report.clinical_history|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    {% if report.physical_examination %}
+    <div class="content-section">
+      <h3>Exame Físico</h3>
+      <p>{{ report.physical_examination|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    {% if report.laboratory_exams %}
+    <div class="content-section">
+      <h3>Exames Laboratoriais</h3>
+      <p>{{ report.laboratory_exams|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    {% if report.treatment_performed %}
+    <div class="content-section">
+      <h3>Tratamento Realizado</h3>
+      <p>{{ report.treatment_performed|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    {% if report.discharge_recommendations %}
+    <div class="content-section">
+      <h3>Recomendações de Alta</h3>
+      <p>{{ report.discharge_recommendations|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    {% if report.follow_up %}
+    <div class="content-section">
+      <h3>Seguimento</h3>
+      <p>{{ report.follow_up|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    <div class="signature-section">
+      <div class="signature-line"></div>
+      <p><strong>{{ report.updated_by.get_full_name }}</strong></p>
+      <p>{{ report.updated_by.profession|default:"Médico" }}</p>
+      <p>Data: {{ now|date:"d/m/Y H:i" }}</p>
+    </div>
+
+  </body>
+</html>

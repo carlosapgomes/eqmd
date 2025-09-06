@@ -294,4 +294,198 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/
 3. Test responsive behavior on mobile devices
 4. Ensure accessibility standards are maintained
 
-This documentation covers the core functionality implemented in Phases 1 and 2 of the discharge reports system.
+## Phase 3: Event System Integration
+
+**Timeline integration and event card functionality for discharge reports.**
+
+### Overview
+
+Phase 3 integrates discharge reports fully into the patient timeline system, making them appear as interactive event cards alongside other medical events like daily notes, prescriptions, and media files.
+
+### Event Card Template
+
+#### event_card_dischargereport.html
+
+Custom event card template extending `event_card_base.html`:
+
+**Location**: `/apps/events/templates/events/partials/event_card_dischargereport.html`
+
+**Features**:
+- **View Button**: Link to detailed discharge report view
+- **Print Button**: Opens print-friendly version in new tab
+- **Edit Button**: Conditional visibility (drafts + 24h window for finals)
+- **Delete Button**: Only visible for drafts with proper permissions
+- **Draft Badge**: Warning badge for draft status indication
+- **Content Summary**: Shows medical specialty, admission/discharge dates, duration, and truncated content
+
+**Template Blocks**:
+- `{% block event_actions %}`: Custom buttons for discharge report actions
+- `{% block event_content %}`: Discharge report summary with dates and medical content
+
+### Print Functionality
+
+#### DischargeReportPrintView
+
+**Purpose**: Generate print-friendly discharge report pages
+
+**Features**:
+- Clean, professional print layout
+- Hospital branding integration using `{% load hospital_tags %}`
+- All discharge report sections (history, diagnosis, treatment, recommendations)
+- Signature section with doctor details
+- Print-optimized CSS with `@media print` rules
+
+**Template**: `dischargereports/dischargereport_print.html`
+
+**URL**: `/dischargereports/<uuid:pk>/print/`
+
+#### Print Template Features
+- Hospital name and branding header
+- Patient demographic information
+- All medical content sections
+- Professional signature block
+- Print button (hidden in print mode)
+- Responsive styling for different paper sizes
+
+### Timeline Integration
+
+#### Event Type Registration
+
+Discharge reports are fully registered in the Event system:
+
+- **Event Type**: `Event.DISCHARGE_REPORT_EVENT = 6`
+- **Display Name**: "Relatório de Alta"
+- **Short Display**: "Alta" (mobile-friendly)
+- **Badge Class**: `bg-medical-dark`
+- **Icon**: `bi-door-open`
+
+#### Timeline Template Updates
+
+**File**: `/apps/events/templates/events/patient_timeline.html`
+
+**Changes**:
+1. **Event Card Rendering**: Added conditional include for discharge report event cards
+   ```django
+   {% elif event.event_type == 6 %}
+       {% include "events/partials/event_card_dischargereport.html" with event=event event_data=event_data %}
+   ```
+
+2. **Create Event Dropdown**: Enabled discharge report creation from timeline
+   - Mobile and desktop dropdown menus updated
+   - Removed "Em breve" (Coming soon) status
+   - Added proper URL linking to patient-specific creation
+
+### Patient-Specific URLs
+
+#### New URL Pattern
+
+Added patient-specific creation URL for better workflow integration:
+
+**URL**: `/dischargereports/patient/<uuid:patient_id>/create/`
+
+**Name**: `patient_dischargereport_create`
+
+#### View Enhancement
+
+Updated `DischargeReportCreateView` with `get_initial()` method:
+- Automatically pre-fills patient field when accessed via patient-specific URL
+- Maintains backward compatibility with general create URL
+- Improves user experience from timeline interface
+
+### Integration Testing
+
+#### Verification Checklist
+
+✅ **Model Integration**:
+- Event type constants properly defined
+- Badge and icon classes configured
+- Short display mapping included
+
+✅ **Template Integration**:
+- Event card template created and functional
+- Timeline template updated with conditional rendering
+- Print template created with hospital branding
+
+✅ **URL Integration**:
+- Patient-specific creation URL added
+- Print URL properly configured
+- All URL patterns tested
+
+✅ **Permission Integration**:
+- Event card respects discharge report permission logic
+- Buttons show/hide based on draft status and edit windows
+- Delete permissions properly enforced
+
+### Usage in Timeline
+
+#### For Medical Staff
+
+1. **Creating Discharge Reports**:
+   - Access patient timeline
+   - Click "Criar Evento" → "Relatórios" → "Relatório de Alta"
+   - Patient is pre-selected automatically
+   - Create as draft or final report
+
+2. **Viewing in Timeline**:
+   - Discharge reports appear as event cards with dark badge
+   - Shows admission dates, medical specialty, and content preview
+   - Duration calculation between admission and discharge dates
+
+3. **Actions Available**:
+   - **View**: Full detailed view of discharge report
+   - **Print**: Professional print layout with hospital branding
+   - **Edit**: Available for drafts (unlimited) and finals (24h window)
+   - **Delete**: Available for drafts only
+
+#### Timeline Display Features
+
+- **Chronological Order**: Discharge reports appear in timeline alongside other events
+- **Visual Distinction**: Dark badge (`bg-medical-dark`) with door icon (`bi-door-open`)
+- **Content Preview**: Shows key information without requiring full page load
+- **Mobile Responsive**: Optimized for mobile and desktop viewing
+- **Accessibility**: Proper ARIA labels and keyboard navigation support
+
+### Technical Implementation
+
+#### Event System Methods
+
+Discharge reports inherit all Event model methods:
+- `get_event_type_badge_class()`: Returns `"bg-medical-dark"`
+- `get_event_type_icon()`: Returns `"bi-door-open"`
+- `get_event_type_short_display()`: Returns `"Alta"`
+- `get_absolute_url()`: Links to discharge report detail view
+- `get_edit_url()`: Links to discharge report update view
+
+#### Timeline Filtering
+
+Discharge reports automatically participate in timeline filtering:
+- **Event Type Filter**: Included in event type checkbox options
+- **Date Range Filter**: Works with admission/discharge dates
+- **Creator Filter**: Works with created_by field
+- **Search Integration**: Content is searchable within timeline
+
+### Troubleshooting
+
+#### Common Integration Issues
+
+**Event Card Not Appearing**:
+- Verify `event_type = 6` is properly set on DischargeReport model
+- Check timeline template includes the conditional rendering
+- Ensure event_card_dischargereport.html exists in correct location
+
+**Print Button Not Working**:
+- Confirm print URL is added to dischargereports/urls.py
+- Verify DischargeReportPrintView is imported in views.py
+- Check print template exists and hospital_tags are loaded
+
+**Permission Errors**:
+- Verify draft/final permission logic is working correctly
+- Check user profession requirements for draft editing
+- Test 24-hour editing window for final reports
+
+**Timeline Dropdown Issues**:
+- Ensure patient-specific URL pattern is added
+- Check URL namespace: `apps.dischargereports:patient_dischargereport_create`
+- Verify CreateView handles patient_id parameter correctly
+
+This completes the Phase 3 integration, making discharge reports fully functional within the EquipeMed timeline system.
