@@ -96,13 +96,13 @@ class DischargeReportForm(forms.ModelForm):
             ).order_by('-admission_datetime').first()
             
             if latest_admission:
-                # Set the admission date (date only, not datetime)
+                # Set the admission date (date only, not datetime) in yyyy-MM-dd format
                 admission_date = latest_admission.admission_datetime.date()
-                self.fields["admission_date"].initial = admission_date
+                self.fields["admission_date"].initial = admission_date.strftime("%Y-%m-%d")
                 
                 # Optionally also set today as discharge date since they're creating a discharge report
                 today = timezone.now().date()
-                self.fields["discharge_date"].initial = today
+                self.fields["discharge_date"].initial = today.strftime("%Y-%m-%d")
                 
         except Exception:
             # If anything goes wrong, silently continue without setting defaults
