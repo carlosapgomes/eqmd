@@ -67,25 +67,42 @@ class DischargeReportDetailView(LoginRequiredMixin, DetailView):
 
 
 class DischargeReportCreateView(LoginRequiredMixin, CreateView):
-    """Create new discharge report"""
+    """Create new discharge report for a specific patient"""
     model = DischargeReport
     form_class = DischargeReportForm
     template_name = 'dischargereports/dischargereport_create.html'
 
-    def get_initial(self):
-        initial = super().get_initial()
-        # If patient_id is provided in URL, set the patient
-        patient_id = self.kwargs.get('patient_id')
-        if patient_id:
-            from apps.patients.models import Patient
-            try:
-                patient = Patient.objects.get(pk=patient_id)
-                initial['patient'] = patient
-            except Patient.DoesNotExist:
-                pass
-        return initial
+    def dispatch(self, request, *args, **kwargs):
+        """Get patient and check permissions before processing request."""
+        from django.shortcuts import get_object_or_404
+        from apps.patients.models import Patient
+        
+        self.patient = get_object_or_404(Patient, pk=kwargs["patient_id"])
+
+        # Check if user can access this patient
+        if not can_access_patient(request.user, self.patient):
+            raise PermissionDenied(
+                "You don't have permission to create discharge reports for this patient"
+            )
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        """Add patient context."""
+        context = super().get_context_data(**kwargs)
+        context["patient"] = self.patient
+        return context
+
+    def get_success_url(self):
+        """Redirect to patient timeline after successful creation."""
+        return reverse_lazy(
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.patient.pk},
+        )
 
     def form_valid(self, form):
+        """Handle successful form submission."""
+        form.instance.patient = self.patient
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         form.instance.event_datetime = form.instance.event_datetime or timezone.now()
@@ -93,10 +110,10 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
         # Handle draft vs final save
         if 'save_final' in self.request.POST:
             form.instance.is_draft = False
-            messages.success(self.request, 'Relatório de alta salvo definitivamente.')
+            messages.success(self.request, f'Relatório de alta para {self.patient.name} salvo definitivamente.')
         else:
             form.instance.is_draft = True
-            messages.success(self.request, 'Relatório de alta salvo como rascunho.')
+            messages.success(self.request, f'Relatório de alta para {self.patient.name} salvo como rascunho.')
 
         return super().form_valid(form)
 

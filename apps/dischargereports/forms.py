@@ -8,14 +8,13 @@ class DischargeReportForm(forms.ModelForm):
     class Meta:
         model = DischargeReport
         fields = [
-            'patient', 'event_datetime', 'description',
+            'event_datetime', 'description',
             'admission_date', 'discharge_date', 'medical_specialty',
             'admission_history', 'problems_and_diagnosis', 'exams_list',
             'procedures_list', 'inpatient_medical_history',
             'discharge_status', 'discharge_recommendations', 'is_draft'
         ]
         widgets = {
-            'patient': forms.Select(attrs={'class': 'form-select'}),
             'event_datetime': forms.DateTimeInput(
                 attrs={'type': 'datetime-local', 'class': 'form-control'}
             ),
