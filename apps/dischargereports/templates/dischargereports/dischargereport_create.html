@@ -106,20 +106,6 @@
               {% endif %}
             </div>
           </div>
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label for="{{ form.description.id_for_label }}" class="form-label">
-                <i class="bi bi-card-text me-1"></i>
-                {{ form.description.label }}
-              </label>
-              {{ form.description }}
-              {% if form.description.errors %}
-                <div class="invalid-feedback d-block">
-                  {% for error in form.description.errors %}{{ error }}{% endfor %}
-                </div>
-              {% endif %}
-            </div>
-          </div>
         </div>
       </div>
 
