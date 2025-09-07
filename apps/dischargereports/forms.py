@@ -1,6 +1,7 @@
 from django import forms
 from django.utils import timezone
 from .models import DischargeReport
+from apps.events.models import Event
 
 
 class DischargeReportForm(forms.ModelForm):
@@ -9,7 +10,7 @@ class DischargeReportForm(forms.ModelForm):
     class Meta:
         model = DischargeReport
         fields = [
-            'event_datetime', 'description',
+            'event_datetime',
             'admission_date', 'discharge_date', 'medical_specialty',
             'admission_history', 'problems_and_diagnosis', 'exams_list',
             'procedures_list', 'inpatient_medical_history',
@@ -18,9 +19,6 @@ class DischargeReportForm(forms.ModelForm):
         widgets = {
             'event_datetime': forms.DateTimeInput(
                 attrs={'type': 'datetime-local', 'class': 'form-control'}
-            ),
-            'description': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Descrição do relatório'}
             ),
             'admission_date': forms.DateInput(
                 attrs={'type': 'date', 'class': 'form-control'}
@@ -88,3 +86,14 @@ class DischargeReportForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+    def save(self, commit=True):
+        """Override save to automatically set description to event type."""
+        instance = super().save(commit=False)
+        
+        # Set description automatically to the discharge report event type
+        instance.description = Event.EVENT_TYPE_CHOICES[Event.DISCHARGE_REPORT_EVENT][1]
+        
+        if commit:
+            instance.save()
+        return instance
