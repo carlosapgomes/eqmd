@@ -35,7 +35,7 @@ Extends the base event card for discharge report events
   </a>
 
   <!-- Edit Button -->
-  {% if event.can_be_edited_by_user:request.user %}
+  {% if event_data.can_edit %}
   <a
     href="{{ event.get_edit_url }}"
     class="btn btn-outline-warning btn-sm"
