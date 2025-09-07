@@ -181,11 +181,10 @@
 
         <div class="card-footer">
           <small class="text-muted">
-            Criado por {{
-            report.created_by.get_full_name|default:report.created_by.username
-            }} em {{ report.created_at|date:"d/m/Y H:i" }} {% if
-            report.updated_at != report.created_at %} • Atualizado em {{
-            report.updated_at|date:"d/m/Y H:i" }} {% endif %}
+            Criado por {{ report.created_by.get_full_name|default:report.created_by.username }} em {{ report.created_at|date:"d/m/Y H:i" }}
+            {% if report.updated_at != report.created_at %}
+              • Atualizado em {{ report.updated_at|date:"d/m/Y H:i" }}
+            {% endif %}
           </small>
         </div>
       </div>
