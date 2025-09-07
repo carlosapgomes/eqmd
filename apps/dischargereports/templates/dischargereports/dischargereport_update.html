@@ -1,9 +1,29 @@
-{% extends 'base.html' %}
+{% extends 'base_app.html' %}
 {% load static %}
 
-{% block title %}Editar Relatório de Alta{% endblock %}
+{% block title %}Editar Relatório de Alta - {{ report.patient.name }}{% endblock %}
 
-{% block content %}
+{% block app_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=report.patient.pk %}">
+        {{ report.patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{{ report.get_absolute_url }}">Relatório de Alta</a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Editar</li>
+  </ol>
+</nav>
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
@@ -13,7 +33,7 @@
             <i class="bi bi-file-earmark-text me-2"></i>
             Editar Relatório de Alta
           </h3>
-          <a href="{% url 'apps.dischargereports:dischargereport_list' %}" class="btn btn-outline-secondary">
+          <a href="{% url 'apps.patients:patient_events_timeline' patient_id=report.patient.pk %}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Voltar
           </a>
         </div>
@@ -231,7 +251,7 @@
                   <i class="bi bi-pencil-square"></i> Atualizar
                 </button>
               {% endif %}
-              <a href="{% url 'apps.dischargereports:dischargereport_list' %}" class="btn btn-secondary">
+              <a href="{% url 'apps.patients:patient_events_timeline' patient_id=report.patient.pk %}" class="btn btn-secondary">
                 <i class="bi bi-x-circle"></i> Cancelar
               </a>
             </div>
