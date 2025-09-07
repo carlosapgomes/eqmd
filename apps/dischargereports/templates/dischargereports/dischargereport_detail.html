@@ -1,10 +1,27 @@
-{% extends 'base.html' %}
+{% extends 'base_app.html' %}
 {% load static %}
-{% load bootstrap5 %}
 
 {% block title %}Relatório de Alta - {{ report.patient.name }}{% endblock %}
 
-{% block content %}
+{% block app_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=report.patient.pk %}">
+        {{ report.patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Relatório de Alta</li>
+  </ol>
+</nav>
+
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
