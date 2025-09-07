@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, UpdateView, DetailView, ListView, DeleteView
 from .models import DischargeReport
-from .forms import DischargeReportForm
+from .forms import DischargeReportCreateForm, DischargeReportUpdateForm
 from apps.core.permissions import can_edit_event, can_delete_event, can_access_patient
 from apps.core.permissions.constants import MEDICAL_DOCTOR, RESIDENT
 
@@ -79,7 +79,7 @@ class DischargeReportDetailView(LoginRequiredMixin, DetailView):
 class DischargeReportCreateView(LoginRequiredMixin, CreateView):
     """Create new discharge report for a specific patient"""
     model = DischargeReport
-    form_class = DischargeReportForm
+    form_class = DischargeReportCreateForm
     template_name = 'dischargereports/dischargereport_create.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -137,8 +137,9 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
 class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
     """Update discharge report - separate template"""
     model = DischargeReport
-    form_class = DischargeReportForm
+    form_class = DischargeReportUpdateForm
     template_name = 'dischargereports/dischargereport_update.html'
+    context_object_name = 'report'
 
     def get_object(self):
         obj = super().get_object()
@@ -154,6 +155,13 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context['can_finalize'] = self.object.is_draft
         return context
+
+    def get_success_url(self):
+        """Redirect to patient timeline after successful update."""
+        return reverse_lazy(
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.pk},
+        )
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
@@ -175,13 +183,20 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
     """Delete discharge report (drafts only)"""
     model = DischargeReport
     template_name = 'dischargereports/dischargereport_confirm_delete.html'
-    success_url = reverse_lazy('apps.dischargereports:dischargereport_list')
+    context_object_name = 'report'
 
     def get_object(self):
         obj = super().get_object()
         if not obj.can_be_deleted_by_user(self.request.user):
             raise PermissionDenied("Este relatório não pode ser excluído.")
         return obj
+
+    def get_success_url(self):
+        """Redirect to patient timeline after successful deletion."""
+        return reverse_lazy(
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.pk},
+        )
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Rascunho do relatório de alta excluído com sucesso.')

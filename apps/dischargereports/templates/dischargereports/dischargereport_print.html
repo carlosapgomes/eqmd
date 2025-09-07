@@ -41,53 +41,47 @@
       </div>
     </div>
 
-    <!-- Patient Information -->
+    <!-- Patient Information - Compact Version -->
     <div class="patient-info-section">
       <h3>Identificação do Paciente</h3>
-      <div class="patient-info-grid">
-        <div class="info-row">
-          <div class="info-cell">
+      <div class="patient-info-compact">
+        <div class="info-line">
+          <span class="info-group">
             <span class="info-label">Nome:</span>
             <span class="info-value">{{ report.patient.name }}</span>
-          </div>
-          <div class="info-cell">
+          </span>
+          <span class="info-group">
             <span class="info-label">Prontuário:</span>
-            <span class="info-value"
-              >{{ report.patient.current_record_number|default:"—" }}</span
-            >
-          </div>
-        </div>
-        <div class="info-row">
-          <div class="info-cell">
-            <span class="info-label">Data de Nascimento:</span>
-            <span class="info-value"
-              >{{ report.patient.birthday|date:"d/m/Y"|default:"—" }}</span
-            >
-          </div>
-          <div class="info-cell">
-            <span class="info-label">Gênero:</span>
-            <span class="info-value"
-              >{{ report.patient.get_gender_display|default:"—" }}</span
-            >
-          </div>
-          <div class="info-cell">
+            <span class="info-value">{{ report.patient.current_record_number|default:"—" }}</span>
+          </span>
+          <span class="info-group">
             <span class="info-label">Idade:</span>
             <span class="info-value">{{ report.patient.age }} anos</span>
-          </div>
+          </span>
         </div>
-        <div class="info-row">
-          <div class="info-cell">
+        <div class="info-line">
+          <span class="info-group">
+            <span class="info-label">Data de Nascimento:</span>
+            <span class="info-value">{{ report.patient.birthday|date:"d/m/Y"|default:"—" }}</span>
+          </span>
+          <span class="info-group">
+            <span class="info-label">Gênero:</span>
+            <span class="info-value">{{ report.patient.get_gender_display|default:"—" }}</span>
+          </span>
+        </div>
+        <div class="info-line admission-discharge">
+          <span class="info-group">
             <span class="info-label">Data de Admissão:</span>
-            <span class="info-value"
-              >{{ report.admission_date|date:"d/m/Y" }}</span
-            >
-          </div>
-          <div class="info-cell">
+            <span class="info-value">{{ report.admission_date|date:"d/m/Y" }}</span>
+          </span>
+          <span class="info-group">
             <span class="info-label">Data de Alta:</span>
-            <span class="info-value"
-              >{{ report.discharge_date|date:"d/m/Y" }}</span
-            >
-          </div>
+            <span class="info-value">{{ report.discharge_date|date:"d/m/Y" }}</span>
+          </span>
+          <span class="info-group">
+            <span class="info-label">Permanência:</span>
+            <span class="info-value">{{ report.discharge_date|timeuntil:report.admission_date }}</span>
+          </span>
         </div>
       </div>
     </div>
