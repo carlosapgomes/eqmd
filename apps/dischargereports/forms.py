@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 from .models import DischargeReport
 
 
@@ -53,6 +54,27 @@ class DischargeReportForm(forms.ModelForm):
             ),
             'is_draft': forms.HiddenInput(),  # Hide from form, controlled by buttons
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Set input formats for datetime field
+        self.fields["event_datetime"].input_formats = [
+            "%Y-%m-%dT%H:%M",  # HTML5 datetime-local format
+            "%Y-%m-%dT%H:%M:%S",
+            "%d/%m/%Y %H:%M:%S",
+            "%d/%m/%Y %H:%M",
+        ]
+        
+        # Set default datetime to now if creating new instance
+        if not self.instance.pk:
+            utc_now = timezone.now().astimezone(timezone.get_default_timezone())
+            self.fields["event_datetime"].initial = utc_now.strftime("%Y-%m-%dT%H:%M")
+        else:
+            dt = self.instance.event_datetime.astimezone(
+                timezone.get_default_timezone()
+            )
+            self.fields["event_datetime"].initial = dt.strftime("%Y-%m-%dT%H:%M")
 
     def clean(self):
         cleaned_data = super().clean()
