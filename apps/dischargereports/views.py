@@ -65,6 +65,16 @@ class DischargeReportDetailView(LoginRequiredMixin, DetailView):
     template_name = 'dischargereports/dischargereport_detail.html'
     context_object_name = 'report'
 
+    def get_context_data(self, **kwargs):
+        """Add additional context data including permission checks."""
+        context = super().get_context_data(**kwargs)
+
+        # Add permission context for template use
+        context["can_edit_report"] = can_edit_discharge_report(self.request.user, self.object)
+        context["can_delete_report"] = can_delete_discharge_report(self.request.user, self.object)
+
+        return context
+
 
 class DischargeReportCreateView(LoginRequiredMixin, CreateView):
     """Create new discharge report for a specific patient"""

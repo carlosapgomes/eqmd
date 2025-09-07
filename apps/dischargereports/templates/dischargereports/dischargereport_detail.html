@@ -56,7 +56,7 @@
             </a>
 
             <!-- Edit Button -->
-            {% if report.can_be_edited_by_user:request.user %}
+            {% if can_edit_report %}
             <a
               href="{% url 'apps.dischargereports:dischargereport_update' pk=report.pk %}"
               class="btn btn-warning"
@@ -67,7 +67,7 @@
             {% endif %}
 
             <!-- Delete Button (drafts only) -->
-            {% if report.can_be_deleted_by_user:request.user %}
+            {% if can_delete_report %}
             <a
               href="{% url 'apps.dischargereports:dischargereport_delete' pk=report.pk %}"
               class="btn btn-outline-danger"
