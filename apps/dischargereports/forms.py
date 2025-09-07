@@ -54,6 +54,8 @@ class DischargeReportForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # Extract patient from kwargs if provided
+        self.patient = kwargs.pop("patient", None)
         super().__init__(*args, **kwargs)
         
         # Set input formats for datetime field
@@ -73,6 +75,38 @@ class DischargeReportForm(forms.ModelForm):
                 timezone.get_default_timezone()
             )
             self.fields["event_datetime"].initial = dt.strftime("%Y-%m-%dT%H:%M")
+        
+        # Auto-populate admission date if creating new instance and patient is provided
+        if not self.instance.pk and self.patient:
+            self._set_admission_date_from_patient()
+
+    def _set_admission_date_from_patient(self):
+        """
+        Auto-populate admission_date from patient's latest active admission.
+        Looks for the most recent PatientAdmission without a discharge_datetime.
+        """
+        try:
+            from apps.patients.models import PatientAdmission
+            
+            # Find the latest active admission (no discharge date)
+            latest_admission = PatientAdmission.objects.filter(
+                patient=self.patient,
+                discharge_datetime__isnull=True,
+                is_active=True
+            ).order_by('-admission_datetime').first()
+            
+            if latest_admission:
+                # Set the admission date (date only, not datetime)
+                admission_date = latest_admission.admission_datetime.date()
+                self.fields["admission_date"].initial = admission_date
+                
+                # Optionally also set today as discharge date since they're creating a discharge report
+                today = timezone.now().date()
+                self.fields["discharge_date"].initial = today
+                
+        except Exception:
+            # If anything goes wrong, silently continue without setting defaults
+            pass
 
     def clean(self):
         cleaned_data = super().clean()

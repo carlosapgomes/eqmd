@@ -87,6 +87,12 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    def get_form_kwargs(self):
+        """Pass patient to form."""
+        kwargs = super().get_form_kwargs()
+        kwargs["patient"] = self.patient
+        return kwargs
+
     def get_context_data(self, **kwargs):
         """Add patient context."""
         context = super().get_context_data(**kwargs)
