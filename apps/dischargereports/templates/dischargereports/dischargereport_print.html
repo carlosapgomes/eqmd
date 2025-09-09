@@ -1,4 +1,4 @@
-{% load static %} {% load hospital_tags %}
+{% load static %} {% load hospital_tags %} {% load dischargereport_tags %}
 <!doctype html>
 <html lang="pt-BR">
   <head>
@@ -91,7 +91,7 @@
     <div class="content-section">
       <h3>Problemas e Diagnósticos</h3>
       <div class="content-text">
-        {{ report.problems_and_diagnosis|linebreaks }}
+        {{ report.problems_and_diagnosis|clean_text|linebreaks }}
       </div>
     </div>
     {% endif %}
@@ -99,21 +99,21 @@
     {% if report.admission_history %}
     <div class="content-section">
       <h3>História da Admissão</h3>
-      <div class="content-text">{{ report.admission_history|linebreaks }}</div>
+      <div class="content-text">{{ report.admission_history|clean_text|linebreaks }}</div>
     </div>
     {% endif %}
 
     {% if report.exams_list %}
     <div class="content-section">
       <h3>Lista de Exames</h3>
-      <div class="content-text">{{ report.exams_list|linebreaks }}</div>
+      <div class="content-text">{{ report.exams_list|clean_text|linebreaks }}</div>
     </div>
     {% endif %}
 
     {% if report.procedures_list %}
     <div class="content-section">
       <h3>Lista de Procedimentos</h3>
-      <div class="content-text">{{ report.procedures_list|linebreaks }}</div>
+      <div class="content-text">{{ report.procedures_list|clean_text|linebreaks }}</div>
     </div>
     {% endif %}
 
@@ -121,7 +121,7 @@
     <div class="content-section">
       <h3>História Médica da Internação</h3>
       <div class="content-text">
-        {{ report.inpatient_medical_history|linebreaks }}
+        {{ report.inpatient_medical_history|clean_text|linebreaks }}
       </div>
     </div>
     {% endif %}
@@ -129,7 +129,7 @@
     {% if report.discharge_status %}
     <div class="content-section">
       <h3>Status da Alta</h3>
-      <div class="content-text">{{ report.discharge_status|linebreaks }}</div>
+      <div class="content-text">{{ report.discharge_status|clean_text|linebreaks }}</div>
     </div>
     {% endif %}
 
@@ -137,7 +137,7 @@
     <div class="content-section">
       <h3>Recomendações de Alta</h3>
       <div class="content-text">
-        {{ report.discharge_recommendations|linebreaks }}
+        {{ report.discharge_recommendations|clean_text|linebreaks }}
       </div>
     </div>
     {% endif %}
@@ -146,11 +146,10 @@
     <div class="page-footer">
       <div class="generation-info">
         <p>
-          <strong>Relatório gerado em:</strong> {{ now|date:"d/m/Y às H:i" }}
+          <strong>Relatório gerado por:</strong> {{ user.get_full_name|default:user.username }}
         </p>
         <p>
-          <strong>Gerado por:</strong> {{
-          user.get_full_name|default:user.username }}
+          <strong>Salvador, </strong> {{ now|date:"d/m/Y,  H:i" }}
         </p>
       </div>
 
@@ -172,5 +171,12 @@
         }
       });
     </script>
+
+    <!--
+      IMPORTANT: To fully hide URLs from printed documents:
+      1. CSS rules above hide automatically generated URLs
+      2. In browser print dialog, ensure "Headers and footers" is UNCHECKED
+      3. This prevents browser from adding page URL to printed document
+    -->
   </body>
 </html>
