@@ -71,8 +71,14 @@ class DischargeReport(Event):
         ]
 
     def save(self, *args, **kwargs):
-        """Override save to set the correct event type."""
+        """Override save to set the correct event type and clean text fields."""
+        from .utils import clean_discharge_report_text_fields
+        
         self.event_type = Event.DISCHARGE_REPORT_EVENT
+        
+        # Clean text fields before saving
+        clean_discharge_report_text_fields(self)
+        
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
