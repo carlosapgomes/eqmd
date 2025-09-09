@@ -189,7 +189,7 @@ class Event(SoftDeleteModel):
             3: "Imagem",  # Imagem (already short)
             4: "Resultado",  # Resultado de Exame
             5: "Requisição",  # Requisição de Exame
-            6: "Alta",  # Relatório de Alta
+            6: "Rel. Alta",  # Relatório de Alta
             7: "Receita",  # Receita (already short)
             8: "Relatório",  # Relatório (already short)
             9: "Fotos",  # Série de Fotos
