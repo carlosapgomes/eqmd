@@ -10,11 +10,17 @@ The script can be run as a Django management command.
 
 ### Using Docker Compose (Recommended for Production/Staging)
 
-To run the command in a Docker environment, use `docker compose run --rm`:
+To run the command in a Docker environment, use `docker compose run --rm` with a volume mount to persist the exported file:
 
 ```bash
-docker compose run --rm eqmd python manage.py export_patient_data
+# Export to current directory on host
+docker compose run --rm -v $(pwd):/host eqmd python manage.py export_patient_data /host/patient_data_export.csv
+
+# Export to specific directory on host
+docker compose run --rm -v /path/to/export/directory:/host eqmd python manage.py export_patient_data /host/patient_data_export.csv
 ```
+
+**Important**: The `--rm` flag automatically removes the container after execution, so you must use a volume mount (`-v`) to persist the exported file on your host machine. Without the volume mount, the exported file will be lost when the container is removed.
 
 ### Using Local Development Environment
 
@@ -29,8 +35,8 @@ uv run python manage.py export_patient_data
 By default, the script creates a file named `patient_data_export.csv` in the project's root directory. You can specify a different path:
 
 ```bash
-# Docker
-docker compose run --rm eqmd python manage.py export_patient_data /path/to/your/output.csv
+# Docker (with volume mount for persistence)
+docker compose run --rm -v $(pwd):/host eqmd python manage.py export_patient_data /host/your_output.csv
 
 # Local
 uv run python manage.py export_patient_data /path/to/your/output.csv
