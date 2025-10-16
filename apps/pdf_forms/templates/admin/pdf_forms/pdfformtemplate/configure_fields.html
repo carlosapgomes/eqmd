@@ -961,8 +961,19 @@ body.modal-open {
                 <div class="form-group">
                     <label for="field-auto-fill">Auto-Fill Data</label>
                     <select id="field-auto-fill" name="auto_fill_mapping">
-                        {% for option in auto_fill_choices %}
-                        <option value="{{ option.value }}" data-type="{{ option.type }}">{{ option.label }}</option>
+                        {% regroup auto_fill_choices by optgroup as grouped_choices %}
+                        {% for group in grouped_choices %}
+                            {% if group.grouper %}
+                                <optgroup label="{{ group.grouper }}">
+                                    {% for option in group.list %}
+                                    <option value="{{ option.value }}" data-type="{{ option.type }}">{{ option.label }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                            {% else %}
+                                {% for option in group.list %}
+                                <option value="{{ option.value }}" data-type="{{ option.type }}">{{ option.label }}</option>
+                                {% endfor %}
+                            {% endif %}
                         {% endfor %}
                     </select>
                     <small style="color: #666;">Automatically populate this field with patient or hospital data when form is opened</small>
