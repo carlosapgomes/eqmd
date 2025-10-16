@@ -53,22 +53,33 @@ class DataFieldMapper:
     @classmethod
     def get_auto_fill_choices(cls):
         """
-        Get grouped choices for auto-fill dropdown.
+        Get choices for auto-fill dropdown formatted for template rendering.
         
         Returns:
-            list: Grouped choices for Django ChoiceField
+            list: List of choice dictionaries with value, label, and optgroup
         """
         choices = [
-            ('', '--- Selecione uma opção ---'),
-            ('Dados do Paciente', [
-                (f'patient.{key}', mapping['label']) 
-                for key, mapping in cls.PATIENT_FIELD_MAPPINGS.items()
-            ]),
-            ('Dados do Hospital', [
-                (f'hospital.{key}', mapping['label']) 
-                for key, mapping in cls.HOSPITAL_FIELD_MAPPINGS.items()
-            ]),
+            {'value': '', 'label': '--- Selecione uma opção ---', 'optgroup': None}
         ]
+        
+        # Add patient data options
+        for key, mapping in cls.PATIENT_FIELD_MAPPINGS.items():
+            choices.append({
+                'value': f'patient.{key}',
+                'label': mapping['label'],
+                'type': mapping['type'],
+                'optgroup': 'Dados do Paciente'
+            })
+        
+        # Add hospital data options
+        for key, mapping in cls.HOSPITAL_FIELD_MAPPINGS.items():
+            choices.append({
+                'value': f'hospital.{key}',
+                'label': mapping['label'], 
+                'type': mapping['type'],
+                'optgroup': 'Dados do Hospital'
+            })
+        
         return choices
 
     @classmethod
