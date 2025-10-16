@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError, PermissionDenied
 import json
 from .models import PDFFormTemplate, PDFFormSubmission
-from .services.field_mapping import PatientFieldMapper
+from .services.field_mapping import DataFieldMapper
 
 
 @admin.register(PDFFormTemplate)
@@ -66,17 +66,8 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
         if not self.has_change_permission(request, template):
             raise PermissionDenied("You don't have permission to configure fields for this template")
         
-        # Get available patient fields for mapping
-        patient_fields = PatientFieldMapper.get_available_patient_fields()
-        patient_field_options = [
-            {'value': '', 'label': '-- No Auto-Population --'}
-        ]
-        for field_path, field_info in patient_fields.items():
-            patient_field_options.append({
-                'value': field_path,
-                'label': f"{field_info['label']} ({field_path})",
-                'type': field_info['type']
-            })
+        # Get available auto-fill choices for mapping (patient and hospital data)
+        auto_fill_choices = DataFieldMapper.get_auto_fill_choices()
 
         context = {
             'template': template,
@@ -95,7 +86,7 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
                 {'value': 'boolean', 'label': 'Checkbox'},
                 {'value': 'email', 'label': 'Email'},
             ],
-            'patient_field_options': patient_field_options,
+            'auto_fill_choices': auto_fill_choices,
             'current_fields_json': json.dumps(template.form_fields or {}),
             'admin_media_prefix': '/static/admin/',
         }
