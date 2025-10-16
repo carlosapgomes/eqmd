@@ -222,7 +222,8 @@ class AdmissionViewTests(TestCase):
         
         # Check patient was discharged
         self.patient.refresh_from_db()
-        self.assertEqual(self.patient.status, Patient.Status.DISCHARGED)
+        self.assertEqual(self.patient.status, Patient.Status.OUTPATIENT)
+        self.assertIsNone(self.patient.ward)
         self.assertFalse(self.patient.is_currently_admitted())
     
     def test_quick_discharge(self):

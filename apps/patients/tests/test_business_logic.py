@@ -73,10 +73,11 @@ class PatientBusinessLogicTests(TestCase):
         # Check patient status after discharge
         self.patient.refresh_from_db()
         admission.refresh_from_db()
-        
-        self.assertEqual(self.patient.status, Patient.Status.DISCHARGED)
+
+        self.assertEqual(self.patient.status, Patient.Status.OUTPATIENT)
         self.assertIsNone(self.patient.current_admission_id)
         self.assertEqual(self.patient.bed, "")
+        self.assertIsNone(self.patient.ward)
         self.assertFalse(self.patient.is_currently_admitted())
         
         # Check admission record

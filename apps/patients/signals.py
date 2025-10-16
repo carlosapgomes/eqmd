@@ -163,10 +163,11 @@ def update_patient_admission_status(sender, instance, created, **kwargs):
     else:
         # Patient is being discharged
         updates = {
-            'status': Patient.Status.DISCHARGED,
+            'status': Patient.Status.OUTPATIENT,
             'current_admission_id': None,
             'last_discharge_date': instance.discharge_datetime.date() if instance.discharge_datetime else None,
             'bed': "",
+            'ward': None,
         }
     
     # Update admission count and total days

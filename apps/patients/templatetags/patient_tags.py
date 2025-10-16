@@ -249,31 +249,31 @@ def get_admission_edit_actions(user, patient, admission):
         actions.append({
             'action_name': 'edit_admission',
             'label': 'Editar Internação',
-            'icon': 'edit',
+            'icon': 'pencil',
             'btn_class': 'btn-outline-primary'
         })
-    
+
     if can_edit_discharge_data(user, admission):
         actions.append({
             'action_name': 'edit_discharge',
             'label': 'Editar Alta',
-            'icon': 'edit',
+            'icon': 'pencil-square',
             'btn_class': 'btn-outline-warning'
         })
-    
+
     if can_cancel_discharge(user, admission):
         actions.append({
             'action_name': 'cancel_discharge',
             'label': 'Cancelar Alta',
-            'icon': 'arrow-clockwise',
+            'icon': 'arrow-counterclockwise',
             'btn_class': 'btn-outline-danger'
         })
-    
+
     if can_discharge_patient(user, admission):
         actions.append({
             'action_name': 'discharge_patient',
             'label': 'Dar Alta',
-            'icon': 'door-open',
+            'icon': 'box-arrow-right',
             'btn_class': 'btn-outline-success'
         })
     

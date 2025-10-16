@@ -81,7 +81,7 @@
                                             data-bs-target="#{{ action.action_name }}Modal"
                                             data-admission-id="{{ current_admission.id }}"
                                             data-patient-id="{{ patient.id }}">
-                                        <i class="fas fa-{{ action.icon }} me-1"></i>{{ action.label }}
+                                        <i class="bi bi-{{ action.icon }} me-1"></i>{{ action.label }}
                                     </button>
                                     {% endfor %}
                                 </div>
@@ -198,7 +198,7 @@
                                                     data-admission-id="{{ admission.id }}"
                                                     data-patient-id="{{ patient.id }}"
                                                     title="{{ action.label }}">
-                                                <i class="fas fa-{{ action.icon }}"></i>
+                                                <i class="bi bi-{{ action.icon }}"></i>
                                             </button>
                                             {% endfor %}
                                         </div>

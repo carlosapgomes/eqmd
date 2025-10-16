@@ -79,15 +79,16 @@ class StatusChangeViewTests(TestCase):
         
         # Check patient status changed
         self.patient.refresh_from_db()
-        self.assertEqual(self.patient.status, Patient.Status.DISCHARGED)
+        self.assertEqual(self.patient.status, Patient.Status.OUTPATIENT)
         self.assertEqual(self.patient.bed, '')  # Bed should be cleared
-        
+        self.assertIsNone(self.patient.ward)  # Ward should be cleared
+
         # Check status change event was created
         self.assertTrue(
             StatusChangeEvent.objects.filter(
                 patient=self.patient,
                 previous_status=Patient.Status.INPATIENT,
-                new_status=Patient.Status.DISCHARGED
+                new_status=Patient.Status.OUTPATIENT
             ).exists()
         )
 

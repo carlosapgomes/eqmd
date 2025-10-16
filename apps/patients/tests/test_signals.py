@@ -206,9 +206,10 @@ class SignalTests(TestCase):
         
         # Check patient is discharged
         self.patient.refresh_from_db()
-        self.assertEqual(self.patient.status, Patient.Status.DISCHARGED)
+        self.assertEqual(self.patient.status, Patient.Status.OUTPATIENT)
         self.assertIsNone(self.patient.current_admission_id)
         self.assertEqual(self.patient.bed, '')
+        self.assertIsNone(self.patient.ward)
     
     def test_admission_denormalized_fields_calculation(self):
         """Test that admission denormalized fields are calculated correctly"""
