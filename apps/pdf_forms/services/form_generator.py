@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .field_mapping import PatientFieldMapper
+from .field_mapping import DataFieldMapper
 from .section_utils import SectionUtils
 
 
@@ -82,16 +82,15 @@ class DynamicFormGenerator:
             if django_field:
                 form_fields[field_name] = django_field
                 
-                # Check for patient field mapping and set initial value
-                if patient and 'patient_field_mapping' in config:
-                    patient_field_path = config['patient_field_mapping']
-                    if patient_field_path:
-                        field_value = PatientFieldMapper.get_patient_field_value(patient, patient_field_path)
-                        if field_value is not None:
-                            # Format the value based on field type
-                            formatted_value = self._format_patient_field_value(field_value, config.get('type', 'text'))
-                            if formatted_value is not None:
-                                initial_values[field_name] = formatted_value
+                # Check for auto-fill mapping and set initial value
+                auto_fill_path = config.get('auto_fill_mapping') or config.get('patient_field_mapping')
+                if auto_fill_path:
+                    field_value = DataFieldMapper.get_auto_fill_value(auto_fill_path, patient)
+                    if field_value is not None:
+                        # Format the value based on field type
+                        formatted_value = self._format_field_value(field_value, config.get('type', 'text'))
+                        if formatted_value is not None:
+                            initial_values[field_name] = formatted_value
 
         # Create form class dynamically
         form_class_name = f"{pdf_template.name.replace(' ', '')}Form"
@@ -182,12 +181,12 @@ class DynamicFormGenerator:
 
         return field_class(**field_kwargs)
 
-    def _format_patient_field_value(self, value, field_type):
+    def _format_field_value(self, value, field_type):
         """
-        Format patient field value for form field based on type.
+        Format auto-fill field value for form field based on type.
         
         Args:
-            value: Raw value from patient field
+            value: Raw value from auto-fill source (patient or hospital data)
             field_type (str): Type of the form field
             
         Returns:

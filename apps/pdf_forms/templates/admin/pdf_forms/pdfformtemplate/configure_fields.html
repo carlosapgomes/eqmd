@@ -94,7 +94,7 @@
 }
 
 .field-overlay.has-patient-mapping .field-label::after {
-    content: " 👤";
+    content: " 📋";
     font-size: 8px;
 }
 
@@ -959,13 +959,13 @@ body.modal-open {
                 </div>
                 
                 <div class="form-group">
-                    <label for="field-patient-mapping">Patient Field Auto-Population</label>
-                    <select id="field-patient-mapping" name="patient_field_mapping">
-                        {% for option in patient_field_options %}
+                    <label for="field-auto-fill">Auto-Fill Data</label>
+                    <select id="field-auto-fill" name="auto_fill_mapping">
+                        {% for option in auto_fill_choices %}
                         <option value="{{ option.value }}" data-type="{{ option.type }}">{{ option.label }}</option>
                         {% endfor %}
                     </select>
-                    <small style="color: #666;">Automatically populate this field with patient data when form is opened</small>
+                    <small style="color: #666;">Automatically populate this field with patient or hospital data when form is opened</small>
                 </div>
                 
                 <div class="form-group">
@@ -1294,8 +1294,8 @@ function drawField(fieldName, fieldConfig) {
     overlay.className = 'field-overlay';
     overlay.setAttribute('data-field', fieldName);
     
-    // Add patient mapping visual indicator
-    if (fieldConfig.patient_field_mapping) {
+    // Add auto-fill mapping visual indicator
+    if (fieldConfig.auto_fill_mapping || fieldConfig.patient_field_mapping) {
         overlay.classList.add('has-patient-mapping');
     }
     
@@ -1513,7 +1513,7 @@ function loadFieldProperties(fieldName) {
     document.getElementById('field-font-size').value = fieldConfig.font_size || 12;
     document.getElementById('field-width').value = fieldConfig.width || 4.0;
     document.getElementById('field-height').value = fieldConfig.height || 0.7;
-    document.getElementById('field-patient-mapping').value = fieldConfig.patient_field_mapping || '';
+    document.getElementById('field-auto-fill').value = fieldConfig.auto_fill_mapping || fieldConfig.patient_field_mapping || '';
     document.getElementById('field-section').value = fieldConfig.section || '';
     document.getElementById('field-order').value = fieldConfig.field_order || '';
     
@@ -1544,7 +1544,7 @@ function updateSelectedField() {
     const fontSize = document.getElementById('field-font-size').value;
     const width = document.getElementById('field-width').value;
     const height = document.getElementById('field-height').value;
-    const patientMapping = document.getElementById('field-patient-mapping').value;
+    const autoFillMapping = document.getElementById('field-auto-fill').value;
     const sectionKey = document.getElementById('field-section').value;
     const fieldOrder = document.getElementById('field-order').value;
     
@@ -1561,10 +1561,13 @@ function updateSelectedField() {
     fieldConfig.required = required;
     fieldConfig.font_size = parseInt(fontSize) || 12;
     
-    // Update patient field mapping
-    if (patientMapping) {
-        fieldConfig.patient_field_mapping = patientMapping;
+    // Update auto-fill mapping
+    if (autoFillMapping) {
+        fieldConfig.auto_fill_mapping = autoFillMapping;
+        // Remove legacy patient_field_mapping if present
+        delete fieldConfig.patient_field_mapping;
     } else {
+        delete fieldConfig.auto_fill_mapping;
         delete fieldConfig.patient_field_mapping;
     }
     
@@ -1699,22 +1702,23 @@ function updateFieldList() {
         fieldItem.className = 'field-item';
         fieldItem.setAttribute('data-field-name', fieldName);
         
-        // Add patient mapping indicator class
-        if (fieldConfig.patient_field_mapping) {
+        // Add auto-fill mapping indicator class
+        if (fieldConfig.auto_fill_mapping || fieldConfig.patient_field_mapping) {
             fieldItem.classList.add('has-patient-mapping');
         }
         
-        // Build patient mapping display
-        let patientMappingDisplay = '';
-        if (fieldConfig.patient_field_mapping) {
-            patientMappingDisplay = `<div class="patient-mapping-indicator">📋 Auto: ${fieldConfig.patient_field_mapping}</div>`;
+        // Build auto-fill mapping display
+        let autoFillDisplay = '';
+        const mapping = fieldConfig.auto_fill_mapping || fieldConfig.patient_field_mapping;
+        if (mapping) {
+            autoFillDisplay = `<div class="patient-mapping-indicator">📋 Auto: ${mapping}</div>`;
         }
         
         fieldItem.innerHTML = `
             <div>
                 <div class="field-name">${fieldConfig.label || fieldName}</div>
                 <div style="font-size: 11px; color: #999;">${fieldName}</div>
-                ${patientMappingDisplay}
+                ${autoFillDisplay}
             </div>
             <div class="field-type">${fieldConfig.type}</div>
         `;

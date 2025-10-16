@@ -7,9 +7,9 @@ from django.core.exceptions import ValidationError
 from django.apps import apps
 
 
-class PatientFieldMapper:
+class DataFieldMapper:
     """
-    Utilities for mapping PDF form fields to patient model fields.
+    Utilities for mapping PDF form fields to patient and hospital data.
     """
 
     # Available patient fields with their types and labels
@@ -38,6 +38,39 @@ class PatientFieldMapper:
         'total_inpatient_days': {'type': 'number', 'label': 'Total de Dias Internado'},
     }
 
+    # Available hospital fields with their types and labels
+    HOSPITAL_FIELD_MAPPINGS = {
+        'name': {'type': 'text', 'label': 'Nome do Hospital'},
+        'address': {'type': 'text', 'label': 'Endereço do Hospital'},
+        'phone': {'type': 'text', 'label': 'Telefone do Hospital'},
+        'email': {'type': 'text', 'label': 'Email do Hospital'},
+        'website': {'type': 'text', 'label': 'Website do Hospital'},
+        'cnes': {'type': 'text', 'label': 'CNES do Hospital'},
+        'cnpj': {'type': 'text', 'label': 'CNPJ do Hospital'},
+    }
+
+    # Combined mappings for dropdown choices
+    @classmethod
+    def get_auto_fill_choices(cls):
+        """
+        Get grouped choices for auto-fill dropdown.
+        
+        Returns:
+            list: Grouped choices for Django ChoiceField
+        """
+        choices = [
+            ('', '--- Selecione uma opção ---'),
+            ('Dados do Paciente', [
+                (f'patient.{key}', mapping['label']) 
+                for key, mapping in cls.PATIENT_FIELD_MAPPINGS.items()
+            ]),
+            ('Dados do Hospital', [
+                (f'hospital.{key}', mapping['label']) 
+                for key, mapping in cls.HOSPITAL_FIELD_MAPPINGS.items()
+            ]),
+        ]
+        return choices
+
     @classmethod
     def get_available_patient_fields(cls):
         """
@@ -49,9 +82,43 @@ class PatientFieldMapper:
         return cls.PATIENT_FIELD_MAPPINGS.copy()
 
     @classmethod
+    def validate_auto_fill_mapping(cls, field_name, auto_fill_path):
+        """
+        Validate that an auto-fill field mapping is valid.
+        
+        Args:
+            field_name (str): Name of the form field
+            auto_fill_path (str): Path like 'patient.name' or 'hospital.cnes'
+            
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        if not auto_fill_path:
+            return True, None  # No mapping is valid
+            
+        # Parse the path
+        if '.' not in auto_fill_path:
+            return False, f"Invalid auto-fill path '{auto_fill_path}'. Must be in format 'source.field'"
+            
+        source, field_key = auto_fill_path.split('.', 1)
+        
+        if source == 'patient':
+            if field_key not in cls.PATIENT_FIELD_MAPPINGS:
+                available_fields = ', '.join(cls.PATIENT_FIELD_MAPPINGS.keys())
+                return False, f"Invalid patient field '{field_key}'. Available fields: {available_fields}"
+        elif source == 'hospital':
+            if field_key not in cls.HOSPITAL_FIELD_MAPPINGS:
+                available_fields = ', '.join(cls.HOSPITAL_FIELD_MAPPINGS.keys())
+                return False, f"Invalid hospital field '{field_key}'. Available fields: {available_fields}"
+        else:
+            return False, f"Invalid auto-fill source '{source}'. Must be 'patient' or 'hospital'"
+            
+        return True, None
+
+    @classmethod
     def validate_patient_field_mapping(cls, field_name, patient_field_path):
         """
-        Validate that a patient field mapping is valid.
+        Legacy method - validate that a patient field mapping is valid.
         
         Args:
             field_name (str): Name of the form field
@@ -68,6 +135,34 @@ class PatientFieldMapper:
             return False, f"Invalid patient field '{patient_field_path}'. Available fields: {available_fields}"
             
         return True, None
+
+    @classmethod
+    def get_auto_fill_value(cls, auto_fill_path, patient=None):
+        """
+        Get value from auto-fill path (patient or hospital data).
+        
+        Args:
+            auto_fill_path (str): Path like 'patient.name' or 'hospital.cnes'
+            patient: Patient object (required for patient data)
+            
+        Returns:
+            Any: Field value or None if not found
+        """
+        if not auto_fill_path:
+            return None
+            
+        # Parse the path
+        if '.' not in auto_fill_path:
+            return None
+            
+        source, field_key = auto_fill_path.split('.', 1)
+        
+        if source == 'patient':
+            return cls.get_patient_field_value(patient, field_key)
+        elif source == 'hospital':
+            return cls.get_hospital_field_value(field_key)
+        else:
+            return None
 
     @classmethod
     def get_patient_field_value(cls, patient, field_path):
@@ -102,22 +197,54 @@ class PatientFieldMapper:
             return None
 
     @classmethod
-    def get_field_type_compatibility(cls, form_field_type, patient_field_path):
+    def get_hospital_field_value(cls, field_key):
         """
-        Check if form field type is compatible with patient field type.
+        Get value from hospital configuration.
+        
+        Args:
+            field_key (str): Hospital field key (e.g., 'name', 'cnes')
+            
+        Returns:
+            Any: Field value or None if not found
+        """
+        from django.conf import settings
+        
+        if not field_key:
+            return None
+            
+        hospital_config = getattr(settings, 'HOSPITAL_CONFIG', {})
+        return hospital_config.get(field_key, None)
+
+    @classmethod
+    def get_field_type_compatibility(cls, form_field_type, auto_fill_path):
+        """
+        Check if form field type is compatible with auto-fill field type.
         
         Args:
             form_field_type (str): Type of the form field
-            patient_field_path (str): Patient field path
+            auto_fill_path (str): Auto-fill path like 'patient.name' or 'hospital.cnes'
             
         Returns:
             bool: True if compatible, False otherwise
         """
-        if not patient_field_path or patient_field_path not in cls.PATIENT_FIELD_MAPPINGS:
-            return True  # No mapping or invalid mapping is always "compatible"
+        if not auto_fill_path:
+            return True  # No mapping is always "compatible"
             
-        patient_field_info = cls.PATIENT_FIELD_MAPPINGS[patient_field_path]
-        patient_field_type = patient_field_info['type']
+        # Parse the path to get field type
+        if '.' not in auto_fill_path:
+            return True
+            
+        source, field_key = auto_fill_path.split('.', 1)
+        
+        # Get field type from mappings
+        data_field_type = None
+        if source == 'patient' and field_key in cls.PATIENT_FIELD_MAPPINGS:
+            data_field_type = cls.PATIENT_FIELD_MAPPINGS[field_key]['type']
+        elif source == 'hospital' and field_key in cls.HOSPITAL_FIELD_MAPPINGS:
+            data_field_type = cls.HOSPITAL_FIELD_MAPPINGS[field_key]['type']
+        
+        if not data_field_type:
+            return True  # Invalid mapping is always "compatible"
         
         # Define compatibility rules
         compatibility_matrix = {
@@ -134,7 +261,7 @@ class PatientFieldMapper:
         }
         
         compatible_types = compatibility_matrix.get(form_field_type, [])
-        return patient_field_type in compatible_types
+        return data_field_type in compatible_types
 
 
 class FieldMappingUtils:
@@ -211,16 +338,36 @@ class FieldMappingUtils:
                 elif not config['choices']:
                     errors.append(f"Field '{field_name}' choices cannot be empty")
 
-            # Validate patient field mapping if present
+            # Validate auto-fill mapping if present (new format)
+            if 'auto_fill_mapping' in config:
+                auto_fill_path = config['auto_fill_mapping']
+                is_valid, error_msg = DataFieldMapper.validate_auto_fill_mapping(field_name, auto_fill_path)
+                if not is_valid:
+                    errors.append(f"Field '{field_name}' has invalid auto-fill mapping: {error_msg}")
+                
+                # Check field type compatibility
+                if auto_fill_path and not DataFieldMapper.get_field_type_compatibility(field_type, auto_fill_path):
+                    # Parse path to get field info
+                    if '.' in auto_fill_path:
+                        source, field_key = auto_fill_path.split('.', 1)
+                        if source == 'patient' and field_key in DataFieldMapper.PATIENT_FIELD_MAPPINGS:
+                            data_type = DataFieldMapper.PATIENT_FIELD_MAPPINGS[field_key]['type']
+                        elif source == 'hospital' and field_key in DataFieldMapper.HOSPITAL_FIELD_MAPPINGS:
+                            data_type = DataFieldMapper.HOSPITAL_FIELD_MAPPINGS[field_key]['type']
+                        else:
+                            data_type = 'unknown'
+                        errors.append(f"Field '{field_name}' type '{field_type}' is not compatible with {source} field type '{data_type}'")
+
+            # Validate patient field mapping if present (legacy format)
             if 'patient_field_mapping' in config:
                 patient_field_path = config['patient_field_mapping']
-                is_valid, error_msg = PatientFieldMapper.validate_patient_field_mapping(field_name, patient_field_path)
+                is_valid, error_msg = DataFieldMapper.validate_patient_field_mapping(field_name, patient_field_path)
                 if not is_valid:
                     errors.append(f"Field '{field_name}' has invalid patient field mapping: {error_msg}")
                 
                 # Check field type compatibility
-                if patient_field_path and not PatientFieldMapper.get_field_type_compatibility(field_type, patient_field_path):
-                    patient_info = PatientFieldMapper.PATIENT_FIELD_MAPPINGS.get(patient_field_path, {})
+                if patient_field_path and not DataFieldMapper.get_field_type_compatibility(field_type, f'patient.{patient_field_path}'):
+                    patient_info = DataFieldMapper.PATIENT_FIELD_MAPPINGS.get(patient_field_path, {})
                     patient_type = patient_info.get('type', 'unknown')
                     errors.append(f"Field '{field_name}' type '{field_type}' is not compatible with patient field type '{patient_type}'")
 
