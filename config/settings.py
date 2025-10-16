@@ -352,6 +352,9 @@ HOSPITAL_CONFIG = {
     'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
     # Hospital short identifier for PWA
     'short_identifier': os.getenv('HOSPITAL_SHORT_ID', ''),
+    # Brazilian hospital identifiers
+    'cnes': os.getenv('HOSPITAL_CNES', ''),
+    'cnpj': os.getenv('HOSPITAL_CNPJ', ''),
 }
 
 # PDF Forms Configuration

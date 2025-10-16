@@ -24,6 +24,16 @@ def hospital_email():
     return getattr(settings, 'HOSPITAL_CONFIG', {}).get('email', '')
 
 @register.simple_tag
+def hospital_cnes():
+    """Get the configured hospital CNES from settings"""
+    return getattr(settings, 'HOSPITAL_CONFIG', {}).get('cnes', '')
+
+@register.simple_tag
+def hospital_cnpj():
+    """Get the configured hospital CNPJ from settings"""
+    return getattr(settings, 'HOSPITAL_CONFIG', {}).get('cnpj', '')
+
+@register.simple_tag
 def hospital_logo():
     """Get the configured hospital logo URL from settings"""
     hospital_config = getattr(settings, 'HOSPITAL_CONFIG', {})
