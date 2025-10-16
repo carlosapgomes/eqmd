@@ -595,12 +595,14 @@ class PatientAdmission(models.Model):
         self.patient.status = self.patient.Status.INPATIENT
         self.patient.current_admission_id = self.id
         self.patient.bed = self.final_bed or self.initial_bed
+        self.patient.ward = self.ward
         self.patient.updated_by = user
         self.patient.save(
             update_fields=[
                 "status",
                 "current_admission_id",
                 "bed",
+                "ward",
                 "updated_by",
                 "updated_at",
             ]
@@ -982,7 +984,7 @@ class Patient(SoftDeleteModel):
             "discharge_patient: Updating patient status and denormalized fields"
         )
         # Update patient status and denormalized fields
-        self.status = self.Status.DISCHARGED
+        self.status = self.Status.OUTPATIENT
         self.current_admission_id = None
         self.last_discharge_date = (
             discharge_datetime.date()
@@ -990,6 +992,7 @@ class Patient(SoftDeleteModel):
             else discharge_datetime
         )
         self.bed = ""
+        self.ward = None
 
         # Recalculate total inpatient days
         self.total_inpatient_days = sum(
@@ -1004,6 +1007,7 @@ class Patient(SoftDeleteModel):
                 "current_admission_id",
                 "last_discharge_date",
                 "bed",
+                "ward",
                 "total_inpatient_days",
                 "updated_by",
                 "updated_at",
@@ -1058,10 +1062,12 @@ class Patient(SoftDeleteModel):
         if current_admission:
             self.status = self.Status.INPATIENT
             self.bed = current_admission.initial_bed or current_admission.final_bed
+            self.ward = current_admission.ward
         elif self.status == self.Status.INPATIENT:
             # Patient was marked as inpatient but has no active admission
             self.status = self.Status.OUTPATIENT
             self.bed = ""
+            self.ward = None
 
         self.save(
             update_fields=[
@@ -1071,6 +1077,7 @@ class Patient(SoftDeleteModel):
                 "current_admission_id",
                 "status",
                 "bed",
+                "ward",
                 "updated_at",
             ]
         )
