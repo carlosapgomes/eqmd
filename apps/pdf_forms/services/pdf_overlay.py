@@ -235,8 +235,18 @@ class PDFFormOverlay:
         # Create PDF canvas with same dimensions as original
         pdf_canvas = canvas.Canvas(buffer, pagesize=(page_width, page_height))
 
-        # Process each field in the configuration (new sectioned format)
-        fields_config = field_config['fields']
+        # Handle both new sectioned format and legacy format
+        if isinstance(field_config, dict):
+            if 'sections' in field_config and 'fields' in field_config:
+                # New sectioned format
+                fields_config = field_config['fields']
+            else:
+                # Legacy format - field_config is directly the fields
+                fields_config = field_config
+        else:
+            # Fallback to empty dict if field_config is not a dict
+            fields_config = {}
+            
         for field_name, config in fields_config.items():
             if field_name in form_data:
                 field_value = form_data[field_name]
