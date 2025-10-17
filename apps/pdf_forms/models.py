@@ -103,6 +103,13 @@ class PDFFormTemplate(models.Model):
     def is_configured(self):
         """Check if the template has field configuration."""
         return bool(self.form_fields and len(self.form_fields) > 0)
+
+    @property
+    def has_data_sources(self):
+        """Check if template configuration includes data sources."""
+        if not self.form_fields:
+            return False
+        return 'data_sources' in self.form_fields
     
     @property 
     def configuration_status(self):

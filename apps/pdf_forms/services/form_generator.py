@@ -2,6 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from .field_mapping import DataFieldMapper
 from .section_utils import SectionUtils
+from .data_source_utils import DataSourceUtils
 
 
 class DynamicFormGenerator:
@@ -78,7 +79,7 @@ class DynamicFormGenerator:
 
         # Create Django form fields
         for field_name, config in fields_config.items():
-            django_field = self._create_django_field(field_name, config)
+            django_field = self._create_django_field(field_name, config, field_config)
             if django_field:
                 form_fields[field_name] = django_field
                 
@@ -109,22 +110,32 @@ class DynamicFormGenerator:
         
         # Store initial values as a class attribute for later use
         form_class._patient_initial_values = initial_values
-        
+
         # Add section metadata to form class
         sections_metadata = self._organize_sections(sections_config, fields_config)
         form_class._sections_metadata = sections_metadata
         form_class._has_sections = bool(sections_config)
         form_class._unsectioned_fields = sections_metadata.get('unsectioned_fields', [])
 
+        # NEW: Store data source metadata on form class
+        if 'data_sources' in field_config:
+            form_class._linked_fields_map = DataSourceUtils.build_linked_fields_map(
+                field_config
+            )
+        else:
+            form_class._linked_fields_map = {}
+
         return form_class
 
-    def _create_django_field(self, field_name, config):
+    def _create_django_field(self, field_name, config, form_config=None):
         """
         Create Django form field from configuration.
+        Enhanced to handle data source choices.
 
         Args:
             field_name (str): Name of the field
             config (dict): Field configuration
+            form_config (dict): Complete form configuration (for data sources)
 
         Returns:
             forms.Field: Django form field instance
@@ -135,6 +146,16 @@ class DynamicFormGenerator:
         help_text = config.get('help_text', '')
         max_length = config.get('max_length')
         choices = config.get('choices', [])
+
+        # NEW: For choice fields, check if using data source
+        if field_type == 'choice' and form_config:
+            data_source_choices = DataSourceUtils.get_field_choices_from_source(
+                form_config, config
+            )
+            if data_source_choices:
+                # Override config choices with data source choices
+                config = config.copy()
+                choices = data_source_choices
 
         # Get the Django field class
         field_class = self.FIELD_TYPE_MAPPING.get(field_type, forms.CharField)
@@ -178,6 +199,21 @@ class DynamicFormGenerator:
         # Add max_length for text fields
         if max_length and field_type in ['text', 'textarea']:
             field_kwargs['max_length'] = max_length
+
+        # NEW: Add data attributes for linked fields
+        if config.get('data_source'):
+            widget_attrs = field_kwargs.get('widget', forms.TextInput()).attrs
+            widget_attrs['data-source'] = config['data_source']
+            widget_attrs['data-source-key'] = config['data_source_key']
+
+            if config.get('linked_readonly'):
+                widget_attrs['data-linked-readonly'] = 'true'
+
+            # Update widget with attributes
+            if 'widget' in field_kwargs:
+                field_kwargs['widget'].attrs.update(widget_attrs)
+            else:
+                field_kwargs['widget'] = forms.TextInput(attrs=widget_attrs)
 
         return field_class(**field_kwargs)
 

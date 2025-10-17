@@ -97,9 +97,20 @@ class PDFFormSecurity:
             PDFFormSecurity.validate_section_configuration(field_config.get('sections', {}))
             # Validate fields configuration
             fields_config = field_config.get('fields', {})
+            # NEW: Validate data sources if present
+            data_sources = field_config.get('data_sources', {})
+            if data_sources:
+                PDFFormSecurity.validate_data_sources(data_sources)
         else:
             # Backward compatibility: treat entire config as fields
-            fields_config = field_config
+            # But first extract data_sources if present in legacy format
+            data_sources = field_config.get('data_sources', {})
+            if data_sources:
+                PDFFormSecurity.validate_data_sources(data_sources)
+                # Remove data_sources from fields config to avoid treating it as a field
+                fields_config = {k: v for k, v in field_config.items() if k != 'data_sources'}
+            else:
+                fields_config = field_config
 
         for field_name, config in fields_config.items():
             # Validate field name
@@ -131,10 +142,12 @@ class PDFFormSecurity:
                     except (ValueError, TypeError):
                         raise ValidationError(f"Invalid coordinate '{coord}' for field '{field_name}'")
 
-            # Validate choices for choice fields
+            # Validate choices for choice fields (unless using data source)
             if config['type'] in ['choice', 'multiple_choice']:
-                if 'choices' not in config or not isinstance(config['choices'], list):
-                    raise ValidationError(f"Choice field '{field_name}' must have a 'choices' list")
+                # Data source fields don't need explicit choices
+                if 'data_source' not in config:
+                    if 'choices' not in config or not isinstance(config['choices'], list):
+                        raise ValidationError(f"Choice field '{field_name}' must have a 'choices' list")
 
             # Validate section reference if present
             if 'section' in config:
@@ -150,6 +163,12 @@ class PDFFormSecurity:
                         raise ValidationError(f"Field order must be positive for field '{field_name}'")
                 except (ValueError, TypeError):
                     raise ValidationError(f"Invalid field order for field '{field_name}'")
+
+            # NEW: Validate field data source references
+            if isinstance(config, dict) and 'data_source' in config:
+                PDFFormSecurity.validate_field_data_source_reference(
+                    field_name, config, data_sources
+                )
 
         return True
 
@@ -215,6 +234,84 @@ class PDFFormSecurity:
             raise ValidationError("Section orders must be unique")
 
         return True
+
+    @staticmethod
+    def validate_data_sources(data_sources):
+        """
+        Validate data sources configuration.
+
+        Args:
+            data_sources (dict): Data sources configuration
+
+        Raises:
+            ValidationError: If configuration is invalid
+        """
+        if not isinstance(data_sources, dict):
+            raise ValidationError("data_sources must be a dictionary")
+
+        for source_name, source_data in data_sources.items():
+            # Validate source name
+            if not isinstance(source_name, str) or not source_name:
+                raise ValidationError(f"Invalid data source name: {source_name}")
+
+            # Validate source data is a list
+            if not isinstance(source_data, list):
+                raise ValidationError(f"Data source '{source_name}' must be a list")
+
+            # Validate each item is a dictionary
+            for idx, item in enumerate(source_data):
+                if not isinstance(item, dict):
+                    raise ValidationError(
+                        f"Item {idx} in data source '{source_name}' must be a dictionary"
+                    )
+
+                # Validate item has at least one key
+                if not item:
+                    raise ValidationError(
+                        f"Item {idx} in data source '{source_name}' cannot be empty"
+                    )
+
+    @staticmethod
+    def validate_field_data_source_reference(field_name, field_config, available_sources):
+        """
+        Validate that field's data source reference is valid.
+
+        Args:
+            field_name (str): Name of the field
+            field_config (dict): Field configuration
+            available_sources (dict): Available data sources
+
+        Raises:
+            ValidationError: If reference is invalid
+        """
+        data_source = field_config.get('data_source')
+        data_source_key = field_config.get('data_source_key')
+
+        # Both or neither must be present
+        if bool(data_source) != bool(data_source_key):
+            raise ValidationError(
+                f"Field '{field_name}': both 'data_source' and 'data_source_key' "
+                f"must be specified together"
+            )
+
+        # If present, validate
+        if data_source:
+            # Check source exists
+            if data_source not in available_sources:
+                raise ValidationError(
+                    f"Field '{field_name}': data source '{data_source}' not found. "
+                    f"Available: {list(available_sources.keys())}"
+                )
+
+            # Check key exists in at least one item
+            source_items = available_sources[data_source]
+            if source_items:
+                first_item = source_items[0]
+                if data_source_key not in first_item:
+                    raise ValidationError(
+                        f"Field '{field_name}': key '{data_source_key}' not found in "
+                        f"data source '{data_source}'. Available keys: {list(first_item.keys())}"
+                    )
 
     @staticmethod
     def validate_pdf_content(file_path):

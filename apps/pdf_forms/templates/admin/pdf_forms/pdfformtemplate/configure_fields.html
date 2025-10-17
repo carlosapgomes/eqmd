@@ -788,6 +788,119 @@
     border-color: #565e64;
 }
 
+/* Data Source Management Styles */
+#data-source-management {
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+.data-source-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    transition: all 0.2s ease;
+}
+
+.data-source-item:hover {
+    background: #e9ecef;
+    border-color: #28a745;
+}
+
+.data-source-info {
+    flex: 1;
+}
+
+.data-source-name {
+    font-weight: bold;
+    color: #495057;
+    margin-right: 8px;
+}
+
+.data-source-count {
+    font-size: 11px;
+    color: #6c757d;
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+
+.data-source-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.data-source-actions button {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.data-item-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.data-item-row input {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.data-item-row button {
+    padding: 6px 10px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.data-item-row button:hover {
+    background: #c82333;
+}
+
+/* Data source linked field indicators */
+.field-overlay.has-data-source {
+    border-color: #17a2b8;
+    background: rgba(23, 162, 184, 0.1);
+}
+
+.field-overlay.has-data-source .field-label::before {
+    content: "🔗 ";
+    font-size: 8px;
+}
+
+.field-item.has-data-source {
+    border-left: 3px solid #17a2b8;
+}
+
+.field-item.has-data-source .field-type {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.data-source-indicator {
+    font-size: 10px;
+    color: #17a2b8;
+    font-weight: bold;
+}
+
 /* Body modifications when modal is open */
 body.modal-open {
     overflow: hidden;
@@ -872,7 +985,27 @@ body.modal-open {
                 </button>
             </div>
         </div>
-        
+
+        <!-- Data Source Management Panel -->
+        <div id="data-source-management" class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Data Sources</h4>
+                <button type="button" class="btn btn-outline-success btn-sm" id="add-data-source-btn">
+                    <i class="bi bi-plus"></i> Add Data Source
+                </button>
+            </div>
+            <div id="data-sources-list" class="mb-3">
+                <div style="padding: 15px; text-align: center; color: #666; font-style: italic;">
+                    No data sources configured
+                </div>
+            </div>
+            <div class="section-controls">
+                <button type="button" class="btn btn-outline-info btn-sm" id="preview-data-sources-btn">
+                    <i class="bi bi-table"></i> Preview Data
+                </button>
+            </div>
+        </div>
+
         <div id="manual-json-editor" style="display: none; margin-top: 20px;">
             <h3>Manual JSON Editor</h3>
             <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
@@ -978,7 +1111,44 @@ body.modal-open {
                     </select>
                     <small style="color: #666;">Automatically populate this field with patient or hospital data when form is opened</small>
                 </div>
-                
+
+                <!-- Data Source Linking -->
+                <div class="form-group" id="data-source-link-group" style="display: none;">
+                    <label>Link to Data Source</label>
+                    <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <strong>💡 Data Source Linking</strong>
+                        <div style="font-size: 11px; margin-top: 5px;">
+                            Link this field to a data source to enable automatic population of related fields.
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="field-data-source">Data Source</label>
+                        <select id="field-data-source" name="data_source" class="form-control">
+                            <option value="">-- None --</option>
+                            <!-- Populated dynamically with available data sources -->
+                        </select>
+                    </div>
+
+                    <div class="mb-2" id="data-source-key-group" style="display: none;">
+                        <label for="field-data-source-key">Data Source Key</label>
+                        <select id="field-data-source-key" name="data_source_key" class="form-control">
+                            <option value="">-- Select Key --</option>
+                            <!-- Populated dynamically based on selected data source -->
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label>
+                            <input type="checkbox" id="field-linked-readonly" name="linked_readonly">
+                            Make read-only when auto-filled
+                        </label>
+                        <div style="font-size: 11px; color: #666;">
+                            Prevents manual editing of auto-filled values
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="field-font-size">Font Size</label>
                     <input type="number" id="field-font-size" name="font_size" value="12" min="6" max="72">
@@ -1099,6 +1269,68 @@ body.modal-open {
     </div>
 </div>
 
+<!-- Data Source Editor Modal -->
+<div class="modal fade" id="dataSourceModal" tabindex="-1" aria-labelledby="dataSourceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dataSourceModalLabel">Data Source Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="data-source-form">
+                    <div class="mb-3">
+                        <label for="data-source-name" class="form-label">Data Source Name</label>
+                        <input type="text" class="form-control" id="data-source-name" required>
+                        <div class="form-text">Unique identifier (e.g., procedures, diagnoses). Only letters, numbers, and underscores.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Data Items</label>
+                        <div class="form-text mb-2">
+                            Add rows with key-value pairs. The first item defines the keys for all items.
+                        </div>
+                        <div id="data-items-container">
+                            <!-- Data items will be dynamically added here -->
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary mt-2" id="add-data-item-btn">
+                            <i class="bi bi-plus"></i> Add Item
+                        </button>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>💡 Tip:</strong> First item defines the structure. All items must have the same keys.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-data-source-btn">Save Data Source</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Source Preview Modal -->
+<div class="modal fade" id="dataSourcePreviewModal" tabindex="-1" aria-labelledby="dataSourcePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dataSourcePreviewModalLabel">Data Sources Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="data-source-preview-content">
+                    <!-- Preview content will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Global variables
 let pdfCanvas = null;
@@ -1117,17 +1349,24 @@ let dragOffset = { x: 0, y: 0 };
 let gridSize = 10; // pixels
 let cmToPx = 1; // Will be calculated based on PDF size
 
+// Data Source Management Variables
+let dataSources = {};
+let editingDataSourceName = null;
+
 // Initialize the configurator
 document.addEventListener('DOMContentLoaded', function() {
     pdfCanvas = document.getElementById('pdf-canvas');
     ctx = pdfCanvas.getContext('2d');
-    
+
     // Load existing fields
     loadExistingFields();
-    
+
+    // Load existing data sources
+    loadExistingDataSources();
+
     // Load PDF preview
     loadPDFPreview();
-    
+
     // Setup event listeners
     setupEventListeners();
 });
@@ -1153,6 +1392,15 @@ function loadExistingFields() {
         console.warn('Error loading existing configuration:', error);
         fields = {};
         sections = {};
+    }
+}
+
+function loadExistingDataSources() {
+    // Extract data sources from existing config if present
+    const existingConfig = {{ current_fields_json|safe }};
+    if (existingConfig && existingConfig.data_sources) {
+        dataSources = existingConfig.data_sources;
+        updateDataSourcesList();
     }
 }
 
@@ -1304,10 +1552,15 @@ function drawField(fieldName, fieldConfig) {
     const overlay = document.createElement('div');
     overlay.className = 'field-overlay';
     overlay.setAttribute('data-field', fieldName);
-    
+
     // Add auto-fill mapping visual indicator
     if (fieldConfig.auto_fill_mapping || fieldConfig.patient_field_mapping) {
         overlay.classList.add('has-patient-mapping');
+    }
+
+    // Add data source mapping visual indicator
+    if (fieldConfig.data_source) {
+        overlay.classList.add('has-data-source');
     }
     
     // Convert cm to pixels
@@ -1399,7 +1652,18 @@ function setupEventListeners() {
     
     // Section assignment changes
     document.getElementById('field-section').addEventListener('change', handleFieldSectionChange);
-    
+
+    // Data source management event listeners
+    document.getElementById('add-data-source-btn').addEventListener('click', () => showDataSourceModal());
+    document.getElementById('save-data-source-btn').addEventListener('click', saveDataSourceConfiguration);
+    document.getElementById('preview-data-sources-btn').addEventListener('click', showDataSourcePreview);
+    document.getElementById('add-data-item-btn').addEventListener('click', addDataItem);
+
+    // Data source dropdown event listeners
+    document.getElementById('field-data-source').addEventListener('change', handleDataSourceChange);
+    document.getElementById('field-data-source-key').addEventListener('change', updateSelectedField);
+    document.getElementById('field-linked-readonly').addEventListener('change', updateSelectedField);
+
     // Modal close functionality
     setupModalCloseHandlers();
 }
@@ -1515,7 +1779,7 @@ function selectField(fieldName) {
 
 function loadFieldProperties(fieldName) {
     const fieldConfig = fields[fieldName];
-    
+
     document.getElementById('field-name').value = fieldName;
     document.getElementById('field-label').value = fieldConfig.label || '';
     document.getElementById('field-type').value = fieldConfig.type || 'text';
@@ -1527,14 +1791,19 @@ function loadFieldProperties(fieldName) {
     document.getElementById('field-auto-fill').value = fieldConfig.auto_fill_mapping || fieldConfig.patient_field_mapping || '';
     document.getElementById('field-section').value = fieldConfig.section || '';
     document.getElementById('field-order').value = fieldConfig.field_order || '';
-    
-    // Update position and size display
-    document.getElementById('position-display').textContent = `${fieldConfig.x}, ${fieldConfig.y}`;
-    document.getElementById('size-display').textContent = `${fieldConfig.width} × ${fieldConfig.height}`;
-    
-    // Handle field type specific options
+
+    // Load data source settings
+    document.getElementById('field-data-source').value = fieldConfig.data_source || '';
+    document.getElementById('field-data-source-key').value = fieldConfig.data_source_key || '';
+    document.getElementById('field-linked-readonly').checked = fieldConfig.linked_readonly || false;
+
+    // Trigger data source change to show key dropdown if needed
+    if (fieldConfig.data_source) {
+        document.getElementById('field-data-source').dispatchEvent(new Event('change'));
+    }
+
     handleFieldTypeChange();
-    
+
     // Load choices for choice fields
     if (fieldConfig.type === 'choice' && fieldConfig.choices) {
         loadChoices(fieldConfig.choices);
@@ -1571,7 +1840,7 @@ function updateSelectedField() {
     fieldConfig.type = type;
     fieldConfig.required = required;
     fieldConfig.font_size = parseInt(fontSize) || 12;
-    
+
     // Update auto-fill mapping
     if (autoFillMapping) {
         fieldConfig.auto_fill_mapping = autoFillMapping;
@@ -1581,7 +1850,22 @@ function updateSelectedField() {
         delete fieldConfig.auto_fill_mapping;
         delete fieldConfig.patient_field_mapping;
     }
-    
+
+    // Update data source settings
+    const dataSource = document.getElementById('field-data-source').value;
+    const dataSourceKey = document.getElementById('field-data-source-key').value;
+    const linkedReadonly = document.getElementById('field-linked-readonly').checked;
+
+    if (dataSource && dataSourceKey) {
+        fieldConfig.data_source = dataSource;
+        fieldConfig.data_source_key = dataSourceKey;
+        fieldConfig.linked_readonly = linkedReadonly;
+    } else {
+        delete fieldConfig.data_source;
+        delete fieldConfig.data_source_key;
+        delete fieldConfig.linked_readonly;
+    }
+
     // Update section assignment
     if (sectionKey) {
         fieldConfig.section = sectionKey;
@@ -1635,15 +1919,30 @@ function updateSelectedField() {
 
 function handleFieldTypeChange() {
     const fieldType = document.getElementById('field-type').value;
-    
+
     // Show/hide max length
     const maxLengthGroup = document.getElementById('max-length-group');
     maxLengthGroup.style.display = ['text', 'textarea', 'email'].includes(fieldType) ? 'block' : 'none';
-    
+
     // Show/hide choices
     const choicesGroup = document.getElementById('choices-group');
     choicesGroup.style.display = fieldType === 'choice' ? 'block' : 'none';
-    
+
+    // Show data source linking for choice fields
+    const dataSourceLinkGroup = document.getElementById('data-source-link-group');
+    if (fieldType === 'choice' && Object.keys(dataSources).length > 0) {
+        dataSourceLinkGroup.style.display = 'block';
+        updateDataSourceDropdown();
+    } else {
+        dataSourceLinkGroup.style.display = 'none';
+    }
+
+    // Also show for text fields that might be auto-filled
+    if (['text', 'number', 'date'].includes(fieldType) && Object.keys(dataSources).length > 0) {
+        dataSourceLinkGroup.style.display = 'block';
+        updateDataSourceDropdown();
+    }
+
     if (fieldType === 'choice' && selectedField) {
         const fieldConfig = fields[selectedField];
         if (!fieldConfig.choices) {
@@ -1651,6 +1950,55 @@ function handleFieldTypeChange() {
             loadChoices(fieldConfig.choices);
         }
     }
+}
+
+function updateDataSourceDropdown() {
+    const select = document.getElementById('field-data-source');
+
+    // Clear existing options except first
+    const firstOption = select.firstElementChild;
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+
+    // Add data source options
+    Object.keys(dataSources).forEach(sourceName => {
+        const option = document.createElement('option');
+        option.value = sourceName;
+        option.textContent = sourceName;
+        select.appendChild(option);
+    });
+}
+
+// Handle data source selection change
+function handleDataSourceChange() {
+    const sourceName = document.getElementById('field-data-source').value;
+    const keyGroup = document.getElementById('data-source-key-group');
+    const keySelect = document.getElementById('field-data-source-key');
+
+    if (sourceName && dataSources[sourceName]) {
+        // Show key selection
+        keyGroup.style.display = 'block';
+
+        // Populate keys from first item
+        const firstItem = dataSources[sourceName][0];
+        if (firstItem) {
+            const keys = Object.keys(firstItem);
+
+            // Clear existing options
+            keySelect.innerHTML = '<option value="">-- Select Key --</option>';
+
+            keys.forEach(key => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = key;
+                keySelect.appendChild(option);
+            });
+        }
+    } else {
+        keyGroup.style.display = 'none';
+    }
+
+    updateSelectedField();
 }
 
 function loadChoices(choices) {
@@ -1717,19 +2065,31 @@ function updateFieldList() {
         if (fieldConfig.auto_fill_mapping || fieldConfig.patient_field_mapping) {
             fieldItem.classList.add('has-patient-mapping');
         }
-        
+
+        // Add data source indicator class
+        if (fieldConfig.data_source) {
+            fieldItem.classList.add('has-data-source');
+        }
+
         // Build auto-fill mapping display
         let autoFillDisplay = '';
         const mapping = fieldConfig.auto_fill_mapping || fieldConfig.patient_field_mapping;
         if (mapping) {
             autoFillDisplay = `<div class="patient-mapping-indicator">📋 Auto: ${mapping}</div>`;
         }
-        
+
+        // Build data source display
+        let dataSourceDisplay = '';
+        if (fieldConfig.data_source) {
+            dataSourceDisplay = `<div class="data-source-indicator">🔗 ${fieldConfig.data_source}.${fieldConfig.data_source_key}</div>`;
+        }
+
         fieldItem.innerHTML = `
             <div>
                 <div class="field-name">${fieldConfig.label || fieldName}</div>
                 <div style="font-size: 11px; color: #999;">${fieldName}</div>
                 ${autoFillDisplay}
+                ${dataSourceDisplay}
             </div>
             <div class="field-type">${fieldConfig.type}</div>
         `;
@@ -1893,6 +2253,25 @@ function saveFields() {
     saveBtn.textContent = 'Saving...';
     saveBtn.disabled = true;
     
+    // Build configuration object
+    let configToSave = {};
+
+    if (Object.keys(dataSources).length > 0) {
+        configToSave.data_sources = dataSources;
+    }
+
+    if (Object.keys(sections).length > 0) {
+        configToSave.sections = sections;
+        configToSave.fields = fields;
+    } else {
+        // Legacy format compatibility
+        if (Object.keys(dataSources).length > 0) {
+            configToSave.fields = fields;
+        } else {
+            configToSave = fields;
+        }
+    }
+
     fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -1900,10 +2279,7 @@ function saveFields() {
             'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
-            fields: Object.keys(sections).length > 0 ? {
-                sections: sections,
-                fields: fields
-            } : fields
+            fields: configToSave
         })
     })
     .then(response => response.json())
@@ -2292,6 +2668,326 @@ function showFormPreview() {
     
     // Show modal with vanilla JavaScript
     showModal(modal);
+}
+
+// Data Source Management Functions
+function updateDataSourcesList() {
+    const dataSourcesList = document.getElementById('data-sources-list');
+
+    if (Object.keys(dataSources).length === 0) {
+        dataSourcesList.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-style: italic;">No data sources configured</div>';
+        return;
+    }
+
+    dataSourcesList.innerHTML = '';
+
+    Object.entries(dataSources).forEach(([sourceName, sourceData]) => {
+        const dataSourceItem = document.createElement('div');
+        dataSourceItem.className = 'data-source-item';
+        dataSourceItem.setAttribute('data-source-name', sourceName);
+
+        const itemCount = Array.isArray(sourceData) ? sourceData.length : 0;
+        const keys = itemCount > 0 && sourceData[0] ? Object.keys(sourceData[0]).join(', ') : 'N/A';
+
+        dataSourceItem.innerHTML = `
+            <div class="data-source-info">
+                <span class="data-source-name">${sourceName}</span>
+                <span class="data-source-count">${itemCount} items</span>
+                <div style="font-size: 10px; color: #999;">Keys: ${keys}</div>
+            </div>
+            <div class="data-source-actions">
+                <button class="btn-edit" onclick="editDataSource('${sourceName}')">Edit</button>
+                <button class="btn-delete" onclick="deleteDataSource('${sourceName}')">Delete</button>
+            </div>
+        `;
+
+        dataSourcesList.appendChild(dataSourceItem);
+    });
+}
+
+function showDataSourceModal(sourceName = null) {
+    editingDataSourceName = sourceName;
+    const modal = document.getElementById('dataSourceModal');
+    const modalTitle = document.getElementById('dataSourceModalLabel');
+
+    if (sourceName) {
+        // Editing existing data source
+        modalTitle.textContent = 'Edit Data Source';
+        const sourceData = dataSources[sourceName];
+
+        document.getElementById('data-source-name').value = sourceName;
+        document.getElementById('data-source-name').disabled = true;
+
+        // Load existing data items
+        loadDataItems(sourceData);
+    } else {
+        // Creating new data source
+        modalTitle.textContent = 'Add New Data Source';
+        document.getElementById('data-source-form').reset();
+        document.getElementById('data-source-name').disabled = false;
+
+        // Start with empty data items container
+        document.getElementById('data-items-container').innerHTML = '';
+        addDataItem(); // Add first empty item
+    }
+
+    showModal(modal);
+}
+
+function loadDataItems(sourceData) {
+    const container = document.getElementById('data-items-container');
+    container.innerHTML = '';
+
+    if (!Array.isArray(sourceData) || sourceData.length === 0) {
+        addDataItem();
+        return;
+    }
+
+    // Get keys from first item
+    const keys = Object.keys(sourceData[0]);
+
+    sourceData.forEach((item, index) => {
+        addDataItemRow(keys, item, index);
+    });
+}
+
+function addDataItem() {
+    const container = document.getElementById('data-items-container');
+    const existingItems = container.querySelectorAll('.data-item-row');
+
+    let keys = [];
+    if (existingItems.length > 0) {
+        // Get keys from first item
+        const firstItem = existingItems[0];
+        keys = Array.from(firstItem.querySelectorAll('input')).map(input => input.placeholder || input.dataset.key);
+    } else {
+        // First item - ask for keys
+        showAddKeysDialog();
+        return;
+    }
+
+    addDataItemRow(keys, {}, existingItems.length);
+}
+
+function showAddKeysDialog() {
+    const keys = prompt('Enter keys for data items (comma-separated):\nExample: name, code');
+
+    if (!keys) return;
+
+    const keyArray = keys.split(',').map(k => k.trim()).filter(k => k);
+
+    if (keyArray.length === 0) {
+        showError('Please enter at least one key');
+        return;
+    }
+
+    addDataItemRow(keyArray, {}, 0);
+}
+
+function addDataItemRow(keys, values = {}, index) {
+    const container = document.getElementById('data-items-container');
+    const row = document.createElement('div');
+    row.className = 'data-item-row';
+    row.dataset.index = index;
+
+    let inputsHtml = keys.map(key => {
+        const value = values[key] || '';
+        return `<input type="text" placeholder="${key}" data-key="${key}" value="${value}">`;
+    }).join('');
+
+    row.innerHTML = `
+        ${inputsHtml}
+        <button type="button" onclick="removeDataItemRow(this)">×</button>
+    `;
+
+    container.appendChild(row);
+}
+
+function removeDataItemRow(button) {
+    button.parentElement.remove();
+}
+
+function saveDataSourceConfiguration() {
+    const sourceName = document.getElementById('data-source-name').value.trim();
+
+    // Validation
+    if (!sourceName) {
+        showError('Data source name is required');
+        return;
+    }
+
+    // Validate source name format
+    if (!/^[a-zA-Z0-9_]+$/.test(sourceName)) {
+        showError('Data source name can only contain letters, numbers, and underscores');
+        return;
+    }
+
+    // Check for duplicate names (when creating new)
+    if (!editingDataSourceName && dataSources[sourceName]) {
+        showError('Data source name already exists');
+        return;
+    }
+
+    // Collect data items
+    const container = document.getElementById('data-items-container');
+    const rows = container.querySelectorAll('.data-item-row');
+
+    if (rows.length === 0) {
+        showError('Please add at least one data item');
+        return;
+    }
+
+    // Get keys from first row
+    const firstRow = rows[0];
+    const keys = Array.from(firstRow.querySelectorAll('input')).map(input => input.dataset.key);
+
+    // Collect all items
+    const items = [];
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const item = {};
+        inputs.forEach((input, i) => {
+            const key = keys[i];
+            const value = input.value.trim();
+            if (value) {
+                item[key] = value;
+            }
+        });
+
+        // Only add non-empty items
+        if (Object.keys(item).length > 0) {
+            items.push(item);
+        }
+    });
+
+    if (items.length === 0) {
+        showError('Please fill in at least one complete data item');
+        return;
+    }
+
+    // Validate all items have the same keys
+    const expectedKeys = JSON.stringify(keys.sort());
+    for (let i = 0; i < items.length; i++) {
+        const itemKeys = JSON.stringify(Object.keys(items[i]).sort());
+        if (itemKeys !== expectedKeys) {
+            showError(`Item ${i + 1} has inconsistent keys. All items must have the same keys: ${keys.join(', ')}`);
+            return;
+        }
+    }
+
+    // Save data source
+    dataSources[sourceName] = items;
+
+    // Update UI
+    updateDataSourcesList();
+    updateFieldAutoFillOptions(); // Update the auto-fill dropdown with new data source
+
+    // Close modal
+    const modal = document.getElementById('dataSourceModal');
+    closeModal(modal);
+    editingDataSourceName = null;
+
+    showSuccess(`Data source "${sourceName}" ${editingDataSourceName ? 'updated' : 'created'} successfully`);
+}
+
+function editDataSource(sourceName) {
+    showDataSourceModal(sourceName);
+}
+
+function deleteDataSource(sourceName) {
+    // Check if any fields are using this data source
+    const fieldsUsingSource = Object.entries(fields).filter(([, fieldConfig]) =>
+        fieldConfig.data_source === sourceName
+    );
+
+    let message = `Delete data source "${sourceName}"?`;
+    if (fieldsUsingSource.length > 0) {
+        message += `\n\nWarning: ${fieldsUsingSource.length} field(s) are currently using this data source:\n`;
+        message += fieldsUsingSource.map(([name]) => `  - ${name}`).join('\n');
+        message += '\n\nThese fields will lose their data source linkage.';
+    }
+
+    if (!confirm(message)) {
+        return;
+    }
+
+    // Remove data source references from fields
+    fieldsUsingSource.forEach(([fieldName]) => {
+        delete fields[fieldName].data_source;
+        delete fields[fieldName].data_source_key;
+        delete fields[fieldName].linked_readonly;
+    });
+
+    // Delete data source
+    delete dataSources[sourceName];
+
+    // Update UI
+    updateDataSourcesList();
+    updateFieldList();
+
+    showSuccess(`Data source "${sourceName}" deleted successfully`);
+}
+
+function showDataSourcePreview() {
+    const modal = document.getElementById('dataSourcePreviewModal');
+    const previewContent = document.getElementById('data-source-preview-content');
+
+    previewContent.innerHTML = '';
+
+    if (Object.keys(dataSources).length === 0) {
+        previewContent.innerHTML = '<div class="text-center text-muted p-4">No data sources configured</div>';
+    } else {
+        Object.entries(dataSources).forEach(([sourceName, sourceData]) => {
+            const sourceDiv = document.createElement('div');
+            sourceDiv.className = 'mb-4';
+
+            const keys = sourceData.length > 0 ? Object.keys(sourceData[0]) : [];
+
+            let tableHtml = `
+                <h5>${sourceName} <span class="badge bg-primary">${sourceData.length} items</span></h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            sourceData.forEach(item => {
+                tableHtml += '<tr>';
+                keys.forEach(key => {
+                    tableHtml += `<td>${item[key] || '-'}</td>`;
+                });
+                tableHtml += '</tr>';
+            });
+
+            tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            sourceDiv.innerHTML = tableHtml;
+            previewContent.appendChild(sourceDiv);
+        });
+    }
+
+    showModal(modal);
+}
+
+function updateFieldAutoFillOptions() {
+    // This function would need backend integration to add data source options
+    // to the auto-fill dropdown. For now, we'll just update the field properties
+    // when a field is selected to show if it's linked to a data source
+
+    // Update field properties panel to show data source options
+    if (selectedField && fields[selectedField]) {
+        const field = fields[selectedField];
+        if (field.data_source) {
+            // Visual indicator that field is linked
+            updateFieldList();
+        }
+    }
 }
 
 function showError(message) {

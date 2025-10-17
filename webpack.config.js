@@ -97,6 +97,11 @@ module.exports = {
           from: "assets/css/ward_patient_map.css",
           to: "css/ward_patient_map.css",
         },
+        // PDF Forms linked fields functionality
+        {
+          from: "assets/js/pdf_forms_linked_fields.js",
+          to: "js/pdf_forms_linked_fields.js",
+        },
         // Add these new patterns to copy your assets
         {
           from: "assets/images",

@@ -106,7 +106,7 @@ class PDFFormTemplateFactory(DjangoModelFactory):
             'height': 0.7,
             'font_size': 12
         }
-    })
+    } or {})
     hospital_specific = True
     is_active = True
     created_by = factory.SubFactory(UserFactory)
