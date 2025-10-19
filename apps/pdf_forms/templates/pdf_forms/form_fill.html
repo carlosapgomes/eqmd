@@ -132,3 +132,12 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+{% if linked_fields_map %}
+<!-- Linked fields data for auto-fill functionality -->
+{{ linked_fields_map|json_script:"linked-fields-data" }}
+<script src="{% static 'js/pdf_forms_linked_fields.js' %}"></script>
+{% endif %}
+{% endblock %}

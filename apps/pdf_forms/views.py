@@ -120,6 +120,12 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
             'form_template': self.form_template,
             'patient': self.patient,
         })
+
+        # Add linked fields map if available for JavaScript initialization
+        form = context.get('form')
+        if form and hasattr(form.__class__, '_linked_fields_map'):
+            context['linked_fields_map'] = form.__class__._linked_fields_map
+
         return context
 
     def form_valid(self, form):

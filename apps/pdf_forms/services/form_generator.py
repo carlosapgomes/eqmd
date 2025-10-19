@@ -171,7 +171,9 @@ class DynamicFormGenerator:
         if field_type == 'textarea':
             field_kwargs['widget'] = forms.Textarea(attrs={'rows': 3, 'class': 'form-control'})
         elif field_type == 'choice' and choices:
-            field_kwargs['choices'] = [(c, c) for c in choices]
+            # Add empty option at the beginning
+            choice_list = [('', '-- Selecione --')] + [(c, c) for c in choices]
+            field_kwargs['choices'] = choice_list
             field_kwargs['widget'] = forms.Select(attrs={'class': 'form-select'})
         elif field_type == 'multiple_choice' and choices:
             field_kwargs['choices'] = [(c, c) for c in choices]

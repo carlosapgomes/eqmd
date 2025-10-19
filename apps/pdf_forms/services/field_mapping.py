@@ -341,13 +341,21 @@ class FieldMappingUtils:
                     errors.append(f"Field '{field_name}' has invalid font_size: must be an integer")
 
             # Validate choices for choice fields
+            # Note: Choice fields using data sources don't need explicit choices
             if field_type in ['choice', 'multiple_choice']:
-                if 'choices' not in config:
-                    errors.append(f"Field '{field_name}' of type '{field_type}' must have 'choices'")
-                elif not isinstance(config['choices'], list):
-                    errors.append(f"Field '{field_name}' choices must be a list")
-                elif not config['choices']:
-                    errors.append(f"Field '{field_name}' choices cannot be empty")
+                # Only require choices if NOT using a data source
+                if 'data_source' not in config:
+                    if 'choices' not in config:
+                        errors.append(f"Field '{field_name}' of type '{field_type}' must have 'choices'")
+                    elif not isinstance(config['choices'], list):
+                        errors.append(f"Field '{field_name}' choices must be a list")
+                    elif not config['choices']:
+                        errors.append(f"Field '{field_name}' choices cannot be empty")
+
+            # Validate data source configuration if present
+            if 'data_source' in config:
+                if 'data_source_key' not in config:
+                    errors.append(f"Field '{field_name}' with data_source must have 'data_source_key'")
 
             # Validate auto-fill mapping if present (new format)
             if 'auto_fill_mapping' in config:

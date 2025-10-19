@@ -1750,8 +1750,13 @@ function createNewField(x, y) {
 }
 
 function selectField(fieldName) {
+    // Save current field before switching to avoid losing changes
+    if (selectedField && selectedField !== fieldName) {
+        updateSelectedField();
+    }
+
     selectedField = fieldName;
-    
+
     // Update visual selection
     document.querySelectorAll('.field-overlay').forEach(el => {
         el.classList.remove('selected');
@@ -1759,20 +1764,20 @@ function selectField(fieldName) {
     document.querySelectorAll('.field-item').forEach(el => {
         el.classList.remove('selected');
     });
-    
+
     const overlay = document.querySelector(`[data-field="${fieldName}"]`);
     if (overlay) {
         overlay.classList.add('selected');
     }
-    
+
     const listItem = document.querySelector(`[data-field-name="${fieldName}"]`);
     if (listItem) {
         listItem.classList.add('selected');
     }
-    
+
     // Load field properties
     loadFieldProperties(fieldName);
-    
+
     // Show properties panel
     document.getElementById('field-properties').style.display = 'block';
 }
@@ -1792,20 +1797,21 @@ function loadFieldProperties(fieldName) {
     document.getElementById('field-section').value = fieldConfig.section || '';
     document.getElementById('field-order').value = fieldConfig.field_order || '';
 
-    // Load data source settings
+    // IMPORTANT: Call handleFieldTypeChange() first to populate dropdown options
+    handleFieldTypeChange();
+
+    // NOW set data source values (after options exist)
     document.getElementById('field-data-source').value = fieldConfig.data_source || '';
     document.getElementById('field-data-source-key').value = fieldConfig.data_source_key || '';
     document.getElementById('field-linked-readonly').checked = fieldConfig.linked_readonly || false;
 
-    // Trigger data source change to show key dropdown if needed
+    // Trigger data source change to show key dropdown and hide choices if needed
     if (fieldConfig.data_source) {
         document.getElementById('field-data-source').dispatchEvent(new Event('change'));
     }
 
-    handleFieldTypeChange();
-
-    // Load choices for choice fields
-    if (fieldConfig.type === 'choice' && fieldConfig.choices) {
+    // Load choices for choice fields (only if NOT using data source)
+    if (fieldConfig.type === 'choice' && fieldConfig.choices && !fieldConfig.data_source) {
         loadChoices(fieldConfig.choices);
     }
 }
@@ -1902,8 +1908,15 @@ function updateSelectedField() {
     }
     
     // Update choices for choice fields
+    // Only require choices if NOT using a data source
     if (type === 'choice') {
-        fieldConfig.choices = getChoicesFromForm();
+        if (dataSource && dataSourceKey) {
+            // Using data source - don't need explicit choices
+            delete fieldConfig.choices;
+        } else {
+            // Not using data source - require explicit choices
+            fieldConfig.choices = getChoicesFromForm();
+        }
     } else {
         delete fieldConfig.choices;
     }
@@ -1945,7 +1958,8 @@ function handleFieldTypeChange() {
 
     if (fieldType === 'choice' && selectedField) {
         const fieldConfig = fields[selectedField];
-        if (!fieldConfig.choices) {
+        // Only create default choices if NOT using a data source
+        if (!fieldConfig.choices && !fieldConfig.data_source) {
             fieldConfig.choices = ['Option 1', 'Option 2'];
             loadChoices(fieldConfig.choices);
         }
@@ -1954,6 +1968,9 @@ function handleFieldTypeChange() {
 
 function updateDataSourceDropdown() {
     const select = document.getElementById('field-data-source');
+
+    // Save current value before clearing
+    const currentValue = select.value;
 
     // Clear existing options except first
     const firstOption = select.firstElementChild;
@@ -1967,6 +1984,11 @@ function updateDataSourceDropdown() {
         option.textContent = sourceName;
         select.appendChild(option);
     });
+
+    // Restore previously selected value if it still exists
+    if (currentValue && dataSources[currentValue]) {
+        select.value = currentValue;
+    }
 }
 
 // Handle data source selection change
@@ -1974,10 +1996,19 @@ function handleDataSourceChange() {
     const sourceName = document.getElementById('field-data-source').value;
     const keyGroup = document.getElementById('data-source-key-group');
     const keySelect = document.getElementById('field-data-source-key');
+    const choicesGroup = document.getElementById('choices-group');
 
     if (sourceName && dataSources[sourceName]) {
         // Show key selection
         keyGroup.style.display = 'block';
+
+        // Hide manual choices section when using data source
+        if (choicesGroup) {
+            choicesGroup.style.display = 'none';
+        }
+
+        // Save current key value before clearing
+        const currentKeyValue = keySelect.value;
 
         // Populate keys from first item
         const firstItem = dataSources[sourceName][0];
@@ -1993,9 +2024,20 @@ function handleDataSourceChange() {
                 option.textContent = key;
                 keySelect.appendChild(option);
             });
+
+            // Restore previously selected key if it still exists in the new data source
+            if (currentKeyValue && keys.includes(currentKeyValue)) {
+                keySelect.value = currentKeyValue;
+            }
         }
     } else {
         keyGroup.style.display = 'none';
+
+        // Show choices section again if no data source selected and field is choice type
+        const fieldType = document.getElementById('field-type').value;
+        if (choicesGroup && fieldType === 'choice') {
+            choicesGroup.style.display = 'block';
+        }
     }
 
     updateSelectedField();
@@ -2244,15 +2286,20 @@ function fitPDF() {
 }
 
 function saveFields() {
+    // Save current field before saving configuration
+    if (selectedField) {
+        updateSelectedField();
+    }
+
     const templateId = '{{ template.id }}';
     const apiUrl = `../api/save-fields/`;
-    
+
     // Show loading state
     const saveBtn = document.getElementById('save-fields-btn');
     const originalText = saveBtn.textContent;
     saveBtn.textContent = 'Saving...';
     saveBtn.disabled = true;
-    
+
     // Build configuration object
     let configToSave = {};
 
@@ -2286,6 +2333,40 @@ function saveFields() {
     .then(data => {
         if (data.success) {
             showSuccess(data.message);
+
+            // Reload configuration from server to ensure client is in sync
+            if (data.fields) {
+                const savedConfig = data.fields;
+
+                // Reload data sources
+                if (savedConfig.data_sources) {
+                    dataSources = savedConfig.data_sources;
+                    updateDataSourcesList();
+                    updateDataSourceDropdown();
+                }
+
+                // Reload sections and fields
+                if (savedConfig.sections && savedConfig.fields) {
+                    sections = savedConfig.sections;
+                    fields = savedConfig.fields;
+                } else if (savedConfig.fields) {
+                    fields = savedConfig.fields;
+                    sections = {};
+                } else {
+                    fields = savedConfig;
+                    sections = {};
+                }
+
+                // Refresh UI
+                updateFieldList();
+                updateSectionsList();
+                drawFields();
+
+                // Reload current field if one is selected
+                if (selectedField && fields[selectedField]) {
+                    loadFieldProperties(selectedField);
+                }
+            }
         } else {
             showError(data.error);
         }
