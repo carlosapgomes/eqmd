@@ -106,27 +106,55 @@ class DataSourceUtils:
     def build_linked_fields_map(form_config):
         """
         Build a complete map of data sources and their linked fields.
+        Groups fields by both data source AND section to support multiple
+        independent field groups using the same data source.
+
         Used for frontend JavaScript initialization.
 
         Args:
             form_config (dict): Complete form configuration
 
         Returns:
-            dict: Map of data sources with field linkages
+            dict: Map of data sources with field linkages, grouped by section
         """
         data_sources = form_config.get('data_sources', {})
         if not data_sources:
             return {}
 
-        linked_map = {}
+        # Extract fields from config (handle both formats)
+        fields = form_config.get('fields', form_config)
 
-        for source_name in data_sources.keys():
-            linked_fields = DataSourceUtils.get_linked_fields(form_config, source_name)
+        # Group fields by data source AND section
+        groups = {}  # Key: "datasource_section", Value: {fields: {}, section: ""}
 
-            if linked_fields:
-                linked_map[source_name] = {
-                    'fields': linked_fields,
-                    'data': data_sources[source_name]
+        for field_name, field_config in fields.items():
+            if not isinstance(field_config, dict):
+                continue
+
+            source_name = field_config.get('data_source')
+            if not source_name or source_name not in data_sources:
+                continue
+
+            source_key = field_config.get('data_source_key')
+            if not source_key:
+                continue
+
+            # Get section (defaults to 'default' for fields without section)
+            section = field_config.get('section', 'default')
+
+            # Create unique group key combining data source and section
+            group_key = f"{source_name}_{section}"
+
+            # Initialize group if not exists
+            if group_key not in groups:
+                groups[group_key] = {
+                    'fields': {},
+                    'data': data_sources[source_name],
+                    'section': section,
+                    'data_source': source_name
                 }
 
-        return linked_map
+            # Add field to group
+            groups[group_key]['fields'][field_name] = source_key
+
+        return groups

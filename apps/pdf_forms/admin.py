@@ -158,18 +158,19 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
             # Parse JSON data from request
             data = json.loads(request.body)
             fields_config = data.get('fields', {})
-            
+
             # Validate field configuration
             self.validate_fields_config(fields_config)
-            
+
             # Save the configuration
             template.form_fields = fields_config
             template.updated_by = request.user
             template.save()
-            
+
             return JsonResponse({
                 'success': True,
-                'message': f'Field configuration saved successfully for {template.name}'
+                'message': f'Field configuration saved successfully for {template.name}',
+                'fields': template.form_fields  # Return saved config for client to reload
             })
             
         except json.JSONDecodeError:
