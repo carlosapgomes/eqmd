@@ -108,7 +108,7 @@ class PDFFormSecurity:
             if data_sources:
                 PDFFormSecurity.validate_data_sources(data_sources)
                 # Remove data_sources from fields config to avoid treating it as a field
-                fields_config = {k: v for k, v in field_config.items() if k != 'data_sources'}
+                fields_config = {k: v for k, v in field_config.items() if k not in ['data_sources', 'sections', 'fields']}
             else:
                 fields_config = field_config
 
