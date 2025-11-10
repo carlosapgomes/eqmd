@@ -45,6 +45,13 @@ class EqmdCustomUser(AbstractUser):
         help_text="When the user accepted the terms"
     )
     
+    # Research access field
+    is_researcher = models.BooleanField(
+        default=False,
+        verbose_name="Pesquisador Clínico",
+        help_text="Permite acesso à funcionalidade de pesquisa clínica em evoluções"
+    )
+    
     # === Essential User Lifecycle Fields ===
 
     # Core Expiration Management

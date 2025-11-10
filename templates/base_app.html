@@ -157,6 +157,19 @@
           {% endif %}
         </ul>
         
+        <!-- Clinical Research Section (NEW) -->
+        {% if user.is_researcher %}
+        <h6 class="sidebar-heading">Pesquisa Clínica</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'apps.research:clinical_search' %}">
+              <i class="bi bi-search"></i>
+              Busca em Evoluções
+            </a>
+          </li>
+        </ul>
+        {% endif %}
+        
         <!-- Clinical Workflows -->
         <!-- <h6 class="sidebar-heading">Fluxos Clínicos</h6> -->
         <!-- <ul class="nav flex-column"> -->
@@ -335,6 +348,19 @@
           </li>
           {% endif %}
         </ul>
+        
+        <!-- Clinical Research Section (Mobile - NEW) -->
+        {% if user.is_researcher %}
+        <h6 class="sidebar-heading">Pesquisa Clínica</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'apps.research:clinical_search' %}">
+              <i class="bi bi-search"></i>
+              Busca em Evoluções
+            </a>
+          </li>
+        </ul>
+        {% endif %}
         
         <!-- Clinical Workflows -->
         <!-- <h6 class="sidebar-heading">Fluxos Clínicos</h6> -->

@@ -1,0 +1,40 @@
+{% extends "base_app.html" %}
+
+{% block app_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Acesso Negado</h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <i class="bi bi-shield-exclamation display-1 text-warning"></i>
+                </div>
+                
+                <h3 class="card-title mb-3">Permissão Insuficiente</h3>
+                
+                <p class="card-text lead mb-4">
+                    Você não tem permissão para acessar as funcionalidades de pesquisa clínica.
+                </p>
+                
+                <div class="alert alert-info" role="alert">
+                    <h6 class="alert-heading">Para obter acesso:</h6>
+                    <p class="mb-0">
+                        Entre em contato com o administrador do sistema para solicitar permissão de pesquisador clínico.
+                        O administrador pode conceder essa permissão através do painel de administração do sistema.
+                    </p>
+                </div>
+                
+                <div class="mt-4">
+                    <a href="{% url 'apps.core:dashboard' %}" class="btn btn-primary">
+                        <i class="bi bi-house-fill me-1"></i>
+                        Voltar ao Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock app_content %}
