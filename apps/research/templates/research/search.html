@@ -93,11 +93,23 @@
                 </p>
             </div>
             <div class="col-md-6 text-md-end">
-                <small class="text-muted">
-                    {% if is_paginated %}
-                        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-                    {% endif %}
-                </small>
+                <div class="d-flex justify-content-end align-items-center">
+                    <div class="me-3">
+                        <a href="{% url 'apps.research:export_search_results' %}?q={{ query|urlencode }}" 
+                           class="btn btn-success btn-sm"
+                           title="Exportar todos os resultados para Excel">
+                            <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                            Exportar Excel
+                        </a>
+                    </div>
+                    <div>
+                        <small class="text-muted">
+                            {% if is_paginated %}
+                                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
