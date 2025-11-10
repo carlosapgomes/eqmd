@@ -184,75 +184,143 @@ def perform_fulltext_search(query_text, page=1, per_page=25):
         'query': query_text
     }
 
-def perform_fulltext_search_queryset(query_text):
+def perform_fulltext_search_queryset(query_text, max_patients=100):
     """
-    Perform full text search and return patient results as a list for Django pagination.
+    Fast full-text search using raw SQL: groups by patient, limits early.
     
     Args:
         query_text: The search query
+        max_patients: Maximum number of patients to return
         
     Returns:
         list: Patient results suitable for Django Paginator
     """
+    from django.db import connection
+    import json
+    
     # Validate query
     clean_query, error = validate_search_query(query_text)
     if error:
         raise ValueError(error)
 
-    # Create PostgreSQL search query
-    search_query = SearchQuery(clean_query, config='portuguese')
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            WITH search_query AS (
+                SELECT plainto_tsquery('portuguese', %s) AS q
+            ),
+            ranked_notes AS (
+                SELECT
+                    dn.event_ptr_id,
+                    e.patient_id,
+                    e.event_datetime,
+                    dn.content,
+                    p.name AS patient_name,
+                    p.current_record_number,
+                    p.gender,
+                    p.birthday,
+                    ts_rank(dn.search_vector, sq.q) AS rank,
+                    ts_headline(
+                        'portuguese',
+                        dn.content,
+                        sq.q,
+                        'MaxFragments=1, MinWords=10, MaxWords=30, StartSel=<b>, StopSel=</b>'
+                    ) AS headline
+                FROM dailynotes_dailynote dn
+                CROSS JOIN search_query sq
+                JOIN events_event e ON e.id = dn.event_ptr_id
+                JOIN patients_patient p ON p.id = e.patient_id
+                WHERE dn.search_vector @@ sq.q
+            ),
+            patient_stats AS (
+                SELECT
+                    patient_id,
+                    MAX(rank) AS highest_rank,
+                    COUNT(*) AS total_matches,
+                    MAX(event_datetime) AS most_recent_match
+                FROM ranked_notes
+                GROUP BY patient_id
+            ),
+            top_patients AS (
+                SELECT patient_id
+                FROM patient_stats
+                ORDER BY highest_rank DESC, total_matches DESC
+                LIMIT %s
+            ),
+            final_results AS (
+                SELECT
+                    rn.*,
+                    ps.highest_rank,
+                    ps.total_matches,
+                    ps.most_recent_match
+                FROM ranked_notes rn
+                JOIN top_patients tp ON rn.patient_id = tp.patient_id
+                JOIN patient_stats ps ON ps.patient_id = tp.patient_id
+            )
+            SELECT
+                patient_id,
+                current_record_number AS registration_number,
+                get_patient_initials(patient_name) AS initials,
+                patient_name,
+                CASE 
+                    WHEN gender = 'M' THEN 'Masculino'
+                    WHEN gender = 'F' THEN 'Feminino'
+                    ELSE 'Não informado'
+                END AS gender_display,
+                gender,
+                birthday,
+                total_matches,
+                highest_rank,
+                most_recent_match,
+                (array_agg(
+                    jsonb_build_object(
+                        'note_date', event_datetime,
+                        'headline', headline,
+                        'rank', rank
+                    ) ORDER BY rank DESC
+                ))[1:5] AS matching_notes
+            FROM final_results
+            GROUP BY
+                patient_id, current_record_number, patient_name,
+                gender, birthday, total_matches, highest_rank, most_recent_match
+            ORDER BY highest_rank DESC, total_matches DESC;
+        """, [clean_query, max_patients])
 
-    # Query matching notes with ranking and headlines
-    matching_notes = DailyNote.objects.annotate(
-        rank=SearchRank('search_vector', search_query),
-        headline=SearchHeadline(
-            'content',
-            search_query,
-            config='portuguese',
-            max_words=30,
-            min_words=10,
-            start_sel='<b>',
-            stop_sel='</b>'
-        )
-    ).filter(
-        search_vector=search_query
-    ).select_related('patient').order_by('-rank')
+        columns = [col[0] for col in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-    if not matching_notes.exists():
-        return []
-
-    # Group notes by patient
-    patient_groups = defaultdict(list)
-    for note in matching_notes:
-        patient_groups[note.patient].append({
-            'note': note,
-            'rank': note.rank,
-            'headline': note.headline,
-            'note_date': note.event_datetime
-        })
-
-    # Build patient results
+    # Post-process: calculate age and format results
     patient_results = []
-    for patient, notes in patient_groups.items():
-        # Calculate age at most recent MATCHING note
-        age_at_recent_match = calculate_age_at_most_recent_match(patient, notes)
+    for r in results:
+        # Calculate age at most recent match
+        age_at_recent_match = None
+        if r['birthday'] and r['most_recent_match']:
+            ref_date = r['most_recent_match'].date() if hasattr(r['most_recent_match'], 'date') else r['most_recent_match']
+            age = ref_date.year - r['birthday'].year
+            if (ref_date.month, ref_date.day) < (r['birthday'].month, r['birthday'].day):
+                age -= 1
+            age_at_recent_match = age
 
-        # Get top 5 matches per patient
-        top_matches = sorted(notes, key=lambda x: x['rank'], reverse=True)[:5]
+        # Create patient-like object for compatibility
+        class PatientProxy:
+            def __init__(self, patient_id, name):
+                self.pk = patient_id
+                self.name = name
+                
+        patient_obj = PatientProxy(r['patient_id'], r['patient_name'])
+        
+        # Snippets already limited to 5 in SQL
+        matching_notes = r['matching_notes']
 
         patient_results.append({
-            'patient': patient,
-            'registration_number': patient.current_record_number or 'N/A',
-            'initials': get_patient_initials(patient.name),
-            'gender': patient.get_gender_display(),
-            'birthday': patient.birthday,
+            'patient': patient_obj,
+            'registration_number': r['registration_number'] or 'N/A',
+            'initials': r['initials'],
+            'gender': r['gender_display'],
+            'birthday': r['birthday'],
             'age_at_most_recent_match': age_at_recent_match,
-            'matching_notes': top_matches,
-            'highest_rank': max(n['rank'] for n in notes),
-            'total_matches': len(notes)
+            'matching_notes': matching_notes,
+            'highest_rank': r['highest_rank'],
+            'total_matches': r['total_matches']
         })
 
-    # Sort by highest rank
-    patient_results.sort(key=lambda x: x['highest_rank'], reverse=True)
-    
     return patient_results
