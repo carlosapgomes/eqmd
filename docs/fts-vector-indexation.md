@@ -29,13 +29,13 @@ uv run python manage.py populate_search_vectors --batch-size 500
 
 ```bash
 # Dry run to check how many records need indexation
-docker-compose exec web uv run python manage.py populate_search_vectors --dry-run
+docker compose run eqmd python manage.py populate_search_vectors --dry-run
 
 # Full indexation for production system
-docker-compose exec web uv run python manage.py populate_search_vectors
+docker compose run eqmd python manage.py populate_search_vectors
 
 # Large dataset with smaller batches (more memory efficient)
-docker-compose exec web uv run python manage.py populate_search_vectors --batch-size 100
+docker compose run eqmd python manage.py populate_search_vectors --batch-size 100
 ```
 
 #### Background Processing (Recommended for Large Datasets)
@@ -43,7 +43,7 @@ docker-compose exec web uv run python manage.py populate_search_vectors --batch-
 ```bash
 # Run indexation in background with logging
 docker-compose exec -d web bash -c "
-  uv run python manage.py populate_search_vectors --batch-size 500 2>&1 | 
+  uv run python manage.py populate_search_vectors --batch-size 500 2>&1 |
   tee /app/logs/vector-indexation-$(date +%Y%m%d-%H%M%S).log
 "
 
@@ -113,23 +113,24 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-      - name: indexation
-        image: your-eqmd-image
-        command: ["uv", "run", "python", "manage.py", "populate_search_vectors"]
-        args: ["--batch-size", "1000"]
-        resources:
-          requests:
-            memory: "1Gi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: eqmd-secrets
-              key: database-url
+        - name: indexation
+          image: your-eqmd-image
+          command:
+            ["uv", "run", "python", "manage.py", "populate_search_vectors"]
+          args: ["--batch-size", "1000"]
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: eqmd-secrets
+                  key: database-url
 ```
 
 ```bash
@@ -150,24 +151,25 @@ kind: CronJob
 metadata:
   name: fts-vector-maintenance
 spec:
-  schedule: "0 2 * * 0"  # Weekly at 2 AM Sunday
+  schedule: "0 2 * * 0" # Weekly at 2 AM Sunday
   jobTemplate:
     spec:
       template:
         spec:
           restartPolicy: OnFailure
           containers:
-          - name: maintenance
-            image: your-eqmd-image
-            command: ["uv", "run", "python", "manage.py", "populate_search_vectors"]
-            args: ["--batch-size", "500"]
-            resources:
-              requests:
-                memory: "512Mi"
-                cpu: "250m"
-              limits:
-                memory: "1Gi"
-                cpu: "500m"
+            - name: maintenance
+              image: your-eqmd-image
+              command:
+                ["uv", "run", "python", "manage.py", "populate_search_vectors"]
+              args: ["--batch-size", "500"]
+              resources:
+                requests:
+                  memory: "512Mi"
+                  cpu: "250m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "500m"
 ```
 
 ### Command Options
@@ -180,21 +182,23 @@ spec:
 
 #### Batch Size Guidelines
 
-| Dataset Size | Recommended Batch Size | Memory Usage | Processing Time |
-|-------------|----------------------|--------------|----------------|
-| < 1,000 notes | 1000 (default) | Low | < 1 minute |
-| 1,000 - 10,000 | 500 | Medium | 5-15 minutes |
-| 10,000 - 50,000 | 100-250 | High | 30-60 minutes |
-| > 50,000 | 50-100 | Very High | 1+ hours |
+| Dataset Size    | Recommended Batch Size | Memory Usage | Processing Time |
+| --------------- | ---------------------- | ------------ | --------------- |
+| < 1,000 notes   | 1000 (default)         | Low          | < 1 minute      |
+| 1,000 - 10,000  | 500                    | Medium       | 5-15 minutes    |
+| 10,000 - 50,000 | 100-250                | High         | 30-60 minutes   |
+| > 50,000        | 50-100                 | Very High    | 1+ hours        |
 
 #### Resource Requirements
 
 **Minimum Requirements:**
+
 - RAM: 512MB available
 - CPU: 1 core
 - Disk: Minimal additional space
 
 **Recommended for Large Datasets:**
+
 - RAM: 1-2GB available
 - CPU: 2+ cores
 - Disk: 10-20% additional space for indexes
@@ -214,12 +218,12 @@ print(f'Progress: {indexed}/{total} ({(indexed/total)*100:.1f}%)')
 
 # Monitor database performance during indexation
 docker-compose exec db psql -U postgres -d eqmd -c "
-SELECT 
+SELECT
   query,
   calls,
   total_time,
   mean_time
-FROM pg_stat_statements 
+FROM pg_stat_statements
 WHERE query LIKE '%search_vector%'
 ORDER BY total_time DESC;
 "
@@ -228,6 +232,7 @@ ORDER BY total_time DESC;
 #### Common Issues
 
 **"Out of Memory" Errors:**
+
 ```bash
 # Reduce batch size
 docker-compose exec web uv run python manage.py populate_search_vectors --batch-size 50
@@ -238,6 +243,7 @@ docker-compose run --rm --memory=4g web \
 ```
 
 **"Database Connection Timeout":**
+
 ```bash
 # Process in smaller batches with delays
 docker-compose exec web bash -c "
@@ -249,6 +255,7 @@ docker-compose exec web bash -c "
 ```
 
 **"Permission Denied" (Docker):**
+
 ```bash
 # Run with proper user permissions
 docker-compose exec --user root web \
@@ -355,10 +362,11 @@ print(f'Search test results: {results}')
 
 # Check database indexes
 docker-compose exec db psql -U postgres -d eqmd -c "
-SELECT indexname, tablename 
-FROM pg_indexes 
+SELECT indexname, tablename
+FROM pg_indexes
 WHERE indexname LIKE '%search%';
 "
 ```
 
 The full-text search system is now ready for production use with properly indexed search vectors!
+

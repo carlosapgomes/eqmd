@@ -42,9 +42,9 @@ def clinical_search(request):
         if form.is_valid():
             query = form.cleaned_data['query']
 
-            # Get the queryset of patient results
+            # Get the queryset of patient results (limit to 100 for UI)
             try:
-                patients = perform_fulltext_search_queryset(query)
+                patients = perform_fulltext_search_queryset(query, max_patients=100)
                 if not patients:
                     messages.info(request, f'Nenhum resultado encontrado para "{query}"')
             except Exception as e:
@@ -116,11 +116,15 @@ def export_search_results(request):
         return redirect('apps.research:clinical_search')
 
     try:
-        # Get all search results (no pagination for export)
-        patients = perform_fulltext_search_queryset(query)
+        # Get search results for export (limit to 500 most relevant patients)
+        patients = perform_fulltext_search_queryset(query, max_patients=500)
         if not patients:
             messages.info(request, 'Nenhum resultado encontrado para exportar.')
             return redirect('apps.research:clinical_search')
+        
+        # Warn if hitting the limit
+        if len(patients) == 500:
+            messages.warning(request, "Exportação limitada aos 500 pacientes mais relevantes.")
 
         # Create Excel workbook
         wb = Workbook()
