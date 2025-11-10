@@ -1,9 +1,14 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.exceptions import PermissionDenied
+from django.utils import timezone
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+import io
 
 from .forms import ClinicalSearchForm
 from .permissions import check_researcher_access
@@ -93,3 +98,121 @@ def search_ajax(request):
                 match['note_date'] = match['note_date'].isoformat()
 
     return JsonResponse(results)
+
+@login_required
+def export_search_results(request):
+    """
+    Export search results to Excel format.
+    """
+    try:
+        check_researcher_access(request.user)
+    except PermissionDenied:
+        messages.error(request, 'Acesso negado para exportação.')
+        return redirect('apps.research:clinical_search')
+
+    query = request.GET.get('q', '').strip()
+    if not query:
+        messages.error(request, 'Consulta de busca é obrigatória para exportação.')
+        return redirect('apps.research:clinical_search')
+
+    try:
+        # Get all search results (no pagination for export)
+        patients = perform_fulltext_search_queryset(query)
+        if not patients:
+            messages.info(request, 'Nenhum resultado encontrado para exportar.')
+            return redirect('apps.research:clinical_search')
+
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Resultados da Busca"
+
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+
+        # Headers
+        headers = [
+            'Prontuário',
+            'Iniciais',
+            'Sexo',
+            'Data de Nascimento',
+            'Idade no Resultado',
+            'Total de Resultados',
+            'Melhor Relevância',
+            'Trechos Encontrados'
+        ]
+
+        # Write headers
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+
+        # Write data
+        for row_num, patient_result in enumerate(patients, 2):
+            ws.cell(row=row_num, column=1, value=patient_result['registration_number'])
+            ws.cell(row=row_num, column=2, value=patient_result['initials'])
+            ws.cell(row=row_num, column=3, value=patient_result['gender'])
+            
+            # Format birthday as DD/MM/YYYY
+            birthday = patient_result['birthday']
+            if birthday:
+                formatted_birthday = birthday.strftime('%d/%m/%Y')
+            else:
+                formatted_birthday = ''
+            ws.cell(row=row_num, column=4, value=formatted_birthday)
+            
+            ws.cell(row=row_num, column=5, value=patient_result['age_at_most_recent_match'] or '')
+            ws.cell(row=row_num, column=6, value=patient_result['total_matches'])
+            ws.cell(row=row_num, column=7, value=round(patient_result['highest_rank'], 4))
+            
+            # Combine all matching notes into one cell
+            snippets = []
+            for match in patient_result['matching_notes']:
+                # Remove HTML tags from headline for Excel
+                clean_headline = match['headline'].replace('<b>', '').replace('</b>', '')
+                snippet = f"[{match['note_date'].strftime('%d/%m/%Y %H:%M')}] {clean_headline}"
+                snippets.append(snippet)
+            
+            ws.cell(row=row_num, column=8, value='\n\n'.join(snippets))
+
+        # Auto-adjust column widths
+        for col in range(1, len(headers) + 1):
+            column_letter = get_column_letter(col)
+            max_length = 0
+            for row in ws[column_letter]:
+                try:
+                    if len(str(row.value)) > max_length:
+                        max_length = len(str(row.value))
+                except:
+                    pass
+            
+            # Set minimum and maximum widths
+            adjusted_width = min(max(max_length + 2, 10), 50)
+            if col == 8:  # Snippets column should be wider
+                adjusted_width = 60
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # Create response
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Generate filename with timestamp
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'busca_clinica_{query[:20]}_{timestamp}.xlsx'
+
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        return response
+
+    except Exception as e:
+        messages.error(request, f'Erro na exportação: {str(e)}')
+        return redirect('apps.research:clinical_search')
