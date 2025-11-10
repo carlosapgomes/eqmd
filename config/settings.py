@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "apps.outpatientprescriptions",  # Outpatient prescriptions app
     "apps.pdfgenerator",  # PDF generator app
     "apps.dischargereports",  # Discharge reports app
+    "apps.research",  # Clinical research app
     # django-allauth
     "allauth",
     "allauth.account",

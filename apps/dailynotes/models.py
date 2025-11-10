@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 from apps.events.models import Event
 
 
@@ -8,6 +10,9 @@ class DailyNote(Event):
     Used for medical daily evolution notes.
     """
     content = models.TextField(verbose_name="Conteúdo")
+
+    # Full text search field
+    search_vector = SearchVectorField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         """Override save to set the correct event type."""
@@ -32,3 +37,6 @@ class DailyNote(Event):
         verbose_name = "Evolução"
         verbose_name_plural = "Evoluções"
         ordering = ["-event_datetime"]
+        indexes = [
+            GinIndex(fields=['search_vector'], name='dailynote_search_gin_idx'),
+        ]

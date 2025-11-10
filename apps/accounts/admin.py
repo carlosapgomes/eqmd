@@ -13,7 +13,7 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
     # Add account_status and access_expires_at to the main list view
     list_display = [
         'username', 'email', 'first_name', 'last_name',
-        'account_status', 'access_expires_at', 'is_active', 'is_staff'
+        'account_status', 'access_expires_at', 'is_researcher', 'is_active', 'is_staff'
     ]
     history_list_display = ['username', 'email', 'profession_type', 'history_change_reason']
 
@@ -47,6 +47,10 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         }),
         ('Permissions', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+        }),
+        ('Permissões de Pesquisa', {
+            'fields': ('is_researcher',),
+            'description': 'Controla acesso às funcionalidades de pesquisa clínica'
         }),
         (_('Segurança'), {
             'fields': ('password_change_required', 'terms_accepted', 'terms_accepted_at'),
@@ -82,6 +86,7 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         'expiration_reason',
         'password_change_required',
         'terms_accepted',
+        'is_researcher',
     )
     
     def save_model(self, request, obj, form, change):
