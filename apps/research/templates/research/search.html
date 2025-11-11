@@ -125,7 +125,7 @@
                             <th>Iniciais</th>
                             <th>Sexo</th>
                             <th>Nascimento</th>
-                            <th>Trechos Encontrados</th>
+                            <th>Resultados</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -139,24 +139,11 @@
                                 </td>
                                 <td>{{ patient_result.gender }}</td>
                                 <td>{{ patient_result.birthday|date:"d/m/Y" }}</td>
-                                <td>
-                                    {% for match in patient_result.matching_notes %}
-                                        <div class="search-snippet">
-                                            {{ match.headline|safe }}
-                                            <div class="mt-1">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-calendar3 me-1"></i>
-                                                    {{ match.note_date|date:"d/m/Y H:i" }}
-                                                </small>
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                    {% if patient_result.total_matches > 1 %}
-                                        <small class="text-muted">
-                                            <i class="bi bi-three-dots me-1"></i>
-                                            +{{ patient_result.total_matches|add:"-1" }} resultado{{ patient_result.total_matches|add:"-1"|pluralize }} adiciona{{ patient_result.total_matches|add:"-1"|pluralize:"l,is" }}
-                                        </small>
-                                    {% endif %}
+                                <td class="text-center">
+                                    <span class="badge bg-primary">{{ patient_result.total_matches }}</span>
+                                    <small class="text-muted d-block mt-1">
+                                        Relevância: {{ patient_result.highest_rank|floatformat:3 }}
+                                    </small>
                                 </td>
                             </tr>
                         {% endfor %}

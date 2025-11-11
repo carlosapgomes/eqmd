@@ -42,9 +42,9 @@ def clinical_search(request):
         if form.is_valid():
             query = form.cleaned_data['query']
 
-            # Get the queryset of patient results (limit to 100 for UI)
+            # Get the queryset of patient results (limit to 500 for UI)
             try:
-                patients = perform_fulltext_search_queryset(query, max_patients=100)
+                patients = perform_fulltext_search_queryset(query, max_patients=500)
                 if not patients:
                     messages.info(request, f'Nenhum resultado encontrado para "{query}"')
             except Exception as e:
@@ -116,15 +116,15 @@ def export_search_results(request):
         return redirect('apps.research:clinical_search')
 
     try:
-        # Get search results for export (limit to 500 most relevant patients)
-        patients = perform_fulltext_search_queryset(query, max_patients=500)
+        # Get search results for export (limit to 1000 most relevant patients)
+        patients = perform_fulltext_search_queryset(query, max_patients=1000)
         if not patients:
             messages.info(request, 'Nenhum resultado encontrado para exportar.')
             return redirect('apps.research:clinical_search')
         
         # Warn if hitting the limit
-        if len(patients) == 500:
-            messages.warning(request, "Exportação limitada aos 500 pacientes mais relevantes.")
+        if len(patients) == 1000:
+            messages.warning(request, "Exportação limitada aos 1000 pacientes mais relevantes.")
 
         # Create Excel workbook
         wb = Workbook()
@@ -143,8 +143,7 @@ def export_search_results(request):
             'Sexo',
             'Data de Nascimento',
             'Total de Resultados',
-            'Melhor Relevância',
-            'Trechos Encontrados'
+            'Melhor Relevância'
         ]
 
         # Write headers
@@ -170,27 +169,9 @@ def export_search_results(request):
             
             ws.cell(row=row_num, column=5, value=patient_result['total_matches'])
             ws.cell(row=row_num, column=6, value=round(patient_result['highest_rank'], 4))
-            
-            # Combine all matching notes into one cell (keep HTML tags for Excel)
-            snippets = []
-            matching_notes = patient_result.get('matching_notes', [])
-            for match in matching_notes:
-                try:
-                    # Keep HTML tags - Excel will display them as text which is fine
-                    if isinstance(match, dict) and 'note_date' in match and 'headline' in match:
-                        snippet = f"[{match['note_date'].strftime('%d/%m/%Y %H:%M')}] {match['headline']}"
-                        snippets.append(snippet)
-                    else:
-                        # Handle unexpected data format
-                        snippets.append(f"[Data malformada: {str(match)[:100]}]")
-                except Exception as e:
-                    # Handle any date formatting or other errors
-                    snippets.append(f"[Erro ao processar resultado: {str(e)}]")
-            
-            ws.cell(row=row_num, column=7, value='\n\n'.join(snippets))
 
         # Set fixed column widths (much faster than auto-calculation)
-        column_widths = [15, 12, 10, 12, 15, 12, 60]  # Fixed widths for each column
+        column_widths = [15, 12, 10, 12, 15, 12]  # Fixed widths for each column
         for col, width in enumerate(column_widths, 1):
             column_letter = get_column_letter(col)
             ws.column_dimensions[column_letter].width = width
