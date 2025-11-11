@@ -250,6 +250,7 @@
                             <th>Iniciais</th>
                             <th>Sexo</th>
                             <th>Nascimento</th>
+                            <th>Data do Achado</th>
                             <th>Resultados</th>
                         </tr>
                     </thead>
@@ -264,6 +265,7 @@
                                 </td>
                                 <td>{{ patient_result.gender }}</td>
                                 <td>{{ patient_result.birthday|date:"d/m/Y" }}</td>
+                                <td>{{ patient_result.most_recent_match|date:"d/m/Y" }}</td>
                                 <td class="text-center">
                                     <span class="badge bg-primary">{{ patient_result.total_matches }}</span>
                                     <small class="text-muted d-block mt-1">

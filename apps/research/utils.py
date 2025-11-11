@@ -295,7 +295,8 @@ def perform_fulltext_search_queryset(query_text, max_patients=500):
                 rn.gender,
                 rn.birthday,
                 ps.total_matches,
-                ps.highest_rank
+                ps.highest_rank,
+                ps.most_recent_match
             FROM ranked_notes rn
             JOIN top_patients tp ON rn.patient_id = tp.patient_id
             JOIN patient_stats ps ON ps.patient_id = tp.patient_id
@@ -318,7 +319,8 @@ def perform_fulltext_search_queryset(query_text, max_patients=500):
             'gender': r['gender_display'],
             'birthday': r['birthday'],
             'highest_rank': r['highest_rank'],
-            'total_matches': r['total_matches']
+            'total_matches': r['total_matches'],
+            'most_recent_match': r['most_recent_match']
         })
 
     return patient_results
