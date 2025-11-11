@@ -305,6 +305,9 @@ ACCOUNT_RATE_LIMITS = {
 LOGIN_REDIRECT_URL = "core:dashboard"
 # LOGOUT_REDIRECT_URL = 'core:landing_page' # Optional: can be added later
 
+# Password reset configuration
+PASSWORD_RESET_TIMEOUT = 86400  # 24 hours (24 * 60 * 60 seconds)
+
 # FilePond Configuration - use media volume directories
 DJANGO_DRF_FILEPOND_UPLOAD_TMP = str(MEDIA_ROOT / 'videos' / 'tmp' / 'filepond_uploads')
 DJANGO_DRF_FILEPOND_FILE_STORE_PATH = str(MEDIA_ROOT / 'videos' / 'tmp' / 'filepond_stored')
