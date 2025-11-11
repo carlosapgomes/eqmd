@@ -142,7 +142,6 @@ def export_search_results(request):
             'Iniciais',
             'Sexo',
             'Data de Nascimento',
-            'Idade no Resultado',
             'Total de Resultados',
             'Melhor Relevância',
             'Trechos Encontrados'
@@ -169,36 +168,23 @@ def export_search_results(request):
                 formatted_birthday = ''
             ws.cell(row=row_num, column=4, value=formatted_birthday)
             
-            ws.cell(row=row_num, column=5, value=patient_result['age_at_most_recent_match'] or '')
-            ws.cell(row=row_num, column=6, value=patient_result['total_matches'])
-            ws.cell(row=row_num, column=7, value=round(patient_result['highest_rank'], 4))
+            ws.cell(row=row_num, column=5, value=patient_result['total_matches'])
+            ws.cell(row=row_num, column=6, value=round(patient_result['highest_rank'], 4))
             
-            # Combine all matching notes into one cell
+            # Combine all matching notes into one cell (keep HTML tags for Excel)
             snippets = []
             for match in patient_result['matching_notes']:
-                # Remove HTML tags from headline for Excel
-                clean_headline = match['headline'].replace('<b>', '').replace('</b>', '')
-                snippet = f"[{match['note_date'].strftime('%d/%m/%Y %H:%M')}] {clean_headline}"
+                # Keep HTML tags - Excel will display them as text which is fine
+                snippet = f"[{match['note_date'].strftime('%d/%m/%Y %H:%M')}] {match['headline']}"
                 snippets.append(snippet)
             
-            ws.cell(row=row_num, column=8, value='\n\n'.join(snippets))
+            ws.cell(row=row_num, column=7, value='\n\n'.join(snippets))
 
-        # Auto-adjust column widths
-        for col in range(1, len(headers) + 1):
+        # Set fixed column widths (much faster than auto-calculation)
+        column_widths = [15, 12, 10, 12, 15, 12, 60]  # Fixed widths for each column
+        for col, width in enumerate(column_widths, 1):
             column_letter = get_column_letter(col)
-            max_length = 0
-            for row in ws[column_letter]:
-                try:
-                    if len(str(row.value)) > max_length:
-                        max_length = len(str(row.value))
-                except:
-                    pass
-            
-            # Set minimum and maximum widths
-            adjusted_width = min(max(max_length + 2, 10), 50)
-            if col == 8:  # Snippets column should be wider
-                adjusted_width = 60
-            ws.column_dimensions[column_letter].width = adjusted_width
+            ws.column_dimensions[column_letter].width = width
 
         # Create response
         output = io.BytesIO()
