@@ -253,6 +253,34 @@ uv run python manage.py create_sample_wards
 uv run python manage.py create_sample_content
 uv run python manage.py create_sample_pdf_forms
 
+# Clinical Research and Full-Text Search
+
+## Full-Text Search Setup
+
+```bash
+# Initialize search vectors for existing daily notes
+uv run python manage.py populate_search_vectors
+
+# Check search functionality
+uv run python manage.py shell -c "
+from apps.research.utils import perform_fulltext_search_queryset
+results = perform_fulltext_search_queryset('diabetes', max_patients=10)
+print(f'Found {len(results)} patients')
+"
+```
+
+## Advanced Search Capabilities
+
+The clinical research module supports PostgreSQL's advanced full-text search with:
+
+- **Auto-optimization**: `diabetes` → `diabetes*`, `diabetes dor` → `diabetes & dor`
+- **Exact phrases**: `"diabetes mellitus"`, `"dor torácica"`
+- **Boolean logic**: `diabetes & hipertensão`, `diabetes | hipertensão`, `diabetes & !gestacional`
+- **Prefix matching**: `medicaç*`, `cardio*`, `hiperten*`
+- **Complex queries**: `diabetes & (medicaç* | insulin*)`
+
+**📖 Complete documentation**: See [docs/fts-vector-indexation.md](docs/fts-vector-indexation.md)
+
 # Data Import
 
 ## Firebase Import
@@ -303,6 +331,7 @@ docker compose exec eqmd python manage.py lifecycle_report --output-file report.
 - **patients**: Patient management with tagging system, status tracking, and internal ward/bed transfer management
 - **events**: Base event model for medical records (UUID, audit trail, 24h edit window)
 - **dailynotes**: Daily evolution notes extending Event model
+- **research**: Clinical research with advanced full-text search capabilities
 - **sample_content**: Template content management for various event types
 - **mediafiles**: Secure media file management for medical images and videos
 - **pdf_forms**: Hospital-specific PDF form overlay functionality with dynamic form generation
