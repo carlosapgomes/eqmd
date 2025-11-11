@@ -146,11 +146,10 @@ def perform_fulltext_search(query_text, page=1, per_page=25):
     # Build patient results (UPDATED)
     patient_results = []
     for patient, notes in patient_groups.items():
-        # Calculate age at most recent MATCHING note (UPDATED)
-        age_at_recent_match = calculate_age_at_most_recent_match(patient, notes)
+        # Skip age calculation for performance
 
-        # Get top 5 matches per patient
-        top_matches = sorted(notes, key=lambda x: x['rank'], reverse=True)[:5]
+        # Get top 1 match per patient
+        top_matches = sorted(notes, key=lambda x: x['rank'], reverse=True)[:1]
 
         patient_results.append({
             'patient': patient,
@@ -158,7 +157,6 @@ def perform_fulltext_search(query_text, page=1, per_page=25):
             'initials': get_patient_initials(patient.name),  # UPDATED function
             'gender': patient.get_gender_display(),
             'birthday': patient.birthday,
-            'age_at_most_recent_match': age_at_recent_match,  # UPDATED field name
             'matching_notes': top_matches,
             'highest_rank': max(n['rank'] for n in notes),
             'total_matches': len(notes)
@@ -277,7 +275,7 @@ def perform_fulltext_search_queryset(query_text, max_patients=100):
                         'headline', headline,
                         'rank', rank
                     ) ORDER BY rank DESC
-                ))[1:5] AS matching_notes
+                ))[1:1] AS matching_notes
             FROM final_results
             GROUP BY
                 patient_id, current_record_number, patient_name,
@@ -288,36 +286,21 @@ def perform_fulltext_search_queryset(query_text, max_patients=100):
         columns = [col[0] for col in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-    # Post-process: calculate age and format results
+    # Post-process: format results (no age calculation, use dictionaries)
     patient_results = []
     for r in results:
-        # Calculate age at most recent match
-        age_at_recent_match = None
-        if r['birthday'] and r['most_recent_match']:
-            ref_date = r['most_recent_match'].date() if hasattr(r['most_recent_match'], 'date') else r['most_recent_match']
-            age = ref_date.year - r['birthday'].year
-            if (ref_date.month, ref_date.day) < (r['birthday'].month, r['birthday'].day):
-                age -= 1
-            age_at_recent_match = age
-
-        # Create patient-like object for compatibility
-        class PatientProxy:
-            def __init__(self, patient_id, name):
-                self.pk = patient_id
-                self.name = name
-                
-        patient_obj = PatientProxy(r['patient_id'], r['patient_name'])
-        
-        # Snippets already limited to 5 in SQL
+        # Snippets already limited to 1 in SQL
         matching_notes = r['matching_notes']
 
         patient_results.append({
-            'patient': patient_obj,
+            'patient': {
+                'pk': r['patient_id'],
+                'name': r['patient_name']
+            },
             'registration_number': r['registration_number'] or 'N/A',
             'initials': r['initials'],
             'gender': r['gender_display'],
             'birthday': r['birthday'],
-            'age_at_most_recent_match': age_at_recent_match,
             'matching_notes': matching_notes,
             'highest_rank': r['highest_rank'],
             'total_matches': r['total_matches']

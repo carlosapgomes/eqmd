@@ -125,7 +125,6 @@
                             <th>Iniciais</th>
                             <th>Sexo</th>
                             <th>Nascimento</th>
-                            <th>Idade no Resultado</th>
                             <th>Trechos Encontrados</th>
                         </tr>
                     </thead>
@@ -141,13 +140,6 @@
                                 <td>{{ patient_result.gender }}</td>
                                 <td>{{ patient_result.birthday|date:"d/m/Y" }}</td>
                                 <td>
-                                    {% if patient_result.age_at_most_recent_match %}
-                                        {{ patient_result.age_at_most_recent_match }} anos
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td>
                                     {% for match in patient_result.matching_notes %}
                                         <div class="search-snippet">
                                             {{ match.headline|safe }}
@@ -159,10 +151,10 @@
                                             </div>
                                         </div>
                                     {% endfor %}
-                                    {% if patient_result.total_matches > 5 %}
+                                    {% if patient_result.total_matches > 1 %}
                                         <small class="text-muted">
                                             <i class="bi bi-three-dots me-1"></i>
-                                            +{{ patient_result.total_matches|add:"-5" }} resultado{{ patient_result.total_matches|add:"-5"|pluralize }} adiciona{{ patient_result.total_matches|add:"-5"|pluralize:"l,is" }}
+                                            +{{ patient_result.total_matches|add:"-1" }} resultado{{ patient_result.total_matches|add:"-1"|pluralize }} adiciona{{ patient_result.total_matches|add:"-1"|pluralize:"l,is" }}
                                         </small>
                                     {% endif %}
                                 </td>
