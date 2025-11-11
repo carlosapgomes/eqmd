@@ -69,6 +69,12 @@ def calculate_age_at_most_recent_match(patient, matching_notes):
 def validate_search_query(query_text):
     """
     Validate and sanitize search query.
+    
+    Supports advanced PostgreSQL full-text search operators:
+    - Phrases: "exact phrase"
+    - Boolean: diabetes & hipertensão, diabetes | dor
+    - Negation: diabetes & !tipo1
+    - Prefix: medicaç*, hiperten*
 
     Returns:
         tuple: (cleaned_query, error_message)
@@ -89,6 +95,40 @@ def validate_search_query(query_text):
 
     return query_text, None
 
+def optimize_search_query(query_text):
+    """
+    Optimize search query for better PostgreSQL performance.
+    
+    Auto-enhances simple queries:
+    - Single words: adds prefix matching (diabetes → diabetes*)
+    - Multiple words: adds AND operator (diabetes dor → diabetes & dor)
+    - Preserves user-specified operators and quotes
+    
+    Returns:
+        str: Optimized query string
+    """
+    # Don't optimize if user already used advanced operators
+    if any(op in query_text for op in ['"', '&', '|', '!', '*', '<', '>']):
+        return query_text
+    
+    # Split into words
+    words = query_text.split()
+    
+    if len(words) == 1:
+        # Single word: add prefix matching for better recall
+        word = words[0]
+        if len(word) >= 4:  # Only add * to words 4+ chars
+            return f"{word}*"
+        return word
+    elif len(words) == 2:
+        # Two words: use AND for precision (phrase search can be manually specified with quotes)
+        return f'{words[0]} & {words[1]}'
+    else:
+        # Multiple words: use AND for precision
+        return ' & '.join(words)
+    
+    return query_text
+
 def perform_fulltext_search(query_text, page=1, per_page=25):
     """
     Perform full text search and return patient-grouped results.
@@ -105,9 +145,12 @@ def perform_fulltext_search(query_text, page=1, per_page=25):
     clean_query, error = validate_search_query(query_text)
     if error:
         return {'error': error}
+    
+    # Optimize query for better search performance
+    optimized_query = optimize_search_query(clean_query)
 
-    # Create PostgreSQL search query
-    search_query = SearchQuery(clean_query, config='portuguese')
+    # Create PostgreSQL search query with advanced syntax support
+    search_query = SearchQuery(optimized_query, config='portuguese', search_type='raw')
 
     # Query matching notes with ranking and headlines
     matching_notes = DailyNote.objects.annotate(
@@ -200,11 +243,14 @@ def perform_fulltext_search_queryset(query_text, max_patients=500):
     clean_query, error = validate_search_query(query_text)
     if error:
         raise ValueError(error)
+    
+    # Optimize query for better search performance
+    optimized_query = optimize_search_query(clean_query)
 
     with connection.cursor() as cursor:
         cursor.execute("""
             WITH search_query AS (
-                SELECT plainto_tsquery('portuguese', %s) AS q
+                SELECT to_tsquery('portuguese', %s) AS q
             ),
             ranked_notes AS (
                 SELECT
@@ -254,7 +300,7 @@ def perform_fulltext_search_queryset(query_text, max_patients=500):
             JOIN top_patients tp ON rn.patient_id = tp.patient_id
             JOIN patient_stats ps ON ps.patient_id = tp.patient_id
             ORDER BY ps.highest_rank DESC, ps.total_matches DESC;
-        """, [clean_query, max_patients])
+        """, [optimized_query, max_patients])
 
         columns = [col[0] for col in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
