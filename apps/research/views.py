@@ -142,6 +142,7 @@ def export_search_results(request):
             'Iniciais',
             'Sexo',
             'Data de Nascimento',
+            'Data do Achado Mais Recente',
             'Total de Resultados',
             'Melhor Relevância'
         ]
@@ -167,11 +168,19 @@ def export_search_results(request):
                 formatted_birthday = ''
             ws.cell(row=row_num, column=4, value=formatted_birthday)
             
-            ws.cell(row=row_num, column=5, value=patient_result['total_matches'])
-            ws.cell(row=row_num, column=6, value=round(patient_result['highest_rank'], 4))
+            # Format most recent match date as DD/MM/YYYY
+            most_recent_match = patient_result['most_recent_match']
+            if most_recent_match:
+                formatted_match_date = most_recent_match.strftime('%d/%m/%Y')
+            else:
+                formatted_match_date = ''
+            ws.cell(row=row_num, column=5, value=formatted_match_date)
+            
+            ws.cell(row=row_num, column=6, value=patient_result['total_matches'])
+            ws.cell(row=row_num, column=7, value=round(patient_result['highest_rank'], 4))
 
         # Set fixed column widths (much faster than auto-calculation)
-        column_widths = [15, 12, 10, 12, 15, 12]  # Fixed widths for each column
+        column_widths = [15, 12, 10, 12, 18, 15, 12]  # Fixed widths for each column
         for col, width in enumerate(column_widths, 1):
             column_letter = get_column_letter(col)
             ws.column_dimensions[column_letter].width = width
