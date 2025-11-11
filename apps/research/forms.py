@@ -13,7 +13,7 @@ class ClinicalSearchForm(forms.Form):
             'autocomplete': 'off'
         }),
         label='Busca Clínica',
-        help_text='Digite pelo menos 3 caracteres para buscar nas evoluções diárias'
+        help_text='Digite pelo menos 3 caracteres. Use: "frase exata", diabetes & hipertensão, medicaç* para busca avançada'
     )
 
     def clean_query(self):
