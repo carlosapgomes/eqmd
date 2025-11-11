@@ -176,6 +176,10 @@ class UserLifecycleMiddleware:
         """Update simple user activity tracking"""
         user = request.user
         
+        # Skip activity tracking for password reset flows to avoid invalidating tokens
+        if '/accounts/password/reset/key/' in request.path_info:
+            return
+        
         # Only update for meaningful activities (not static files, etc.)
         if self._is_meaningful_activity(request):
             user.update_activity_timestamp()
