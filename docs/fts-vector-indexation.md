@@ -370,3 +370,209 @@ WHERE indexname LIKE '%search%';
 
 The full-text search system is now ready for production use with properly indexed search vectors!
 
+## Advanced Search Capabilities
+
+### Search Syntax and Operators
+
+EquipeMed supports PostgreSQL's advanced full-text search operators for precise medical research:
+
+#### Automatic Optimization
+
+The system automatically enhances simple queries for better performance:
+
+- **Single words**: `diabetes` → `diabetes*` (finds diabetes, diabética, diabético)
+- **Multiple words**: `diabetes dor` → `diabetes & dor` (both terms must be present)
+
+#### Manual Operators
+
+Users can specify advanced operators for precise control:
+
+##### Exact Phrases
+```
+"diabetes mellitus"        # Finds exact phrase
+"insuficiência cardíaca"   # Exact cardiac insufficiency phrase
+"dor abdominal aguda"      # Exact phrase for acute abdominal pain
+```
+
+##### Boolean Logic
+```
+diabetes & hipertensão     # Both terms required (AND)
+diabetes | hipertensão     # Either term acceptable (OR)
+diabetes & !gestacional    # Diabetes but not gestational (NOT)
+```
+
+##### Prefix Matching  
+```
+medicaç*                   # Finds medicação, medicamentos, medicamentosa
+hiperten*                  # Finds hipertensão, hipertensivo, hipertensiva
+cardio*                    # Finds cardiologia, cardiomegalia, cardiovascular
+```
+
+##### Complex Combinations
+```
+diabetes & (medicaç* | insulin*)           # Diabetes with any medication
+"dor torácica" & !(muscular | costal)      # Chest pain excluding muscular/costal
+cardio* & (insuficien* | arritmia)         # Cardiac conditions with specific terms
+```
+
+### Search Examples by Medical Specialty
+
+#### Cardiology
+```
+"insuficiência cardíaca"                    # Exact heart failure phrase
+cardio* & (sopro | arritmia | fibrilação)   # Cardiac findings
+"dor torácica" & !muscular                  # Non-muscular chest pain
+```
+
+#### Endocrinology
+```
+diabetes & (tipo1 | tipo2)                 # Diabetes classification
+glicemi* & (jejum | pós-prandial)          # Glycemic measurements
+"cetoacidose diabética"                     # Exact DKA phrase
+```
+
+#### Gastroenterology
+```
+"dor abdominal" & (aguda | crônica)        # Abdominal pain classification
+gastro* & (sangramento | hemorragia)       # GI bleeding terms
+"síndrome do intestino irritável"          # Exact IBS phrase
+```
+
+#### Pneumology
+```
+"dispneia aos esforços"                    # Exact dyspnea phrase
+pneumo* & (derrame | consolidação)         # Lung findings
+"insuficiência respiratória" & !crônica    # Acute respiratory failure
+```
+
+### Performance Tips
+
+#### Query Optimization Guidelines
+
+1. **Use specific terms**: `"fibrilação atrial"` vs `fibrilação`
+2. **Combine operators**: `diabetes & medicaç*` vs `diabetes medicação`
+3. **Exclude common terms**: `dor & !leve` vs `dor`
+4. **Use prefixes for variants**: `hiperten*` vs multiple OR terms
+
+#### Search Strategy Recommendations
+
+**For Literature Reviews:**
+```
+# Broad initial search
+diabetes*
+
+# Refined search
+diabetes & (complicaç* | nefropatia | retinopatia)
+
+# Very specific
+"diabetes mellitus tipo 2" & medicaç*
+```
+
+**For Case Finding:**
+```
+# Symptom-based
+"dor torácica" & (aguda | súbita)
+
+# Diagnosis-based  
+"infarto agudo do miocárdio"
+
+# Treatment-based
+"angioplastia" & (primária | emergência)
+```
+
+### User Interface Integration
+
+#### Form Help Text
+The search form automatically shows available operators:
+
+> "Digite pelo menos 3 caracteres. Use: "frase exata", diabetes & hipertensão, medicaç* para busca avançada"
+
+#### Search Tips for Users
+
+**Beginner Level:**
+- Type medical terms normally: `diabetes hipertensão`
+- Use quotes for exact phrases: `"dor abdominal"`
+
+**Advanced Level:**
+- Combine with AND: `diabetes & nefropatia`
+- Use wildcards: `cardio* medicaç*`
+- Exclude terms: `pneumonia & !viral`
+
+### API and Integration
+
+#### Programmatic Search
+
+```python
+from apps.research.utils import perform_fulltext_search_queryset
+
+# Simple search
+results = perform_fulltext_search_queryset("diabetes", max_patients=100)
+
+# Advanced search
+results = perform_fulltext_search_queryset(
+    'diabetes & medicaç* & !"tipo 1"', 
+    max_patients=500
+)
+
+# Medical specialty search
+results = perform_fulltext_search_queryset(
+    '"insuficiência cardíaca" & (betabloqueador* | inibidor*)',
+    max_patients=200
+)
+```
+
+#### Excel Export Enhancement
+
+Search results exported to Excel maintain:
+- Original search query in filename
+- Relevance scores for ranking
+- Match counts per patient
+- Optimized column widths for medical data
+
+### Troubleshooting Search Queries
+
+#### Common Query Errors
+
+**Syntax Error: Invalid tsquery**
+```
+# Problem: Unmatched quotes
+"diabetes mellitus
+
+# Solution: Close quotes
+"diabetes mellitus"
+```
+
+**No Results Found**
+```
+# Problem: Too restrictive
+diabetes & hipertensão & nefropatia & retinopatia
+
+# Solution: Use OR for alternatives  
+diabetes & (nefropatia | retinopatia)
+```
+
+**Too Many Results**
+```
+# Problem: Too broad
+dor
+
+# Solution: Add specificity
+"dor torácica" & aguda
+```
+
+#### Performance Optimization
+
+**Query Performance Guidelines:**
+- Shorter queries execute faster
+- Exact phrases (`"termo"`) are faster than wildcards (`termo*`)
+- Boolean operators add minimal overhead
+- Complex nested queries may be slower
+
+**Best Practices:**
+1. Start with broad terms, then refine
+2. Use exact phrases for established medical terms
+3. Combine boolean operators strategically
+4. Monitor search performance in production
+
+The enhanced full-text search system provides powerful tools for medical research while maintaining simplicity for everyday use.
+
