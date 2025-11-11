@@ -1,0 +1,381 @@
+<!-- Search Help Modal -->
+<div class="modal fade" id="searchHelpModal" tabindex="-1" aria-labelledby="searchHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="searchHelpModalLabel">
+                    <i class="bi bi-search me-2"></i>
+                    Guia de Busca Clínica Avançada
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs" id="searchHelpTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab" aria-controls="basic" aria-selected="true">
+                            <i class="bi bi-play-circle me-1"></i>Básico
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="operators-tab" data-bs-toggle="tab" data-bs-target="#operators" type="button" role="tab" aria-controls="operators" aria-selected="false">
+                            <i class="bi bi-code-slash me-1"></i>Operadores
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="specialties-tab" data-bs-toggle="tab" data-bs-target="#specialties" type="button" role="tab" aria-controls="specialties" aria-selected="false">
+                            <i class="bi bi-hospital me-1"></i>Especialidades
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="examples-tab" data-bs-toggle="tab" data-bs-target="#examples" type="button" role="tab" aria-controls="examples" aria-selected="false">
+                            <i class="bi bi-lightbulb me-1"></i>Exemplos
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="searchHelpTabContent">
+                    <!-- Basic Tab -->
+                    <div class="tab-pane fade show active" id="basic" role="tabpanel" aria-labelledby="basic-tab">
+                        <div class="mt-3">
+                            <h6><i class="bi bi-info-circle text-primary me-2"></i>Busca Simples</h6>
+                            <p>O sistema otimiza automaticamente suas buscas para melhor precisão:</p>
+                            
+                            <div class="search-example mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <code class="search-query">diabetes</code>
+                                        <span class="mx-2">→</span>
+                                        <code class="search-optimized">diabetes*</code>
+                                        <small class="text-muted ms-2">Encontra diabetes, diabética, diabético</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="diabetes">
+                                        <i class="bi bi-clipboard me-1"></i>Copiar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="search-example mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <code class="search-query">diabetes dor</code>
+                                        <span class="mx-2">→</span>
+                                        <code class="search-optimized">diabetes & dor</code>
+                                        <small class="text-muted ms-2">Ambos os termos devem estar presentes</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="diabetes dor">
+                                        <i class="bi bi-clipboard me-1"></i>Copiar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                <strong>Dica:</strong> Para frases exatas, use aspas: <code>"diabetes mellitus"</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Operators Tab -->
+                    <div class="tab-pane fade" id="operators" role="tabpanel" aria-labelledby="operators-tab">
+                        <div class="mt-3">
+                            <h6><i class="bi bi-gear text-primary me-2"></i>Operadores Avançados</h6>
+                            
+                            <div class="operator-group mb-4">
+                                <h6 class="text-success">Frases Exatas</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code class="search-phrase">"insuficiência cardíaca"</code>
+                                            <small class="text-muted ms-2">Busca a frase exata</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"insuficiência cardíaca"'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code class="search-phrase">"dor abdominal aguda"</code>
+                                            <small class="text-muted ms-2">Frase específica para dor abdominal</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"dor abdominal aguda"'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="operator-group mb-4">
+                                <h6 class="text-info">Lógica Booleana</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>diabetes <span class="operator-and">&</span> hipertensão</code>
+                                            <small class="text-muted ms-2">Ambos os termos (E)</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="diabetes & hipertensão">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>diabetes <span class="operator-or">|</span> hipertensão</code>
+                                            <small class="text-muted ms-2">Qualquer um dos termos (OU)</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="diabetes | hipertensão">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>diabetes <span class="operator-and">&</span> <span class="operator-not">!</span>gestacional</code>
+                                            <small class="text-muted ms-2">Diabetes excluindo gestacional (NÃO)</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="diabetes & !gestacional">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="operator-group mb-4">
+                                <h6 class="text-warning">Prefixos e Variações</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>medicaç<span class="operator-wildcard">*</span></code>
+                                            <small class="text-muted ms-2">medicação, medicamentos, medicamentosa</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="medicaç*">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>cardio<span class="operator-wildcard">*</span></code>
+                                            <small class="text-muted ms-2">cardiologia, cardiomegalia, cardiovascular</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="cardio*">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Specialties Tab -->
+                    <div class="tab-pane fade" id="specialties" role="tabpanel" aria-labelledby="specialties-tab">
+                        <div class="mt-3">
+                            <h6><i class="bi bi-heart-pulse text-primary me-2"></i>Exemplos por Especialidade</h6>
+                            
+                            <div class="specialty-group mb-4">
+                                <h6 class="text-danger"><i class="bi bi-heart me-1"></i>Cardiologia</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>"insuficiência cardíaca"</code>
+                                            <small class="text-muted ms-2">Diagnóstico específico</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"insuficiência cardíaca"'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>"dor torácica" & !muscular</code>
+                                            <small class="text-muted ms-2">Dor torácica não muscular</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"dor torácica" & !muscular'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="specialty-group mb-4">
+                                <h6 class="text-primary"><i class="bi bi-droplet me-1"></i>Endocrinologia</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>diabetes & (tipo1 | tipo2)</code>
+                                            <small class="text-muted ms-2">Classificação do diabetes</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="diabetes & (tipo1 | tipo2)">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>"cetoacidose diabética"</code>
+                                            <small class="text-muted ms-2">Complicação específica</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"cetoacidose diabética"'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="specialty-group mb-4">
+                                <h6 class="text-success"><i class="bi bi-stomach me-1"></i>Gastroenterologia</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>"dor abdominal" & (aguda | crônica)</code>
+                                            <small class="text-muted ms-2">Classificação temporal</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"dor abdominal" & (aguda | crônica)'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>gastro* & sangramento</code>
+                                            <small class="text-muted ms-2">Sangramento gastrintestinal</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="gastro* & sangramento">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="specialty-group mb-4">
+                                <h6 class="text-info"><i class="bi bi-lungs me-1"></i>Pneumologia</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>"dispneia aos esforços"</code>
+                                            <small class="text-muted ms-2">Sintoma específico</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"dispneia aos esforços"'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>"insuficiência respiratória" & !crônica</code>
+                                            <small class="text-muted ms-2">Insuficiência aguda</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"insuficiência respiratória" & !crônica'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Examples Tab -->
+                    <div class="tab-pane fade" id="examples" role="tabpanel" aria-labelledby="examples-tab">
+                        <div class="mt-3">
+                            <h6><i class="bi bi-journal-medical text-primary me-2"></i>Padrões Clínicos Comuns</h6>
+                            
+                            <div class="example-group mb-4">
+                                <h6 class="text-primary">Sintomas e Diagnósticos</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>febre & (bacteriana | viral)</code>
+                                            <small class="text-muted ms-2">Classificação etiológica da febre</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="febre & (bacteriana | viral)">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>"cefaleia tensional" | "enxaqueca"</code>
+                                            <small class="text-muted ms-2">Tipos de cefaleia</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"cefaleia tensional" | "enxaqueca"'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="example-group mb-4">
+                                <h6 class="text-success">Medicações e Tratamentos</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>antibio* & (amoxicilina | azitromicina)</code>
+                                            <small class="text-muted ms-2">Antibióticos específicos</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="antibio* & (amoxicilina | azitromicina)">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>"efeito colateral" & medicaç*</code>
+                                            <small class="text-muted ms-2">Reações medicamentosas</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query='"efeito colateral" & medicaç*'>
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="example-group mb-4">
+                                <h6 class="text-warning">Buscas de Pesquisa</h6>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>covid* & (vaccin* | imuniz*)</code>
+                                            <small class="text-muted ms-2">COVID e vacinação</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="covid* & (vaccin* | imuniz*)">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="search-example mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>idoso* & queda* & fractura*</code>
+                                            <small class="text-muted ms-2">Quedas em idosos</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary copy-search-btn" data-query="idoso* & queda* & fractura*">
+                                            <i class="bi bi-clipboard me-1"></i>Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="clearSearchBtn">
+                    <i class="bi bi-eraser me-1"></i>Limpar Busca
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
