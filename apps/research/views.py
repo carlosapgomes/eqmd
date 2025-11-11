@@ -173,10 +173,19 @@ def export_search_results(request):
             
             # Combine all matching notes into one cell (keep HTML tags for Excel)
             snippets = []
-            for match in patient_result['matching_notes']:
-                # Keep HTML tags - Excel will display them as text which is fine
-                snippet = f"[{match['note_date'].strftime('%d/%m/%Y %H:%M')}] {match['headline']}"
-                snippets.append(snippet)
+            matching_notes = patient_result.get('matching_notes', [])
+            for match in matching_notes:
+                try:
+                    # Keep HTML tags - Excel will display them as text which is fine
+                    if isinstance(match, dict) and 'note_date' in match and 'headline' in match:
+                        snippet = f"[{match['note_date'].strftime('%d/%m/%Y %H:%M')}] {match['headline']}"
+                        snippets.append(snippet)
+                    else:
+                        # Handle unexpected data format
+                        snippets.append(f"[Data malformada: {str(match)[:100]}]")
+                except Exception as e:
+                    # Handle any date formatting or other errors
+                    snippets.append(f"[Erro ao processar resultado: {str(e)}]")
             
             ws.cell(row=row_num, column=7, value='\n\n'.join(snippets))
 
