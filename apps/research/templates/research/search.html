@@ -135,6 +135,25 @@
     font-weight: 500;
 }
 
+/* Search Loading Animation */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+#searchButton {
+    min-width: 120px;
+    transition: all 0.3s ease;
+}
+
+#searchButton:disabled {
+    opacity: 0.7;
+}
+
 #searchHelpModal .modal-body {
     max-height: 70vh;
     overflow-y: auto;
@@ -171,7 +190,7 @@
 <!-- Search Form -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="post" class="mb-0">
+        <form method="post" class="mb-0 no-loading">
             {% csrf_token %}
             <div class="row align-items-end">
                 <div class="col-md-10">
@@ -195,8 +214,13 @@
                         <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#searchHelpModal" title="Ajuda de Busca">
                             <i class="bi bi-question-circle"></i>
                         </button>
-                        <button type="submit" class="btn btn-primary flex-fill">
-                            <i class="bi bi-search me-1"></i>Buscar
+                        <button type="submit" class="btn btn-primary flex-fill" id="searchButton">
+                            <span class="search-normal">
+                                <i class="bi bi-search me-1"></i>Buscar
+                            </span>
+                            <span class="search-loading d-none">
+                                <i class="bi bi-arrow-clockwise spin me-1"></i>Buscando...
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -336,6 +360,37 @@
 <script>
 // Handle click-to-open patient timeline and search help functionality
 document.addEventListener('DOMContentLoaded', function() {
+    
+    // Search form loading state handling
+    const searchForm = document.querySelector('form.no-loading');
+    const searchButton = document.getElementById('searchButton');
+    
+    if (searchForm && searchButton) {
+        searchForm.addEventListener('submit', function() {
+            // Disable button to prevent double submission
+            searchButton.disabled = true;
+            
+            // Toggle loading state
+            const normalState = searchButton.querySelector('.search-normal');
+            const loadingState = searchButton.querySelector('.search-loading');
+            
+            if (normalState && loadingState) {
+                normalState.classList.add('d-none');
+                loadingState.classList.remove('d-none');
+            }
+            
+            // Re-enable button if form submission fails (shouldn't happen normally)
+            setTimeout(function() {
+                if (searchButton.disabled) {
+                    searchButton.disabled = false;
+                    if (normalState && loadingState) {
+                        normalState.classList.remove('d-none');
+                        loadingState.classList.add('d-none');
+                    }
+                }
+            }, 30000); // 30 second safety net
+        });
+    }
     
     // Search Help Modal Functionality
     const searchInput = document.querySelector('input[name="query"]');
