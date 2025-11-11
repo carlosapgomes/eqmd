@@ -287,10 +287,19 @@ def perform_fulltext_search_queryset(query_text, max_patients=100):
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     # Post-process: format results (no age calculation, use dictionaries)
+    import json
     patient_results = []
     for r in results:
-        # Snippets already limited to 1 in SQL
-        matching_notes = r['matching_notes']
+        # Snippets already limited to 1 in SQL - parse JSON strings
+        matching_notes = []
+        if r['matching_notes']:
+            for note_json in r['matching_notes']:
+                if isinstance(note_json, str):
+                    note_data = json.loads(note_json)
+                    # Convert note_date string back to datetime for template compatibility
+                    from datetime import datetime
+                    note_data['note_date'] = datetime.fromisoformat(note_data['note_date'].replace('Z', '+00:00'))
+                    matching_notes.append(note_data)
 
         patient_results.append({
             'patient': {
