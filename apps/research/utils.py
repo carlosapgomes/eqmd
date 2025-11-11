@@ -182,7 +182,7 @@ def perform_fulltext_search(query_text, page=1, per_page=25):
         'query': query_text
     }
 
-def perform_fulltext_search_queryset(query_text, max_patients=100):
+def perform_fulltext_search_queryset(query_text, max_patients=500):
     """
     Fast full-text search using raw SQL: groups by patient, limits early.
     
@@ -208,21 +208,13 @@ def perform_fulltext_search_queryset(query_text, max_patients=100):
             ),
             ranked_notes AS (
                 SELECT
-                    dn.event_ptr_id,
                     e.patient_id,
                     e.event_datetime,
-                    dn.content,
                     p.name AS patient_name,
                     p.current_record_number,
                     p.gender,
                     p.birthday,
-                    ts_rank(dn.search_vector, sq.q) AS rank,
-                    ts_headline(
-                        'portuguese',
-                        dn.content,
-                        sq.q,
-                        'MaxFragments=1, MinWords=10, MaxWords=30, StartSel=<b>, StopSel=</b>'
-                    ) AS headline
+                    ts_rank(dn.search_vector, sq.q) AS rank
                 FROM dailynotes_dailynote dn
                 CROSS JOIN search_query sq
                 JOIN events_event e ON e.id = dn.event_ptr_id
@@ -243,64 +235,33 @@ def perform_fulltext_search_queryset(query_text, max_patients=100):
                 FROM patient_stats
                 ORDER BY highest_rank DESC, total_matches DESC
                 LIMIT %s
-            ),
-            final_results AS (
-                SELECT
-                    rn.*,
-                    ps.highest_rank,
-                    ps.total_matches,
-                    ps.most_recent_match
-                FROM ranked_notes rn
-                JOIN top_patients tp ON rn.patient_id = tp.patient_id
-                JOIN patient_stats ps ON ps.patient_id = tp.patient_id
             )
-            SELECT
-                patient_id,
-                current_record_number AS registration_number,
-                get_patient_initials(patient_name) AS initials,
-                patient_name,
+            SELECT DISTINCT
+                rn.patient_id,
+                rn.current_record_number AS registration_number,
+                get_patient_initials(rn.patient_name) AS initials,
+                rn.patient_name,
                 CASE 
-                    WHEN gender = 'M' THEN 'Masculino'
-                    WHEN gender = 'F' THEN 'Feminino'
+                    WHEN rn.gender = 'M' THEN 'Masculino'
+                    WHEN rn.gender = 'F' THEN 'Feminino'
                     ELSE 'Não informado'
                 END AS gender_display,
-                gender,
-                birthday,
-                total_matches,
-                highest_rank,
-                most_recent_match,
-                (array_agg(
-                    jsonb_build_object(
-                        'note_date', event_datetime,
-                        'headline', headline,
-                        'rank', rank
-                    ) ORDER BY rank DESC
-                ))[1:1] AS matching_notes
-            FROM final_results
-            GROUP BY
-                patient_id, current_record_number, patient_name,
-                gender, birthday, total_matches, highest_rank, most_recent_match
-            ORDER BY highest_rank DESC, total_matches DESC;
+                rn.gender,
+                rn.birthday,
+                ps.total_matches,
+                ps.highest_rank
+            FROM ranked_notes rn
+            JOIN top_patients tp ON rn.patient_id = tp.patient_id
+            JOIN patient_stats ps ON ps.patient_id = tp.patient_id
+            ORDER BY ps.highest_rank DESC, ps.total_matches DESC;
         """, [clean_query, max_patients])
 
         columns = [col[0] for col in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-    # Post-process: format results (no age calculation, use dictionaries)
-    import json
+    # Post-process: format results (no snippets, much faster)
     patient_results = []
     for r in results:
-        # Snippets already limited to 1 in SQL - parse JSON strings
-        matching_notes = []
-        if r['matching_notes']:
-            for note_json in r['matching_notes']:
-                if isinstance(note_json, str):
-                    note_data = json.loads(note_json)
-                    # Convert note_date string back to datetime for template compatibility
-                    from datetime import datetime
-                    note_data['note_date'] = datetime.fromisoformat(note_data['note_date'].replace('Z', '+00:00'))
-                    matching_notes.append(note_data)
-
         patient_results.append({
             'patient': {
                 'pk': r['patient_id'],
@@ -310,7 +271,6 @@ def perform_fulltext_search_queryset(query_text, max_patients=100):
             'initials': r['initials'],
             'gender': r['gender_display'],
             'birthday': r['birthday'],
-            'matching_notes': matching_notes,
             'highest_rank': r['highest_rank'],
             'total_matches': r['total_matches']
         })
