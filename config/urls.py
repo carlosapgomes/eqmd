@@ -16,7 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView, TemplateView
@@ -43,7 +43,7 @@ urlpatterns = [
     path("accounts/password/change/", PasswordChangeView.as_view(), name="account_change_password"),
     path("accounts/password/reset/", PasswordResetView.as_view(), name="account_reset_password"),
     path("accounts/password/reset/done/", PasswordResetDoneView.as_view(), name="account_reset_password_done"),
-    path("accounts/password/reset/key/<uidb36>-<key>/", PasswordResetFromKeyView.as_view(), name="account_reset_password_from_key"),
+    re_path(r"^accounts/password/reset/key/(?P<uidb36>[0-9A-Za-z]+)-(?P<key>.+)/$", PasswordResetFromKeyView.as_view(), name="account_reset_password_from_key"),
     path("accounts/password/reset/key/done/", PasswordResetFromKeyDoneView.as_view(), name="account_reset_password_from_key_done"),
     path("accounts/email/", EmailView.as_view(), name="account_email"),
     path("accounts/confirm-email/", TemplateView.as_view(template_name="account/verification_sent.html"), name="account_email_verification_sent"),
