@@ -1,7 +1,12 @@
 import re
+import os
+import tempfile
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
+from django.core.mail import EmailMessage
 from django.utils import timezone
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from apps.dailynotes.models import DailyNote
 from apps.patients.models import Patient
 
@@ -28,12 +33,17 @@ class Command(BaseCommand):
             help='Patient name (partial match supported, e.g., "João Vitor")'
         )
         
-        # Output options
-        parser.add_argument(
+        # Output options (mutually exclusive)
+        output_group = parser.add_mutually_exclusive_group()
+        output_group.add_argument(
             '--output',
             type=str,
-            default='-',
-            help='Output file path (default: stdout)'
+            help='Output file path (default: stdout if no email specified)'
+        )
+        output_group.add_argument(
+            '--email',
+            type=str,
+            help='Send export as email attachment to this address'
         )
         
         # Anonymization options
@@ -55,6 +65,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
+            # Validate email if provided
+            if options['email']:
+                try:
+                    validate_email(options['email'])
+                except ValidationError:
+                    raise CommandError(f'Invalid email address: {options["email"]}')
+            
             # Find patient
             patient = self._get_patient(options)
             
@@ -71,14 +88,22 @@ class Command(BaseCommand):
                 patient, dailynotes, options
             )
             
-            # Output to file or stdout
-            self._write_output(markdown_content, options['output'])
-            
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f'Successfully exported {dailynotes.count()} notes'
+            # Output based on options
+            if options['email']:
+                self._send_email(markdown_content, options['email'], dailynotes.count())
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'Successfully emailed {dailynotes.count()} notes to {options["email"]}'
+                    )
                 )
-            )
+            else:
+                output_file = options.get('output') or '-'
+                self._write_output(markdown_content, output_file)
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'Successfully exported {dailynotes.count()} notes'
+                    )
+                )
             
         except Exception as e:
             raise CommandError(f'Error exporting notes: {str(e)}')
@@ -236,3 +261,54 @@ class Command(BaseCommand):
                     f.write(content)
             except IOError as e:
                 raise CommandError(f'Could not write to file {output_path}: {str(e)}')
+
+    def _send_email(self, content, email_address, note_count):
+        """Send markdown content as email attachment"""
+        try:
+            # Create temporary file with the content
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as temp_file:
+                temp_file.write(content)
+                temp_file_path = temp_file.name
+            
+            # Generate filename with timestamp
+            timestamp = timezone.now().strftime('%d-%m-%Y_%H-%M')
+            filename = f'evolucoes_paciente_{timestamp}.md'
+            
+            # Prepare email
+            subject = f'Exportação de Evoluções - {note_count} evolução(ões)'
+            message = f"""Exportação de evoluções médicas em anexo.
+
+📊 **Resumo da Exportação:**
+- **Total de evoluções:** {note_count}
+- **Data da exportação:** {timezone.now().strftime('%d/%m/%Y às %H:%M:%S')}
+- **Formato:** Markdown (.md)
+
+⚠️ **Aviso de Confidencialidade:**
+Este arquivo contém informações médicas. Mantenha a confidencialidade e delete após o processamento.
+
+---
+Sistema EquipeMed - Exportação Automática"""
+
+            email = EmailMessage(
+                subject=subject,
+                body=message,
+                to=[email_address],
+            )
+            
+            # Attach the markdown file
+            email.attach_file(temp_file_path, mimetype='text/markdown')
+            
+            # Send email
+            email.send()
+            
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+            
+        except Exception as e:
+            # Clean up temp file if it exists
+            if 'temp_file_path' in locals():
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+            raise CommandError(f'Failed to send email: {str(e)}')
