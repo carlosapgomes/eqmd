@@ -36,6 +36,20 @@ ALLOWED_HOSTS = [
     host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host.strip()
 ]
 
+# Cookie security configuration (toggle per environment)
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() in (
+    "true",
+    "1",
+    "yes",
+    "on",
+)
+CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "False").lower() in (
+    "true",
+    "1",
+    "yes",
+    "on",
+)
+
 # CSRF Trusted Origins
 # https://docs.djangoproject.com/en/5.2/ref/settings/#csrf-trusted-origins
 DJANGO_CSRF_TRUSTED_ORIGINS_RAW = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "")
@@ -431,4 +445,3 @@ LOGGING = {
         },
     },
 }
-
