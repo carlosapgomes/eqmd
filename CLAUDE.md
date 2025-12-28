@@ -285,17 +285,28 @@ The clinical research module supports PostgreSQL's advanced full-text search wit
 
 ## Firebase Import
 
-For importing dailynotes from Firebase Realtime Database, see the detailed guide:
+For incremental sync of patients and dailynotes from Firebase Realtime Database, see the detailed guide:
 
 **📖 [Firebase Import Documentation](docs/firebase-import.md)**
 
 Quick command reference:
 ```bash
-# Basic import
-uv run python manage.py import_firebase_dailynotes \
+# Single command sync (patients + dailynotes)
+uv run python manage.py sync_firebase_data \
   --credentials-file firebase-key.json \
   --database-url https://your-project.firebaseio.com \
-  --project-name your-project
+  --project-name your-project \
+  --since-date $(date -d "yesterday" +%Y-%m-%d)
+
+# Docker production sync
+docker-compose run --rm \
+  -v ./firebase-key.json:/app/firebase-key.json:ro \
+  eqmd python manage.py sync_firebase_data \
+    --credentials-file firebase-key.json \
+    --database-url https://your-project.firebaseio.com \
+    --project-name your-project \
+    --since-date $(date -d "yesterday" +%Y-%m-%d) \
+    --chunk-size 500
 ```
 
 # Cache management (performance)
