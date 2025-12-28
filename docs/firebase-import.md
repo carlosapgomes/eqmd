@@ -72,7 +72,7 @@ uv run python manage.py sync_firebase_data \
 
 ```bash
 # Initial sync with dry run
-docker-compose run --rm \
+docker compose run --rm \
   -v /path/to/firebase-key.json:/app/firebase-key.json:ro \
   eqmd uv run python manage.py sync_firebase_data \
     --credentials-file firebase-key.json \
@@ -83,7 +83,7 @@ docker-compose run --rm \
     --dry-run
 
 # Daily sync (automatic date calculation)
-docker-compose run --rm \
+docker compose run --rm \
   -v /path/to/firebase-key.json:/app/firebase-key.json:ro \
   eqmd uv run python manage.py sync_firebase_data \
     --credentials-file firebase-key.json \
@@ -98,25 +98,25 @@ docker-compose run --rm \
 
 ```bash
 # Daily sync with copy and cleanup
-docker-compose cp firebase-key.json eqmd:/app/firebase-key.json && \
-docker-compose exec eqmd uv run python manage.py sync_firebase_data \
+docker compose cp firebase-key.json eqmd:/app/firebase-key.json && \
+docker compose exec eqmd uv run python manage.py sync_firebase_data \
   --credentials-file firebase-key.json \
   --database-url https://your-project.firebaseio.com \
   --project-name your-project \
   --since-date $(date -d "yesterday" +%Y-%m-%d) \
   --user-email admin@yourcompany.com \
   --chunk-size 500 && \
-docker-compose exec eqmd rm /app/firebase-key.json
+docker compose exec eqmd rm /app/firebase-key.json
 ```
 
 **Option 3: Manual Copy with Shell Cleanup**
 
 ```bash
 # Copy credentials
-docker-compose cp firebase-key.json eqmd:/app/firebase-key.json
+docker compose cp firebase-key.json eqmd:/app/firebase-key.json
 
 # Run with cleanup in single command
-docker-compose exec eqmd bash -c "
+docker compose exec eqmd bash -c "
   uv run python manage.py sync_firebase_data \
     --credentials-file firebase-key.json \
     --database-url https://your-project.firebaseio.com \
@@ -221,16 +221,8 @@ kubectl delete secret firebase-creds
 **Linux Cron Example**
 
 ```bash
-# Add to crontab (runs daily at 2 AM)
-0 2 * * * cd /path/to/eqmd && docker-compose run --rm \
-  -v /path/to/firebase-key.json:/app/firebase-key.json:ro \
-  eqmd uv run python manage.py sync_firebase_data \
-    --credentials-file firebase-key.json \
-    --database-url https://your-project.firebaseio.com \
-    --project-name your-project \
-    --since-date $(date -d "yesterday" +\%Y-\%m-\%d) \
-    --user-email admin@yourcompany.com \
-    --chunk-size 500 >> /var/log/firebase-sync.log 2>&1
+# Add to crontab (runs daily at 2 AM) - MUST be single line in crontab
+0 2 * * * cd /path/to/eqmd && docker compose run --rm -v /path/to/firebase-key.json:/app/firebase-key.json:ro eqmd uv run python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --user-email admin@yourcompany.com --chunk-size 500 >> /var/log/firebase-sync.log 2>&1
 ```
 
 ### Command Options
@@ -343,7 +335,7 @@ The `sync_firebase_data` command automatically syncs in the correct order:
 
 ```bash
 # Production daily sync (cron-ready)
-docker-compose run --rm \
+docker compose run --rm \
   -v ./firebase-key.json:/app/firebase-key.json:ro \
   eqmd python manage.py sync_firebase_data \
     --credentials-file firebase-key.json \
@@ -351,37 +343,31 @@ docker-compose run --rm \
     --project-name your-project \
     --since-date $(date -d "yesterday" +%Y-%m-%d) \
     --chunk-size 500
-```
 
-### Cron Job Setup
-
-**Simple Daily Sync (2 AM)**
-```bash
-# Add to crontab
-0 2 * * * cd /path/to/your/project && docker-compose run --rm \
+# With email reporting for adoption tracking
+docker compose run --rm \
   -v ./firebase-key.json:/app/firebase-key.json:ro \
   eqmd python manage.py sync_firebase_data \
     --credentials-file firebase-key.json \
     --database-url https://your-project.firebaseio.com \
     --project-name your-project \
     --since-date $(date -d "yesterday" +%Y-%m-%d) \
-    --chunk-size 500 >> /var/log/firebase-sync.log 2>&1
+    --chunk-size 500 \
+    --email admin@yourcompany.com
+```
+
+### Cron Job Setup
+
+**Simple Daily Sync (2 AM)**
+```bash
+# Add to crontab - MUST be single line in crontab
+0 2 * * * cd /path/to/your/project && docker compose run --rm -v ./firebase-key.json:/app/firebase-key.json:ro eqmd python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --chunk-size 500 --email admin@yourcompany.com >> /var/log/firebase-sync.log 2>&1
 ```
 
 **Advanced Cron with Error Handling**
 ```bash
-# Cron with email alerts on failure
-0 2 * * * cd /path/to/your/project && (
-  docker-compose run --rm \
-    -v ./firebase-key.json:/app/firebase-key.json:ro \
-    eqmd python manage.py sync_firebase_data \
-      --credentials-file firebase-key.json \
-      --database-url https://your-project.firebaseio.com \
-      --project-name your-project \
-      --since-date $(date -d "yesterday" +%Y-%m-%d) \
-      --chunk-size 500 \
-  || echo "Firebase sync failed at $(date)" | mail -s "Firebase Sync Error" admin@yourcompany.com
-) >> /var/log/firebase-sync.log 2>&1
+# Cron with email alerts on failure - MUST be single line in crontab
+0 2 * * * cd /path/to/your/project && (docker compose run --rm -v ./firebase-key.json:/app/firebase-key.json:ro eqmd python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --chunk-size 500 --email admin@yourcompany.com || echo "Firebase sync failed at $(date)" | mail -s "Firebase Sync Error" admin@yourcompany.com) >> /var/log/firebase-sync.log 2>&1
 ```
 
 ### Security Best Practices

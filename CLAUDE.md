@@ -299,7 +299,7 @@ uv run python manage.py sync_firebase_data \
   --since-date $(date -d "yesterday" +%Y-%m-%d)
 
 # Docker production sync
-docker-compose run --rm \
+docker compose run --rm \
   -v ./firebase-key.json:/app/firebase-key.json:ro \
   eqmd python manage.py sync_firebase_data \
     --credentials-file firebase-key.json \
@@ -307,6 +307,17 @@ docker-compose run --rm \
     --project-name your-project \
     --since-date $(date -d "yesterday" +%Y-%m-%d) \
     --chunk-size 500
+
+# With email reporting for adoption tracking
+docker compose run --rm \
+  -v ./firebase-key.json:/app/firebase-key.json:ro \
+  eqmd python manage.py sync_firebase_data \
+    --credentials-file firebase-key.json \
+    --database-url https://your-project.firebaseio.com \
+    --project-name your-project \
+    --since-date $(date -d "yesterday" +%Y-%m-%d) \
+    --chunk-size 500 \
+    --email admin@yourcompany.com
 ```
 
 # Cache management (performance)
