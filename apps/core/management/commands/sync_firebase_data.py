@@ -5,6 +5,9 @@ from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 from django.utils import timezone as django_timezone
 from django.db import transaction
+from django.core.mail import EmailMessage
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 try:
     import firebase_admin
@@ -89,6 +92,11 @@ class Command(BaseCommand):
             default=1000,
             help="Number of records to fetch from Firebase in each chunk (default: 1000)",
         )
+        parser.add_argument(
+            "--email",
+            type=str,
+            help="Send sync report via email to this address",
+        )
 
     def handle(self, *args, **options):
         if firebase_admin is None:
@@ -96,9 +104,17 @@ class Command(BaseCommand):
                 "firebase-admin package is not installed. Please install it with: uv add firebase-admin"
             )
 
+        # Validate email if provided
+        if options.get("email"):
+            try:
+                validate_email(options["email"])
+            except ValidationError:
+                raise CommandError(f"Invalid email address: {options['email']}")
+
         self.dry_run = options["dry_run"]
         self.limit = options.get("limit")
         self.chunk_size = options.get("chunk_size", 1000)
+        self.email = options.get("email")
 
         if self.dry_run:
             self.stdout.write(
@@ -724,6 +740,65 @@ class Command(BaseCommand):
 
         return "\n".join(sections)
 
+    def _send_sync_report_email(self, patients_synced, dailynotes_synced, sync_date, next_cutoff_date):
+        """Send sync report via email"""
+        try:
+            # Calculate total records
+            total_synced = patients_synced + dailynotes_synced
+            
+            # Generate email subject
+            subject = f"Firebase Sync Report - {sync_date.strftime('%d/%m/%Y')} - {patients_synced} patients, {dailynotes_synced} dailynotes"
+            
+            # Generate email body
+            body = f"""Relatório de Sincronização Firebase - Sistema EquipeMed
+
+📊 **Resumo da Sincronização:**
+- **Data:** {sync_date.strftime('%d/%m/%Y às %H:%M:%S')}
+- **Pacientes sincronizados:** {patients_synced}
+- **Evoluções sincronizadas:** {dailynotes_synced}
+- **Total de registros:** {total_synced}
+
+📈 **Monitoramento de Adoção:**
+Este relatório ajuda a acompanhar a migração do sistema antigo:
+- Números decrescentes indicam maior adoção do novo sistema
+- Números consistentemente baixos sugerem possibilidade de congelar o sistema antigo
+
+⚙️ **Configurações da Sincronização:**
+- **Tamanho do chunk:** {self.chunk_size} registros por consulta Firebase
+- **Modo:** {"DRY RUN (sem alterações)" if self.dry_run else "PRODUÇÃO (dados sincronizados)"}"""
+
+            if self.limit:
+                body += f"\n- **Limite aplicado:** {self.limit} registros por tipo"
+
+            body += f"""
+
+📅 **Próxima Sincronização:**
+Use --since-date {next_cutoff_date} para a próxima execução
+
+⏰ **Automação Sugerida:**
+Configure o cron job para executar diariamente e monitorar a tendência dos números.
+Quando os números se mantiverem consistentemente baixos por várias semanas, 
+considere congelar o sistema antigo.
+
+---
+Sistema EquipeMed - Sincronização Automática Firebase"""
+
+            # Send email
+            email = EmailMessage(
+                subject=subject,
+                body=body,
+                to=[self.email],
+            )
+            email.send()
+            
+            return True
+            
+        except Exception as e:
+            self.stdout.write(
+                self.style.ERROR(f"Failed to send sync report email: {str(e)}")
+            )
+            return False
+
     def display_sync_report(self, patients_synced, dailynotes_synced):
         """Display final sync report with next cutoff date"""
         self.stdout.write("")
@@ -754,5 +829,19 @@ class Command(BaseCommand):
         self.stdout.write("")
         self.stdout.write(self.style.WARNING("Next sync cutoff date:"))
         self.stdout.write(f"  Use --since-date {next_cutoff} for the next sync")
+
+        # Send email report if email is configured
+        if self.email:
+            self.stdout.write("")
+            self.stdout.write("Sending sync report via email...")
+            sync_date = datetime.now()
+            if self._send_sync_report_email(patients_synced, dailynotes_synced, sync_date, next_cutoff):
+                self.stdout.write(
+                    self.style.SUCCESS(f"✓ Sync report sent successfully to {self.email}")
+                )
+            else:
+                self.stdout.write(
+                    self.style.ERROR("✗ Failed to send sync report email (check console for details)")
+                )
 
         self.stdout.write(self.style.SUCCESS("=" * 60))
