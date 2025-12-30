@@ -143,4 +143,3 @@ After cleanup, the template will be:
 - URL patterns in `apps/historyandphysicals/urls.py`
 - Any templates that reference this template
 - Navigation menus or buttons that link to this template
-

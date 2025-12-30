@@ -179,4 +179,3 @@ Add a gender/sex field to the Patient model and integrate it throughout the appl
 - `apps/patients/tests/test_forms.py`
 - `apps/patients/tests/test_views.py`
 - Test factories and sample data commands
-

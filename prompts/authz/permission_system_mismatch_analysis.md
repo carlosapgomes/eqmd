@@ -49,6 +49,7 @@ def _get_resident_permissions(self):
 #### Resolution Applied (2025-08-02)
 
 **Documentation Updated** to align with implementation:
+
 - Updated user-guide.md to show Residents have identical permissions to Medical Doctors
 - Updated permission tables to allow Residents to discharge patients
 - Updated personal data protection rules to include Residents
@@ -71,6 +72,7 @@ def _get_resident_permissions(self):
 #### Resolution Applied (2025-08-02)
 
 **Implementation Updated** in setup_groups.py:
+
 ```python
 # Patient viewing and management (ADDED create capability)
 permissions.extend([
@@ -98,6 +100,7 @@ permissions.extend(self._get_app_permissions('mediafiles'))  # ✅ ADDED: Full m
 ```
 
 **Documentation Updated** to reflect new capabilities:
+
 - Updated user-guide.md to show nurses can create and manage patients
 - Added patient record number and admission management to role description
 - Added full media file management capabilities
@@ -107,6 +110,7 @@ permissions.extend(self._get_app_permissions('mediafiles'))  # ✅ ADDED: Full m
 **Permission Count**: Nurses now have 49 permissions (increased from 27, with H&P restricted to view-only)
 
 **Latest Refinement (2025-08-02)**:
+
 ```python
 # History & Physicals - view only (physicians create these)
 permissions.extend(self._get_view_permissions('historyandphysicals'))
@@ -130,6 +134,7 @@ permissions.extend(self._get_view_permissions('historyandphysicals'))
 #### Resolution Applied (2025-08-02)
 
 **Implementation Updated** in setup_groups.py:
+
 ```python
 def _get_physiotherapist_permissions(self):
     """Limited clinical permissions focused on therapy documentation."""
@@ -157,6 +162,7 @@ def _get_physiotherapist_permissions(self):
 ```
 
 **Documentation Updated** to reflect restricted role:
+
 - Updated user-guide.md to show "Limited Access - Therapy documentation only"
 - Removed patient creation, editing, and deletion capabilities
 - Removed patient status change abilities from permission table
@@ -166,11 +172,13 @@ def _get_physiotherapist_permissions(self):
 **Permission Count**: Physiotherapists now have 9 permissions (reduced from 50)
 
 **Permissions Retained**:
+
 - View patients, wards, tags, events (read-only)
 - Full simple notes management for therapy documentation
 - Template viewing
 
 **Permissions Removed**:
+
 - Patient creation, editing, deletion
 - Patient record number management
 - Patient admissions management
@@ -195,6 +203,7 @@ def _get_physiotherapist_permissions(self):
 #### Resolution Applied (2025-08-02)
 
 **Implementation Updated** in setup_groups.py:
+
 ```python
 def _get_student_permissions(self):
     """Supervised learning permissions for medical students."""
@@ -220,6 +229,7 @@ def _get_student_permissions(self):
 ```
 
 **Documentation Updated** to reflect supervised learning model:
+
 - Updated user-guide.md to show "Supervised Learning Access"
 - Added simple notes for supervised observations
 - Added media documentation for wound/surgery tracking
@@ -229,6 +239,7 @@ def _get_student_permissions(self):
 **Permission Count**: Students now have 17 permissions (reduced from 18, focused on supervised learning)
 
 **Learning Model Established**:
+
 - Simple notes serve as supervised observations
 - Residents review student notes and promote to formal records
 - Media documentation helps with wound and surgical progress tracking
@@ -252,12 +263,14 @@ def _get_student_permissions(self):
 #### Resolution Applied (2025-08-02)
 
 **Hospital Context Middleware Analysis**:
+
 - ✅ **Middleware DOES NOT EXIST** - `apps.hospitals` app was removed
 - ✅ **Not in MIDDLEWARE settings** - Already removed from Django configuration  
 - ✅ **Environment-based config** - Uses `HOSPITAL_CONFIG` environment variables
 - ❌ **Documentation outdated** - Still referenced non-existent middleware
 
 **Documentation Updated** to reflect single hospital architecture:
+
 ```yaml
 # Before: Multi-hospital with context management
 - Hospital selection workflows
@@ -271,11 +284,13 @@ def _get_student_permissions(self):
 ```
 
 **Changes Applied**:
+
 - **user-guide.md**: Removed hospital context management sections, updated access rules for universal patient access
 - **api-reference.md**: Removed hospital context middleware documentation and hospital-related query functions
 - **README.md**: Already properly documented single hospital architecture
 
 **Architecture Simplified**:
+
 - No hospital selection required - all users work within the same hospital
 - Universal patient access without hospital context restrictions  
 - Environment variables define hospital configuration (name, address, contact info)
@@ -332,12 +347,14 @@ permissions.extend([
 Medical Doctors should have full sample content management capabilities for template creation and editing.
 
 #### Current Implementation
+
 ```python
 # Template viewing only
 permissions.append('sample_content.view_samplecontent')  # ❌ VIEW ONLY
 ```
 
 #### Recommended Fix
+
 ```python
 def _get_doctor_permissions(self):
     # ... existing permissions ...
@@ -439,6 +456,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/te
 **All major permission system mismatches have been successfully resolved (2025-08-02):**
 
 ### ✅ **Completed Fixes**
+
 1. **Residents** - Now have identical permissions to Medical Doctors (documentation aligned)
 2. **Nurses** - Enhanced with patient creation, record management, media access, H&P view-only (49 permissions)
 3. **Physiotherapists** - Restricted to therapy documentation only (9 permissions)
@@ -446,6 +464,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/te
 5. **Hospital Context** - Documentation updated for single hospital architecture, removed non-existent middleware
 
 ### 📊 **Final Permission Counts**
+
 - Medical Doctors: 70 permissions (full access)
 - Residents: 70 permissions (identical to doctors)
 - Nurses: 49 permissions (enhanced capabilities, H&P view-only)
@@ -453,6 +472,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/te
 - Students: 17 permissions (supervised learning focused)
 
 ### 🏥 **Clinical Appropriateness Achieved**
+
 - Role-based permissions now align with real-world medical responsibilities
 - Supervised learning model established for students
 - Principle of least privilege maintained across all roles
@@ -460,8 +480,8 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/te
 - Single hospital architecture simplifies operations without sacrificing functionality
 
 ### 🔄 **Remaining Work**
+
 - Sample content management for doctors (medium priority)
 - Comprehensive testing and monitoring
 
 The permission system is now properly aligned between implementation and documentation, with clinically appropriate role boundaries established.
-

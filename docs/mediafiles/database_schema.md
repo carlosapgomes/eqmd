@@ -181,6 +181,7 @@ Event (base model)
 ## Implementation Phases
 
 ### Phase 2A: Single Photo Implementation
+
 - MediaFile model
 - Photo model
 - Basic file upload and validation
@@ -188,6 +189,7 @@ Event (base model)
 - Admin interface
 
 ### Phase 2B: Photo Series Implementation
+
 - PhotoSeries model
 - PhotoSeriesFile through model
 - Multi-file upload handling
@@ -195,6 +197,7 @@ Event (base model)
 - Bulk operations
 
 ### Phase 2C: Video Clip Implementation
+
 - VideoClip model
 - Video file validation
 - Video thumbnail extraction

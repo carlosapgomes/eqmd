@@ -87,7 +87,7 @@ class DischargeReportForm(forms.ModelForm):
         return cleaned_data
 ```
 
-2. UPDATE VIEWS.PY:
+1. UPDATE VIEWS.PY:
 
 ```python
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -183,7 +183,7 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 ```
 
-3. UPDATE URLS.PY:
+1. UPDATE URLS.PY:
 
 ```python
 from django.urls import path
@@ -200,7 +200,7 @@ urlpatterns = [
 ]
 ```
 
-4. CREATE TEMPLATES:
+1. CREATE TEMPLATES:
 
 Create base directory structure:
 
@@ -307,7 +307,7 @@ Create similar templates for:
 - dischargereport_list.html (table of reports)
 - dischargereport_confirm_delete.html (deletion confirmation)
 
-5. REGISTER URLS IN MAIN PROJECT:
+1. REGISTER URLS IN MAIN PROJECT:
    Add to main urls.py:
 
 ```python

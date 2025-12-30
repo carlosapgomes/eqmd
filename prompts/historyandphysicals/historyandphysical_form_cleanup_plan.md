@@ -156,4 +156,3 @@ After cleanup, the template will be:
 - Views in `apps/historyandphysicals/views.py`
 - URL patterns in `apps/historyandphysicals/urls.py`
 - Any other templates that reference this template
-

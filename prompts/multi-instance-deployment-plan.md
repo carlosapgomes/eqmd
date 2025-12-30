@@ -489,4 +489,3 @@ CONTAINER_PREFIX=test HOST_PORT=8779 EQMD_IMAGE=ghcr.io/org/eqmd:v3.0-rc1
 **Dependencies**: None - all changes are additive and backwards compatible
 
 **Review Points**: After Phase 1 (core configuration), After Phase 3 (full testing)
-

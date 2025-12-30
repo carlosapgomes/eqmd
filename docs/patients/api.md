@@ -39,6 +39,7 @@ curl -b sessionid=your-session-id \
 ```
 
 Response includes gender information:
+
 ```json
 {
   "results": [
@@ -62,6 +63,7 @@ curl -b sessionid=your-session-id \
 ```
 
 Response includes gender information:
+
 ```json
 {
   "patient_id": "uuid-here",

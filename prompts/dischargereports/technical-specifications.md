@@ -3,6 +3,7 @@
 ## Model Design
 
 ### DischargeReport Model
+
 ```python
 class DischargeReport(Event):
     """Discharge report extending the base Event model"""
@@ -70,6 +71,7 @@ class DischargeReport(Event):
 ## Database Design
 
 ### Indexes Required
+
 ```python
 # Add to model Meta:
 indexes = [
@@ -81,6 +83,7 @@ indexes = [
 ```
 
 ### Constraints
+
 - admission_date must be <= discharge_date
 - is_draft defaults to True
 - All text fields should be non-null but can be empty strings
@@ -88,6 +91,7 @@ indexes = [
 ## API Design
 
 ### URL Structure
+
 ```python
 # apps/dischargereports/urls.py
 urlpatterns = [
@@ -107,6 +111,7 @@ urlpatterns = [
 ```
 
 ### View Classes
+
 ```python
 class DischargeReportCreateView(LoginRequiredMixin, CreateView):
     """Create new discharge report"""
@@ -139,6 +144,7 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
 ## Form Design
 
 ### DischargeReportForm
+
 ```python
 class DischargeReportForm(forms.ModelForm):
     """Form for discharge report create/update"""
@@ -201,6 +207,7 @@ class DischargeReportForm(forms.ModelForm):
 ## Template Structure
 
 ### Base Template Layout
+
 ```html
 <!-- dischargereport_create.html -->
 {% extends 'base.html' %}
@@ -275,6 +282,7 @@ class DischargeReportForm(forms.ModelForm):
 ## Firebase Import Specifications
 
 ### Command Structure
+
 ```python
 class Command(BaseCommand):
     help = "Import discharge reports from Firebase"
@@ -292,6 +300,7 @@ class Command(BaseCommand):
 ```
 
 ### Data Mapping
+
 ```python
 FIREBASE_FIELD_MAPPING = {
     'content.admissionDate': 'admission_date',      # '2025-08-22' -> date
@@ -311,6 +320,7 @@ FIREBASE_FIELD_MAPPING = {
 ```
 
 ### PatientAdmission Creation Logic
+
 ```python
 def create_patient_admission(self, discharge_report_data):
     """Create PatientAdmission for imported discharge report"""
@@ -345,6 +355,7 @@ def create_patient_admission(self, discharge_report_data):
 ## Print Template Specifications
 
 ### PDF Layout Requirements
+
 ```html
 <!-- dischargereport_print.html -->
 <!DOCTYPE html>
@@ -406,6 +417,7 @@ def create_patient_admission(self, discharge_report_data):
 ## Event Card Integration
 
 ### Event Card Template
+
 ```html
 <!-- event_card_dischargereport.html -->
 {% extends "events/partials/event_card_base.html" %}
@@ -459,6 +471,7 @@ def create_patient_admission(self, discharge_report_data):
 ## Testing Strategy
 
 ### Model Tests
+
 ```python
 class DischargeReportModelTests(TestCase):
     def test_save_sets_event_type(self):
@@ -476,6 +489,7 @@ class DischargeReportModelTests(TestCase):
 ```
 
 ### View Tests  
+
 ```python
 class DischargeReportViewTests(TestCase):
     def test_create_view_requires_login(self):

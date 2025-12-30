@@ -59,6 +59,7 @@ python manage.py populate_sample_data --clear-existing
 Realistic pharmaceutical data with Brazilian medications:
 
 **Public Templates (10):**
+
 - Dipirona Sódica 500mg
 - Paracetamol 750mg
 - Omeprazol 20mg
@@ -71,6 +72,7 @@ Realistic pharmaceutical data with Brazilian medications:
 - Atenolol 50mg
 
 **Private Templates (5):**
+
 - Amoxicilina 500mg
 - Azitromicina 500mg
 - Prednisona 20mg
@@ -82,12 +84,14 @@ Realistic pharmaceutical data with Brazilian medications:
 Common medical scenarios with multiple medications:
 
 **Public Templates (4):**
+
 - Hipertensão Arterial - Tratamento Inicial (2 medications)
 - Diabetes Mellitus Tipo 2 - Monoterapia (1 medication)
 - Dislipidemia - Tratamento com Estatina (1 medication)
 - Proteção Gástrica + Analgesia (2 medications)
 
 **Private Templates (1):**
+
 - Infecção Respiratória - Antibiótico (1 medication)
 
 ### 📝 Outpatient Prescriptions (60-90 total)
@@ -108,6 +112,7 @@ python manage.py create_sample_content
 ```
 
 This creates templates for:
+
 - Daily evolution notes (Evolução)
 - History and physical exams (Anamnese e Exame Físico)  
 - Simple observations (Nota/Observação)
@@ -316,4 +321,3 @@ self.client.force_login(user)
 ---
 
 **Remember**: The sample data password is `samplepass123` for all users.
-

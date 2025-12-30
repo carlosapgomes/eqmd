@@ -17,6 +17,7 @@
    ```
 
 2. Verify README updates:
+
    ```bash
    cat README.md | grep -A 10 "Patients App"
    ```
@@ -165,6 +166,7 @@
    ```
 
 6. Verify documentation files:
+
    ```bash
    ls -la docs/patients/
    ```
@@ -185,14 +187,19 @@
    ````
 
    - [ ] Check for any pending migrations:
+
      ```bash
      python manage.py showmigrations patients
      ```
+
    - [ ] Verify permissions and groups are correctly set up:
+
      ```bash
      python manage.py shell -c "from django.contrib.auth.models import Group; print(Group.objects.filter(name__contains='Patient').values('name', 'permissions__codename'))"
      ```
+
    - [ ] Check for any deprecation warnings:
+
      ```bash
      python -Wd manage.py check patients
      ```
@@ -200,18 +207,25 @@
    ## Deployment Steps
 
    - [ ] Apply any pending migrations:
+
      ```bash
      python manage.py migrate patients
      ```
+
    - [ ] Collect static files:
+
      ```bash
      python manage.py collectstatic --noinput
      ```
+
    - [ ] Update cache if using caching:
+
      ```bash
      python manage.py clear_cache
      ```
+
    - [ ] Restart web server:
+
      ```bash
      sudo systemctl restart gunicorn
      sudo systemctl restart nginx
@@ -225,6 +239,7 @@
    - [ ] Verify dashboard widgets are displaying correctly
    - [ ] Check permissions work correctly for different user roles
    - [ ] Monitor error logs for any issues:
+
      ```bash
      tail -f /var/log/nginx/error.log
      tail -f /path/to/django/logs/error.log
@@ -235,6 +250,7 @@
    ```
 
 2. Verify deployment checklist:
+
    ```bash
    cat docs/patients/deployment.md
    ```
@@ -304,6 +320,7 @@
    ```
 
 2. Verify API documentation:
+
    ```bash
    cat docs/patients/api.md
    ```
@@ -323,6 +340,7 @@
    ```
 
 3. Update main documentation index to include patients app:
+
    ```bash
    echo "- [Patients App](patients/index.md)" >> docs/index.md
    ```

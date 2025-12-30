@@ -5,12 +5,14 @@
 This document outlines the detailed implementation plan for adding section-based field grouping to PDF forms, combining **Option 1 (Section-Based Configuration)** with **Option 4 (Accordion Interface)**.
 
 ### Goals
+
 - Allow admin users to organize form fields into logical sections
 - Improve form filling UX with collapsible accordion sections
 - Maintain backward compatibility with existing forms
 - Provide intuitive section management in the admin configurator
 
 ### Architecture Changes
+
 - Extend JSON field configuration to include sections
 - Enhance form generator to handle sectioned fields
 - Update admin configurator with section management UI
@@ -727,6 +729,7 @@ class Command(BaseCommand):
 **File:** `docs/apps/pdf-forms.md`
 
 Add section about section-based form organization:
+
 - Configuration examples
 - Admin interface usage
 - Best practices for section organization

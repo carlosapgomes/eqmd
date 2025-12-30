@@ -7,12 +7,14 @@ The Dashboard Cache System eliminates expensive real-time database queries that 
 ## Performance Impact
 
 ### Before (Real-time queries)
+
 - Dashboard load: ~2-5 seconds with complex JOINs
 - CPU spikes to 100% on each dashboard access  
 - Multiple expensive queries per page load
 - Ward mapping caused server slowdowns
 
 ### After (Cached approach)
+
 - Dashboard load: ~200-500ms (simple SELECT from cache)
 - Background processing: ~10-30 seconds every 5 minutes
 - No impact on user-facing performance
@@ -41,10 +43,12 @@ class WardMappingCache(models.Model):
 ### Cache Keys
 
 **Dashboard Cache:**
+
 - `patient_counts` - Total, inpatient, outpatient counts
 - `recent_patients` - 30 most recent patients with latest event
 
 **Ward Mapping Cache:**
+
 - `ward_mapping_full` - Complete ward structure with patient assignments
 - `ward_filters` - Ward and tag dropdown data
 
@@ -66,6 +70,7 @@ docker compose exec web python manage.py update_dashboard_stats --force
 ```
 
 **Data collected:**
+
 - Patient counts (total, inpatients, outpatients)
 - 30 most recent patients ordered by latest event datetime
 - Execution time and success/error logging
@@ -86,6 +91,7 @@ docker compose exec web python manage.py update_ward_mapping_cache --force
 ```
 
 **Data collected:**
+
 - All wards with patient assignments
 - Patient details (name, bed, admission duration, tags)
 - Ward utilization calculations
@@ -104,6 +110,7 @@ docker compose exec web python manage.py check_cache_health --verbose
 ```
 
 **Output example:**
+
 ```
 ✓ dashboard_stats: Healthy (2.3 minutes old)
 ✓ recent_patients: Healthy (2.3 minutes old)  
@@ -144,12 +151,14 @@ If services are not always running, use `run --rm` instead:
 ### Log Management
 
 Create log directory:
+
 ```bash
 sudo mkdir -p /var/log/eqmd
 sudo chown $USER:$USER /var/log/eqmd
 ```
 
 Log rotation with logrotate:
+
 ```bash
 # /etc/logrotate.d/eqmd-cache
 /var/log/eqmd/*.log {
@@ -344,16 +353,19 @@ docker compose exec web python manage.py update_ward_mapping_cache --force
 ### Troubleshooting Common Issues
 
 **1. Cache showing as stale:**
+
 - Check cron jobs are running: `sudo crontab -l`
 - Check log files: `tail -f /var/log/eqmd/dashboard_cache.log`
 - Verify Docker containers are healthy: `docker compose ps`
 
 **2. "Updating" message persists:**
+
 - Run health check: `docker compose exec web python manage.py check_cache_health`
 - Force refresh: `docker compose exec web python manage.py update_dashboard_stats --force`
 - Check command logs for errors
 
 **3. Performance not improved:**
+
 - Verify views are using cached data (check for `from_cache: True` in context)
 - Monitor CPU usage during cache refresh vs. page access
 - Check that old real-time queries have been removed
@@ -432,6 +444,7 @@ When updating the cache system:
 ## Future Enhancements
 
 **Potential improvements:**
+
 - Redis integration for even faster access
 - Cache warming on database changes via signals
 - Real-time cache invalidation

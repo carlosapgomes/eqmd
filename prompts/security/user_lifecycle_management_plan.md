@@ -7,12 +7,14 @@ This plan implements comprehensive user lifecycle management for EquipeMed, addr
 ## Problem Statement
 
 **Current Issues:**
+
 - No automated account expiration for residents/students
 - Manual deactivation is error-prone and often delayed
 - LGPD compliance risk from departed users retaining access
 - No systematic tracking of user activity or access reviews
 
 **Security Risks:**
+
 - Departed staff maintaining access to patient data
 - Inactive accounts vulnerable to compromise
 - Regulatory compliance violations
@@ -38,30 +40,35 @@ This plan implements comprehensive user lifecycle management for EquipeMed, addr
 ## Implementation Phases
 
 ### Phase 1: Database Schema Foundation
+
 **Timeline: 1-2 weeks**
 **Priority: High**
 
 Core database structure to support all lifecycle management features.
 
 ### Phase 2: Middleware and Core Logic
-**Timeline: 2-3 weeks** 
+
+**Timeline: 2-3 weeks**
 **Priority: High**
 
 Authentication flow integration and automated expiration checking.
 
 ### Phase 3: Management Commands and Automation
+
 **Timeline: 1-2 weeks**
 **Priority: Medium**
 
 Daily maintenance tasks and administrative tools.
 
 ### Phase 4: Admin Interface and Dashboards
+
 **Timeline: 2-3 weeks**
 **Priority: Medium**
 
 User-friendly management interface for administrators.
 
 ### Phase 5: Advanced Features and Monitoring
+
 **Timeline: 1-2 weeks**
 **Priority: Low**
 
@@ -70,6 +77,7 @@ Enhanced reporting, bulk operations, and integration capabilities.
 ## Detailed Phase Breakdown
 
 Each phase includes:
+
 - **Technical specifications**
 - **Database migrations**
 - **Code implementation details**
@@ -89,11 +97,13 @@ Each phase includes:
 ## Risk Mitigation
 
 ### Technical Risks
+
 - **Database Migration**: Careful schema changes with rollback procedures
 - **Authentication Flow**: Thorough testing to avoid login disruptions
 - **Performance Impact**: Efficient queries and caching strategies
 
 ### Operational Risks  
+
 - **User Communication**: Clear notifications about expiration policies
 - **Admin Training**: Documentation and training for new management features
 - **Gradual Rollout**: Phased activation with monitoring and feedback

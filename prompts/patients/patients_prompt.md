@@ -13,6 +13,7 @@
 - this model should extend the `models.Model` model from `django.db.models`
 
 - this model should have the following extra fields:
+
     ```python
     INPATIENT = 0
     OUTPATIENT = 1
@@ -92,16 +93,15 @@
     )
 
     ```
-    - update  `accounts/forms.py` to include the new fields
-    - update  `accounts/views.py` to include the new fields
-    - update  `accounts/admin.py` to include the new fields
 
-##  Documentation
+  - update  `accounts/forms.py` to include the new fields
+  - update  `accounts/views.py` to include the new fields
+  - update  `accounts/admin.py` to include the new fields
+
+## Documentation
 
 Write documentation for this app in the `docs` directory in the `apps/accounts` directory
 Write documentation for the new models and views in the `docs` directory in the `apps/accounts` directory
-
-
 
 Do not use crispy forms in the templates, like:
 `{% crispy form form.helper %}`

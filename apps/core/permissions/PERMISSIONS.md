@@ -303,15 +303,19 @@ def _create_user_manager_group(self):
 ## Security Principles
 
 ### 1. Medical ≠ Administrative
+
 Clear separation between clinical work and system administration.
 
 ### 2. Least Privilege
+
 Each role gets minimum permissions necessary for their function.
 
 ### 3. No Privilege Escalation
+
 Medical staff cannot gain administrative access through any means.
 
 ### 4. Audit Ready
+
 Foundation in place for future audit logging requirements.
 
 ## Validation Checklist
@@ -344,6 +348,7 @@ uv run python manage.py user_permissions --action=assign
 ## Emergency Access
 
 In case of system issues:
+
 - **Superuser** can override all restrictions
 - **IT administrators** have full system access
 - **Emergency procedures** documented separately

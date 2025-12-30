@@ -7,6 +7,7 @@ This investigation analyzed static files located within Django app folders inste
 ## Apps with Static Files
 
 ### 1. **apps/core/static/**
+
 - **Location**: `apps/core/static/core/hero-medical-team.svg`
 - **Content**: Single SVG file (235 lines) containing medical team illustration
 - **Usage**: Referenced in `apps/core/templates/core/landing_page.html` for the hero section
@@ -14,8 +15,9 @@ This investigation analyzed static files located within Django app folders inste
 - **Assessment**: ✅ **Appropriate** - This is a core app-specific asset used only in the landing page
 
 ### 2. **apps/events/static/**
+
 - **Location**: `apps/events/static/events/`
-- **Content**: 
+- **Content**:
   - `css/timeline.css` (206 lines) - Timeline-specific styles
   - `css/print.css` (114 lines) - Print-specific styles for timeline
   - `js/timeline.js` (209 lines) - Timeline interactions and modal handling
@@ -24,6 +26,7 @@ This investigation analyzed static files located within Django app folders inste
 - **Assessment**: ⚠️ **Problematic** - Contains duplicated CSS and should be consolidated
 
 ### 3. **apps/mediafiles/static/**
+
 - **Location**: `apps/mediafiles/static/mediafiles/`
 - **Content**:
   - `css/mediafiles.css` (403 lines) - General media file styles
@@ -58,7 +61,8 @@ entry: {
 
 ### 1. **CSS Class Duplications**
 
-#### Timeline-related duplications:
+#### Timeline-related duplications
+
 - **`.timeline-card`** styles are duplicated between:
   - `apps/events/static/events/css/timeline.css` (lines 2-6)
   - `apps/events/templates/events/patient_timeline.html` (lines 12-15)
@@ -75,7 +79,8 @@ entry: {
   - `apps/events/static/events/css/timeline.css` (lines 39-45)
   - `apps/events/templates/events/patient_timeline.html` (lines 29-33)
 
-#### Media-related duplications:
+#### Media-related duplications
+
 - **`.media-thumbnail`** styles are duplicated between:
   - `apps/mediafiles/static/mediafiles/css/mediafiles.css` (lines 80-89)
   - `apps/mediafiles/templates/mediafiles/base.html` (lines 10-19)
@@ -86,12 +91,14 @@ entry: {
 
 ### 2. **JavaScript Code Duplications**
 
-#### Configuration duplications:
+#### Configuration duplications
+
 - **File validation config** is duplicated between:
   - `apps/mediafiles/static/mediafiles/js/mediafiles.js` (lines 13-20)
   - `apps/mediafiles/static/mediafiles/js/photo.js` (lines 13-22)
 
-#### Utility function duplications:
+#### Utility function duplications
+
 - **`formatFileSize`** function is duplicated between:
   - `apps/mediafiles/static/mediafiles/js/mediafiles.js` (lines 27-33)
   - `apps/mediafiles/static/mediafiles/js/photo.js` (lines 29-35)
@@ -100,7 +107,8 @@ entry: {
   - `apps/mediafiles/static/mediafiles/js/mediafiles.js` (lines 59-77)
   - `apps/mediafiles/static/mediafiles/js/photo.js` (lines 47-65)
 
-#### Drag and drop functionality:
+#### Drag and drop functionality
+
 - **Drag and drop handlers** are duplicated between:
   - `apps/mediafiles/static/mediafiles/js/mediafiles.js` (lines 108-160)
   - `apps/mediafiles/static/mediafiles/js/photo.js` (lines 82-150)
@@ -131,6 +139,7 @@ entry: {
 ### 3. **File Organization Assessment**
 
 **Current approach is generally correct**:
+
 - ✅ App-specific static files belong in app folders
 - ✅ Webpack correctly bundles these files
 - ✅ Core app SVG is appropriately placed

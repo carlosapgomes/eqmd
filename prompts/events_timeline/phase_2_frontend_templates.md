@@ -1,6 +1,7 @@
 # Phase 2: Frontend Templates - Patient Events Timeline
 
 ## Overview
+
 This phase creates the frontend templates and UI components for the timeline display, including summary cards, filtering interface, and pagination.
 
 ## Step 1: Create Main Timeline Template
@@ -712,6 +713,7 @@ mkdir -p apps/events/static/events/js
 ## Expected Results
 
 After completing Phase 2:
+
 - Fully functional timeline template with summary cards
 - Responsive design that works on all devices
 - Interactive filtering interface

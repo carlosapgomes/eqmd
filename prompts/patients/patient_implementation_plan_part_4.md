@@ -191,6 +191,7 @@
    ```
 
 2. Include patient URLs in project urls.py:
+
    ```python
    # In config/urls.py
    path('patients/', include('apps.patients.urls', namespace='patients')),
@@ -205,6 +206,7 @@
    ```
 
 2. Verify URL patterns:
+
    ```bash
    python manage.py show_urls | grep patients
    ```
@@ -219,6 +221,7 @@
    ```
 
 2. Add permission checks to templates:
+
    ```html
    {% if perms.patients.add_patient %}
    <a href="{% url 'patients:patient_create' %}" class="btn btn-primary"
@@ -254,10 +257,12 @@
    ```
 
 5. Test basic view access:
+
    ```bash
    python manage.py runserver
    ```
-   Then visit http://localhost:8000/patients/ in your browser.
+
+   Then visit <http://localhost:8000/patients/> in your browser.
 
 ### Step 6: Test Views
 
@@ -391,6 +396,7 @@
    ```
 
 2. Run view tests:
+
    ```bash
    python manage.py test apps.patients.tests.test_views
    ```
@@ -463,6 +469,7 @@
    ```
 
 2. Run form tests:
+
    ```bash
    python manage.py test apps.patients.tests.test_forms
    ```

@@ -322,4 +322,3 @@ def perform_fulltext_search(query_text, limit=25, offset=0):
 - Phase 7: Testing/Optimization (1-2 hours)
 
 **Total: 9.5-13.5 hours**
-

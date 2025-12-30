@@ -260,6 +260,7 @@ The `sync_firebase_data` command automatically syncs in the correct order:
 3. **Output**: Displays next cutoff date for subsequent sync runs
 
 **Key Benefits:**
+
 - **Single command** replaces manual two-step process
 - **Automatic ordering** ensures patients exist before dailynotes
 - **Draft filtering** prevents importing incomplete/draft notes
@@ -359,12 +360,14 @@ docker compose run --rm \
 ### Cron Job Setup
 
 **Simple Daily Sync (2 AM)**
+
 ```bash
 # Add to crontab - MUST be single line in crontab
 0 2 * * * cd /path/to/your/project && docker compose run --rm -v ./firebase-key.json:/app/firebase-key.json:ro eqmd python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --chunk-size 500 --email admin@yourcompany.com >> /var/log/firebase-sync.log 2>&1
 ```
 
 **Advanced Cron with Error Handling**
+
 ```bash
 # Cron with email alerts on failure - MUST be single line in crontab
 0 2 * * * cd /path/to/your/project && (docker compose run --rm -v ./firebase-key.json:/app/firebase-key.json:ro eqmd python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --chunk-size 500 --email admin@yourcompany.com || echo "Firebase sync failed at $(date)" | mail -s "Firebase Sync Error" admin@yourcompany.com) >> /var/log/firebase-sync.log 2>&1

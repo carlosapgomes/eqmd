@@ -352,4 +352,3 @@ docker compose up -d eqmd
 ```
 
 This comprehensive user management approach ensures secure, conflict-free deployment while maintaining operational flexibility and security best practices.
-

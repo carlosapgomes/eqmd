@@ -8,7 +8,7 @@ Based on the requirements, I recommend a hybrid approach:
 4. **Create decorators** for common view-level permission checks
 5. **Use template tags** for permission checks in templates
 
-## Key Implementation Considerations:
+## Key Implementation Considerations
 
 1. **Hospital Context Management**:
 

@@ -16,6 +16,7 @@ The Core app currently provides web-based views and will potentially include RES
 **Content-Type**: text/html
 
 #### Request
+
 ```http
 GET / HTTP/1.1
 Host: app.sispep.com
@@ -23,6 +24,7 @@ Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
 ```
 
 #### Response
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
@@ -35,6 +37,7 @@ Content-Length: [length]
 ```
 
 #### Response Data
+
 - **Type**: HTML document
 - **Template**: `core/landing_page.html`
 - **Context**: Page metadata and content
@@ -47,6 +50,7 @@ Content-Length: [length]
 **Content-Type**: text/html
 
 #### Request
+
 ```http
 GET /dashboard/ HTTP/1.1
 Host: app.sispep.com
@@ -55,6 +59,7 @@ Cookie: sessionid=abc123...
 ```
 
 #### Response (Authenticated)
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
@@ -67,6 +72,7 @@ Content-Length: [length]
 ```
 
 #### Response (Unauthenticated)
+
 ```http
 HTTP/1.1 302 Found
 Location: /accounts/login/?next=/dashboard/
@@ -82,6 +88,7 @@ Location: /accounts/login/?next=/dashboard/
 **Content-Type**: application/json
 
 #### Request
+
 ```http
 GET /api/v1/dashboard/ HTTP/1.1
 Host: app.sispep.com
@@ -90,6 +97,7 @@ Authorization: Bearer [token]
 ```
 
 #### Response
+
 ```json
 {
     "user": {
@@ -134,6 +142,7 @@ Authorization: Bearer [token]
 **Content-Type**: application/json
 
 #### Request
+
 ```http
 GET /api/v1/dashboard/stats/ HTTP/1.1
 Host: app.sispep.com
@@ -142,6 +151,7 @@ Authorization: Bearer [token]
 ```
 
 #### Response
+
 ```json
 {
     "stats": {
@@ -183,6 +193,7 @@ Authorization: Bearer [token]
 **Content-Type**: application/json
 
 #### Request
+
 ```http
 GET /api/v1/search/?q=patient&type=all&limit=10 HTTP/1.1
 Host: app.sispep.com
@@ -191,12 +202,14 @@ Authorization: Bearer [token]
 ```
 
 #### Query Parameters
+
 - `q` (string, required): Search query
 - `type` (string, optional): Search type (patients, activities, all)
 - `limit` (integer, optional): Maximum results (default: 10)
 - `offset` (integer, optional): Pagination offset (default: 0)
 
 #### Response
+
 ```json
 {
     "query": "patient",
@@ -232,6 +245,7 @@ Authorization: Bearer [token]
 ## Authentication
 
 ### Session Authentication (Current)
+
 Used for web interface:
 
 ```python
@@ -244,6 +258,7 @@ def dashboard_view(request):
 ```
 
 ### Token Authentication (Future)
+
 For API endpoints:
 
 ```python
@@ -256,11 +271,13 @@ class DashboardAPIView(APIView):
 ```
 
 #### Token Usage
+
 ```http
 Authorization: Bearer your-api-token-here
 ```
 
 ### JWT Authentication (Future)
+
 For mobile applications:
 
 ```python
@@ -314,6 +331,7 @@ class DashboardAPIView(APIView):
 ## Rate Limiting
 
 ### Future Implementation
+
 API endpoints will include rate limiting:
 
 ```python
@@ -326,6 +344,7 @@ RATE_LIMITS = {
 ```
 
 ### Rate Limit Headers
+
 ```http
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
@@ -335,6 +354,7 @@ X-RateLimit-Reset: 1642248000
 ## Pagination
 
 ### Future Pagination Format
+
 ```json
 {
     "count": 150,
@@ -345,17 +365,20 @@ X-RateLimit-Reset: 1642248000
 ```
 
 ### Pagination Parameters
+
 - `limit`: Number of results per page (max: 100)
 - `offset`: Number of results to skip
 
 ## Versioning
 
 ### API Versioning Strategy
+
 - **URL Versioning**: `/api/v1/`, `/api/v2/`
 - **Backward Compatibility**: Maintain previous versions
 - **Deprecation**: 6-month deprecation notice
 
 ### Version Headers
+
 ```http
 API-Version: 1.0
 Deprecated: false
@@ -367,11 +390,13 @@ Sunset: 2025-01-01
 ### Supported Content Types
 
 #### Request
+
 - `application/json` (API endpoints)
 - `application/x-www-form-urlencoded` (forms)
 - `multipart/form-data` (file uploads)
 
 #### Response
+
 - `application/json` (API endpoints)
 - `text/html` (web pages)
 - `text/csv` (data exports)
@@ -380,6 +405,7 @@ Sunset: 2025-01-01
 ## CORS Configuration
 
 ### Future CORS Settings
+
 ```python
 CORS_ALLOWED_ORIGINS = [
     "https://app.sispep.com",
@@ -392,11 +418,13 @@ CORS_ALLOW_CREDENTIALS = True
 ## API Documentation
 
 ### Future Interactive Documentation
+
 - **Swagger/OpenAPI**: Interactive API documentation
 - **Redoc**: Alternative documentation interface
 - **Postman Collection**: API testing collection
 
 ### Documentation URLs
+
 - `/api/docs/` - Swagger UI
 - `/api/redoc/` - ReDoc interface
 - `/api/schema/` - OpenAPI schema
@@ -404,6 +432,7 @@ CORS_ALLOW_CREDENTIALS = True
 ## Security Considerations
 
 ### API Security Measures
+
 1. **Authentication**: Required for all protected endpoints
 2. **HTTPS**: All API traffic over HTTPS
 3. **CSRF Protection**: For session-based authentication
@@ -412,6 +441,7 @@ CORS_ALLOW_CREDENTIALS = True
 6. **Logging**: Comprehensive API logging
 
 ### Security Headers
+
 ```http
 X-Content-Type-Options: nosniff
 X-Frame-Options: DENY
@@ -422,12 +452,14 @@ Strict-Transport-Security: max-age=31536000
 ## Monitoring and Analytics
 
 ### Future Monitoring
+
 - **Response Times**: Track API performance
 - **Error Rates**: Monitor error frequency
 - **Usage Patterns**: Analyze API usage
 - **User Behavior**: Track user interactions
 
 ### Metrics Endpoints
+
 ```http
 GET /api/v1/metrics/health/
 GET /api/v1/metrics/performance/

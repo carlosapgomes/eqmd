@@ -7,6 +7,7 @@ Poppler is a PDF rendering library required for the visual PDF field configurato
 ## What is Poppler?
 
 Poppler is a PDF rendering library based on the xpdf-3.0 code base. It provides utilities for:
+
 - Converting PDF pages to images (`pdftoppm`)
 - Extracting PDF information (`pdfinfo`)
 - Converting PDF to text (`pdftotext`)
@@ -29,6 +30,7 @@ pdftoppm -h
 ```
 
 **Package Details:**
+
 - Package name: `poppler-utils`
 - Includes: pdftoppm, pdfinfo, pdftotext, pdftocairo, and other utilities
 - Typical installation size: ~15MB
@@ -36,16 +38,19 @@ pdftoppm -h
 ### CentOS/RHEL/Fedora
 
 **CentOS/RHEL 7:**
+
 ```bash
 sudo yum install poppler-utils
 ```
 
 **CentOS/RHEL 8+ and Fedora:**
+
 ```bash
 sudo dnf install poppler-utils
 ```
 
 **Verification:**
+
 ```bash
 pdftoppm -h
 pdfinfo -h
@@ -54,6 +59,7 @@ pdfinfo -h
 ### macOS
 
 **Using Homebrew (Recommended):**
+
 ```bash
 # Install Homebrew if not already installed
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -66,6 +72,7 @@ pdftoppm -h
 ```
 
 **Using MacPorts:**
+
 ```bash
 sudo port install poppler
 ```
@@ -75,10 +82,11 @@ sudo port install poppler
 **Manual Installation:**
 
 1. **Download Poppler for Windows:**
-   - Visit: https://blog.alivate.com.au/poppler-windows/
+   - Visit: <https://blog.alivate.com.au/poppler-windows/>
    - Download the latest release (e.g., `poppler-23.08.0-0.zip`)
 
 2. **Extract Files:**
+
    ```cmd
    # Extract to a permanent location
    C:\Program Files\poppler\
@@ -91,11 +99,13 @@ sudo port install poppler
    - Restart Command Prompt/PowerShell
 
 4. **Verify Installation:**
+
    ```cmd
    pdftoppm -h
    ```
 
 **Using Chocolatey (Alternative):**
+
 ```cmd
 # Install Chocolatey package manager if not installed
 # Then install poppler
@@ -105,6 +115,7 @@ choco install poppler
 ### Docker Environments
 
 **Dockerfile:**
+
 ```dockerfile
 # Ubuntu/Debian base
 FROM ubuntu:20.04
@@ -120,6 +131,7 @@ RUN dnf install -y poppler-utils
 ```
 
 **Docker Compose:**
+
 ```yaml
 services:
   web:
@@ -134,6 +146,7 @@ services:
 ## Verification Steps
 
 ### Basic Verification
+
 ```bash
 # Check if poppler is installed
 which pdftoppm
@@ -148,6 +161,7 @@ pdftoppm -v
 ```
 
 ### Advanced Testing
+
 ```bash
 # Create a test PDF (if you have one)
 echo "Test PDF content" | ps2pdf - test.pdf
@@ -160,6 +174,7 @@ ls test_output-*.png
 ```
 
 ### Python Integration Test
+
 ```python
 # Test from Django shell
 python manage.py shell
@@ -182,6 +197,7 @@ else:
 ### Issue 1: "Command not found" - Poppler not in PATH
 
 **Symptoms:**
+
 ```bash
 pdftoppm -h
 # bash: pdftoppm: command not found
@@ -190,6 +206,7 @@ pdftoppm -h
 **Solutions:**
 
 **Linux:**
+
 ```bash
 # Check if poppler is actually installed
 dpkg -l | grep poppler  # Ubuntu/Debian
@@ -201,6 +218,7 @@ sudo dnf install poppler-utils  # CentOS/RHEL 8+
 ```
 
 **macOS:**
+
 ```bash
 # Check Homebrew installation
 brew list | grep poppler
@@ -213,6 +231,7 @@ echo $PATH | grep -o '/usr/local/bin'
 ```
 
 **Windows:**
+
 1. Verify extraction location: `C:\Program Files\poppler\bin\pdftoppm.exe`
 2. Check PATH environment variable
 3. Restart Command Prompt after PATH changes
@@ -221,12 +240,14 @@ echo $PATH | grep -o '/usr/local/bin'
 ### Issue 2: "Permission denied" - Execution permissions
 
 **Symptoms:**
+
 ```bash
 pdftoppm -h
 # Permission denied
 ```
 
 **Solution:**
+
 ```bash
 # Check permissions
 ls -la $(which pdftoppm)
@@ -242,6 +263,7 @@ sudo chown apache:apache $(which pdftoppm)      # CentOS
 ### Issue 3: pdf2image errors - "Unable to get page count"
 
 **Symptoms:**
+
 ```python
 from pdf2image import convert_from_path
 convert_from_path('test.pdf')
@@ -251,11 +273,13 @@ convert_from_path('test.pdf')
 **Solutions:**
 
 1. **Verify Poppler Installation:**
+
    ```bash
    pdftoppm -h  # Should work without errors
    ```
 
 2. **Check PDF File:**
+
    ```bash
    pdfinfo test.pdf  # Should display PDF information
    ```
@@ -266,6 +290,7 @@ convert_from_path('test.pdf')
    - Check file permissions
 
 4. **Python Environment Issues:**
+
    ```python
    import subprocess
    result = subprocess.run(['pdftoppm', '-h'], capture_output=True, text=True)
@@ -276,6 +301,7 @@ convert_from_path('test.pdf')
 ### Issue 4: Docker container issues
 
 **Symptoms:**
+
 ```bash
 # Inside Docker container
 pdftoppm -h
@@ -285,16 +311,19 @@ pdftoppm -h
 **Solutions:**
 
 1. **Update Dockerfile:**
+
    ```dockerfile
    RUN apt-get update && apt-get install -y poppler-utils
    ```
 
 2. **Rebuild container:**
+
    ```bash
    docker build --no-cache -t myapp .
    ```
 
 3. **Verify in running container:**
+
    ```bash
    docker exec -it container_name bash
    pdftoppm -h
@@ -303,6 +332,7 @@ pdftoppm -h
 ### Issue 5: Web server permission issues
 
 **Symptoms:**
+
 - Visual configurator shows "Poppler not found" error
 - Command line `pdftoppm` works fine
 - Django app can't access poppler
@@ -310,6 +340,7 @@ pdftoppm -h
 **Solutions:**
 
 1. **Check web server user:**
+
    ```bash
    # Test as web server user
    sudo -u www-data pdftoppm -h  # Ubuntu
@@ -317,12 +348,14 @@ pdftoppm -h
    ```
 
 2. **Fix PATH for web server:**
+
    ```bash
    # Add to /etc/environment or web server config
    PATH="/usr/local/bin:/usr/bin:/bin"
    ```
 
 3. **Django shell testing:**
+
    ```python
    python manage.py shell
    
@@ -340,11 +373,13 @@ pdftoppm -h
 ## Performance Considerations
 
 ### Memory Usage
+
 - PDF to image conversion is memory-intensive
 - Large PDFs may require significant RAM
 - Consider implementing timeouts for conversion
 
 ### Optimization Settings
+
 ```python
 # Optimize pdf2image performance
 from pdf2image import convert_from_path
@@ -373,16 +408,19 @@ The PDF Forms app provides automatic fallback when Poppler is not available:
 ### Cloud Deployment Options
 
 **AWS Lambda Layers:**
+
 - Use pre-built Poppler layer for Lambda functions
 - Search AWS Lambda Layers marketplace for "poppler"
 
 **Google Cloud Run:**
+
 ```dockerfile
 FROM gcr.io/google-appengine/python
 RUN apt-get update && apt-get install -y poppler-utils
 ```
 
 **Heroku:**
+
 ```
 # Add to requirements.txt or use buildpack
 https://github.com/heroku/heroku-buildpack-poppler
@@ -391,10 +429,12 @@ https://github.com/heroku/heroku-buildpack-poppler
 ## Support and Resources
 
 ### Official Documentation
-- Poppler Project: https://poppler.freedesktop.org/
-- pdf2image Documentation: https://pypi.org/project/pdf2image/
+
+- Poppler Project: <https://poppler.freedesktop.org/>
+- pdf2image Documentation: <https://pypi.org/project/pdf2image/>
 
 ### Community Resources
+
 - Stack Overflow: Search "poppler installation"
 - GitHub Issues: pdf2image repository issues
 - Docker Hub: Pre-built images with Poppler included
@@ -404,6 +444,7 @@ https://github.com/heroku/heroku-buildpack-poppler
 If you continue to experience issues:
 
 1. **Check System Logs:**
+
    ```bash
    # Linux
    journalctl -u your-django-app
@@ -413,6 +454,7 @@ If you continue to experience issues:
    ```
 
 2. **Create Minimal Test Case:**
+
    ```python
    # test_poppler.py
    try:

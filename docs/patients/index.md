@@ -12,6 +12,7 @@
 ## Technical Reference Files
 
 This directory contains specialized documentation:
+
 - API endpoints and JSON responses
 - Tag management workflows
 - Deployment configurations

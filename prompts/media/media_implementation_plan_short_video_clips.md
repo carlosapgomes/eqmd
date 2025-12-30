@@ -12,7 +12,7 @@ Based on extra instructions, this implementation must strictly follow:
 2. **Breadcrumbs**: All video clip pages use same breadcrumb: Patient detail → Timeline → Video clip page  
 3. **Styling**: Follow the overall styling and structure used for the photo feature from @app/mediafiles
 4. **Detail Page**: Very similar to photo detail page with video player controls (play, pause, forward, backward, replay), responsive for mobile devices, NO download button
-5. **Timeline Card**: 
+5. **Timeline Card**:
    - Template at `@app/events/templates/events/partials/event_card_videoclip.html`
    - Show duration like photo series shows photo count
    - Auto-generate thumbnail from first frame
@@ -30,12 +30,14 @@ Based on extra instructions, this implementation must strictly follow:
 **Action**: Enhance MediaFile model to support video metadata
 
 **New fields to add**:
+
 - `duration` - DurationField for video length (null=True, blank=True)
 - `video_codec` - CharField for video codec information (null=True, blank=True)
 - `video_bitrate` - PositiveIntegerField for bitrate (null=True, blank=True)
 - `fps` - FloatField for frames per second (null=True, blank=True)
 
 **New methods to implement**:
+
 - `is_video()` - Check if file is a video
 - `get_duration_display()` - Format duration as MM:SS
 - `extract_video_metadata()` - Extract video metadata using ffmpeg
@@ -51,12 +53,14 @@ Based on extra instructions, this implementation must strictly follow:
 **Action**: Implement VideoClip model extending Event
 
 **Model specifications**:
+
 - Inherits from Event model
 - OneToOneField to MediaFile
 - Auto-set event_type to VIDEO_CLIP_EVENT in save()
 - Custom manager for video-specific queries
 
 **Key methods to implement**:
+
 - `save()` - Set event_type, validate duration, call super()
 - `get_absolute_url()` - Return detail view URL
 - `get_edit_url()` - Return edit view URL
@@ -72,6 +76,7 @@ Based on extra instructions, this implementation must strictly follow:
 **Action**: Implement video processing utilities using ffmpeg
 
 **VideoProcessor class methods**:
+
 - `extract_metadata(video_file)` - Extract duration, codec, bitrate, fps
 - `generate_secure_thumbnail(video_file, timestamp=0)` - Generate thumbnail with UUID naming
 - `validate_video_file(video_file)` - Validate format, duration, and security
@@ -81,12 +86,14 @@ Based on extra instructions, this implementation must strictly follow:
 - `get_secure_video_upload_path(instance, filename)` - Generate secure upload path
 
 **Security features**:
+
 - Video content validation (prevent malicious video files)
 - Codec validation against whitelist
 - Container format validation
 - Video stream analysis for security threats
 
 **Error handling**:
+
 - FFmpeg not installed detection
 - Corrupted video file handling
 - Unsupported format detection
@@ -102,6 +109,7 @@ uv run python manage.py makemigrations mediafiles
 ```
 
 **Migration review checklist**:
+
 - VideoClip model creation with Event inheritance
 - MediaFile model updates for video fields
 - Proper field types and constraints
@@ -114,6 +122,7 @@ uv run python manage.py makemigrations mediafiles
 **Action**: Create comprehensive admin interface for VideoClip management
 
 **VideoClipAdmin specifications**:
+
 - List display: thumbnail_preview, description, duration, patient, event_datetime, created_by
 - List filters: event_datetime, created_by, patient__current_hospital, duration
 - Search fields: description, patient__name, media_file__original_filename
@@ -124,6 +133,7 @@ uv run python manage.py makemigrations mediafiles
 - Custom queryset with select_related optimization
 
 **Admin methods**:
+
 - `thumbnail_preview()` - Display video thumbnail
 - `duration_display()` - Format duration nicely
 - `file_size_display()` - Format file size
@@ -136,6 +146,7 @@ uv run python manage.py makemigrations mediafiles
 **Action**: Implement comprehensive model testing for VideoClip
 
 **Test cases for VideoClip**:
+
 - Event type auto-assignment
 - Duration validation (≤ 2 minutes)
 - Video file relationship
@@ -145,6 +156,7 @@ uv run python manage.py makemigrations mediafiles
 - Manager methods
 
 **Test cases for video MediaFile**:
+
 - Video metadata extraction
 - Thumbnail generation from video
 - Duration validation
@@ -152,6 +164,7 @@ uv run python manage.py makemigrations mediafiles
 - File size validation
 
 **Test utilities**:
+
 - Factory classes for VideoClip
 - Sample video file creation (various durations)
 - Mock ffmpeg responses for testing
@@ -162,6 +175,7 @@ uv run python manage.py makemigrations mediafiles
 ### Security Requirements for Videos
 
 **Video File Security**:
+
 - UUID-based video filenames prevent enumeration
 - Video codec validation against whitelist
 - Container format validation (MP4, WebM, MOV only)
@@ -170,12 +184,14 @@ uv run python manage.py makemigrations mediafiles
 - Video content analysis for malicious payloads
 
 **Video Processing Security**:
+
 - Secure thumbnail generation with UUID naming
 - FFmpeg command injection prevention
 - Temporary file cleanup during processing
 - Error handling for corrupted video files
 
 **Video Serving Security**:
+
 - Permission-based video streaming
 - HTTP range request validation
 - Secure video URL generation
@@ -184,6 +200,7 @@ uv run python manage.py makemigrations mediafiles
 ### Security Implementation for Videos
 
 **Secure Video Upload Path**:
+
 ```python
 def get_secure_video_upload_path(instance, filename):
     ext = Path(filename).suffix.lower()
@@ -195,6 +212,7 @@ def get_secure_video_upload_path(instance, filename):
 ```
 
 **Video Security Validation**:
+
 ```python
 def validate_video_security(video_file):
     # File size validation
@@ -225,6 +243,7 @@ def validate_video_security(video_file):
 **Action**: Implement forms for video upload and editing
 
 **VideoClipCreateForm specifications**:
+
 - Fields: description, event_datetime, video (FileField)
 - Custom video field with validation
 - File size validation (max 50MB)
@@ -234,11 +253,13 @@ def validate_video_security(video_file):
 - Bootstrap styling with video preview
 
 **VideoClipUpdateForm specifications**:
+
 - Fields: description, event_datetime, caption (no video change - similar to photo editing)
 - Inherits validation from VideoClipCreateForm
 - Displays current video thumbnail and metadata
 
 **Form validation methods**:
+
 - `clean_video()` - Validate file type, size, duration, format, and security
 - `clean_event_datetime()` - Ensure datetime is not in future
 - `validate_video_security()` - Comprehensive security validation
@@ -251,6 +272,7 @@ def validate_video_security(video_file):
 **Action**: Implement CRUD views for video clip management
 
 **VideoClipCreateView specifications**:
+
 - Extends CreateView
 - Permission required: 'events.add_event'
 - Hospital context validation
@@ -261,6 +283,7 @@ def validate_video_security(video_file):
 - Breadcrumb navigation: Patient detail → Timeline → Video clip page
 
 **VideoClipDetailView specifications**:
+
 - Extends DetailView
 - Permission check with patient access validation
 - Video player with controls (play, pause, forward, backward, replay)
@@ -273,6 +296,7 @@ def validate_video_security(video_file):
 - Breadcrumb navigation: Patient detail → Timeline → Video clip page
 
 **VideoClipUpdateView specifications**:
+
 - Extends UpdateView
 - Permission check: can_edit_event (24-hour rule)
 - Form with current video preview
@@ -281,6 +305,7 @@ def validate_video_security(video_file):
 - Breadcrumb navigation: Patient detail → Timeline → Video clip page
 
 **VideoClipDeleteView specifications**:
+
 - Extends DeleteView
 - Permission check: can_delete_event (24-hour rule)
 - Confirmation page with video preview
@@ -295,6 +320,7 @@ def validate_video_security(video_file):
 **Action**: Implement secure video streaming views
 
 **VideoStreamView specifications**:
+
 - Permission-protected video streaming
 - Patient access validation
 - Secure video path resolution (no direct file access)
@@ -306,6 +332,7 @@ def validate_video_security(video_file):
 - Rate limiting for video streaming
 
 **VideoDownloadView specifications**:
+
 - Secure video file download
 - Permission validation
 - Proper filename handling
@@ -318,6 +345,7 @@ def validate_video_security(video_file):
 **Action**: Define URL patterns for video clip views
 
 **URL patterns**:
+
 - `videos/create/<uuid:patient_id>/` - VideoClipCreateView
 - `videos/<uuid:pk>/` - VideoClipDetailView
 - `videos/<uuid:pk>/edit/` - VideoClipUpdateView
@@ -326,6 +354,7 @@ def validate_video_security(video_file):
 - `videos/<uuid:pk>/download/` - Video download view
 
 **URL naming convention**:
+
 - `videoclip_create`, `videoclip_detail`, `videoclip_update`, `videoclip_delete`
 - `videoclip_stream`, `videoclip_download`
 
@@ -336,6 +365,7 @@ def validate_video_security(video_file):
 **Action**: Implement comprehensive view testing for VideoClip
 
 **Test cases**:
+
 - Video upload with valid/invalid files
 - Duration validation enforcement
 - Permission-based access control
@@ -354,6 +384,7 @@ def validate_video_security(video_file):
 **Action**: Create video upload/edit form template
 
 **Template features**:
+
 - Video file upload with preview
 - Upload progress indicator
 - Processing status indicator (thumbnail generation)
@@ -368,6 +399,7 @@ def validate_video_security(video_file):
 **Action**: Create video detail view template
 
 **Template features**:
+
 - HTML5 video player with controls
 - Video metadata display (duration, size, format, codec)
 - Thumbnail fallback if video fails to load
@@ -383,6 +415,7 @@ def validate_video_security(video_file):
 **Action**: Create specialized event card for video clips
 
 **Template features**:
+
 - Video thumbnail display (auto-generated from first frame)
 - Duration badge similar to photo series count (e.g., "1:30")
 - Play icon overlay
@@ -399,6 +432,7 @@ def validate_video_security(video_file):
 **Action**: Create reusable video player component
 
 **Template features**:
+
 - HTML5 video element with controls
 - Custom video controls (optional)
 - Poster image (thumbnail)
@@ -412,6 +446,7 @@ def validate_video_security(video_file):
 **Action**: Create modal for video viewing (similar to photo modal)
 
 **Template features**:
+
 - Modal video player with play, pause, forward, backward controls
 - Video metadata overlay
 - Download button
@@ -427,6 +462,7 @@ def validate_video_security(video_file):
 **Action**: Create video-specific styling (following photo feature styling structure)
 
 **CSS features**:
+
 - Video player styling (following photo styling patterns)
 - Thumbnail styling with play overlay
 - Upload form styling (consistent with photo upload forms)
@@ -444,6 +480,7 @@ def validate_video_security(video_file):
 **Action**: Create video-specific JavaScript (following photo feature JS patterns)
 
 **JavaScript features**:
+
 - Video upload progress tracking (similar to photo upload)
 - Client-side duration validation
 - Video preview during upload
@@ -460,6 +497,7 @@ def validate_video_security(video_file):
 **Action**: Add video-specific template tags
 
 **Template tags**:
+
 - `{% video_player videoclip %}` - Display video player
 - `{% video_thumbnail videoclip %}` - Display video thumbnail
 - `{% video_duration videoclip %}` - Format and display duration
@@ -472,6 +510,7 @@ def validate_video_security(video_file):
 **Action**: Create comprehensive security tests for VideoClip
 
 **Security test scenarios**:
+
 - Video file enumeration prevention
 - Video codec validation
 - Container format validation
@@ -488,6 +527,7 @@ def validate_video_security(video_file):
 **Action**: Create end-to-end integration tests for VideoClip
 
 **Test scenarios**:
+
 - Complete video upload workflow
 - Video appears in patient timeline
 - Video player functionality
@@ -505,6 +545,7 @@ def validate_video_security(video_file):
 **Action**: Create performance tests for video handling
 
 **Performance tests**:
+
 - Large video upload handling (up to 50MB)
 - Video streaming performance
 - Thumbnail generation speed
@@ -517,6 +558,7 @@ def validate_video_security(video_file):
 **Action**: Test video functionality across browsers
 
 **Browser test scenarios**:
+
 - Chrome/Chromium video playback
 - Firefox video playback
 - Safari video playback (if available)
@@ -529,6 +571,7 @@ def validate_video_security(video_file):
 **Action**: Create UAT scenarios for video functionality
 
 **UAT scenarios**:
+
 - Medical professional uploads procedure video
 - Video appears in patient timeline with duration badge
 - Video can be played with standard controls
@@ -541,6 +584,7 @@ def validate_video_security(video_file):
 ## Success Criteria
 
 Short Video Clips implementation is complete when:
+
 - [ ] VideoClip model properly extends Event with VIDEO_CLIP_EVENT type
 - [ ] MediaFile model handles video metadata and thumbnails
 - [ ] Admin interface provides full video management
@@ -566,6 +610,7 @@ Short Video Clips implementation is complete when:
 ## Final Integration Steps
 
 After completing all three media types:
+
 1. Test integration between Photo, PhotoSeries, and VideoClip
 2. Ensure consistent UI/UX across all media types
 3. Verify event timeline displays all media types properly
@@ -578,6 +623,7 @@ After completing all three media types:
 ## Success Criteria for Complete Media Feature
 
 The media feature is fully implemented when:
+
 - [ ] All three media types (Photo, PhotoSeries, VideoClip) work independently
 - [ ] Event timeline displays all media types with appropriate cards
 - [ ] Upload forms work for all media types

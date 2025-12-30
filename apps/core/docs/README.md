@@ -34,6 +34,7 @@ apps/core/
 ## Key Features
 
 ### 1. Landing Page
+
 - **Purpose**: Public-facing homepage for EquipeMed
 - **URL**: `/` (root URL)
 - **Template**: `core/landing_page.html`
@@ -45,6 +46,7 @@ apps/core/
   - Contact information
 
 ### 2. Dashboard
+
 - **Purpose**: Main interface for authenticated users
 - **URL**: `/dashboard/`
 - **Template**: `core/dashboard.html`
@@ -58,6 +60,7 @@ apps/core/
 ## Configuration
 
 ### App Registration
+
 The app is registered in `config/settings.py`:
 
 ```python
@@ -69,6 +72,7 @@ INSTALLED_APPS = [
 ```
 
 ### URL Configuration
+
 The app URLs are included in the main `config/urls.py`:
 
 ```python
@@ -79,6 +83,7 @@ urlpatterns = [
 ```
 
 ### Login Redirect
+
 After successful login, users are redirected to the dashboard:
 
 ```python
@@ -88,10 +93,12 @@ LOGIN_REDIRECT_URL = 'core:dashboard'
 ## Dependencies
 
 ### Internal Dependencies
+
 - **Base Templates**: Uses `templates/base.html` and `templates/base_app.html`
 - **Authentication**: Integrates with `apps.accounts` for user authentication
 
 ### External Dependencies
+
 - **Django**: Core framework
 - **django-allauth**: Authentication system
 - **Bootstrap**: UI framework (via templates)
@@ -116,12 +123,14 @@ templates/base.html                    # Root base template
 ## Views
 
 ### `landing_page(request)`
+
 - **Purpose**: Renders the public landing page
 - **Authentication**: Not required
 - **Context**: `page_title`
 - **Template**: `core/landing_page.html`
 
 ### `dashboard_view(request)`
+
 - **Purpose**: Renders the authenticated user dashboard
 - **Authentication**: Required (`@login_required`)
 - **Context**: `page_title`
@@ -130,6 +139,7 @@ templates/base.html                    # Root base template
 ## Templates
 
 ### Landing Page Features
+
 - **Responsive Design**: Mobile-first approach
 - **Hero Section**: Main call-to-action
 - **Feature Cards**: Key application features
@@ -137,6 +147,7 @@ templates/base.html                    # Root base template
 - **CTA Sections**: Multiple conversion points
 
 ### Dashboard Features
+
 - **Sidebar Navigation**: Main app navigation
 - **Welcome Section**: Personalized greeting
 - **Stats Cards**: Key metrics overview
@@ -155,11 +166,13 @@ The app uses a custom medical-themed color scheme:
 ## Security
 
 ### Authentication
+
 - Dashboard requires user authentication
 - Landing page is publicly accessible
 - Uses Django's built-in authentication decorators
 
 ### CSRF Protection
+
 - All forms include CSRF tokens
 - Protected by Django's CSRF middleware
 
@@ -170,6 +183,7 @@ Test files are located in `apps/core/tests.py`. Currently contains placeholder f
 ## Future Enhancements
 
 ### Planned Features
+
 1. **Analytics Dashboard**: User activity metrics
 2. **Notification Center**: System notifications
 3. **Quick Search**: Global search functionality
@@ -177,6 +191,7 @@ Test files are located in `apps/core/tests.py`. Currently contains placeholder f
 5. **Help System**: Integrated help and tutorials
 
 ### Template Improvements
+
 1. **Progressive Web App**: PWA capabilities
 2. **Dark Mode**: Theme switching
 3. **Accessibility**: WCAG compliance
@@ -199,6 +214,7 @@ Test files are located in `apps/core/tests.py`. Currently contains placeholder f
 4. **URL Conflicts**: Verify namespace usage in templates
 
 ### Debug Mode
+
 Enable debug mode in development:
 
 ```python

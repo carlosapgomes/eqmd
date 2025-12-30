@@ -344,4 +344,3 @@ def handle_empty_results(query_text):
 3. Template rendering time
 4. Total HTTP response time
 5. Memory usage during search processing
-

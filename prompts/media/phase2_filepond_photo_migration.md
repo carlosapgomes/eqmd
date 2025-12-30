@@ -1,14 +1,17 @@
 # Phase 2: Photo and PhotoSeries Migration to django-drf-filepond
 
 ## Overview
+
 This phase migrates Photo and PhotoSeries functionality to use django-drf-filepond, maintaining the multiple file upload capability for PhotoSeries while simplifying the JavaScript architecture and eliminating webpack bundle complexity.
 
 ## Prerequisites
+
 - Phase 1 (Video migration) must be completed successfully
 - django-drf-filepond configured and working for videos
 - Server-side processing pipeline established
 
 ## Key Objectives
+
 - ✅ Migrate Photo model to use FilePond uploads
 - ✅ Migrate PhotoSeries with multiple file support
 - ✅ Simplify JavaScript bundles and eliminate complex webpack config
@@ -17,7 +20,8 @@ This phase migrates Photo and PhotoSeries functionality to use django-drf-filepo
 
 ## Step 1: Extend Storage Backend for Images
 
-### Update `apps/mediafiles/storage.py`:
+### Update `apps/mediafiles/storage.py`
+
 ```python
 class SecureImageStorage(FileSystemStorage):
     """
@@ -62,7 +66,8 @@ class SecurePhotoSeriesStorage(SecureImageStorage):
         return super()._save(name, content)
 ```
 
-### Update settings.py:
+### Update settings.py
+
 ```python
 # Add image storage configurations
 DJANGO_DRF_FILEPOND_STORAGES_BACKEND_PHOTO = 'apps.mediafiles.storage.SecureImageStorage'
@@ -76,7 +81,8 @@ MEDIA_THUMBNAIL_SIZE = (300, 300)
 
 ## Step 2: Create Image Processor
 
-### Create `apps/mediafiles/image_processor.py`:
+### Create `apps/mediafiles/image_processor.py`
+
 ```python
 import os
 from pathlib import Path
@@ -151,7 +157,8 @@ class ImageProcessor:
 
 ## Step 3: Update Photo Model and Forms
 
-### Modify `apps/mediafiles/models.py` - Photo section:
+### Modify `apps/mediafiles/models.py` - Photo section
+
 ```python
 class Photo(Event):
     """Simplified Photo model using FilePond."""
@@ -210,7 +217,8 @@ class Photo(Event):
 # Remove MediaFile model dependencies from Photo
 ```
 
-### Create new `apps/mediafiles/forms.py` - Photo form:
+### Create new `apps/mediafiles/forms.py` - Photo form
+
 ```python
 from django_drf_filepond.models import TemporaryUpload
 from django_drf_filepond.api import store_upload
@@ -281,7 +289,8 @@ class PhotoCreateForm(BaseEventForm):
 
 ## Step 4: Update PhotoSeries Model and Forms
 
-### Modify PhotoSeries model:
+### Modify PhotoSeries model
+
 ```python
 class PhotoSeries(Event):
     """PhotoSeries model using FilePond for multiple uploads."""
@@ -341,7 +350,8 @@ class PhotoSeriesFile(models.Model):
         return None
 ```
 
-### Create PhotoSeries form:
+### Create PhotoSeries form
+
 ```python
 class PhotoSeriesCreateForm(BaseEventForm):
     """PhotoSeries form with multiple file upload support."""
@@ -418,7 +428,8 @@ class PhotoSeriesCreateForm(BaseEventForm):
 
 ## Step 5: Update Templates
 
-### Create `apps/mediafiles/templates/mediafiles/photo_form.html`:
+### Create `apps/mediafiles/templates/mediafiles/photo_form.html`
+
 ```html
 {% extends "base.html" %}
 {% load static %}
@@ -523,7 +534,8 @@ if (inputElement) {
 {% endblock %}
 ```
 
-### Create `apps/mediafiles/templates/mediafiles/photoseries_create.html`:
+### Create `apps/mediafiles/templates/mediafiles/photoseries_create.html`
+
 ```html
 {% extends "base.html" %}
 {% load static %}
@@ -629,7 +641,8 @@ if (inputElement) {
 
 ## Step 6: Remove Legacy JavaScript and Webpack Complexity
 
-### Files to DELETE:
+### Files to DELETE
+
 ```
 apps/mediafiles/static/mediafiles/js/photo.js
 apps/mediafiles/static/mediafiles/js/photoseries.js
@@ -641,7 +654,8 @@ static/mediafiles-bundle.js
 static/image-processing-*-bundle.js
 ```
 
-### Simplify webpack.config.js:
+### Simplify webpack.config.js
+
 ```javascript
 module.exports = {
   entry: {
@@ -664,7 +678,8 @@ module.exports = {
 
 ## Step 7: Update Timeline Integration
 
-### Update event card templates to work without complex JS:
+### Update event card templates to work without complex JS
+
 ```html
 <!-- apps/events/templates/events/partials/event_card_photo.html -->
 <div class="event-card" data-event-type="photo">
@@ -713,13 +728,15 @@ function showPhotoModal(imageUrl, filename) {
 
 ## Step 8: Run Migrations and Tests
 
-### Create and run migrations:
+### Create and run migrations
+
 ```bash
 python manage.py makemigrations mediafiles
 python manage.py migrate
 ```
 
-### Test complete photo workflow:
+### Test complete photo workflow
+
 1. Upload single photo - verify FilePond upload works
 2. Upload photo series - verify multiple file support
 3. Test timeline display of both photo types
@@ -728,6 +745,7 @@ python manage.py migrate
 6. Verify secure file serving still works
 
 ## Success Criteria
+
 - ✅ Photo uploads work with FilePond (single file)
 - ✅ PhotoSeries uploads work with FilePond (multiple files)
 - ✅ Timeline integration displays photos correctly
@@ -740,4 +758,5 @@ python manage.py migrate
 - ✅ Secure file serving functional
 
 ## Next Phase
+
 Once Phase 2 is complete and tested, proceed to Phase 3 for final cleanup and optimization.

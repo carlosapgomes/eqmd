@@ -44,18 +44,21 @@ apps/core/permissions/
 **Simple 2-Tier System:**
 
 ### Tier 1: Doctors & Residents
+
 - Full access to all patients regardless of status
 - Can discharge patients
 - Can edit patient personal data
 - Can create and edit all types of events
 
 ### Tier 2: Others (Nurses, Physiotherapists, Students)
+
 - Full access to all patients regardless of status
 - Limited status changes (cannot discharge)
 - Cannot edit patient personal data
 - Can create and edit events (role-specific restrictions may apply)
 
 **Key Simplifications:**
+
 - **Universal Patient Access**: All medical staff can access all patients
 - **No Hospital Context**: Single hospital environment eliminates hospital-based restrictions
 - **Focus on Role Differences**: Permissions based on medical profession capabilities
@@ -67,6 +70,7 @@ The core permission utilities are located in `apps/core/permissions/utils.py` an
 ### Patient Access Control
 
 #### `can_access_patient(user, patient)`
+
 **Always returns True** - All medical staff can access all patients in the single-hospital environment.
 
 ```python
@@ -78,62 +82,78 @@ if can_access_patient(request.user, patient):
 ```
 
 #### `can_change_patient_status(user, patient, new_status)`
+
 Controls who can change patient status based on role.
 
 **Rules:**
+
 - **Doctors/Residents**: Can change any patient status (including discharge)
 - **Others**: Limited status changes (cannot discharge patients)
 
 #### `can_change_patient_personal_data(user, patient)`
+
 Controls who can modify patient personal information.
 
 **Rules:**
+
 - **Doctors/Residents**: Can change patient personal data
 - **Others**: Cannot change patient personal data
 
 #### `get_user_accessible_patients(user)`
+
 Returns all patients for all authenticated medical staff (universal access).
 
 ### Event Management
 
 #### `can_edit_event(user, event)`
+
 Time-limited event editing permissions.
 
 **Rules:**
+
 - Only event creators can edit their events
 - Editing restricted to 24 hours after event creation
 - Supports audit trail for medical record integrity
 
 #### `can_delete_event(user, event)`
+
 Controls event deletion permissions.
 
 **Rules:**
+
 - Only event creators can delete their events
 - Events can only be deleted within 24 hours of creation
 
 ### Role Checking
 
 #### `is_doctor(user)`
+
 Check if user is a doctor.
 
 #### `is_resident(user)`
+
 Check if user is a resident.
 
 #### `get_user_profession_type(user)`
+
 Get the profession type for a user.
 
 ### Convenience Functions
 
 #### `can_manage_patients(user)`
+
 Check if user can manage patients (add, change, delete).
 
 #### `can_view_patients(user)`
+
 Check if user can view patients (always True for authenticated users).
 
 #### `can_manage_events(user)`
+
 Check if user can manage events.
 
 #### `can_view_events(user)`
+
 Check if user can view events.
 
 ## Decorators
@@ -143,6 +163,7 @@ Permission decorators provide view-level access control and are located in `apps
 ### Available Decorators
 
 #### `@patient_access_required`
+
 Validates user access to the specified patient (always passes for authenticated users).
 
 ```python
@@ -156,6 +177,7 @@ def patient_detail_view(request, patient_id):
 ```
 
 #### `@doctor_required`
+
 Restricts view access to doctors only.
 
 ```python
@@ -168,6 +190,7 @@ def discharge_patient_view(request, patient_id):
 ```
 
 #### `@can_edit_event_required`
+
 Validates user can edit the specified event.
 
 ```python
@@ -180,6 +203,7 @@ def event_edit_view(request, event_id):
 ```
 
 #### `@patient_data_change_required`
+
 Validates user can change patient personal data.
 
 ```python
@@ -353,6 +377,7 @@ The simplified permission system maintains security while reducing complexity:
 ### Migration from Multi-Hospital System
 
 **Key Changes:**
+
 - Removed hospital context requirements
 - Universal patient access for all medical staff
 - Simplified permission checking (no hospital membership validation)

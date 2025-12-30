@@ -2,7 +2,9 @@
 # Outpatient Prescription System Implementation Requirements
 
 ## Overview
+
 Implement two interconnected features for the EquipeMed platform:
+
 1. A **Drug Templates** system to manage medication information
 2. An **Outpatient Prescription** feature that uses these drug templates to create printable prescriptions
 </context>
@@ -11,6 +13,7 @@ Implement two interconnected features for the EquipeMed platform:
 ## Drug Templates Feature
 
 ### Core Functionality
+
 - Create a `DrugTemplate` model to store medication information including:
   - Drug name (required)
   - Presentation (form, strength, etc.)
@@ -20,11 +23,13 @@ Implement two interconnected features for the EquipeMed platform:
   - Created/updated timestamps for audit trail
 
 ### Visibility Control
+
 - Each drug template must have a public/private status:
   - **Private**: Only visible to and usable by the creating user
   - **Public**: Available to all system users regardless of creator
 
 ### User Experience
+
 - Allow users to create personalized drug templates with their preferred:
   - Dosage instructions (text field with markdown support)
   - Administration routes (selectable from predefined options)
@@ -38,6 +43,7 @@ Implement two interconnected features for the EquipeMed platform:
 ## Outpatient Prescription Feature
 
 ### Core Functionality
+
 - Extend the existing Event system with a new `OutpatientPrescription` model (event_type=11)
 - Create a `PrescriptionItem` model to store individual drugs within a prescription
 - Allow users to:
@@ -50,6 +56,7 @@ Implement two interconnected features for the EquipeMed platform:
   - Generate printable documents using the HTML+browser print strategy (not server-side PDF)
 
 ### Prescription Templates
+
 - Create a `PrescriptionTemplate` model to store reusable prescription configurations:
   - **Private templates**: Only available to the creating user
   - **Public templates**: Available to all system users
@@ -61,6 +68,7 @@ Implement two interconnected features for the EquipeMed platform:
   - Created/updated timestamps
 
 ### Print-Ready Document Generation
+
 - Follow the established HTML+browser print strategy documented in styling.md
 - Generate professional medical prescription documents following medical document standards
 - Include all necessary prescription elements:
@@ -72,6 +80,7 @@ Implement two interconnected features for the EquipeMed platform:
 - Use the print.css stylesheet for proper document formatting
 
 ## Integration Requirements
+
 - Follow the existing EquipeMed permission system:
   - Use `@patient_access_required` for patient-specific operations
   - Use `@can_edit_event_required` for edit operations
@@ -82,6 +91,7 @@ Implement two interconnected features for the EquipeMed platform:
 - Follow established medical styling guidelines from docs/styling.md
 
 ## Data Independence Requirements
+
 - When creating an outpatient prescription for a patient or a prescription template, copy the content from drug templates rather than linking directly:
   - This ensures that if a drug template is later modified, those changes will not affect existing prescriptions
   - Store complete drug information in the PrescriptionItem model
@@ -93,12 +103,14 @@ Implement two interconnected features for the EquipeMed platform:
     - `delete_own_event_24h`: Can delete own events within 24 hours
 
 ## Technical Implementation Details
+
 - Follow the vertical slicing approach used in other event implementations
 - Create appropriate templates extending the base event templates
 - Implement proper form validation for all user inputs
 - Use Bootstrap 5.3.6 with the medical theme for consistent styling
 
 ## Success Criteria
+
 - Doctors and residents can successfully create, edit, and manage drug templates
 - Users can create outpatient prescriptions using both templates and manual drug entries
 - Prescriptions generate properly formatted, professional-looking printable documents
@@ -109,6 +121,7 @@ Implement two interconnected features for the EquipeMed platform:
 ## Acceptance Tests
 
 ### Drug Templates Feature
+
 1. **Template Creation**
    - [ ] Doctors can create new drug templates with all required fields
    - [ ] Markdown support works correctly for dosage instructions
@@ -121,6 +134,7 @@ Implement two interconnected features for the EquipeMed platform:
    - [ ] Usage statistics are correctly tracked and displayed
 
 ### Outpatient Prescription Feature
+
 1. **Core Workflow**
    - [ ] Users can create a new outpatient prescription for a patient
    - [ ] Users can select from existing prescription templates

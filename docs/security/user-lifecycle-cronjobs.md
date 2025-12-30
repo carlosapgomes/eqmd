@@ -160,6 +160,7 @@ echo "Lifecycle monthly maintenance completed - $(date)"
 ```
 
 Make the script executable:
+
 ```bash
 sudo chmod +x /app/scripts/lifecycle_monthly_cleanup.sh
 sudo chown www-data:www-data /app/scripts/lifecycle_monthly_cleanup.sh
@@ -289,6 +290,7 @@ echo "=== End Status Report ==="
 ```
 
 Run status dashboard:
+
 ```bash
 sudo chmod +x /app/scripts/lifecycle_status.sh
 /app/scripts/lifecycle_status.sh
@@ -301,17 +303,20 @@ sudo chmod +x /app/scripts/lifecycle_status.sh
 #### Issue: Cronjobs not executing
 
 **Check cron daemon status:**
+
 ```bash
 sudo systemctl status cron
 sudo systemctl restart cron
 ```
 
 **Check cron logs:**
+
 ```bash
 sudo tail -f /var/log/cron | grep lifecycle
 ```
 
 **Verify file permissions:**
+
 ```bash
 ls -la /etc/cron.d/equipemd-lifecycle
 # Should be owned by root with 644 permissions
@@ -320,12 +325,14 @@ ls -la /etc/cron.d/equipemd-lifecycle
 #### Issue: Commands failing in cron but working manually
 
 **Check environment variables:**
+
 ```bash
 # Add to cronjob for debugging
 * * * * * www-data cd /app && env > /tmp/cron_env.log 2>&1
 ```
 
 **Check PATH issues:**
+
 ```bash
 # Use full paths in cronjob
 0 6 * * * www-data cd /app && /usr/bin/uv run /usr/bin/python manage.py check_user_expiration
@@ -334,6 +341,7 @@ ls -la /etc/cron.d/equipemd-lifecycle
 #### Issue: Email notifications not sending
 
 **Test email in cron environment:**
+
 ```bash
 # Test email with same environment as cron
 sudo -u www-data bash -c "cd /app && uv run python manage.py shell -c \"
@@ -345,6 +353,7 @@ send_mail('Test', 'Cron test', 'noreply@equipemd.com', ['admin@yourorg.com'])
 #### Issue: Log files growing too large
 
 **Implement log rotation:**
+
 ```bash
 sudo nano /etc/logrotate.d/equipemd-lifecycle
 ```
@@ -482,6 +491,7 @@ EMAIL_HOST_PASSWORD = 'secure_password_from_env'
 ## Support
 
 For cronjob issues:
+
 1. Check cronjob logs: `/app/logs/lifecycle/`
 2. Verify cron daemon: `sudo systemctl status cron`
 3. Test commands manually as www-data user

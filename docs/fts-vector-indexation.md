@@ -388,6 +388,7 @@ The system automatically enhances simple queries for better performance:
 Users can specify advanced operators for precise control:
 
 ##### Exact Phrases
+
 ```
 "diabetes mellitus"        # Finds exact phrase
 "insuficiência cardíaca"   # Exact cardiac insufficiency phrase
@@ -395,6 +396,7 @@ Users can specify advanced operators for precise control:
 ```
 
 ##### Boolean Logic
+
 ```
 diabetes & hipertensão     # Both terms required (AND)
 diabetes | hipertensão     # Either term acceptable (OR)
@@ -402,6 +404,7 @@ diabetes & !gestacional    # Diabetes but not gestational (NOT)
 ```
 
 ##### Prefix Matching  
+
 ```
 medicaç*                   # Finds medicação, medicamentos, medicamentosa
 hiperten*                  # Finds hipertensão, hipertensivo, hipertensiva
@@ -409,6 +412,7 @@ cardio*                    # Finds cardiologia, cardiomegalia, cardiovascular
 ```
 
 ##### Complex Combinations
+
 ```
 diabetes & (medicaç* | insulin*)           # Diabetes with any medication
 "dor torácica" & !(muscular | costal)      # Chest pain excluding muscular/costal
@@ -418,6 +422,7 @@ cardio* & (insuficien* | arritmia)         # Cardiac conditions with specific te
 ### Search Examples by Medical Specialty
 
 #### Cardiology
+
 ```
 "insuficiência cardíaca"                    # Exact heart failure phrase
 cardio* & (sopro | arritmia | fibrilação)   # Cardiac findings
@@ -425,6 +430,7 @@ cardio* & (sopro | arritmia | fibrilação)   # Cardiac findings
 ```
 
 #### Endocrinology
+
 ```
 diabetes & (tipo1 | tipo2)                 # Diabetes classification
 glicemi* & (jejum | pós-prandial)          # Glycemic measurements
@@ -432,6 +438,7 @@ glicemi* & (jejum | pós-prandial)          # Glycemic measurements
 ```
 
 #### Gastroenterology
+
 ```
 "dor abdominal" & (aguda | crônica)        # Abdominal pain classification
 gastro* & (sangramento | hemorragia)       # GI bleeding terms
@@ -439,6 +446,7 @@ gastro* & (sangramento | hemorragia)       # GI bleeding terms
 ```
 
 #### Pneumology
+
 ```
 "dispneia aos esforços"                    # Exact dyspnea phrase
 pneumo* & (derrame | consolidação)         # Lung findings
@@ -457,6 +465,7 @@ pneumo* & (derrame | consolidação)         # Lung findings
 #### Search Strategy Recommendations
 
 **For Literature Reviews:**
+
 ```
 # Broad initial search
 diabetes*
@@ -469,6 +478,7 @@ diabetes & (complicaç* | nefropatia | retinopatia)
 ```
 
 **For Case Finding:**
+
 ```
 # Symptom-based
 "dor torácica" & (aguda | súbita)
@@ -483,6 +493,7 @@ diabetes & (complicaç* | nefropatia | retinopatia)
 ### User Interface Integration
 
 #### Form Help Text
+
 The search form automatically shows available operators:
 
 > "Digite pelo menos 3 caracteres. Use: "frase exata", diabetes & hipertensão, medicaç* para busca avançada"
@@ -490,10 +501,12 @@ The search form automatically shows available operators:
 #### Search Tips for Users
 
 **Beginner Level:**
+
 - Type medical terms normally: `diabetes hipertensão`
 - Use quotes for exact phrases: `"dor abdominal"`
 
 **Advanced Level:**
+
 - Combine with AND: `diabetes & nefropatia`
 - Use wildcards: `cardio* medicaç*`
 - Exclude terms: `pneumonia & !viral`
@@ -524,6 +537,7 @@ results = perform_fulltext_search_queryset(
 #### Excel Export Enhancement
 
 Search results exported to Excel maintain:
+
 - Original search query in filename
 - Relevance scores for ranking
 - Match counts per patient
@@ -534,6 +548,7 @@ Search results exported to Excel maintain:
 #### Common Query Errors
 
 **Syntax Error: Invalid tsquery**
+
 ```
 # Problem: Unmatched quotes
 "diabetes mellitus
@@ -543,6 +558,7 @@ Search results exported to Excel maintain:
 ```
 
 **No Results Found**
+
 ```
 # Problem: Too restrictive
 diabetes & hipertensão & nefropatia & retinopatia
@@ -552,6 +568,7 @@ diabetes & (nefropatia | retinopatia)
 ```
 
 **Too Many Results**
+
 ```
 # Problem: Too broad
 dor
@@ -563,16 +580,17 @@ dor
 #### Performance Optimization
 
 **Query Performance Guidelines:**
+
 - Shorter queries execute faster
 - Exact phrases (`"termo"`) are faster than wildcards (`termo*`)
 - Boolean operators add minimal overhead
 - Complex nested queries may be slower
 
 **Best Practices:**
+
 1. Start with broad terms, then refine
 2. Use exact phrases for established medical terms
 3. Combine boolean operators strategically
 4. Monitor search performance in production
 
 The enhanced full-text search system provides powerful tools for medical research while maintaining simplicity for everyday use.
-

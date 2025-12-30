@@ -13,6 +13,7 @@ This plan implements a Ward-only model with flexible bed strings to match real h
 ### Phase 1: Ward Model Creation
 
 #### 1.1 Create Ward Model
+
 **File**: `apps/patients/models.py`
 
 Add the Ward model after the existing Tag model:
@@ -99,6 +100,7 @@ class Ward(models.Model):
 ```
 
 #### 1.2 Update Patient Model
+
 **File**: `apps/patients/models.py`
 
 Add ward field to Patient model (after the `bed` field):
@@ -117,6 +119,7 @@ ward = models.ForeignKey(
 ```
 
 #### 1.3 Update PatientAdmission Model
+
 **File**: `apps/patients/models.py`
 
 Add ward field to PatientAdmission model (after the `final_bed` field):
@@ -139,6 +142,7 @@ ward = models.ForeignKey(
 Add ward-related methods to existing models:
 
 **Patient model updates**:
+
 ```python
 # Add to Patient model methods section
 
@@ -157,6 +161,7 @@ def get_ward_display(self):
 ```
 
 **PatientAdmission model updates**:
+
 ```python
 # Update admit_patient method in Patient model to include ward
 def admit_patient(self, admission_datetime, admission_type, user, **kwargs):
@@ -184,6 +189,7 @@ def admit_patient(self, admission_datetime, admission_type, user, **kwargs):
 ### Phase 2: Admin Interface Updates
 
 #### 2.1 Update Admin Configuration
+
 **File**: `apps/patients/admin.py`
 
 Add Ward admin and update existing admin classes:
@@ -306,6 +312,7 @@ class PatientAdmissionAdmin(admin.ModelAdmin):
 ### Phase 3: Forms and Views Updates
 
 #### 3.1 Update Forms
+
 **File**: `apps/patients/forms.py`
 
 Update existing forms to include ward selection:
@@ -366,6 +373,7 @@ class WardForm(forms.ModelForm):
 ```
 
 #### 3.2 Update Views
+
 **File**: `apps/patients/views.py`
 
 Add ward context to existing views and create new ward management views:
@@ -432,17 +440,21 @@ class WardUpdateView(LoginRequiredMixin, UpdateView):
 ### Phase 4: Templates Updates
 
 #### 4.1 Update Patient Templates
+
 **Files**: Update existing patient templates to show ward information
 
 Add ward display to patient list and detail templates:
+
 - `apps/patients/templates/patients/patient_list.html`: Add ward column
 - `apps/patients/templates/patients/patient_detail.html`: Add ward section
 - `apps/patients/templates/patients/patient_form.html`: Add ward field
 
 #### 4.2 Create Ward Templates
+
 **Files**: Create new ward management templates
 
 Create new templates:
+
 - `apps/patients/templates/patients/ward_list.html`: Ward listing
 - `apps/patients/templates/patients/ward_detail.html`: Ward details with patient list
 - `apps/patients/templates/patients/ward_form.html`: Ward creation/editing
@@ -450,6 +462,7 @@ Create new templates:
 ### Phase 5: URL Configuration
 
 #### 5.1 Update URLs
+
 **File**: `apps/patients/urls.py`
 
 Add ward management URLs:
@@ -469,6 +482,7 @@ urlpatterns = [
 ### Phase 6: Management Commands
 
 #### 6.1 Create Sample Wards Command
+
 **File**: `apps/patients/management/commands/create_sample_wards.py`
 
 ```python
@@ -571,6 +585,7 @@ class Command(BaseCommand):
 ```
 
 #### 6.2 Update populate_sample_data Command
+
 **File**: `apps/core/management/commands/populate_sample_data.py`
 
 Add ward creation to the existing sample data command:
@@ -614,6 +629,7 @@ def handle(self, *args, **options):
 ### Phase 7: Documentation Updates
 
 #### 7.1 Update Database Reset Documentation
+
 **File**: `docs/database-reset.md`
 
 Update Step 7 to include ward creation:
@@ -636,6 +652,7 @@ uv run python manage.py populate_sample_data
 ```
 
 #### 7.2 Update Reset Script
+
 **File**: `reset_database.sh`
 
 Update the initialize_data function:
@@ -686,6 +703,7 @@ display_completion() {
 ### Phase 8: Template Tags and Context Processors
 
 #### 8.1 Create Ward Template Tags
+
 **File**: `apps/patients/templatetags/ward_tags.py`
 
 ```python
@@ -711,6 +729,7 @@ def get_active_wards():
 ```
 
 #### 8.2 Update Context Processors
+
 **File**: `apps/patients/context_processors.py`
 
 Add ward statistics to existing context processors:
@@ -758,6 +777,7 @@ TEMPLATES = [
 ### Phase 9: Testing
 
 #### 9.1 Create Ward Tests
+
 **File**: `apps/patients/tests/test_ward_models.py`
 
 ```python
@@ -820,6 +840,7 @@ class WardModelTest(TestCase):
 Since this is a greenfield project with database wipe:
 
 #### 10.1 Update CLAUDE.md
+
 **File**: `CLAUDE.md`
 
 Add ward management to the essential commands section:

@@ -11,6 +11,7 @@
 ## 📱 Applications
 
 ### Comprehensive App Guides
+
 - **[Patients](apps/patients.md)** - Complete patient management guide
 - **[Events](apps/events.md)** - Timeline architecture and event system  
 - **[Daily Notes](apps/dailynotes.md)** - Medical evolution notes system
@@ -18,6 +19,7 @@
 - **[PDF Forms](apps/pdf-forms.md)** - Hospital forms with coordinate positioning
 
 ### Technical Reference
+
 - **[MediaFiles Technical](mediafiles/)** - Database schemas and file storage
 - **[Patients Workflows](patients/)** - Specific workflow documentation
 - **[Sample Content](sample_content/)** - Template content management

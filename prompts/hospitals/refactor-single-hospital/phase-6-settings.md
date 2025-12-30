@@ -17,6 +17,7 @@
 ### 1. Update Django Settings (`eqmd/settings.py`)
 
 **Remove hospitals app from INSTALLED_APPS:**
+
 ```python
 # Before
 INSTALLED_APPS = [
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
 ```
 
 **Remove hospital middleware:**
+
 ```python
 # Before
 MIDDLEWARE = [
@@ -58,6 +60,7 @@ MIDDLEWARE = [
 ```
 
 **Remove hospital-related template context processors:**
+
 ```python
 # Before
 TEMPLATES = [
@@ -90,6 +93,7 @@ TEMPLATES = [
 ### 2. Update Main URL Configuration (`eqmd/urls.py`)
 
 **Remove hospital URL includes:**
+
 ```python
 # Before
 urlpatterns = [
@@ -112,12 +116,14 @@ urlpatterns = [
 ### 3. Remove Hospital-Related Configuration
 
 **Remove hospital-specific settings:**
+
 - [ ] Remove any hospital-related cache settings
 - [ ] Remove hospital context session settings
 - [ ] Remove hospital-related logging configuration
 - [ ] Remove hospital permission settings
 
 **Check for and remove:**
+
 ```python
 # Remove settings like these if they exist
 HOSPITAL_CONTEXT_SESSION_KEY = 'current_hospital_id'
@@ -128,6 +134,7 @@ HOSPITAL_PERMISSION_CACHE_TIMEOUT = 600
 ### 4. Update Authentication Settings
 
 **Simplify login redirects (no hospital selection):**
+
 ```python
 # Before (redirect to hospital selection)
 LOGIN_REDIRECT_URL = '/hospitals/select/'
@@ -139,18 +146,21 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 ### 5. Update Management Commands
 
 **Delete hospital-specific management commands:**
+
 - [ ] Delete `apps/hospitals/management/` (entire directory with hospitals app)
 - [ ] Delete `apps/core/management/commands/assign_users_to_hospitals.py` (assigns users to hospitals)
 
 **Update hospital-dependent management commands:**
 
 **`setup_groups.py` updates needed:**
+
 - [ ] Remove `_get_hospital_permissions()` and `_get_hospital_view_permissions()` methods
 - [ ] Remove hospital permission calls from group creation methods (lines 93, 110, 126, 142)
 - [ ] Remove PatientHospitalRecord references from patient permission methods
 - [ ] Update to work with simplified permission model
 
 **`populate_sample_data.py` updates needed:**
+
 - [ ] Remove hospital creation logic (`create_hospitals()` method)
 - [ ] Remove hospital imports (`from apps.hospitals.models import Hospital, Ward`)
 - [ ] Remove user-hospital assignments in `create_users()` method
@@ -159,6 +169,7 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 - [ ] Update to work with environment-based hospital configuration
 
 **Keep as-is (no hospital dependencies):**
+
 - [ ] `apps/core/management/commands/permission_audit.py` - Works with profession-based groups
 - [ ] `apps/core/management/commands/permission_performance.py` - Tests permission functions
 - [ ] `apps/core/management/commands/user_permissions.py` - Manages user-group assignments
@@ -166,6 +177,7 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 ### 6. Update Database Configuration
 
 **Remove hospital-related database indexes (if any custom ones):**
+
 - [ ] Check for custom database indexes related to hospitals
 - [ ] Remove hospital-related database constraints
 - [ ] Update database optimization settings
@@ -173,6 +185,7 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 ### 7. Clean Up Static Files Configuration
 
 **Remove hospital-related static file configurations:**
+
 - [ ] Remove hospital-specific CSS/JS from static files
 - [ ] Remove hospital-related webpack configurations
 - [ ] Update static file collection
@@ -180,6 +193,7 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 ### 8. Update Logging Configuration
 
 **Remove hospital context from logging:**
+
 ```python
 # Before (hospital context in logs)
 LOGGING = {
@@ -203,6 +217,7 @@ LOGGING = {
 ### 9. Update Cache Configuration
 
 **Simplify cache keys (no hospital context):**
+
 ```python
 # Remove hospital-aware cache configurations
 # Simplify cache key patterns
@@ -211,6 +226,7 @@ LOGGING = {
 ### 10. Update Security Settings
 
 **Remove hospital-related security settings:**
+
 - [ ] Remove hospital context from CSRF settings
 - [ ] Remove hospital-related CORS settings (if any)
 - [ ] Simplify session security
@@ -218,6 +234,7 @@ LOGGING = {
 ### 11. Hospital Configuration via Environment Variables
 
 **Add single hospital configuration (.env files):**
+
 ```bash
 # Hospital Information
 HOSPITAL_NAME="Your Hospital Name"
@@ -233,6 +250,7 @@ HOSPITAL_LOGO_PATH="static/images/hospital-logo.png"
 ```
 
 **Update settings.py to include hospital config:**
+
 ```python
 # Hospital Configuration
 HOSPITAL_CONFIG = {
@@ -249,25 +267,29 @@ HOSPITAL_CONFIG = {
 ### 12. Docker Configuration (if applicable)
 
 **Update Docker settings:**
+
 - [ ] Remove hospital-related environment variables from docker-compose
 - [ ] Update container configuration
 - [ ] Remove hospital data volumes
 
 ## Files to Modify
 
-### Configuration Files:
+### Configuration Files
+
 - [ ] `eqmd/settings.py` - Major cleanup
 - [ ] `eqmd/urls.py` - Remove hospital URLs
 - [ ] `.env` / `.env.example` - Remove hospital variables
 - [ ] `docker-compose.yml` (if applicable) - Remove hospital config
 
-### Files to Delete:
+### Files to Delete
+
 - [ ] `apps/hospitals/urls.py`
 - [ ] `apps/hospitals/management/` (entire directory)
 - [ ] `apps/core/management/commands/assign_users_to_hospitals.py`
 - [ ] Any hospital-specific configuration files
 
-### Management Commands Modified:
+### Management Commands Modified
+
 - [ ] **Deleted:** `assign_users_to_hospitals.py` (hospital-specific functionality)
 - [ ] **Updated:** `setup_groups.py` (remove hospital permissions)
 - [ ] **Updated:** `populate_sample_data.py` (remove hospital creation/assignment)
@@ -276,6 +298,7 @@ HOSPITAL_CONFIG = {
 ## Validation Steps
 
 **Test configuration changes:**
+
 ```bash
 # Check Django configuration
 uv run python manage.py check
@@ -291,6 +314,7 @@ uv run python manage.py help
 ```
 
 ### 1. Verify Django Check Passes
+
 ```bash
 uv run python manage.py check
 # Should show no errors
@@ -300,24 +324,28 @@ uv run python manage.py check --deploy
 ```
 
 ### 2. Test URL Resolution
+
 ```bash
 uv run python manage.py show_urls
 # Should not show any hospital URLs
 ```
 
 ### 3. Test Static Files
+
 ```bash
 uv run python manage.py collectstatic --dry-run
 # Should work without hospital-related files
 ```
 
 ### 4. Test Development Server
+
 ```bash
 uv run python manage.py runserver
 # Should start without errors
 ```
 
 ### 5. Test Database Connection
+
 ```bash
 uv run python manage.py migrate --dry-run
 # Should show no pending migrations
@@ -326,6 +354,7 @@ uv run python manage.py migrate --dry-run
 ## Validation Checklist
 
 Before proceeding to Phase 7:
+
 - [ ] `uv run python manage.py check` passes
 - [ ] Development server starts successfully
 - [ ] No hospital URLs in URL patterns
@@ -338,6 +367,7 @@ Before proceeding to Phase 7:
 ## Configuration Simplifications
 
 **Benefits of simplified configuration:**
+
 - Faster Django startup (less apps/middleware)
 - Simpler URL routing
 - Reduced memory usage
@@ -347,6 +377,7 @@ Before proceeding to Phase 7:
 ## Security Review
 
 **Ensure security is maintained:**
+
 - [ ] Authentication still works correctly
 - [ ] Permission system functions properly
 - [ ] Session management works
@@ -356,6 +387,7 @@ Before proceeding to Phase 7:
 ## Performance Improvements
 
 **Expected performance gains:**
+
 - Faster request processing (no hospital middleware)
 - Faster URL resolution (fewer patterns)
 - Reduced memory usage (fewer apps)

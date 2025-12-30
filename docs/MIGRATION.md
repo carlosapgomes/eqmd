@@ -34,6 +34,7 @@ cp .env.example .env
 ```
 
 Required environment variables:
+
 ```bash
 HOSPITAL_NAME="Your Hospital Name"
 HOSPITAL_ADDRESS="123 Medical Center Drive, City, State 12345"
@@ -82,12 +83,14 @@ uv run python manage.py runserver
 ### Permission System Changes
 
 **Before (Complex Hospital + Role):**
+
 - Hospital context required for patient access
 - Complex multi-hospital permission logic
 - Status-dependent hospital assignment rules
 - Hospital middleware and context processors
 
 **After (Simple Role-Based):**
+
 - Universal patient access for all medical staff
 - Simple role-based permissions for actions
 - No hospital context or assignment complexity
@@ -106,6 +109,7 @@ uv run python manage.py runserver
 ### Configuration Changes
 
 **Hospital Configuration** - Now environment-based:
+
 ```python
 # In settings.py
 HOSPITAL_CONFIG = {
@@ -120,6 +124,7 @@ HOSPITAL_CONFIG = {
 ```
 
 **Template Changes:**
+
 - Removed hospital selection UI
 - Added hospital header with configuration
 - Simplified patient forms and lists
@@ -169,11 +174,13 @@ uv run python manage.py create_sample_content     # Create sample medical templa
 If you have an existing multi-hospital installation:
 
 ### Option 1: Fresh Start (Recommended)
+
 - Export critical data (patient lists, user accounts)
 - Follow fresh installation steps above
 - Manually recreate essential data
 
 ### Option 2: Stay on Multi-Hospital
+
 ```bash
 git checkout prescriptions  # Use original multi-hospital branch
 ```
@@ -181,12 +188,14 @@ git checkout prescriptions  # Use original multi-hospital branch
 ### Data Migration Considerations
 
 **Cannot migrate automatically:**
+
 - Hospital relationships and assignments
 - PatientHospitalRecord history
 - Complex permission configurations
 - Hospital-specific settings
 
 **Can export/import manually:**
+
 - Patient basic information (name, ID, status)
 - User accounts (without hospital assignments)
 - Medical event content (without hospital context)
@@ -197,16 +206,19 @@ git checkout prescriptions  # Use original multi-hospital branch
 ### Common Issues
 
 **Permission Errors:**
+
 - Ensure user is assigned to correct professional group
 - Run `uv run python manage.py setup_groups` to create groups
 - Check that permission functions don't reference hospital context
 
 **Template Errors:**
+
 - Remove any hospital context template tags
 - Use new hospital configuration template tags
 - Ensure all content is within proper template blocks
 
 **Database Errors:**
+
 - This architecture requires fresh migrations
 - Cannot upgrade existing multi-hospital database
 - Use fresh installation approach
@@ -221,21 +233,25 @@ git checkout prescriptions  # Use original multi-hospital branch
 ## Benefits Summary
 
 ### Performance Improvements
+
 - **Faster queries** - No complex hospital joins
 - **Simpler caching** - Role-based cache keys only
 - **Reduced overhead** - Fewer database relationships
 
 ### Development Benefits
+
 - **Faster feature development** - No hospital context complexity
 - **Easier testing** - Simplified permission scenarios
 - **Better code maintainability** - Cleaner, focused codebase
 
 ### Deployment Benefits
+
 - **Simpler configuration** - Environment variables only
 - **Easier scaling** - No multi-hospital complexity
 - **Better security** - Reduced permission attack surface
 
 ### User Experience Benefits
+
 - **Cleaner interface** - No hospital selection complexity
 - **Faster page loads** - Simpler queries and templates
 - **Consistent permissions** - Clear role-based access rules
@@ -243,6 +259,7 @@ git checkout prescriptions  # Use original multi-hospital branch
 ## Support
 
 For additional assistance with migration or setup:
+
 - Review the comprehensive documentation in `CLAUDE.md`
 - Check the refactor documentation in `refactor-single-hospital/`
 - Create an issue in the project repository

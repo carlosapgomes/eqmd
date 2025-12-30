@@ -48,14 +48,14 @@ The command generates a CSV file where **each row represents a single daily note
 
 ### Columns
 
--   `patient_id`: The unique, anonymized UUID for the patient.
--   `patient_record_number`: The patient's official record number in the hospital EHR system.
--   `patient_gender`: The gender of the patient ('M', 'F', 'O', 'N').
--   `patient_age_at_note`: The patient's age in years at the time the note was created.
--   `patient_status`: The patient's status at the time of the note (e.g., "Inpatient", "Discharged", "Deceased").
--   `note_id`: The unique UUID for the daily note.
--   `note_event_datetime`: The full date and time the note was recorded (in ISO 8601 format).
--   `note_content`: The complete text content of the daily note.
+- `patient_id`: The unique, anonymized UUID for the patient.
+- `patient_record_number`: The patient's official record number in the hospital EHR system.
+- `patient_gender`: The gender of the patient ('M', 'F', 'O', 'N').
+- `patient_age_at_note`: The patient's age in years at the time the note was created.
+- `patient_status`: The patient's status at the time of the note (e.g., "Inpatient", "Discharged", "Deceased").
+- `note_id`: The unique UUID for the daily note.
+- `note_event_datetime`: The full date and time the note was recorded (in ISO 8601 format).
+- `note_content`: The complete text content of the daily note.
 
 ### Sorting
 
@@ -69,9 +69,9 @@ The export includes the `patient_record_number` to allow for traceability back t
 
 The script still **explicitly excludes** direct PII such as:
 
--   Names
--   Addresses
--   Phone numbers
--   Healthcard numbers
--   Fiscal or ID numbers
--   Exact birth dates (only age at the time of the note is included)
+- Names
+- Addresses
+- Phone numbers
+- Healthcard numbers
+- Fiscal or ID numbers
+- Exact birth dates (only age at the time of the note is included)

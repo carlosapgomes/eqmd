@@ -87,6 +87,7 @@ media/videos/
 ```
 
 **Phase 1 Changes:**
+
 - All videos automatically converted to H.264/MP4 format
 - FilePond manages temporary storage and conversion process
 - Thumbnail generation pending future implementation
@@ -251,6 +252,7 @@ def calculate_file_hash(file_obj):
 ### Deduplication Strategy
 
 **For Photos and PhotoSeries (MediaFile-based):**
+
 1. Calculate hash on upload
 2. Check if hash exists in database
 3. If exists, link to existing file instead of storing duplicate
@@ -258,6 +260,7 @@ def calculate_file_hash(file_obj):
 5. Delete file only when no references remain
 
 **For Videos (FilePond-based):**
+
 - File deduplication handled by FilePond system
 - VideoClip model stores metadata directly (no MediaFile relationship)
 - Each video conversion creates unique H.264/MP4 output

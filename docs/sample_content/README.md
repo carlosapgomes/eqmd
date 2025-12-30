@@ -198,4 +198,3 @@ Potential areas for expansion:
 - Import/export functionality
 - Template usage analytics
 - Integration with event creation forms for auto-population
-

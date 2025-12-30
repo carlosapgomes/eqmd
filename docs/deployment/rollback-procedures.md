@@ -11,6 +11,7 @@ This guide covers rollback procedures for the registry-based deployment system, 
 ### Backup System
 
 Every upgrade automatically creates:
+
 - **Docker image backup** with timestamp tag
 - **Environment snapshot** of current deployment
 - **Static files backup** in named volume
@@ -355,18 +356,21 @@ echo "🎉 Rollback verification completed successfully"
 ## Rollback Checklist
 
 ### Before Rollback
+
 - [ ] **Identify the issue** - Document what went wrong
 - [ ] **Check recent backups** - Verify backup availability
 - [ ] **Notify stakeholders** - Inform about planned rollback
 - [ ] **Prepare monitoring** - Set up monitoring for rollback verification
 
 ### During Rollback
+
 - [ ] **Stop current services** - Cleanly shut down current deployment
 - [ ] **Restore from backup** - Apply appropriate rollback method
 - [ ] **Verify restoration** - Run health checks and verification
 - [ ] **Monitor logs** - Watch for errors during rollback
 
 ### After Rollback
+
 - [ ] **Confirm functionality** - Test critical application features
 - [ ] **Update monitoring** - Ensure monitoring reflects rollback
 - [ ] **Document incident** - Record what happened and why

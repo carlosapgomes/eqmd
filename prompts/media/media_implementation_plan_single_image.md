@@ -13,6 +13,7 @@ This plan implements the Photo model for single image uploads in the EquipeMed m
 **Action**: Implement the base MediaFile model for file storage and metadata
 
 **Model specifications**:
+
 - UUID primary key
 - FileField with secure UUID-based upload paths (`photos/YYYY/MM/originals/uuid.ext`)
 - Metadata fields: original_filename, secure_filename, file_size, mime_type, width, height
@@ -24,6 +25,7 @@ This plan implements the Photo model for single image uploads in the EquipeMed m
 - Secure file naming utilities
 
 **Key methods to implement**:
+
 - `save()` - Override to generate secure filename, thumbnails, and extract metadata
 - `clean()` - Validate file type, size, and security constraints
 - `get_thumbnail_url()` - Return thumbnail URL with fallback
@@ -40,12 +42,14 @@ This plan implements the Photo model for single image uploads in the EquipeMed m
 **Action**: Implement Photo model extending Event
 
 **Model specifications**:
+
 - Inherits from Event model
 - OneToOneField to MediaFile
 - Auto-set event_type to PHOTO_EVENT in save()
 - Custom manager for photo-specific queries
 
 **Key methods to implement**:
+
 - `save()` - Set event_type and call super()
 - `get_absolute_url()` - Return detail view URL
 - `get_edit_url()` - Return edit view URL
@@ -61,6 +65,7 @@ uv run python manage.py makemigrations mediafiles
 ```
 
 **Migration review checklist**:
+
 - MediaFile model creation with proper field types
 - Photo model creation with Event inheritance
 - Foreign key relationships properly defined
@@ -73,6 +78,7 @@ uv run python manage.py makemigrations mediafiles
 **Action**: Create comprehensive admin interface for Photo management
 
 **PhotoAdmin specifications**:
+
 - List display: thumbnail preview, description, patient, event_datetime, created_by
 - List filters: event_datetime, created_by, patient__current_hospital
 - Search fields: description, patient__name, original_filename
@@ -82,6 +88,7 @@ uv run python manage.py makemigrations mediafiles
 - Custom queryset with select_related optimization
 
 **MediaFileAdmin specifications**:
+
 - List display: thumbnail, original_filename, file_size, mime_type, created_at
 - List filters: mime_type, created_at
 - Search fields: original_filename
@@ -95,6 +102,7 @@ uv run python manage.py makemigrations mediafiles
 **Action**: Implement security features in MediaFile model
 
 **Security features to implement**:
+
 - UUID-based secure filename generation
 - File extension validation
 - MIME type validation
@@ -104,6 +112,7 @@ uv run python manage.py makemigrations mediafiles
 - Original filename sanitization
 
 **Security methods**:
+
 ```python
 def get_secure_upload_path(instance, filename):
     """Generate secure upload path with UUID filename"""
@@ -122,6 +131,7 @@ def sanitize_filename(filename):
 **Action**: Implement comprehensive model testing
 
 **Test cases for MediaFile**:
+
 - File upload and metadata extraction
 - Thumbnail generation
 - File validation (type, size, security)
@@ -132,6 +142,7 @@ def sanitize_filename(filename):
 - Deduplication functionality
 
 **Test cases for Photo**:
+
 - Event type auto-assignment
 - Media file relationship
 - Validation rules
@@ -140,6 +151,7 @@ def sanitize_filename(filename):
 - Security constraints
 
 **Security test cases**:
+
 - Path traversal attack prevention
 - File extension validation
 - MIME type spoofing detection
@@ -147,6 +159,7 @@ def sanitize_filename(filename):
 - Filename sanitization
 
 **Test utilities**:
+
 - Factory classes using factory_boy
 - Sample image file creation
 - Malicious file samples for security testing
@@ -157,6 +170,7 @@ def sanitize_filename(filename):
 ### Security Requirements
 
 **File Security**:
+
 - UUID-based filenames prevent enumeration attacks
 - Original filenames stored in database only
 - File extension validation against whitelist
@@ -165,6 +179,7 @@ def sanitize_filename(filename):
 - Path traversal prevention
 
 **Access Security**:
+
 - Permission-based file access
 - Patient context validation
 - Secure file serving through Django views
@@ -172,6 +187,7 @@ def sanitize_filename(filename):
 - Audit logging for file access
 
 **Data Security**:
+
 - File hash calculation for integrity
 - Deduplication prevents storage waste
 - Secure file deletion with cleanup
@@ -180,6 +196,7 @@ def sanitize_filename(filename):
 ### Security Implementation Details
 
 **Secure Upload Path Generation**:
+
 ```python
 def get_secure_photo_upload_path(instance, filename):
     ext = Path(filename).suffix.lower()
@@ -191,6 +208,7 @@ def get_secure_photo_upload_path(instance, filename):
 ```
 
 **File Validation**:
+
 ```python
 def validate_photo_file(file):
     # Size validation
@@ -217,6 +235,7 @@ def validate_photo_file(file):
 **Action**: Implement forms for photo upload and editing
 
 **PhotoCreateForm specifications**:
+
 - Fields: description, event_datetime, image (FileField)
 - Custom image field with validation
 - File size and type validation
@@ -224,11 +243,13 @@ def validate_photo_file(file):
 - Bootstrap styling with proper classes
 
 **PhotoUpdateForm specifications**:
+
 - Fields: description, event_datetime (no image change)
 - Inherits validation from PhotoCreateForm
 - Displays current image thumbnail
 
 **Form validation methods**:
+
 - `clean_image()` - Validate file type, size, format, and security constraints
 - `clean_event_datetime()` - Ensure datetime is not in future
 - `validate_file_security()` - Check for malicious content and path traversal
@@ -241,6 +262,7 @@ def validate_photo_file(file):
 **Action**: Implement CRUD views for photo management
 
 **PhotoCreateView specifications**:
+
 - Extends CreateView
 - Permission required: 'events.add_event'
 - Hospital context validation
@@ -249,6 +271,7 @@ def validate_photo_file(file):
 - Form processing with file handling
 
 **PhotoDetailView specifications**:
+
 - Extends DetailView
 - Permission check with patient access validation
 - Full-size image display
@@ -256,12 +279,14 @@ def validate_photo_file(file):
 - Edit/delete action buttons (if permitted)
 
 **PhotoUpdateView specifications**:
+
 - Extends UpdateView
 - Permission check: can_edit_event (24-hour rule)
 - Form with current image preview
 - Success redirect to detail view
 
 **PhotoDeleteView specifications**:
+
 - Extends DeleteView
 - Permission check: can_delete_event (24-hour rule)
 - Confirmation page with image preview
@@ -275,6 +300,7 @@ def validate_photo_file(file):
 **Action**: Define URL patterns for photo views
 
 **URL patterns**:
+
 - `photos/create/<uuid:patient_id>/` - PhotoCreateView
 - `photos/<uuid:pk>/` - PhotoDetailView
 - `photos/<uuid:pk>/edit/` - PhotoUpdateView
@@ -282,6 +308,7 @@ def validate_photo_file(file):
 - `photos/<uuid:pk>/download/` - File download view
 
 **URL naming convention**:
+
 - `photo_create`, `photo_detail`, `photo_update`, `photo_delete`, `photo_download`
 
 ### Step 2.4: Implement File Serving Views
@@ -291,6 +318,7 @@ def validate_photo_file(file):
 **Action**: Create secure file serving views
 
 **PhotoDownloadView specifications**:
+
 - Permission-protected file serving
 - Patient access validation
 - Secure file path resolution (no direct file system access)
@@ -307,6 +335,7 @@ def validate_photo_file(file):
 **Action**: Implement comprehensive view testing
 
 **Test cases**:
+
 - Photo creation with valid/invalid data
 - Permission-based access control
 - File upload handling
@@ -323,6 +352,7 @@ def validate_photo_file(file):
 **Action**: Create base template for mediafiles views
 
 **Template specifications**:
+
 - Extends main site base template
 - Media-specific CSS and JavaScript includes
 - Breadcrumb navigation
@@ -335,6 +365,7 @@ def validate_photo_file(file):
 **Action**: Create photo upload/edit form template
 
 **Template features**:
+
 - Bootstrap form styling
 - File upload with preview
 - Progress indicator for upload
@@ -347,6 +378,7 @@ def validate_photo_file(file):
 **Action**: Create photo detail view template
 
 **Template features**:
+
 - Full-size image display with zoom functionality
 - Image metadata display
 - Event information (patient, datetime, description)
@@ -359,6 +391,7 @@ def validate_photo_file(file):
 **Action**: Create photo deletion confirmation template
 
 **Template features**:
+
 - Image preview
 - Confirmation message
 - Cancel/delete buttons
@@ -371,6 +404,7 @@ def validate_photo_file(file):
 **Action**: Create specialized event card for photos
 
 **Template features**:
+
 - Thumbnail display (300x200px)
 - Camera icon overlay
 - Event metadata (datetime, description)
@@ -385,6 +419,7 @@ def validate_photo_file(file):
 **Action**: Create modal for photo viewing
 
 **Template features**:
+
 - Full-size image display
 - Image zoom functionality
 - Navigation controls (if part of series)
@@ -399,6 +434,7 @@ def validate_photo_file(file):
 **Action**: Create photo-specific styling
 
 **CSS features**:
+
 - Image thumbnail styling
 - Modal overlay styling
 - Upload form styling
@@ -413,6 +449,7 @@ def validate_photo_file(file):
 **Action**: Create photo-specific JavaScript
 
 **JavaScript features**:
+
 - Client-side image resizing before upload
 - Upload progress indication
 - Image preview functionality
@@ -427,6 +464,7 @@ def validate_photo_file(file):
 **Action**: Create photo-specific template tags
 
 **Template tags**:
+
 - `{% photo_thumbnail photo size %}` - Display photo thumbnail
 - `{% photo_modal_trigger photo %}` - Create modal trigger button
 - `{% photo_metadata photo %}` - Display photo metadata
@@ -439,6 +477,7 @@ def validate_photo_file(file):
 **Action**: Create comprehensive security tests
 
 **Security test scenarios**:
+
 - File enumeration attack prevention
 - Path traversal attack prevention
 - Malicious file upload prevention
@@ -455,6 +494,7 @@ def validate_photo_file(file):
 **Action**: Create end-to-end integration tests
 
 **Test scenarios**:
+
 - Complete photo upload workflow
 - Photo viewing in patient timeline
 - Modal functionality
@@ -470,6 +510,7 @@ def validate_photo_file(file):
 **Action**: Create performance tests for photo handling
 
 **Performance tests**:
+
 - Large image upload handling
 - Thumbnail generation speed
 - Multiple photo loading
@@ -481,6 +522,7 @@ def validate_photo_file(file):
 **Action**: Create UAT scenarios for photo functionality
 
 **UAT scenarios**:
+
 - Medical professional uploads wound photo
 - Photo appears in patient timeline
 - Photo can be viewed in detail
@@ -491,6 +533,7 @@ def validate_photo_file(file):
 ## Success Criteria
 
 Single Image implementation is complete when:
+
 - [ ] Photo model properly extends Event with PHOTO_EVENT type
 - [ ] MediaFile model handles file storage and metadata
 - [ ] Admin interface provides full photo management
@@ -507,6 +550,7 @@ Single Image implementation is complete when:
 ## Next Steps
 
 After completing Single Image implementation:
+
 1. Proceed to Image Series implementation
 2. Ensure Photo model integration with PhotoSeries
 3. Test cross-functionality between single and series photos

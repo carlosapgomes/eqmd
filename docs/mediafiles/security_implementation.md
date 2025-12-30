@@ -17,6 +17,7 @@ This document outlines the comprehensive security implementation for the MediaFi
 ### Threat Model
 
 **Threats Addressed**:
+
 - File enumeration attacks
 - Path traversal attacks
 - Malicious file uploads

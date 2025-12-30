@@ -1,9 +1,11 @@
 # Custom Logout Page Implementation Plan
 
 ## Overview
+
 This plan details the implementation of a custom logout page to replace the default allauth logout.html template. The new page will extend base.html and follow the EquipeMed design system established in the login page.
 
 ## Current State Analysis
+
 - [ ] **Current logout URL**: Uses allauth's default `account_logout` URL
 - [ ] **Current template**: Uses allauth's default logout.html template
 - [ ] **Current behavior**: Basic logout confirmation with minimal styling
@@ -12,6 +14,7 @@ This plan details the implementation of a custom logout page to replace the defa
 ## Implementation Plan
 
 ### Phase 1: Template Creation
+
 - [ ] **Create custom logout template**
   - [ ] Create `templates/account/logout.html` file
   - [ ] Extend `base.html` template (not `base_app.html` since user is logging out)
@@ -19,6 +22,7 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Use medical color scheme and styling from the project's SCSS
 
 ### Phase 2: Template Structure Design
+
 - [ ] **Header section**
   - [ ] Create navigation bar similar to login page
   - [ ] Include EquipeMed branding with medical icon
@@ -38,6 +42,7 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Style submit button with `.btn-medical-primary`
 
 ### Phase 3: Content and Messaging
+
 - [ ] **Portuguese localization**
   - [ ] Use Portuguese text throughout the template
   - [ ] Maintain professional medical tone
@@ -50,6 +55,7 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Add option to cancel and return to dashboard
 
 ### Phase 4: Styling Implementation
+
 - [ ] **CSS styling**
   - [ ] Use existing medical color palette
   - [ ] Apply consistent spacing and typography
@@ -62,6 +68,7 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Add security/shield icons for trust indicators
 
 ### Phase 5: Form Functionality
+
 - [ ] **Form implementation**
   - [ ] Ensure proper CSRF protection
   - [ ] Handle POST request correctly
@@ -74,6 +81,7 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Proper button styling and accessibility
 
 ### Phase 6: Integration and Testing
+
 - [ ] **Template integration**
   - [ ] Verify template overrides allauth default
   - [ ] Test template inheritance from base.html
@@ -85,6 +93,7 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Ensure proper redirect after logout
 
 ### Phase 7: Responsive Design
+
 - [ ] **Mobile optimization**
   - [ ] Test on mobile devices
   - [ ] Ensure card layout works on small screens
@@ -96,6 +105,7 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Check form functionality
 
 ### Phase 8: Security and Accessibility
+
 - [ ] **Security considerations**
   - [ ] Verify CSRF token implementation
   - [ ] Test logout functionality
@@ -108,6 +118,7 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Check color contrast ratios
 
 ### Phase 9: Documentation and Cleanup
+
 - [ ] **Code documentation**
   - [ ] Add template comments
   - [ ] Document any custom styling
@@ -121,6 +132,7 @@ This plan details the implementation of a custom logout page to replace the defa
 ## Technical Requirements
 
 ### Template Structure
+
 ```html
 {% extends "base.html" %}
 {% load i18n %}
@@ -141,12 +153,14 @@ This plan details the implementation of a custom logout page to replace the defa
 ```
 
 ### Required Template Tags
+
 - [ ] `{% load i18n %}` for internationalization
 - [ ] `{% csrf_token %}` for form security
 - [ ] `{% url 'account_logout' %}` for form action
 - [ ] `{{ redirect_field }}` for redirect handling
 
 ### Styling Classes to Use
+
 - [ ] `.navbar-medical` for navigation
 - [ ] `.card-medical` for main content card
 - [ ] `.btn-medical-primary` for logout button
@@ -155,6 +169,7 @@ This plan details the implementation of a custom logout page to replace the defa
 - [ ] `.bg-medical-light` for background
 
 ## Success Criteria
+
 - [ ] **Functional requirements met**
   - [ ] Logout functionality works correctly
   - [ ] Template overrides allauth default
@@ -171,17 +186,20 @@ This plan details the implementation of a custom logout page to replace the defa
   - [ ] Accessible to all users
 
 ## Files to be Created/Modified
+
 - [ ] **New file**: `templates/account/logout.html`
 - [ ] **Verify**: `templates/base_app.html` (logout link should work)
 - [ ] **Test**: Navigation flow and user experience
 
 ## Dependencies
+
 - [ ] Django allauth (already installed)
 - [ ] Bootstrap 5.3.6 (already available)
 - [ ] Bootstrap Icons (already available)
 - [ ] Medical SCSS theme (already implemented)
 
 ## Estimated Timeline
+
 - [ ] **Phase 1-3**: Template creation and structure (2-3 hours)
 - [ ] **Phase 4-5**: Styling and functionality (2-3 hours)
 - [ ] **Phase 6-8**: Integration and testing (2-3 hours)

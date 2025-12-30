@@ -80,11 +80,13 @@ Implement a global page navigation loading indicator to improve UX during page t
 **File**: `assets/js/page-loading.js`
 
 **Key Features:**
+
 - Handles both link navigation and form submissions
 - Smart filtering to avoid interfering with existing functionality
 - Multiple escape hatch mechanisms for special cases
 
 **Core Implementation:**
+
 - Shows loading overlay during page navigation
 - Shows loading overlay during form submissions that navigate to new pages
 - Skips GET forms that don't change URL (search/filter forms)
@@ -131,16 +133,19 @@ The loading spinner includes multiple ways to prevent it from showing on specifi
 ### For Links (Anchor Tags)
 
 **Method 1: CSS Class**
+
 ```html
 <a href="/some-page" class="no-loading">No spinner link</a>
 ```
 
 **Method 2: Data Attribute**
+
 ```html
 <a href="/some-page" data-no-loading>No spinner link</a>
 ```
 
 **Automatically Skipped Links:**
+
 - External links (different hostname)
 - Hash/anchor links (`#section`)
 - JavaScript links (`javascript:void(0)`)
@@ -155,6 +160,7 @@ The loading spinner includes multiple ways to prevent it from showing on specifi
 ### For Forms
 
 **Method 1: CSS Class**
+
 ```html
 <form method="post" class="no-loading">
   <!-- Form won't show loading spinner -->
@@ -162,6 +168,7 @@ The loading spinner includes multiple ways to prevent it from showing on specifi
 ```
 
 **Method 2: Data Attribute**
+
 ```html
 <form method="post" data-no-loading>
   <!-- Form won't show loading spinner -->
@@ -169,6 +176,7 @@ The loading spinner includes multiple ways to prevent it from showing on specifi
 ```
 
 **Method 3: AJAX Forms**
+
 ```html
 <form method="post" class="ajax-form">
   <!-- Forms with AJAX handling -->
@@ -180,6 +188,7 @@ The loading spinner includes multiple ways to prevent it from showing on specifi
 ```
 
 **Automatically Skipped Forms:**
+
 - GET forms that don't change URL (filter/search forms)
 - Forms with `data-ajax` or `ajax-form` class
 - Forms with `data-no-loading` or `no-loading` class
@@ -187,6 +196,7 @@ The loading spinner includes multiple ways to prevent it from showing on specifi
 ### Usage Examples
 
 **Timeline Filter Form (Automatically Skipped):**
+
 ```html
 <!-- This GET form to same URL won't show spinner -->
 <form method="get" id="timeline-filters">
@@ -196,6 +206,7 @@ The loading spinner includes multiple ways to prevent it from showing on specifi
 ```
 
 **Custom AJAX Form:**
+
 ```html
 <!-- Use data-ajax to prevent spinner -->
 <form method="post" data-ajax id="quick-update-form">
@@ -205,6 +216,7 @@ The loading spinner includes multiple ways to prevent it from showing on specifi
 ```
 
 **Form with Custom Loading State:**
+
 ```html
 <!-- Use no-loading class to prevent spinner -->
 <form method="post" class="no-loading" id="upload-form">
@@ -302,29 +314,32 @@ If issues arise:
 
 ## Quick Reference: How to Disable Loading Spinner
 
-### For a specific link:
+### For a specific link
+
 ```html
 <a href="/page" class="no-loading">Link without spinner</a>
 <a href="/page" data-no-loading>Link without spinner</a>
 ```
 
-### For a specific form:
+### For a specific form
+
 ```html
 <form method="post" class="no-loading">Form without spinner</form>
 <form method="post" data-no-loading>Form without spinner</form>
 <form method="post" data-ajax>AJAX form without spinner</form>
 ```
 
-### What gets spinner automatically:
+### What gets spinner automatically
+
 - ✅ POST/PUT/DELETE forms
 - ✅ Links to different pages
 - ✅ Navigation within the app
 
-### What doesn't get spinner automatically:
+### What doesn't get spinner automatically
+
 - ❌ GET forms (search/filter forms)
 - ❌ External links
 - ❌ Bootstrap modals/dropdowns
 - ❌ FilePond/specialized upload widgets
 - ❌ Hash/anchor links
 - ❌ Email/phone links
-

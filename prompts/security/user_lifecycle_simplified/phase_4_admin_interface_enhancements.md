@@ -1,6 +1,7 @@
 # Phase 4: Enhanced Admin Interface
 
 ## Overview
+
 **Timeline: 2-3 days**
 **Priority: High**
 
@@ -10,10 +11,10 @@ This phase focuses on enhancing the standard Django Admin interface to provide a
 
 The previous implementation phases successfully added lifecycle-related fields to the `EqmdCustomUser` model and created the `AccountRenewalRequest` model. However, these fields and models are not visible or manageable in the Django admin panel. Administrators currently lack the ability to:
 
--   View a user's current `account_status` or `access_expires_at` date.
--   Manually edit a user's lifecycle information.
--   Filter or search for users based on their lifecycle status.
--   Review, approve, or deny account renewal requests.
+- View a user's current `account_status` or `access_expires_at` date.
+- Manually edit a user's lifecycle information.
+- Filter or search for users based on their lifecycle status.
+- Review, approve, or deny account renewal requests.
 
 This plan details the specific changes required to integrate these features directly into the existing admin interface.
 
@@ -200,23 +201,23 @@ class AccountRenewalRequestAdmin(admin.ModelAdmin):
 
 After implementation, the following should be manually tested in the Django admin panel:
 
-1.  **User List View**:
-    *   Confirm the new columns (`Account Status`, `Access Expires At`) are visible.
-    *   Test sorting by clicking on the new column headers.
-    *   Test the new sidebar filters for `Account Status` and `Expiration Reason`.
-    *   Use the search bar to find a user by their supervisor's name.
-2.  **User Detail View**:
-    *   Open a user and find the "Lifecycle Management" section.
-    *   Verify that the correct fields are editable and read-only.
-    *   Modify a user's `account_status` and `access_expires_at` date and save to confirm it works.
-3.  **Renewal Request View**:
-    *   Confirm that "Account Renewal Requests" appears in the admin index.
-    *   Create a test renewal request and verify it appears in the list.
-    *   Use the bulk actions to approve and deny pending requests and confirm the status changes.
+1. **User List View**:
+    - Confirm the new columns (`Account Status`, `Access Expires At`) are visible.
+    - Test sorting by clicking on the new column headers.
+    - Test the new sidebar filters for `Account Status` and `Expiration Reason`.
+    - Use the search bar to find a user by their supervisor's name.
+2. **User Detail View**:
+    - Open a user and find the "Lifecycle Management" section.
+    - Verify that the correct fields are editable and read-only.
+    - Modify a user's `account_status` and `access_expires_at` date and save to confirm it works.
+3. **Renewal Request View**:
+    - Confirm that "Account Renewal Requests" appears in the admin index.
+    - Create a test renewal request and verify it appears in the list.
+    - Use the bulk actions to approve and deny pending requests and confirm the status changes.
 
 ## Success Metrics
 
--   ✅ Administrators can view and sort by `account_status` and `access_expires_at` in the user list.
--   ✅ Administrators can edit all relevant lifecycle fields from the user detail page.
--   ✅ Administrators can filter the user list by `account_status`.
--   ✅ Administrators can view and manage `AccountRenewalRequest` objects, including bulk approval/denial.
+- ✅ Administrators can view and sort by `account_status` and `access_expires_at` in the user list.
+- ✅ Administrators can edit all relevant lifecycle fields from the user detail page.
+- ✅ Administrators can filter the user list by `account_status`.
+- ✅ Administrators can view and manage `AccountRenewalRequest` objects, including bulk approval/denial.

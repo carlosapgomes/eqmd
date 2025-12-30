@@ -114,4 +114,3 @@ Core automation commands for daily expiration checking and email notifications o
 ---
 
 **Next Steps**: Begin with [Phase 1: Simplified Database Schema](phase_1_database_schema_simplified.md)
-

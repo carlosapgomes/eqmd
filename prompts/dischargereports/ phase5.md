@@ -21,7 +21,7 @@ touch apps/dischargereports/management/__init__.py
 touch apps/dischargereports/management/commands/__init__.py
 ````
 
-2. CREATE IMPORT COMMAND:
+1. CREATE IMPORT COMMAND:
    apps/dischargereports/management/commands/import_firebase_discharge_reports.py:
 
 ```python
@@ -359,10 +359,10 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("=" * 60))
 ```
 
-3. CREATE FEATURE DOCUMENTATION:
+1. CREATE FEATURE DOCUMENTATION:
    Create docs/apps/dischargereports.md with comprehensive documentation including the Firebase import command usage, data mapping, and troubleshooting guide. Use the template from docs-template.md created earlier.
 
-4. TEST THE COMMAND:
+2. TEST THE COMMAND:
 
 ```bash
 # Test with dry run
@@ -379,7 +379,7 @@ uv run python manage.py import_firebase_discharge_reports \
   --dry-run
 ```
 
-5. ADD DOCKER COMMAND EXAMPLES TO DOCS:
+1. ADD DOCKER COMMAND EXAMPLES TO DOCS:
 
 ```bash
 # Docker version

@@ -171,6 +171,7 @@ def tag_management_widget(context, patient):
 #### 6.1 Enhanced Permission System
 
 **View-Level Permission Checks:**
+
 - Added comprehensive tag management permission functions in `apps/core/permissions/utils.py`:
   - `can_manage_patient_tags()` - Check if user can add/remove tags
   - `can_add_patient_tag()` - Check if user can add specific tag
@@ -178,6 +179,7 @@ def tag_management_widget(context, patient):
   - `can_view_patient_tags()` - Check if user can view patient tags
 
 **Updated Tag Management Views:**
+
 - `PatientTagAddView` - Uses `can_add_patient_tag()` with detailed validation
 - `PatientTagRemoveView` - Uses `can_remove_patient_tag()` for secure removal
 - `PatientTagRemoveAllView` - Uses `can_manage_patient_tags()` for bulk operations
@@ -186,6 +188,7 @@ def tag_management_widget(context, patient):
 #### 6.2 Template-Level Permission Integration
 
 **Permission Template Tags:**
+
 - Added template tags in `apps/core/templatetags/permission_tags.py`:
   - `can_user_manage_patient_tags` - Template tag for management permissions
   - `can_user_view_patient_tags` - Template tag for viewing permissions
@@ -193,6 +196,7 @@ def tag_management_widget(context, patient):
   - `tag_permissions_context` - Inclusion tag for permission contexts
 
 **Enhanced Templates:**
+
 - Updated `tag_management.html` with permission-based rendering
 - Show/hide tag management buttons based on permissions
 - Display permission status to users with graceful fallbacks
@@ -205,27 +209,32 @@ def tag_management_widget(context, patient):
 Instead of creating a separate `PatientTagAuditLog` model, integrated tag tracking into the existing Event system for better user experience and consistency.
 
 **Added Tag Event Types to Event Model:**
+
 - `TAG_ADDED_EVENT (20)`: "Tag Adicionada" with badge class `bg-success` and icon `bi-tag-fill`
 - `TAG_REMOVED_EVENT (21)`: "Tag Removida" with badge class `bg-warning` and icon `bi-tag`
 - `TAG_BULK_REMOVE_EVENT (22)`: "Tags Removidas em Lote" with badge class `bg-danger` and icon `bi-tags`
 
 **Created Tag Event Models:**
+
 - `TagAddedEvent`: Tracks individual tag additions with tag name, color, and notes
 - `TagRemovedEvent`: Tracks individual tag removals with original tag information
 - `TagBulkRemoveEvent`: Tracks bulk tag removal operations with count and tag names list
 
 **Timeline Integration:**
+
 - All tag operations now appear in the unified patient timeline
 - Tag events display alongside other patient activities (status changes, daily notes, etc.)
 - Users see tag history in the same place they look for all patient activities
 - Eliminates confusion from separate audit systems
 
 **Updated Tag Management Views:**
+
 - `PatientTagAddView`: Creates `TagAddedEvent` in timeline with full context
 - `PatientTagRemoveView`: Creates `TagRemovedEvent` in timeline with tag details
 - `PatientTagRemoveAllView`: Creates `TagBulkRemoveEvent` with tag count and names
 
 **Benefits Achieved:**
+
 - **Unified Timeline**: All patient activities in one chronological view
 - **Better UX**: Users know to check patient timeline for all history
 - **Consistent Architecture**: Leverages existing Event infrastructure
@@ -235,6 +244,7 @@ Instead of creating a separate `PatientTagAuditLog` model, integrated tag tracki
 #### 6.4 Testing and Validation
 
 **Comprehensive Testing Completed:**
+
 - ✅ Permission functions work correctly with various user types
 - ✅ Template tags render properly with permission context  
 - ✅ Event-based audit logging captures operations with full metadata
@@ -244,6 +254,7 @@ Instead of creating a separate `PatientTagAuditLog` model, integrated tag tracki
 - ✅ Timeline integration displays tag events alongside other activities
 
 **Security Features:**
+
 - Role-based access control with `patients.change_patient` permission requirement
 - Comprehensive audit trail via Event system with user and timestamp logging
 - Permission context returned to frontend for dynamic behavior
@@ -327,4 +338,3 @@ Instead of creating a separate `PatientTagAuditLog` model, integrated tag tracki
 ## Conclusion
 
 This refactor will create a cleaner, more maintainable patient management system with better user experience and consistent patterns throughout the application. The separation of personal data (forms) from medical data (detail page) aligns with medical workflow expectations and provides a foundation for future enhancements.
-

@@ -16,12 +16,14 @@
 ### 1. Update Patient Views (`apps/patients/views.py`)
 
 **Remove hospital context logic:**
+
 - [ ] Remove hospital filtering from patient list views
 - [ ] Remove hospital context from patient detail views
 - [ ] Remove hospital validation from patient create/update views
 - [ ] Simplify patient search (no hospital filtering)
 
 **Simplify patient queryset filtering:**
+
 ```python
 # Before (complex hospital filtering)
 def get_queryset(self):
@@ -37,12 +39,14 @@ def get_queryset(self):
 ### 2. Update Patient Forms (`apps/patients/forms.py`)
 
 **Remove hospital-related fields and logic:**
+
 - [ ] Remove `current_hospital` field from patient forms
 - [ ] Remove hospital selection widgets
 - [ ] Remove dynamic hospital field requirements
 - [ ] Remove hospital record formsets
 
 **Simplify form validation:**
+
 ```python
 # Before (complex hospital validation)
 def clean(self):
@@ -63,6 +67,7 @@ def clean(self):
 ```
 
 **Remove PatientHospitalRecord forms:**
+
 - [ ] Delete `PatientHospitalRecordForm`
 - [ ] Remove nested formsets for hospital records
 - [ ] Remove hospital record inline forms
@@ -70,22 +75,26 @@ def clean(self):
 ### 3. Update Core Views (`apps/core/views.py`)
 
 **Remove hospital context from dashboard:**
+
 - [ ] Remove hospital selection from dashboard
 - [ ] Remove hospital-specific widgets
 - [ ] Simplify dashboard statistics (no hospital filtering)
 
 **Update context processors:**
+
 - [ ] Remove hospital context from global template context
 - [ ] Remove hospital-related template variables
 
 ### 4. Update Event Views (`apps/events/views.py`, `apps/dailynotes/views.py`)
 
 **Remove hospital filtering from events:**
+
 - [ ] Remove hospital context from event queries
 - [ ] Simplify event access control (role-based only)
 - [ ] Remove hospital filtering from event lists
 
 **Simplify event permissions:**
+
 ```python
 # Before (hospital + role check)
 def dispatch(self, request, *args, **kwargs):
@@ -102,12 +111,14 @@ def dispatch(self, request, *args, **kwargs):
 ### 5. Remove Hospital Views and URLs
 
 **Delete hospital-specific views:**
+
 - [ ] Delete entire `apps/hospitals/views.py`
 - [ ] Remove hospital selection views
 - [ ] Remove hospital context switching views
 - [ ] Remove ward management views
 
 **Update URL patterns:**
+
 - [ ] Remove hospital URLs from main `urls.py`
 - [ ] Remove hospital context URLs
 - [ ] Clean up any hospital-related URL includes
@@ -115,6 +126,7 @@ def dispatch(self, request, *args, **kwargs):
 ### 6. Update MediaFiles Views (`apps/mediafiles/views.py`)
 
 **Remove hospital context from media access:**
+
 - [ ] Remove hospital filtering from media file access
 - [ ] Simplify media file permissions (role-based only)
 - [ ] Remove hospital context from file serving views
@@ -122,6 +134,7 @@ def dispatch(self, request, *args, **kwargs):
 ### 7. Update Admin Views
 
 **Simplify admin interfaces:**
+
 - [ ] Remove hospital filters from admin list views
 - [ ] Remove hospital fields from admin forms
 - [ ] Update admin fieldsets to exclude hospital fields
@@ -130,6 +143,7 @@ def dispatch(self, request, *args, **kwargs):
 ### 8. Update API Views (if any)
 
 **Remove hospital context from API:**
+
 - [ ] Remove hospital filtering from API endpoints
 - [ ] Simplify API permissions
 - [ ] Remove hospital context from API responses
@@ -137,6 +151,7 @@ def dispatch(self, request, *args, **kwargs):
 ### 9. Form Widget Cleanup
 
 **Remove hospital-related widgets:**
+
 - [ ] Remove hospital selection widgets
 - [ ] Remove hospital autocomplete fields
 - [ ] Remove hospital context from form rendering
@@ -144,6 +159,7 @@ def dispatch(self, request, *args, **kwargs):
 ### 10. View Permission Decorators
 
 **Update view decorators:**
+
 - [ ] Replace `@hospital_context_required` with simple permission checks
 - [ ] Replace `@patient_hospital_access_required` with `@patient_access_required`
 - [ ] Remove hospital context from permission decorators
@@ -153,12 +169,14 @@ def dispatch(self, request, *args, **kwargs):
 ### Patient Forms Simplification
 
 **Remove from PatientCreateForm/PatientUpdateForm:**
+
 - `current_hospital` field
 - Hospital record inline formsets
 - Dynamic hospital validation
 - Hospital-dependent field visibility
 
 **Simplified patient form:**
+
 ```python
 class PatientCreateForm(forms.ModelForm):
     class Meta:
@@ -179,6 +197,7 @@ class PatientCreateForm(forms.ModelForm):
 ### Search Forms
 
 **Simplify patient search:**
+
 ```python
 # Before (hospital-aware search)
 class PatientSearchForm(forms.Form):
@@ -195,6 +214,7 @@ class PatientSearchForm(forms.Form):
 ## View Response Simplification
 
 **Remove hospital context from view responses:**
+
 ```python
 # Before (complex hospital context)
 def get_context_data(self, **kwargs):
@@ -212,7 +232,8 @@ def get_context_data(self, **kwargs):
 
 ## Files to Modify
 
-### Primary View Files:
+### Primary View Files
+
 - [ ] `apps/patients/views.py` - Major simplification
 - [ ] `apps/patients/forms.py` - Remove hospital fields
 - [ ] `apps/core/views.py` - Remove hospital context
@@ -220,22 +241,26 @@ def get_context_data(self, **kwargs):
 - [ ] `apps/dailynotes/views.py` - Remove hospital logic
 - [ ] `apps/mediafiles/views.py` - Simplify permissions
 
-### Admin Files:
+### Admin Files
+
 - [ ] `apps/patients/admin.py` - Remove hospital filters
 - [ ] `apps/accounts/admin.py` - Remove hospital fields
 - [ ] All admin.py files with hospital references
 
-### URL Files:
+### URL Files
+
 - [ ] `eqmd/urls.py` - Remove hospital URL includes
 - [ ] Remove `apps/hospitals/urls.py`
 
-### Context Processors:
+### Context Processors
+
 - [ ] Remove hospital context processors
 - [ ] Update template context
 
 ## Validation Checklist
 
 Before proceeding to Phase 5:
+
 - [ ] All views work without hospital context
 - [ ] Forms validate correctly without hospital fields
 - [ ] Patient creation/editing works
@@ -247,6 +272,7 @@ Before proceeding to Phase 5:
 ## Testing Strategy
 
 **Test key functionality:**
+
 - [ ] Patient CRUD operations
 - [ ] Event creation and editing
 - [ ] Dashboard loads correctly
@@ -257,6 +283,7 @@ Before proceeding to Phase 5:
 ## Performance Improvements
 
 **Expected benefits:**
+
 - Faster form validation (no hospital checks)
 - Simpler database queries (no hospital joins)
 - Faster view rendering (less context)

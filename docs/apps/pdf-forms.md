@@ -271,6 +271,7 @@ sectioned_config = SectionUtils.migrate_unsectioned_form(legacy_config)
 #### Common Section Patterns
 
 **Medical Forms**:
+
 ```json
 {
   "sections": {
@@ -313,21 +314,25 @@ sectioned_config = SectionUtils.migrate_unsectioned_form(legacy_config)
 #### Common Issues
 
 **Section Not Displaying**:
+
 - Check section key matches field assignments
 - Verify section has valid `label` and `order` properties
 - Ensure section order values are unique
 
 **Fields Missing from Sections**:
+
 - Verify field `section` property matches existing section key
 - Check for typos in section references
 - Fields without valid section references appear in "Other Fields"
 
 **Section Order Issues**:
+
 - Ensure all sections have unique `order` values
 - Use sequential numbering (1, 2, 3, ...) for best results
 - Missing order values default to 999
 
 **Template Errors After Migration**:
+
 - Validate JSON structure after migration
 - Check for special characters in section keys
 - Use `--dry-run` to preview changes before applying
@@ -357,7 +362,8 @@ sectioned_config = SectionUtils.migrate_unsectioned_form(legacy_config)
 
 **Access**: Admin → PDF Form Templates → Select template → "Configure Fields" button
 
-**Requirements**: 
+**Requirements**:
+
 ```bash
 uv add pdf2image  # For PDF-to-image conversion
 
@@ -368,6 +374,7 @@ uv add pdf2image  # For PDF-to-image conversion
 ```
 
 **Features**:
+
 - **Intuitive Interface**: No manual coordinate entry required
 - **Real-time Preview**: See field positioning immediately (requires Poppler)
 - **Fallback JSON Editor**: Manual JSON editor when PDF preview is unavailable
@@ -405,6 +412,7 @@ brew install poppler
 ```
 
 **Verification:**
+
 ```bash
 # Test poppler installation
 pdftoppm -h
@@ -412,6 +420,7 @@ pdftoppm -h
 ```
 
 **Fallback Behavior:**
+
 - **With Poppler**: Full visual drag-and-drop interface with PDF preview
 - **Without Poppler**: Automatic fallback to manual JSON editor with validation
 - **No Loss of Functionality**: All field configuration features available through JSON editor
@@ -442,6 +451,7 @@ PDF_FORMS_CONFIG = {
 ## Field Types and Configuration
 
 ### Text Fields
+
 ```json
 {
   "field_name": {
@@ -457,6 +467,7 @@ PDF_FORMS_CONFIG = {
 ```
 
 ### Choice Fields
+
 ```json
 {
   "field_name": {
@@ -470,6 +481,7 @@ PDF_FORMS_CONFIG = {
 ```
 
 ### Boolean Fields
+
 ```json
 {
   "field_name": {
@@ -482,6 +494,7 @@ PDF_FORMS_CONFIG = {
 ```
 
 ### Date Fields
+
 ```json
 {
   "field_name": {
@@ -499,16 +512,19 @@ PDF_FORMS_CONFIG = {
 ### Common Issues
 
 **PDF Preview Not Working**:
+
 - Ensure Poppler is installed (`pdftoppm -h`)
 - Check file permissions on PDF templates
 - Verify PDF file is not corrupted
 
 **Field Positioning Issues**:
+
 - Use centimeter measurements for precision
 - Test with different PDF readers/printers
 - Verify coordinate system (0,0 is top-left)
 
 **Performance Issues**:
+
 - Enable template caching in production
 - Monitor memory usage during PDF generation
 - Consider background task queue for large forms

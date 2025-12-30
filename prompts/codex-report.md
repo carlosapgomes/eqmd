@@ -36,12 +36,14 @@ Below is a consolidated summary of what’s actually in the code today:
 ## 3. Assessment Against Desired Behavior
 
 The analysis brief defined these **Desired Behaviors** (excerpt):
+
 ```markdown
 - Create/manage drug templates
 - Create outpatient prescriptions using drug templates or duplicating prescription templates
 - After duplicating a PrescriptionTemplate, user edits list/instructions per patient
 - Generate printable documents for prescriptions
 ```
+
 【F:prompts/outprescriptons/code_analysis.md†L39-L49】
 
 Below is how the implementation lines up:
@@ -74,27 +76,33 @@ Below is how the implementation lines up:
 Below are our prioritized suggestions to align the implementation with the original plan and the desired behavior:
 
 ### A. PrescriptionTemplate Usage Tracking
+
 1. **Increment `PrescriptionTemplate.usage_count`** in `OutpatientPrescription.copy_from_prescription_template()`  
    _Rationale:_ Success criteria require tracking how often templates are used.  
 2. **Add DB index** on `PrescriptionTemplate.usage_count` if rapid sorting/reporting is needed.
 
 ### B. Decouple Data Independence
+
 1. **Remove or rethink `source_template` FK** on `PrescriptionItem`.  
    - The plan’s goal was true copy‐of‐data so prescriptions don’t change if templates are updated.  
    - If usage analytics on DrugTemplate is needed, consider a separate logging table or transactional counter at copy time (not a hard FK).
 2. **Ensure prescription items store all fields independently** (drug_name, presentation, instructions, quantity).
 
 ### C. Align Timestamps with Plan
+
 1. **Remove timestamps** (`created_at`/`updated_at`) from `PrescriptionTemplateItem` if inheritance is desired.  
    - Or update the plan/docs to acknowledge that items now carry their own timestamps.
 
 ### D. Complete Print Functionality
+
 1. **Implement print templates** (`templates/outpatientprescriptions/print_*.html`) following the HTML+browser print strategy (vertical slice 24).  
 2. **Add print CSS** under `static/css/print_prescription.css` to match medical document standards.  
 3. **Write automated tests** to verify print view rendering and style.
 
 ### E. Finish Forms/Views/URLs/Permissions Slices
+
 Work through the remaining vertical slices (tasks 17–26) for the prescriptions app:
+
 - **Multi‐item formsets** (`PrescriptionItemFormSet`) and prescription templates forms.
 - **Create/Edit/Delete views** for prescriptions and prescription templates.
 - **URL patterns** and namespacing.
@@ -102,6 +110,7 @@ Work through the remaining vertical slices (tasks 17–26) for the prescriptio
 - **Tests** for view permissions, form validation, and end‐to‐end workflows.
 
 ### F. Validate Event Type & Integration
+
 1. **Confirm the correct `event_type` constant** against `apps/events/models.py`—the plan said 11, code uses `Event.OUTPT_PRESCRIPTION_EVENT`.  
 2. **Audit middleware/hooks** to ensure hospital‑context and audit fields are applied.
 

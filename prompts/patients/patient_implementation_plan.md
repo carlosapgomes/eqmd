@@ -3,10 +3,13 @@
 ## Vertical Slice 1: Initial App Setup and Patient Model
 
 ### Step 1: App Configuration and Basic Setup
+
 1. Create the patients app structure
+
    ```bash
    python manage.py startapp patients apps/patients
    ```
+
 2. Add the app to INSTALLED_APPS in config/settings.py
 3. Verify app configuration:
    - Check app is properly registered in Django
@@ -14,7 +17,9 @@
    - Run Django shell to confirm app is recognized
 
 ### Step 2: Create AllowedTag and UUIDTaggedItem Models
+
 1. Create the tag models in models.py:
+
 ````python path=apps/patients/models.py mode=EDIT
    import uuid
    from django.db import models
@@ -37,12 +42,14 @@
            verbose_name_plural = "Tags"
 ````
 
-2. Test basic functionality:
+1. Test basic functionality:
    - Run Django shell to verify models
    - Create a test tag and verify it works
 
 ### Step 3: Create Patient Model
+
 1. Add Patient model to models.py:
+
 ````python path=apps/patients/models.py mode=EDIT
    from taggit.managers import TaggableManager
    
@@ -143,7 +150,8 @@
        # Additional methods will be added in the next steps
 ````
 
-2. Add remaining Patient model methods:
+1. Add remaining Patient model methods:
+
 ````python path=apps/patients/models.py mode=EDIT
        def set_record_number(self, hospital, record_number, user):
            """Set or update patient's record number at specified hospital"""
@@ -253,7 +261,9 @@
 ````
 
 ### Step 4: Create PatientHospitalRecord Model
+
 1. Add PatientHospitalRecord model to models.py:
+
 ````python path=apps/patients/models.py mode=EDIT
    class PatientHospitalRecord(models.Model):
        """Tracks a patient's record numbers and history at different hospitals"""
@@ -303,13 +313,14 @@
            return f"{self.patient.name} - {self.hospital.name} ({self.record_number})"
 ````
 
-2. Create migrations and verify models:
+1. Create migrations and verify models:
+
    ```bash
    python manage.py makemigrations patients
    python manage.py migrate
    ```
 
-3. Test basic model functionality:
+2. Test basic model functionality:
    - Use Django shell to create test instances
    - Verify relationships work correctly
    - Test model methods with simple cases
@@ -317,7 +328,9 @@
 ## Vertical Slice 2: Admin Interface for Patient Models
 
 ### Step 1: Register Models in Admin
+
 1. Update admin.py:
+
 ````python path=apps/patients/admin.py mode=EDIT
    from django.contrib import admin
    from .models import Patient, PatientHospitalRecord, AllowedTag, UUIDTaggedItem
@@ -375,13 +388,15 @@
            super().save_model(request, obj, form, change)
 ````
 
-2. Test admin interface:
+1. Test admin interface:
    - Verify models appear in admin
    - Test creating and editing records
    - Verify all fields display correctly
 
 ### Step 2: Create Admin Customizations
+
 1. Add inline admin for PatientHospitalRecord:
+
 ````python path=apps/patients/admin.py mode=EDIT
    class PatientHospitalRecordInline(admin.TabularInline):
        model = PatientHospitalRecord
@@ -401,7 +416,7 @@
        inlines = [PatientHospitalRecordInline]
 ````
 
-2. Test admin customizations:
+1. Test admin customizations:
    - Verify inline admin works correctly
    - Test adding hospital records through patient admin
    - Verify permissions work as expected
@@ -409,7 +424,9 @@
 ## Vertical Slice 3: Patient Forms and Basic Views
 
 ### Step 1: Create Patient Forms
+
 1. Create forms.py:
+
 ````python path=apps/patients/forms.py mode=EDIT
    from django import forms
    from crispy_forms.helper import FormHelper
@@ -533,7 +550,9 @@
 ````
 
 ### Step 2: Create Basic Views
+
 1. Update views.py:
+
 ````python path=apps/patients/views.py mode=EDIT
    from django.shortcuts import render, redirect, get_object_or_404
    from django.contrib.auth.decorators import login_required
@@ -613,7 +632,8 @@
            return super().delete(request, *args, **kwargs)
 ````
 
-2. Add PatientHospitalRecord views:
+1. Add PatientHospitalRecord views:
+
 ````python path=apps/patients/views.py mode=EDIT
    # PatientHospitalRecord views
    class PatientHospitalRecordCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -670,7 +690,8 @@
            return super().delete(request, *args, **kwargs)
 ````
 
-3. Add AllowedTag views:
+1. Add AllowedTag views:
+
 ````python path=apps/patients/views.py mode=EDIT
    # AllowedTag views
    class AllowedTagListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -713,7 +734,9 @@
 ````
 
 ### Step 3: Create URL Patterns
+
 1. Complete the urls.py file:
+
 ````python path=apps/patients/urls.py mode=EDIT
    from django.urls import path
    from . import views
@@ -747,24 +770,29 @@
    ]
 ````
 
-2. Add the app URLs to the project's main urls.py:
+1. Add the app URLs to the project's main urls.py:
+
 ````python path=config/urls.py mode=EDIT
    # Add to existing imports and urlpatterns
    path('patients/', include('apps.patients.urls')),
 ````
 
 ### Step 4: Verify App Configuration and Basic Functionality
+
 1. Verify URL configuration:
+
    ```bash
    python manage.py shell -c "from django.urls import reverse; print(reverse('patients:patient_list'))"
    ```
 
 2. Test view resolution:
+
    ```bash
    python manage.py shell -c "from django.urls.resolvers import get_resolver; resolver = get_resolver(); print('patients:patient_list' in resolver.reverse_dict)"
    ```
 
 3. Verify model permissions:
+
    ```bash
    python manage.py shell -c "from django.contrib.auth.models import Permission; from django.contrib.contenttypes.models import ContentType; ct = ContentType.objects.get(app_label='patients', model='patient'); perms = Permission.objects.filter(content_type=ct); print([p.codename for p in perms])"
    ```
@@ -772,7 +800,9 @@
 ## Vertical Slice 4: Templates and Basic UI
 
 ### Step 1: Create Base Templates
+
 1. Create patient_base.html:
+
 ````html path=templates/patients/patient_base.html mode=EDIT
 {% extends "base_app.html" %}
 {% load static %}
@@ -834,7 +864,9 @@
 ````
 
 ### Step 2: Create Patient List Template
+
 1. Create patient_list.html:
+
 ````html path=templates/patients/patient_list.html mode=EDIT
 {% extends "patients/patient_base.html" %}
 {% load static %}
@@ -986,7 +1018,9 @@
 ````
 
 ### Step 3: Create Patient Detail Template
+
 1. Create patient_detail.html:
+
 ````html path=templates/patients/patient_detail.html mode=EDIT
 {% extends "patients/patient_base.html" %}
 {% load static %}
@@ -1222,7 +1256,9 @@
 ````
 
 ### Step 4: Create Form Templates
+
 1. Create patient_form.html:
+
 ````html path=templates/patients/patient_form.html mode=EDIT
 {% extends "patients/patient_base.html" %}
 {% load crispy_forms_tags %}
@@ -1257,7 +1293,8 @@
 {% endblock %}
 ````
 
-2. Create hospital_record_form.html:
+1. Create hospital_record_form.html:
+
 ````html path=templates/patients/hospital_record_form.html mode=EDIT
 {% extends "patients/patient_base.html" %}
 {% load crispy_forms_tags %}
@@ -1294,7 +1331,8 @@
 {% endblock %}
 ````
 
-3. Create confirmation templates:
+1. Create confirmation templates:
+
 ````html path=templates/patients/patient_confirm_delete.html mode=EDIT
 {% extends "patients/patient_base.html" %}
 
@@ -1378,7 +1416,9 @@
 ````
 
 ### Step 5: Create Tag Templates
+
 1. Create tag_list.html:
+
 ````html path=templates/patients/tag_list.html mode=EDIT
 {% extends "patients/patient_base.html" %}
 
@@ -1446,8 +1486,8 @@
 {% endblock %}
 ````
 
+1. Create tag_form.html:
 
-2. Create tag_form.html:
 ````html path=templates/patients/tag_form.html mode=EDIT
     <div class="card-body">
       {% crispy form %}
@@ -1456,7 +1496,8 @@
 {% endblock %}
 ````
 
-3. Create tag_confirm_delete.html:
+1. Create tag_confirm_delete.html:
+
 ````html path=templates/patients/tag_confirm_delete.html mode=EDIT
 {% extends "patients/patient_base.html" %}
 
@@ -1503,7 +1544,9 @@
 ## Vertical Slice 5: Tests and Documentation
 
 ### Step 1: Create Model Tests
+
 1. Create test_models.py:
+
 ````python path=apps/patients/tests/test_models.py mode=EDIT
 from django.test import TestCase
 from django.contrib.auth import get_user_model
@@ -1626,7 +1669,9 @@ class PatientModelTest(TestCase):
 ````
 
 ### Step 2: Create Form Tests
+
 1. Create test_forms.py:
+
 ````python path=apps/patients/tests/test_forms.py mode=EDIT
 from django.test import TestCase
 from django.contrib.auth import get_user_model
@@ -1803,7 +1848,9 @@ class AllowedTagFormTest(TestCase):
 ````
 
 ### Step 3: Create View Tests
+
 1. Create test_views.py:
+
 ````python path=apps/patients/tests/test_views.py mode=EDIT
 from django.test import TestCase
 from django.urls import reverse
@@ -2106,7 +2153,9 @@ class TagViewsTest(TestCase):
 ````
 
 ### Step 4: Create Documentation
+
 1. Create a documentation file:
+
 ````markdown path=apps/patients/docs/README.md mode=EDIT
 # Patients App Documentation
 
@@ -2278,10 +2327,10 @@ priority_patients = Patient.objects.filter(tags=tag)
 ```
 ````
 
-
 ## Vertical Slice 6: Integration and Final Testing
 
 ### Step 1: Integrate with Main Navigation
+
 1. Update the main navigation template to include patients app links:
 
 ````html path=templates/includes/sidebar.html mode=EDIT
@@ -2309,6 +2358,7 @@ priority_patients = Patient.objects.filter(tags=tag)
 ````
 
 ### Step 2: Create Dashboard Widgets
+
 1. Create a dashboard widget for recent patients:
 
 ````html path=templates/patients/widgets/recent_patients.html mode=EDIT
@@ -2370,7 +2420,7 @@ priority_patients = Patient.objects.filter(tags=tag)
 </div>
 ````
 
-2. Create a dashboard widget for patient statistics:
+1. Create a dashboard widget for patient statistics:
 
 ````html path=templates/patients/widgets/patient_stats.html mode=EDIT
 <div class="row">
@@ -2453,6 +2503,7 @@ priority_patients = Patient.objects.filter(tags=tag)
 ````
 
 ### Step 3: Update Dashboard View
+
 1. Update the dashboard view to include patient data:
 
 ````python path=apps/core/views.py mode=EDIT
@@ -2477,7 +2528,7 @@ def dashboard(request):
     return render(request, 'core/dashboard.html', context)
 ````
 
-2. Update the dashboard template to include patient widgets:
+1. Update the dashboard template to include patient widgets:
 
 ````html path=templates/core/dashboard.html mode=EDIT
 {% if 'apps.patients' in INSTALLED_APPS %}
@@ -2499,6 +2550,7 @@ def dashboard(request):
 ````
 
 ### Step 4: Add Template Tags for Patient Data
+
 1. Create template tags file:
 
 ````python path=apps/patients/templatetags/patient_tags.py mode=EDIT
@@ -2535,7 +2587,7 @@ def render_patient_tags(patient):
     return {'tags': patient.tags.all()}
 ````
 
-2. Create template for rendering patient tags:
+1. Create template for rendering patient tags:
 
 ````html path=templates/patients/tags/patient_tag_list.html mode=EDIT
 {% if tags %}
@@ -2550,6 +2602,7 @@ def render_patient_tags(patient):
 ````
 
 ### Step 5: Final Integration Testing
+
 1. Create an integration test file:
 
 ````python path=apps/patients/tests/test_integration.py mode=EDIT
@@ -2708,6 +2761,7 @@ class PatientIntegrationTest(TestCase):
 ````
 
 ### Step 6: Add Permissions and Groups
+
 1. Create a migration to add patient-specific permissions and groups:
 
 ````python path=apps/patients/migrations/0002_add_patient_permissions.py mode=EDIT
@@ -2761,6 +2815,7 @@ class Migration(migrations.Migration):
 ## Vertical Slice 7: Final Documentation and Deployment
 
 ### Step 1: Update Project README
+
 1. Add patients app information to the main project README:
 
 ````markdown path=README.md mode=EDIT
@@ -2790,6 +2845,7 @@ Access the patients module through the sidebar navigation or directly at `/patie
 ````
 
 ### Step 2: Create User Guide
+
 1. Create a user guide for the patients app:
 
 ````markdown path=docs/user_guides/patients_app.md mode=EDIT
@@ -2883,6 +2939,7 @@ The status is indicated by a colored badge on the patient list and detail pages.
 ````
 
 ### Step 3: Final Deployment Checklist
+
 1. Create a deployment checklist:
 
 ````markdown path=docs/deployment/patients_app_checklist.md mode=EDIT

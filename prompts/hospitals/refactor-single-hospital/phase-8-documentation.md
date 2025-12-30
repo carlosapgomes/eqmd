@@ -18,6 +18,7 @@
 ### 1. Update CLAUDE.md - Major Rewrite
 
 **Remove hospital-related sections:**
+
 - [ ] Remove entire "Hospitals App" section
 - [ ] Remove hospital context middleware documentation
 - [ ] Remove hospital permission system details
@@ -26,6 +27,7 @@
 **Update App Details sections:**
 
 **Patients App** - Simplify hospital assignment logic:
+
 ```markdown
 <!-- Before (complex hospital logic) -->
 #### Hospital Assignment Logic
@@ -45,6 +47,7 @@
 ```
 
 **Permission System** - Complete rewrite:
+
 ```markdown
 <!-- Before (complex hospital + role permissions) -->
 ## Permission System
@@ -76,6 +79,7 @@ Located in `apps/core/permissions/`:
 ```
 
 **Update Essential Commands:**
+
 ```markdown
 <!-- Remove hospital-related commands -->
 # Development
@@ -97,6 +101,7 @@ uv run python manage.py create_sample_content
 ### 2. Update Project Architecture Overview
 
 **Simplify Apps Overview:**
+
 ```markdown
 <!-- Remove hospitals app -->
 ### Apps Overview
@@ -111,6 +116,7 @@ uv run python manage.py create_sample_content
 ```
 
 **Update Key Features:**
+
 ```markdown
 ### Key Features
 
@@ -124,6 +130,7 @@ uv run python manage.py create_sample_content
 ### 3. Update Patient App Documentation
 
 **Simplify patient documentation:**
+
 ```markdown
 ### Patients App
 
@@ -147,6 +154,7 @@ uv run python manage.py create_sample_content
 ### 4. Remove Hospital-Related Documentation
 
 **Delete hospital documentation sections:**
+
 - [ ] Remove "Hospital Context Middleware" section
 - [ ] Remove "Hospital Assignment Logic" section
 - [ ] Remove hospital-related template tags documentation
@@ -155,6 +163,7 @@ uv run python manage.py create_sample_content
 ### 5. Update Permission System Documentation
 
 **Rewrite permission documentation:**
+
 ```markdown
 ## Permission System
 
@@ -202,6 +211,7 @@ uv run python manage.py setup_groups              # Create profession-based grou
 uv run python manage.py permission_audit --action=report  # System audit
 uv run python manage.py user_permissions --action=assign # Assign user to group
 ```
+
 ```
 
 ### 6. Update Setup and Installation Instructions
@@ -219,19 +229,22 @@ uv run python manage.py user_permissions --action=assign # Assign user to group
    uv install
    ```
 
-2. **Database setup:**
+1. **Database setup:**
+
    ```bash
    uv run python manage.py migrate
    uv run python manage.py createsuperuser
    ```
 
-3. **Sample data (optional):**
+2. **Sample data (optional):**
+
    ```bash
    uv run python manage.py create_sample_tags
    uv run python manage.py create_sample_content
    ```
 
-4. **Run development server:**
+3. **Run development server:**
+
    ```bash
    uv run python manage.py runserver
    ```
@@ -239,6 +252,7 @@ uv run python manage.py user_permissions --action=assign # Assign user to group
 ### First Time Setup
 
 After creating a superuser:
+
 1. Log in to admin at `/admin/`
 2. Create user groups: `uv run python manage.py setup_groups`
 3. Assign users to appropriate professional groups
@@ -330,6 +344,7 @@ A Django 5 medical team collaboration platform for patient tracking and care man
 ### 10. Create Migration Guide
 
 **Create deployment guide for single-hospital:**
+
 ```markdown
 # Single-Hospital Architecture Guide
 
@@ -343,7 +358,8 @@ This version uses a simplified single-hospital architecture without the complexi
    git checkout single-hospital-refactor
    ```
 
-2. **Set up environment:**
+1. **Set up environment:**
+
    ```bash
    uv install
    cp .env.example .env
@@ -351,7 +367,8 @@ This version uses a simplified single-hospital architecture without the complexi
    # HOSPITAL_NAME, HOSPITAL_ADDRESS, HOSPITAL_PHONE, etc.
    ```
 
-3. **Create database:**
+2. **Create database:**
+
    ```bash
    uv run python manage.py migrate
    uv run python manage.py createsuperuser
@@ -363,6 +380,7 @@ This version uses a simplified single-hospital architecture without the complexi
 **Note:** This architecture is not compatible with existing multi-hospital data. For new installations only.
 
 If you need multi-hospital functionality:
+
 ```bash
 git checkout prescriptions  # Use original multi-hospital branch
 ```
@@ -374,6 +392,7 @@ git checkout prescriptions  # Use original multi-hospital branch
 - Faster development and testing
 - Easier deployment and maintenance
 - Better security through simplified permissions
+
 ```
 
 ### 11. Update Development Guidelines
@@ -401,24 +420,28 @@ git checkout prescriptions  # Use original multi-hospital branch
 
 ## Files to Update
 
-### Documentation Files:
+### Documentation Files
+
 - [ ] `CLAUDE.md` - Major rewrite removing hospital complexity
 - [ ] `README.md` - Simplify project description and features
 - [ ] `docs/` directory (if exists) - Remove hospital documentation
 - [ ] `CONTRIBUTING.md` (if exists) - Update development guidelines
 
-### Configuration Documentation:
+### Configuration Documentation
+
 - [ ] `.env.example` - Remove hospital environment variables
 - [ ] Deployment guides - Simplify without hospital context
 - [ ] Docker documentation - Remove hospital configuration
 
-### New Files to Create:
+### New Files to Create
+
 - [ ] `MIGRATION.md` - Guide for migrating from multi-hospital
 - [ ] Updated architecture diagrams (if any exist)
 
 ## Validation Checklist
 
 Before completing the refactor:
+
 - [ ] CLAUDE.md accurately reflects simplified architecture
 - [ ] README shows correct feature set
 - [ ] Setup instructions work for new installations
@@ -430,6 +453,7 @@ Before completing the refactor:
 ## Final Project Status
 
 **After Phase 8 completion:**
+
 - Single-hospital architecture fully implemented
 - Documentation reflects simplified system
 - Permission system is role-based only
@@ -438,6 +462,7 @@ Before completing the refactor:
 - Simplified development and deployment
 
 **Benefits Achieved:**
+
 - ~60% reduction in permission system complexity
 - ~40% reduction in overall codebase complexity
 - Simpler development workflow
