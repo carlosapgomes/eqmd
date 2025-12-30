@@ -107,6 +107,7 @@ apps/llm/
 
 ### 4.4 Persistence & Safety
 
+- **Structured Data:** Use Pydantic models (defined in `apps/llm/schemas.py`) for all LLM inputs and outputs. Never parse raw JSON manually.
 - Store AI outputs separately from clinician-authored data.
 - Capture metadata: prompt version, provider/model id, token usage (if available), timestamp, requesting user, review/approval state.
 - Build UI/admin flows so clinicians approve or edit AI drafts before publication; log every approval or modification for auditing.
@@ -128,6 +129,8 @@ apps/llm/
 - Continue using pytest with descriptive test names (`test_admit_patient_already_admitted_raises_error`).
 - Add service-level unit tests whenever logic moves out of models/views.
 - Ensure each service test covers success, failure, and edge cases (permissions, validation).
+- **Mock all external LLM calls** in tests to prevent cost explosion and ensure deterministic behavior (e.g., using `vcrpy` or `unittest.mock`).
+- **Enforce strict typing:** Run a type checker (like `mypy`) on service code and `apps/llm/schemas.py` to strictly validate data passed between AI outputs and Django models.
 - Snapshot or fixture-test prompts when wording or structure changes to prevent regressions.
 - Maintain integration tests for critical workflows (admissions, discharges, PDF exports) so refactors remain safe.
 
