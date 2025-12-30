@@ -635,6 +635,7 @@ docker system prune
 **Problem**: In development, the PWA shows "Install to Home Screen" option, but in production it only shows "Open EquipeMed".
 
 **Root Cause**: The issue occurs because:
+
 1. **Manifest served incorrectly**: nginx serves static files directly, but the manifest is now dynamic (`/manifest.json`)
 2. **Service Worker caching fails**: nginx doesn't set the correct `Content-Type` headers for PWA files
 3. **HTTPS requirements**: PWAs require HTTPS in production (except localhost)
@@ -767,14 +768,17 @@ server {
 #### Common Issues and Solutions
 
 **"Open" instead of "Install"**:
+
 - ❌ **Issue**: Browser thinks PWA is already installed or criteria not met
 - ✅ **Fix**: Clear browser data, check HTTPS, verify manifest Content-Type
 
 **Service Worker fails to register**:
+
 - ❌ **Issue**: nginx serving service worker with wrong Content-Type
 - ✅ **Fix**: Add service worker location block with correct headers
 
 **Manifest not loading**:
+
 - ❌ **Issue**: nginx serves `/static/manifest.json` but app requests `/manifest.json`
 - ✅ **Fix**: Use dynamic manifest served by Django with proper Content-Type
 

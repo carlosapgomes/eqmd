@@ -1,6 +1,7 @@
 # Phase 1: Backend Implementation - Patient Events Timeline
 
 ## Overview
+
 This phase implements the backend infrastructure for the patient events timeline, including views, URL patterns, and query optimizations.
 
 ## Step 1: Create Patient Events Timeline View
@@ -149,6 +150,7 @@ class PatientEventsTimelineView(ListView):
 ```
 
 **Required Imports**: Add these to the top of the file:
+
 ```python
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
@@ -174,6 +176,7 @@ path('<uuid:patient_id>/timeline/', PatientEventsTimelineView.as_view(), name='p
 ```
 
 **Complete URL pattern should be**:
+
 ```python
 urlpatterns = [
     # ... existing patterns ...
@@ -270,6 +273,7 @@ class EventTimelineManager(models.Manager):
 ```
 
 **Then add to Event model**:
+
 ```python
 class Event(UUIDModel, TimeStampedModel):
     # ... existing fields ...
@@ -309,6 +313,7 @@ path('<uuid:patient_id>/timeline/', PatientEventsTimelineView.as_view(), name='p
 ## Expected Results
 
 After completing Phase 1:
+
 - New timeline view accessible at `/patients/<uuid>/timeline/`
 - Filtering by event type, date range, and creator
 - Pagination with 15 events per page

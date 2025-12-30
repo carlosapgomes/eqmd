@@ -58,6 +58,7 @@ exportToCSV() {
 ```
 
 ### Usage
+
 - Single button click exports current view to CSV
 - Includes ward name, patient name, bed, status, and record number
 - Handles empty wards gracefully
@@ -108,12 +109,14 @@ context.update({
 ## Benefits
 
 ### CSV Export
+
 - **Immediate value**: Staff can save patient lists for reports
 - **No complexity**: Single file, no dependencies
 - **Familiar format**: Everyone knows how to open CSV files
 - **Audit trail**: Timestamped exports for records
 
 ### Stats Bar
+
 - **Quick overview**: See totals at a glance
 - **Emergency visibility**: Highlights urgent cases
 - **Timestamp**: Shows data freshness
@@ -137,6 +140,7 @@ context.update({
 ## Future Considerations
 
 Only implement additional features if you actually experience:
+
 - Page load times > 2 seconds (unlikely with < 100 patients)
 - User requests for real-time updates
 - Need for complex analytics

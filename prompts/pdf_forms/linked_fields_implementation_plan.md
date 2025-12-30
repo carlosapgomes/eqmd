@@ -564,6 +564,7 @@ def _create_django_field(self, field_name, config, form_config=None):
 ```
 
 **Testing**:
+
 - Panel renders correctly in configurator
 - Styling integrates with existing UI
 
@@ -640,6 +641,7 @@ def _create_django_field(self, field_name, config, form_config=None):
 ```
 
 **Testing**:
+
 - Modals open/close correctly
 - Form validation works
 - Data persists when editing
@@ -1063,6 +1065,7 @@ document.addEventListener('DOMContentLoaded', function() {
 ```
 
 **Testing**:
+
 - Data sources can be created, edited, deleted
 - Data items management works correctly
 - Validation prevents invalid configurations
@@ -1240,6 +1243,7 @@ function updateSelectedField() {
 ```
 
 **Testing**:
+
 - Data source dropdown populates correctly
 - Key dropdown shows available keys
 - Field properties save/load correctly
@@ -1331,6 +1335,7 @@ function updateFieldList() {
 ```
 
 **Testing**:
+
 - Fields linked to data sources show visual indicators
 - Overlay and list items have distinct styling
 - Indicators update when linkage changes
@@ -1776,44 +1781,44 @@ class LinkedFieldsWorkflowTests(TestCase):
 
 ### Phase 2: Form Generation (Day 3)
 
-4. Implement form generation enhancements (Step 2.1)
-5. Test choice field generation from data sources
-6. Verify metadata attachment to forms
+1. Implement form generation enhancements (Step 2.1)
+2. Test choice field generation from data sources
+3. Verify metadata attachment to forms
 
 ### Phase 2.5: Admin UI (Days 4-5)
 
-7. Add data source management panel (Steps 2.5.1 - 2.5.2)
-8. Implement data source JavaScript (Step 2.5.3)
-9. Add field linking UI (Steps 2.5.4 - 2.5.5)
-10. Test complete admin workflow
+1. Add data source management panel (Steps 2.5.1 - 2.5.2)
+2. Implement data source JavaScript (Step 2.5.3)
+3. Add field linking UI (Steps 2.5.4 - 2.5.5)
+4. Test complete admin workflow
 
 ### Phase 3: Frontend Enhancement (Days 6-7)
 
-11. Implement linked fields JavaScript (Steps 3.1 - 3.2)
-12. Add webpack configuration
-13. Integration testing of auto-fill behavior
+1. Implement linked fields JavaScript (Steps 3.1 - 3.2)
+2. Add webpack configuration
+3. Integration testing of auto-fill behavior
 
 ### Phase 4: Testing (Week 2)
 
-14. Full integration tests (unit + integration)
-15. Manual testing with real data
-16. Performance testing
-17. Browser compatibility testing
+1. Full integration tests (unit + integration)
+2. Manual testing with real data
+3. Performance testing
+4. Browser compatibility testing
 
 ### Phase 5: Documentation (Week 2)
 
-18. Update docs/apps/pdf-forms.md with new features
-19. Create example configurations
-20. Record admin tutorial video (optional)
-21. Update help text in admin interface
+1. Update docs/apps/pdf-forms.md with new features
+2. Create example configurations
+3. Record admin tutorial video (optional)
+4. Update help text in admin interface
 
 ### Phase 6: Deployment
 
-22. Deploy to staging environment
-23. User acceptance testing with hospital staff
-24. Deploy to production
-25. Monitor for issues
-26. Gather user feedback
+1. Deploy to staging environment
+2. User acceptance testing with hospital staff
+3. Deploy to production
+4. Monitor for issues
+5. Gather user feedback
 
 ---
 

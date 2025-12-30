@@ -3,6 +3,7 @@
 Based on the PRD in `/prompts/outprescriptons/requirements.md`, I need a detailed implementation plan for creating two new Django apps:
 
 ## App Structure Requirements
+
 1. **Drug Templates App**
    - Create as an independent app in the `apps/` directory following Django conventions
    - Implement the `DrugTemplate` model with all required fields and functionality
@@ -13,6 +14,7 @@ Based on the PRD in `/prompts/outprescriptons/requirements.md`, I need a detaile
    - Extend the existing Event system with a new `OutpatientPrescription` model (event_type=11)
 
 ## Implementation Details
+
 - Provide a complete scaffolding for both apps including:
   - Models with all required fields and relationships
   - Views for all CRUD operations
@@ -23,11 +25,13 @@ Based on the PRD in `/prompts/outprescriptons/requirements.md`, I need a detaile
   - Permissions implementation
 
 ## Task Breakdown
+
 - Break down the implementation into 20-30 distinct tasks
 - Each task should have 3-5 detailed sub-tasks with step-by-step instructions
 - Follow the vertical slicing approach used in other event implementations
 
 ## UI/UX Requirements
+
 - All UI components must follow the established EquipeMed design patterns
 - Use Bootstrap 5.3.6 with the medical theme for consistent styling
 - Reference existing apps like `apps/dailynotes`, `apps/simplenotes`, and `apps/mediafiles` for UI patterns
@@ -35,6 +39,7 @@ Based on the PRD in `/prompts/outprescriptons/requirements.md`, I need a detaile
 - Implement the HTML+browser print strategy for prescription documents
 
 ## Integration Requirements
+
 - Follow the existing permission system with appropriate decorators
 - Integrate with the hospital context middleware
 - Maintain proper audit trails using Event model's audit fields

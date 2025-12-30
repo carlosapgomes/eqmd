@@ -243,4 +243,3 @@ Before proceeding to Phase 4:
 - [ ] Time-based edit windows preserved
 - [ ] Student access properly limited
 - [ ] No accidental permission escalation
-

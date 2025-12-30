@@ -15,9 +15,11 @@ Retrieve all sample content templates for a specific event type.
 **Endpoint:** `GET /sample-content/api/event-type/<event_type>/`
 
 **Parameters:**
+
 - `event_type` (path parameter): Integer representing the event type ID
 
 **Response Format:**
+
 ```json
 {
     "sample_contents": [
@@ -31,6 +33,7 @@ Retrieve all sample content templates for a specific event type.
 ```
 
 **Event Type IDs:**
+
 - `0` - History and Physical Event (Anamnese e Exame Físico)
 - `1` - Daily Note Event (Evolução)
 - `2` - Simple Note Event (Nota/Observação)
@@ -43,6 +46,7 @@ Retrieve all sample content templates for a specific event type.
 - `9` - Photo Series Event (Série de Fotos)
 
 **Example Request:**
+
 ```http
 GET /sample-content/api/event-type/1/ HTTP/1.1
 Host: example.com
@@ -50,6 +54,7 @@ Cookie: sessionid=your-session-id
 ```
 
 **Example Response:**
+
 ```json
 {
     "sample_contents": [
@@ -70,6 +75,7 @@ Cookie: sessionid=your-session-id
 **Error Responses:**
 
 **401 Unauthorized** - User not authenticated
+
 ```json
 {
     "error": "Authentication required"
@@ -77,6 +83,7 @@ Cookie: sessionid=your-session-id
 ```
 
 **400 Bad Request** - Invalid event type
+
 ```json
 {
     "error": "Invalid event type"
@@ -180,6 +187,7 @@ function populateTemplateSelector(eventType, selectElementId) {
 ## Rate Limiting
 
 Currently, no rate limiting is implemented. However, best practices suggest:
+
 - Cache responses when possible
 - Avoid excessive API calls in loops
 - Implement client-side caching for frequently accessed templates

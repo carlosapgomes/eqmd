@@ -31,12 +31,14 @@ Implementation of PDF form overlay functionality for hospital-specific forms (tr
 ### Manual Configuration vs. Auto-Extraction
 
 **❌ Why NOT Auto-Extract PDF Fields:**
+
 - **Unreliable**: Many hospital PDFs are scanned documents without fillable form fields
 - **Limited Compatibility**: Only works with PDFs that have embedded form annotations
 - **Positioning Issues**: Auto-detected positioning is often inaccurate
 - **Format Variations**: Different PDF creation tools create inconsistent field structures
 
 **✅ Why Manual Configuration is Better:**
+
 - **Universal Compatibility**: Works with any PDF format (scanned, image-based, or form-based)
 - **Precise Control**: Exact positioning using x,y coordinates in centimeters
 - **Predictable Results**: No guessing about field detection or positioning
@@ -291,7 +293,8 @@ The `form_fields` JSON in `PDFFormTemplate` uses coordinate-based positioning:
 }
 ```
 
-### Field Configuration Properties:
+### Field Configuration Properties
+
 - **Position**: `x`, `y` coordinates in centimeters from top-left
 - **Dimensions**: `width`, `height` in centimeters
 - **Typography**: `font_size`, `font_family`
@@ -1110,6 +1113,7 @@ uv add PyPDF2          # For PDF manipulation and merging
 ```
 
 **Why These Libraries:**
+
 - **ReportLab**: Professional PDF generation with precise coordinate positioning
 - **PyPDF2**: Reliable PDF manipulation for merging overlay onto original
 - **Coordinate-based approach**: No dependency on PDF form field detection

@@ -3,9 +3,11 @@
 ## Detailed Implementation Phases with Tasks
 
 ### Phase 1: Foundation (Core Model) - ~2-3 hours
+
 **Goal**: Create the basic Django app structure and model
 
-#### Tasks:
+#### Tasks
+
 1. **Create Django App** (30 min)
    - Run `python manage.py startapp dischargereports`
    - Create proper directory structure
@@ -32,9 +34,11 @@
 ---
 
 ### Phase 2: Basic CRUD Operations - ~3-4 hours
+
 **Goal**: Implement create, read, update, delete functionality
 
-#### Tasks:
+#### Tasks
+
 1. **Create Forms** (1 hour)
    - DischargeReportForm with all fields
    - Draft/save toggle implementation
@@ -42,7 +46,7 @@
 
 2. **Create Views** (1.5 hours)
    - CreateView (separate from update)
-   - UpdateView 
+   - UpdateView
    - DetailView
    - ListView with filtering
    - DeleteView (draft only)
@@ -64,9 +68,11 @@
 ---
 
 ### Phase 3: Event System Integration - ~2-3 hours
+
 **Goal**: Integrate with patient timeline and event system
 
-#### Tasks:
+#### Tasks
+
 1. **Create Event Card Template** (1 hour)
    - event_card_dischargereport.html
    - Extend event_card_base.html
@@ -92,9 +98,11 @@
 ---
 
 ### Phase 4: Print/PDF Generation - ~2-3 hours
+
 **Goal**: Create print-friendly reports in Portuguese
 
-#### Tasks:
+#### Tasks
+
 1. **Create Print Template** (1.5 hours)
    - dischargereport_print.html
    - All required sections in Portuguese
@@ -116,9 +124,11 @@
 ---
 
 ### Phase 5: Firebase Import Command - ~3-4 hours
+
 **Goal**: Import existing discharge reports from Firebase
 
-#### Tasks:
+#### Tasks
+
 1. **Create Management Command** (2 hours)
    - import_firebase_discharge_reports.py
    - Command-line arguments and validation
@@ -144,9 +154,11 @@
 ---
 
 ### Phase 6: Advanced Features - ~2-3 hours
+
 **Goal**: Draft logic, permissions, and polish
 
-#### Tasks:
+#### Tasks
+
 1. **Draft Logic Implementation** (1 hour)
    - Implement draft-only editing
    - Update templates to show draft status
@@ -172,9 +184,11 @@
 ---
 
 ### Phase 7: Testing and Documentation - ~2-3 hours
+
 **Goal**: Comprehensive testing and documentation
 
-#### Tasks:
+#### Tasks
+
 1. **Model and View Tests** (1.5 hours)
    - Unit tests for model methods
    - View tests for CRUD operations
@@ -196,20 +210,23 @@
 
 ## Total Estimated Time: ~16-20 hours
 
-## Critical Dependencies Between Phases:
+## Critical Dependencies Between Phases
+
 - Phase 1 must complete before Phase 2
 - Phase 3 depends on Phase 2 completion  
 - Phase 4 can be developed in parallel with Phase 3
 - Phase 5 requires Phase 1 model completion
 - Phase 6 and 7 can be done after core functionality (Phases 1-3)
 
-## Risk Mitigation:
+## Risk Mitigation
+
 - **Firebase Data Format**: Validate data structure early in Phase 5
 - **Print Layout**: Test print CSS across different browsers in Phase 4
 - **Timeline Integration**: Test with existing events to avoid conflicts in Phase 3
 - **Permission System**: Thoroughly test draft logic in Phase 6
 
-## Success Criteria:
+## Success Criteria
+
 - ✅ Discharge reports display in patient timeline
 - ✅ Print generates professional Portuguese PDFs
 - ✅ Firebase import successfully migrates existing data

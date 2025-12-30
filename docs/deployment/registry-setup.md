@@ -11,6 +11,7 @@ EquipeMed uses a registry-based deployment approach where Docker images are buil
 ### GitHub Container Registry (Recommended)
 
 **Benefits:**
+
 - Free for public repositories
 - Integrated with GitHub Actions
 - Automatic authentication with GITHUB_TOKEN
@@ -24,6 +25,7 @@ EquipeMed uses a registry-based deployment approach where Docker images are buil
 4. **Set repository visibility** for packages in Settings > Actions > General
 
 **Authentication:**
+
 ```bash
 # Login to GitHub Container Registry
 echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
@@ -35,24 +37,27 @@ export REGISTRY_TOKEN="your-github-token"
 ```
 
 **Image naming:**
+
 - Format: `ghcr.io/username/repository:tag`
 - Example: `ghcr.io/yourorg/eqmd:latest`
 
 ### Docker Hub Alternative
 
 **Benefits:**
+
 - Most widely used registry
 - Good free tier
 - Easy setup and management
 
 **Setup:**
 
-1. **Create Docker Hub account** at https://hub.docker.com
+1. **Create Docker Hub account** at <https://hub.docker.com>
 2. **Create repository** for your project
 3. **Generate access token** in Account Settings > Security
 4. **Update image references** in deployment scripts
 
 **Authentication:**
+
 ```bash
 # Login to Docker Hub
 echo $DOCKER_TOKEN | docker login -u $DOCKER_USERNAME --password-stdin
@@ -64,12 +69,14 @@ export REGISTRY_TOKEN="your-access-token"
 ```
 
 **Image naming:**
+
 - Format: `username/repository:tag`
 - Example: `yourorg/eqmd:latest`
 
 ### Private Registry
 
 **Benefits:**
+
 - Full control over infrastructure
 - No external dependencies
 - Can be hosted on-premise
@@ -77,6 +84,7 @@ export REGISTRY_TOKEN="your-access-token"
 **Setup:**
 
 1. **Set up registry server:**
+
 ```bash
 # Using Docker Registry
 docker run -d -p 5000:5000 --restart=always --name registry registry:2
@@ -85,7 +93,8 @@ docker run -d -p 5000:5000 --restart=always --name registry registry:2
 # See: https://goharbor.io/docs/2.9.0/install-config/
 ```
 
-2. **Configure TLS** (recommended for production):
+1. **Configure TLS** (recommended for production):
+
 ```bash
 # Generate certificates
 openssl req -newkey rsa:4096 -nodes -sha256 -keyout certs/domain.key -x509 -days 365 -out certs/domain.crt
@@ -98,7 +107,8 @@ docker run -d -p 5000:5000 --restart=always --name registry \
   registry:2
 ```
 
-3. **Configure authentication:**
+1. **Configure authentication:**
+
 ```bash
 # Create password file
 htpasswd -Bbn username password > auth/htpasswd
@@ -113,6 +123,7 @@ docker run -d -p 5000:5000 --restart=always --name registry \
 ```
 
 **Client Configuration:**
+
 ```bash
 # Add registry to Docker daemon configuration
 echo '{"insecure-registries": ["your-registry:5000"]}' > /etc/docker/daemon.json
@@ -132,16 +143,19 @@ export REGISTRY_TOKEN="your-password"
 ### GitHub Actions (Included)
 
 The repository includes `.github/workflows/build-and-push.yml` that:
+
 - Builds Docker images on push/PR
 - Pushes to GitHub Container Registry
 - Performs security scanning
 - Tags images appropriately
 
 **Trigger conditions:**
+
 - Push to `main` or `dev` branches
 - Pull requests to `main`
 
 **Image tags created:**
+
 - `latest` (for main branch)
 - `dev` (for dev branch)
 - `pr-123` (for pull requests)

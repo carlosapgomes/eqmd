@@ -53,16 +53,19 @@ If functionality doesn't work (CSS not applied, JavaScript not executing):
 ## Best Practices
 
 ### Template Inheritance
+
 - Always use `{% extends %}` for consistent layout
 - Place all content within appropriate template blocks
 - Use `{% load %}` tags within blocks when possible
 
 ### Static Files
+
 - Use `{% load static %}` for static file references
 - Place CSS in `{% block extra_css %}`
 - Place JavaScript in `{% block extra_js %}`
 
 ### Code Organization
+
 - Keep template logic minimal
 - Use template tags for complex logic
 - Prefer view-level data processing over template processing

@@ -5,6 +5,7 @@
 **Note:** Tag creation is restricted to system administrators only. This ensures system-wide consistency and prevents tag proliferation.
 
 **For Administrators:**
+
 1. Navigate to Patients > Manage Tags
 2. Click "Add Tag"
 3. Enter tag name and select color

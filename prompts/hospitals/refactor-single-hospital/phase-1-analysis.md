@@ -117,4 +117,3 @@ Create `hospital-inventory.md` with:
 - Focus on comprehensive discovery to avoid surprises later
 - Document any complex dependencies that might affect later phases
 - Identify any hospital-related functionality that might be critical to preserve
-

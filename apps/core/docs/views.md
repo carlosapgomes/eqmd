@@ -16,27 +16,33 @@ The Core app contains two main views that handle the primary user interfaces:
 **Location**: `apps/core/views.py:4-11`
 
 #### Purpose
+
 Renders the public-facing landing page for EquipeMed, serving as the main entry point for new users.
 
 #### Function Signature
+
 ```python
 def landing_page(request):
 ```
 
 #### Parameters
+
 - `request` (HttpRequest): The HTTP request object
 
 #### Authentication
+
 - **Required**: No
 - **Decorators**: None
 - **Access**: Public (anyone can access)
 
 #### Return Value
+
 - **Type**: HttpResponse
 - **Template**: `core/landing_page.html`
 - **Context**: Dictionary with page metadata
 
 #### Context Variables
+
 ```python
 context = {
     'page_title': 'Bem-vindo ao EquipeMed',
@@ -44,7 +50,9 @@ context = {
 ```
 
 #### Template Features
+
 The landing page template includes:
+
 - Hero section with main value proposition
 - Feature showcase cards
 - Benefits overview
@@ -53,11 +61,13 @@ The landing page template includes:
 - Responsive design
 
 #### URL Mapping
+
 - **Pattern**: `/`
 - **Name**: `landing_page`
 - **Namespace**: `core:landing_page`
 
 #### Example Usage
+
 ```python
 # In templates
 <a href="{% url 'core:landing_page' %}">Home</a>
@@ -68,6 +78,7 @@ redirect_url = reverse('core:landing_page')
 ```
 
 #### SEO Considerations
+
 - Page title is set for search engines
 - Meta descriptions should be added
 - Structured data could be implemented
@@ -79,29 +90,35 @@ redirect_url = reverse('core:landing_page')
 **Location**: `apps/core/views.py:13-21`
 
 #### Purpose
+
 Renders the main dashboard interface for authenticated users, providing access to core application features.
 
 #### Function Signature
+
 ```python
 @login_required
 def dashboard_view(request):
 ```
 
 #### Parameters
+
 - `request` (HttpRequest): The HTTP request object
 
 #### Authentication
+
 - **Required**: Yes
 - **Decorators**: `@login_required`
 - **Access**: Authenticated users only
 - **Redirect**: Unauthenticated users redirected to login page
 
 #### Return Value
+
 - **Type**: HttpResponse
 - **Template**: `core/dashboard.html`
 - **Context**: Dictionary with page metadata and user data
 
 #### Context Variables
+
 ```python
 context = {
     'page_title': 'Painel Principal',
@@ -109,7 +126,9 @@ context = {
 ```
 
 #### Template Features
+
 The dashboard template includes:
+
 - Welcome message with user name
 - Sidebar navigation
 - Quick stats cards
@@ -118,11 +137,13 @@ The dashboard template includes:
 - Responsive layout
 
 #### URL Mapping
+
 - **Pattern**: `/dashboard/`
 - **Name**: `dashboard`
 - **Namespace**: `core:dashboard`
 
 #### Example Usage
+
 ```python
 # In templates
 <a href="{% url 'core:dashboard' %}">Dashboard</a>
@@ -133,7 +154,9 @@ redirect_url = reverse('core:dashboard')
 ```
 
 #### Login Redirect
+
 This view is configured as the default login redirect:
+
 ```python
 # In settings.py
 LOGIN_REDIRECT_URL = 'core:dashboard'
@@ -142,6 +165,7 @@ LOGIN_REDIRECT_URL = 'core:dashboard'
 ## View Patterns and Best Practices
 
 ### Context Data Pattern
+
 Both views follow a consistent pattern for context data:
 
 ```python
@@ -154,6 +178,7 @@ def view_function(request):
 ```
 
 ### Authentication Handling
+
 The app uses Django's built-in authentication:
 
 ```python
@@ -166,6 +191,7 @@ def protected_view(request):
 ```
 
 ### Template Rendering
+
 All views use Django's `render` shortcut:
 
 ```python
@@ -180,18 +206,21 @@ def view_function(request):
 ### Planned View Improvements
 
 #### Dashboard Enhancements
+
 1. **User-specific Data**: Display user's actual data instead of placeholder
 2. **Dynamic Stats**: Real-time statistics from database
 3. **Personalization**: User preferences and customization
 4. **Activity Feed**: Recent user actions and notifications
 
 #### Additional Views
+
 1. **Settings View**: User preferences and configuration
 2. **Help View**: Documentation and tutorials
 3. **Search View**: Global search functionality
 4. **Profile View**: User profile management
 
 ### Context Improvements
+
 Future context data might include:
 
 ```python
@@ -211,6 +240,7 @@ context = {
 ## Error Handling
 
 ### Current Implementation
+
 The views currently rely on Django's default error handling:
 
 - **404 errors**: Handled by Django's default 404 page
@@ -218,6 +248,7 @@ The views currently rely on Django's default error handling:
 - **Authentication errors**: Handled by `@login_required` decorator
 
 ### Recommended Improvements
+
 1. **Custom Error Pages**: Create branded error templates
 2. **Logging**: Add proper logging for debugging
 3. **User Feedback**: Provide helpful error messages
@@ -226,11 +257,13 @@ The views currently rely on Django's default error handling:
 ## Performance Considerations
 
 ### Current Performance
+
 - Views are simple and fast
 - No database queries in current implementation
 - Templates are cached by Django
 
 ### Optimization Opportunities
+
 1. **Database Optimization**: Use select_related/prefetch_related for future queries
 2. **Caching**: Implement view-level caching for static content
 3. **Pagination**: Add pagination for large datasets
@@ -239,11 +272,13 @@ The views currently rely on Django's default error handling:
 ## Security Considerations
 
 ### Current Security
+
 - Authentication properly enforced with decorators
 - CSRF protection enabled by default
 - No direct database access in views
 
 ### Security Best Practices
+
 1. **Input Validation**: Validate all user inputs
 2. **Permission Checks**: Add granular permission checking
 3. **Rate Limiting**: Implement rate limiting for API endpoints
@@ -252,6 +287,7 @@ The views currently rely on Django's default error handling:
 ## Testing
 
 ### Test Coverage
+
 Current test coverage is minimal. Recommended tests:
 
 ```python

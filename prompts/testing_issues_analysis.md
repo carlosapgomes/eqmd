@@ -83,4 +83,3 @@ Add a "Testing Verification" section to each slice that includes:
 - App configuration verification steps
 - Basic functionality smoke tests
 - Clear test running instructions with fallback options
-

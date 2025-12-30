@@ -27,6 +27,7 @@ class EqmdCustomUser(AbstractUser):
 ```
 
 **Key Features:**
+
 - `terms_accepted`: Boolean flag tracking acceptance status
 - `terms_accepted_at`: Timestamp of when terms were accepted
 - Both fields are included in audit history via `simple-history`
@@ -46,6 +47,7 @@ class TermsAcceptanceRequiredMiddleware:
 ```
 
 **Enforcement Logic:**
+
 1. Skip unauthenticated users
 2. Allow users who have already accepted terms
 3. Allow access to terms-related URLs and logout
@@ -54,6 +56,7 @@ class TermsAcceptanceRequiredMiddleware:
 6. Log all enforcement actions for security audit
 
 **Allowed URLs without terms acceptance:**
+
 - `/accept-terms/` - Terms acceptance page
 - `/terms-of-use/` - Full terms document
 - `/account/logout/` - User logout
@@ -79,10 +82,12 @@ class TermsAcceptanceRequiredMiddleware:
 ### Navigation Flow
 
 **From Accept Terms Page:**
+
 - "Ler Termos Completos" → `/terms-of-use/` (same tab)
 - "Voltar" on terms page → Returns to `/accept-terms/`
 
 **Direct Access:**
+
 - Direct navigation to `/terms-of-use/` → "Voltar" goes to login page
 
 ## URL Structure
@@ -97,6 +102,7 @@ class TermsAcceptanceRequiredMiddleware:
 ### Terms of Use (`templates/core/terms_of_use.html`)
 
 **Features:**
+
 - Complete legal document
 - Medical-themed professional styling
 - Dual navigation (top and bottom)
@@ -104,6 +110,7 @@ class TermsAcceptanceRequiredMiddleware:
 - Hospital-independent language ("EquipeMed" as service provider)
 
 **Content Structure:**
+
 1. Service positioning as "Sistema de Informação Clínica"
 2. Legal boundaries and responsibilities
 3. Confidentiality and LGPD compliance
@@ -114,6 +121,7 @@ class TermsAcceptanceRequiredMiddleware:
 ### Terms Acceptance (`templates/core/accept_terms.html`)
 
 **Features:**
+
 - Interactive acceptance interface
 - Terms summary with key points
 - Mandatory checkbox validation
@@ -122,6 +130,7 @@ class TermsAcceptanceRequiredMiddleware:
 - Dual-action buttons (Accept/Cancel)
 
 **Validation:**
+
 - JavaScript checkbox validation
 - Server-side POST processing
 - CSRF protection
@@ -132,12 +141,14 @@ class TermsAcceptanceRequiredMiddleware:
 ### Service Positioning
 
 **Independent Service Provider:**
+
 - EquipeMed positioned as independent "Sistema de Informação Clínica"
 - Clear boundaries: not hospital management software
 - Supplementary tool, doesn't replace official hospital systems
 - Respect for institutional authority
 
 **Legal Language:**
+
 - LGPD compliance references
 - Professional responsibility emphasis
 - Medical ethics integration
@@ -146,12 +157,14 @@ class TermsAcceptanceRequiredMiddleware:
 ### Audit Trail
 
 **Database Tracking:**
+
 - Acceptance timestamp (`terms_accepted_at`)
 - Boolean status (`terms_accepted`)
 - Historical changes via `simple-history`
 - User identification and tracking
 
 **Security Logging:**
+
 ```python
 logger.info(
     f'Terms accepted by user {request.user.username} '
@@ -161,6 +174,7 @@ logger.info(
 ```
 
 **Audit Information Captured:**
+
 - Username and user ID
 - IP address (via `get_client_ip`)
 - Exact timestamp
@@ -183,6 +197,7 @@ MIDDLEWARE = [
 ```
 
 **Order Requirements:**
+
 - Must come after authentication middleware
 - Must come after password change middleware
 - Must come before final request processing
@@ -258,12 +273,14 @@ for record in user.history.all():
 ### Monitoring
 
 **Key Metrics to Monitor:**
+
 - Terms acceptance rate
 - Users stuck at terms page
 - Middleware enforcement frequency
 - Security log alerts
 
 **Log Locations:**
+
 - Application logs: Terms acceptance events
 - Security logs: Enforcement actions
 - Database history: Acceptance tracking
@@ -273,16 +290,19 @@ for record in user.history.all():
 ### Existing Systems
 
 **Authentication Integration:**
+
 - Works with `allauth` authentication system
 - Integrates with password change requirements
 - Respects existing permission system
 
 **Audit Integration:**
+
 - Uses existing `simple-history` infrastructure
 - Leverages existing IP tracking system
 - Integrates with security logging framework
 
 **UI Integration:**
+
 - Consistent with medical theme styling
 - Uses existing Bootstrap components
 - Follows established template patterns
@@ -300,6 +320,7 @@ for record in user.history.all():
 ### API Extensions
 
 Future API endpoints could include:
+
 - `GET /api/terms/status/` - Check user's terms acceptance status
 - `POST /api/terms/accept/` - API-based terms acceptance
 - `GET /api/terms/history/` - Terms acceptance history for user
@@ -309,21 +330,25 @@ Future API endpoints could include:
 ### Common Issues
 
 **Issue: Users stuck in redirect loop**
+
 - Check middleware order in settings
 - Verify URL patterns are correct
 - Check for circular redirects in views
 
 **Issue: Terms not being enforced**
+
 - Verify middleware is enabled
 - Check user authentication status
 - Confirm `terms_accepted` field exists
 
 **Issue: Navigation buttons not working**
+
 - Check URL reversals in templates
 - Verify view context includes `return_url`
 - Test JavaScript console for errors
 
 **Issue: Acceptance not recording**
+
 - Check database field permissions
 - Verify CSRF tokens in forms
 - Check form validation logic

@@ -52,12 +52,14 @@ urlpatterns = [
 **Full Name**: `core:landing_page`
 
 #### Details
+
 - **Purpose**: Public homepage for EquipeMed
 - **Authentication**: Not required
 - **HTTP Methods**: GET
 - **Template**: `core/landing_page.html`
 
 #### URL Reversing
+
 ```python
 # In views
 from django.urls import reverse
@@ -71,6 +73,7 @@ url = reverse('core:landing_page')
 ```
 
 #### Example URLs
+
 - `http://example.com/`
 - `https://app.sispep.com/`
 
@@ -82,12 +85,14 @@ url = reverse('core:landing_page')
 **Full Name**: `core:dashboard`
 
 #### Details
+
 - **Purpose**: Main authenticated user interface
 - **Authentication**: Required (`@login_required`)
 - **HTTP Methods**: GET
 - **Template**: `core/dashboard.html`
 
 #### URL Reversing
+
 ```python
 # In views
 from django.urls import reverse
@@ -101,12 +106,14 @@ url = reverse('core:dashboard')
 ```
 
 #### Example URLs
+
 - `http://example.com/dashboard/`
 - `https://app.sispep.com/dashboard/`
 
 ## Namespace Configuration
 
 ### App Namespace
+
 The Core app uses the namespace `apps.core` for explicit identification:
 
 ```python
@@ -114,12 +121,14 @@ app_name = 'apps.core'
 ```
 
 ### Benefits of Namespacing
+
 1. **Collision Avoidance**: Prevents URL name conflicts
 2. **Explicit Routing**: Clear identification of app URLs
 3. **Maintainability**: Easier to manage in large projects
 4. **Consistency**: Matches the app directory structure
 
 ### Usage Examples
+
 ```python
 # Explicit namespace (recommended)
 reverse('apps.core:landing_page')
@@ -133,6 +142,7 @@ reverse('core:dashboard')
 ## URL Integration
 
 ### Login Redirect Configuration
+
 The dashboard is configured as the default login redirect:
 
 ```python
@@ -141,6 +151,7 @@ LOGIN_REDIRECT_URL = 'core:dashboard'
 ```
 
 ### Navigation Links
+
 Common navigation patterns in templates:
 
 ```html
@@ -159,6 +170,7 @@ Common navigation patterns in templates:
 ## URL Parameters and Query Strings
 
 ### Current Implementation
+
 The current URL patterns don't use parameters or query strings:
 
 ```python
@@ -168,6 +180,7 @@ path('dashboard/', views.dashboard_view, name='dashboard'),
 ```
 
 ### Future Enhancements
+
 Potential URL patterns for future features:
 
 ```python
@@ -186,6 +199,7 @@ path('search/<str:query>/', views.search_results, name='search_results'),
 ## HTTP Methods
 
 ### Current Support
+
 All current URLs support only GET requests:
 
 ```python
@@ -198,6 +212,7 @@ def dashboard_view(request):
 ```
 
 ### Future HTTP Method Support
+
 Potential additions for interactive features:
 
 ```python
@@ -218,10 +233,12 @@ def api_dashboard_data(request):
 ## URL Security
 
 ### Authentication Requirements
+
 - **Landing Page**: Public access (no authentication)
 - **Dashboard**: Requires authentication (`@login_required`)
 
 ### CSRF Protection
+
 All POST requests are protected by Django's CSRF middleware:
 
 ```python
@@ -234,6 +251,7 @@ MIDDLEWARE = [
 ```
 
 ### URL Access Control
+
 ```python
 from django.contrib.auth.decorators import login_required
 
@@ -247,6 +265,7 @@ def dashboard_view(request):
 ## Error Handling
 
 ### 404 Errors
+
 Django automatically handles 404 errors for undefined URLs:
 
 ```python
@@ -255,6 +274,7 @@ Django automatically handles 404 errors for undefined URLs:
 ```
 
 ### Custom Error Pages
+
 Future implementation could include custom error templates:
 
 ```python
@@ -266,6 +286,7 @@ handler500 = 'apps.core.views.custom_500'
 ## URL Testing
 
 ### Test Examples
+
 Recommended tests for URL patterns:
 
 ```python
@@ -294,11 +315,13 @@ class CoreURLsTestCase(TestCase):
 ## Performance Considerations
 
 ### URL Routing Performance
+
 - **Simple Patterns**: Current patterns are simple and fast
 - **Regex Patterns**: Avoid complex regex when possible
 - **URL Caching**: Django caches URL patterns automatically
 
 ### Optimization Tips
+
 1. **Order Patterns**: Place most common patterns first
 2. **Avoid Regex**: Use simple string patterns when possible
 3. **Namespace Usage**: Use namespaces for better organization
@@ -306,16 +329,19 @@ class CoreURLsTestCase(TestCase):
 ## SEO and URL Structure
 
 ### Current URL Structure
+
 - **Root URL**: `/` (good for SEO)
 - **Dashboard**: `/dashboard/` (descriptive and clean)
 
 ### SEO Best Practices
+
 1. **Descriptive URLs**: Use meaningful path segments
 2. **Consistent Structure**: Maintain consistent URL patterns
 3. **Canonical URLs**: Implement canonical URL handling
 4. **Sitemap**: Generate XML sitemap for search engines
 
 ### Future URL Improvements
+
 ```python
 # SEO-friendly URLs
 path('about/', views.about_page, name='about'),
@@ -327,6 +353,7 @@ path('help/', views.help_page, name='help'),
 ## API Endpoints
 
 ### Future API URLs
+
 Potential API endpoints for the Core app:
 
 ```python
@@ -337,6 +364,7 @@ path('api/search/', views.search_api, name='search_api'),
 ```
 
 ### API Versioning
+
 ```python
 # Versioned API URLs
 path('api/v1/dashboard/', include('apps.core.api.v1.urls')),
@@ -355,6 +383,7 @@ path('api/v2/dashboard/', include('apps.core.api.v2.urls')),
 ### Common URL Issues
 
 1. **NoReverseMatch Error**
+
    ```python
    # Problem: Incorrect URL name
    reverse('dashboard')  # Missing namespace
@@ -364,18 +393,21 @@ path('api/v2/dashboard/', include('apps.core.api.v2.urls')),
    ```
 
 2. **404 Not Found**
+
    ```python
    # Check URL pattern matches exactly
    path('dashboard/', ...)  # Requires trailing slash
    ```
 
 3. **Redirect Loops**
+
    ```python
    # Check LOGIN_REDIRECT_URL setting
    LOGIN_REDIRECT_URL = 'core:dashboard'
    ```
 
 ### Debug Tips
+
 1. **URL Debug**: Use `django.urls.reverse` in Django shell
 2. **Pattern Testing**: Test URL patterns with `resolve()`
 3. **Middleware**: Check middleware order for authentication

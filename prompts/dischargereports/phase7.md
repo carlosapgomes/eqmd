@@ -19,7 +19,7 @@ mkdir -p apps/dischargereports/tests
 touch apps/dischargereports/tests/__init__.py
 ````
 
-2. CREATE MODEL TESTS:
+1. CREATE MODEL TESTS:
    apps/dischargereports/tests/test_models.py:
 
 ```python
@@ -155,7 +155,7 @@ class DischargeReportModelTests(TestCase):
         self.assertEqual(final_report.status_badge_class, "badge bg-success")
 ```
 
-3. CREATE VIEW TESTS:
+1. CREATE VIEW TESTS:
    apps/dischargereports/tests/test_views.py:
 
 ```python
@@ -311,7 +311,7 @@ class DischargeReportViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
 ```
 
-4. CREATE FIREBASE IMPORT TESTS:
+1. CREATE FIREBASE IMPORT TESTS:
    apps/dischargereports/tests/test_firebase_import.py:
 
 ```python
@@ -440,7 +440,7 @@ class FirebaseImportTests(TestCase):
         self.assertFalse(admission.is_active)
 ```
 
-5. CREATE INTEGRATION TESTS:
+1. CREATE INTEGRATION TESTS:
    apps/dischargereports/tests/test_integration.py:
 
 ```python
@@ -522,7 +522,7 @@ class DischargeReportIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 403)
 ```
 
-6. COMPLETE FEATURE DOCUMENTATION:
+1. COMPLETE FEATURE DOCUMENTATION:
    Create comprehensive docs/apps/dischargereports.md using the template from docs-template.md, including:
 
 - All testing commands
@@ -530,7 +530,7 @@ class DischargeReportIntegrationTests(TestCase):
 - Development notes
 - Firebase import documentation
 
-7. CREATE TEST RUNNER SCRIPT:
+1. CREATE TEST RUNNER SCRIPT:
 
 ```bash
 # Add to documentation - testing commands

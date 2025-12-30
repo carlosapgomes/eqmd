@@ -29,7 +29,7 @@ Create these files:
 - apps/dischargereports/views.py
 - apps/dischargereports/forms.py
 
-2. IMPLEMENT MODELS.PY:
+1. IMPLEMENT MODELS.PY:
 
 ```python
 from django.db import models
@@ -125,7 +125,7 @@ class DischargeReport(Event):
         return f"Relatório de Alta - {self.patient.name} - {self.discharge_date.strftime('%d/%m/%Y')}{draft_text}"
 ```
 
-3. IMPLEMENT APPS.PY:
+1. IMPLEMENT APPS.PY:
 
 ```python
 from django.apps import AppConfig
@@ -137,7 +137,7 @@ class DischargereportsConfig(AppConfig):
     verbose_name = 'Relatórios de Alta'
 ```
 
-4. IMPLEMENT ADMIN.PY:
+1. IMPLEMENT ADMIN.PY:
 
 ```python
 from django.contrib import admin
@@ -174,7 +174,7 @@ class DischargeReportAdmin(admin.ModelAdmin):
     )
 ```
 
-5. CREATE EMPTY FILES:
+1. CREATE EMPTY FILES:
 
 ```python
 # apps/dischargereports/urls.py
@@ -191,10 +191,10 @@ from django.shortcuts import render
 from django import forms
 ```
 
-6. ADD TO INSTALLED_APPS in settings/base.py:
+1. ADD TO INSTALLED_APPS in settings/base.py:
    Add 'apps.dischargereports' to INSTALLED_APPS list.
 
-7. GENERATE AND RUN MIGRATION:
+2. GENERATE AND RUN MIGRATION:
 
 ```bash
 uv run python manage.py makemigrations dischargereports

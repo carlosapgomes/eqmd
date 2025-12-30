@@ -1,6 +1,7 @@
 # Phase 3: Integration & UX Enhancements
 
 ## Overview
+
 This phase integrates the timeline with the patient detail page, adds UX enhancements like modal views, and implements mobile optimizations.
 
 ## Step 1: Update Patient Detail Page
@@ -10,6 +11,7 @@ This phase integrates the timeline with the patient detail page, adds UX enhance
 **Action**: Replace the placeholder Quick Actions section with timeline integration
 
 **Find this section (around lines 317-355)**:
+
 ```html
 <!-- Quick Actions -->
 <div class="col-md-6">
@@ -28,6 +30,7 @@ This phase integrates the timeline with the patient detail page, adds UX enhance
 ```
 
 **Replace with**:
+
 ```html
 <!-- Quick Actions & Recent Events -->
 <div class="col-md-6">
@@ -187,6 +190,7 @@ This phase integrates the timeline with the patient detail page, adds UX enhance
 **Action**: Add recent events to the PatientDetailView context
 
 **Find the PatientDetailView class and update it**:
+
 ```python
 class PatientDetailView(DetailView):
     model = Patient
@@ -217,6 +221,7 @@ class PatientDetailView(DetailView):
 ```
 
 **Add required imports at the top**:
+
 ```python
 from django.core.exceptions import PermissionDenied
 from apps.core.permissions.utils import can_access_patient, can_change_patient_personal_data
@@ -712,6 +717,7 @@ def events_count_by_type(patient):
 ## Expected Results
 
 After completing Phase 3:
+
 - Timeline fully integrated with patient detail page
 - Recent events widget showing latest 3 events
 - Quick action buttons for common event types

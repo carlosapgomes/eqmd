@@ -20,15 +20,18 @@ The User Lifecycle Management system provides 6 essential management commands:
 **Purpose**: Check and update user expiration statuses automatically.
 
 **Usage**:
+
 ```bash
 docker compose exec eqmd python manage.py check_user_expiration [OPTIONS]
 ```
 
 **Options**:
+
 - `--dry-run` - Show what would be updated without making changes
 - `--role {resident,student,all}` - Check specific user roles only (default: all)
 
 **Examples**:
+
 ```bash
 # Check all users and update statuses
 docker compose exec eqmd python manage.py check_user_expiration
@@ -41,6 +44,7 @@ docker compose exec eqmd python manage.py check_user_expiration --role resident
 ```
 
 **Sample Output**:
+
 ```
 Starting simplified expiration check (dry_run=False)
 Found 4 users to check
@@ -64,15 +68,18 @@ Found 4 users to check
 **Purpose**: Send email notifications to users approaching expiration.
 
 **Usage**:
+
 ```bash
 docker compose exec eqmd python manage.py send_expiration_notifications [OPTIONS]
 ```
 
 **Options**:
+
 - `--dry-run` - Show notifications that would be sent without sending them
 - `--warning-days DAYS [DAYS ...]` - Days before expiration to send warnings (default: 30 14 7 3 1)
 
 **Examples**:
+
 ```bash
 # Send notifications with default warning periods
 docker compose exec eqmd python manage.py send_expiration_notifications
@@ -85,6 +92,7 @@ docker compose exec eqmd python manage.py send_expiration_notifications --warnin
 ```
 
 **Sample Output**:
+
 ```
 Sending expiration notifications (simplified - email only, dry_run=False)
 Found 0 users to notify (30 days)
@@ -109,15 +117,18 @@ Sent 3 notifications, 0 errors
 **Purpose**: Generate reports on inactive users (no automatic changes made).
 
 **Usage**:
+
 ```bash
 docker compose exec eqmd python manage.py cleanup_inactive_users [OPTIONS]
 ```
 
 **Options**:
+
 - `--inactivity-days DAYS` - Days of inactivity to report on (default: 90)
 - `--format {table,csv}` - Output format (default: table)
 
 **Examples**:
+
 ```bash
 # Generate table report for 90-day inactive users
 docker compose exec eqmd python manage.py cleanup_inactive_users
@@ -130,6 +141,7 @@ docker compose exec eqmd python manage.py cleanup_inactive_users --inactivity-da
 ```
 
 **Sample Output** (table format):
+
 ```
 Generating inactive user report (simplified - no auto-changes)
 Found 3 inactive users
@@ -156,19 +168,23 @@ RECOMMENDATION: Review these users for potential status updates
 **Purpose**: Extend access expiration for individual users.
 
 **Usage**:
+
 ```bash
 docker compose exec eqmd python manage.py extend_user_access USERNAME [OPTIONS]
 ```
 
 **Required Arguments**:
+
 - `USERNAME` - Username of user to extend access
 
 **Options**:
+
 - `--days DAYS` - Number of days to extend access (required)
 - `--reason REASON` - Reason for access extension (required)
 - `--force` - Force extension even if user is expired/departed
 
 **Examples**:
+
 ```bash
 # Extend user access by 90 days
 docker compose exec eqmd python manage.py extend_user_access sample_res_ana \
@@ -183,6 +199,7 @@ docker compose exec eqmd python manage.py extend_user_access expired_user \
 ```
 
 **Interactive Process**:
+
 ```
 Current user status:
   Username: sample_res_ana
@@ -209,6 +226,7 @@ New status: Active
 **Purpose**: Perform bulk operations on multiple users.
 
 **Usage**:
+
 ```bash
 docker compose exec eqmd python manage.py bulk_user_operations {extend,set-expiration} [OPTIONS]
 ```
@@ -218,10 +236,12 @@ docker compose exec eqmd python manage.py bulk_user_operations {extend,set-expir
 Bulk extend user access from CSV file.
 
 **Options**:
+
 - `--csv-file FILE` - CSV file with usernames and extension data (required)
 - `--dry-run` - Preview changes without applying them
 
 **CSV Format**:
+
 ```csv
 username,days,reason
 sample_res_ana,90,Performance review completed
@@ -230,6 +250,7 @@ sample_est_paula,60,Rotation extension
 ```
 
 **Examples**:
+
 ```bash
 # Test bulk extension (dry run)
 docker compose exec eqmd python manage.py bulk_user_operations extend \
@@ -246,11 +267,13 @@ docker compose exec eqmd python manage.py bulk_user_operations extend \
 Set expiration dates for all users of a specific role.
 
 **Options**:
+
 - `--role {resident,student}` - User role to update (required)
 - `--months MONTHS` - Months from now to expire (required)
 - `--reason REASON` - Reason for expiration update (default: "Bulk expiration update")
 
 **Examples**:
+
 ```bash
 # Set all residents to expire in 18 months
 docker compose exec eqmd python manage.py bulk_user_operations set-expiration \
@@ -265,6 +288,7 @@ docker compose exec eqmd python manage.py bulk_user_operations set-expiration \
 ```
 
 **Confirmation Required**:
+
 ```
 Found 12 residents to update
 Set expiration to 27/07/2026 for all residents? (y/N): y
@@ -278,15 +302,18 @@ Successfully updated expiration for 12 residents
 **Purpose**: Generate comprehensive user lifecycle reports in CSV format.
 
 **Usage**:
+
 ```bash
 docker compose exec eqmd python manage.py lifecycle_report [OPTIONS]
 ```
 
 **Options**:
+
 - `--output-file FILE` - Output CSV file path (default: lifecycle_report_YYYYMMDD.csv)
 - `--days-ahead DAYS` - Look ahead days for expiration analysis (default: 90)
 
 **Examples**:
+
 ```bash
 # Generate report with default filename
 docker compose exec eqmd python manage.py lifecycle_report
@@ -299,6 +326,7 @@ docker compose exec eqmd python manage.py lifecycle_report --days-ahead 60 --out
 ```
 
 **Sample CSV Output**:
+
 ```csv
 username,full_name,email,profession,account_status,expiration_date,days_until_expiration,last_activity,days_since_activity,supervisor
 sample_res_ana,Ana Rodrigues,ana@example.com,Residente,Active,26/02/2025,45,15/12/2024,30,dr.silva
@@ -307,6 +335,7 @@ sample_est_paula,Paula Alves,paula@example.com,Estudante,Expiring Soon,15/02/202
 ```
 
 **Report Fields**:
+
 - `username` - User's login username
 - `full_name` - Full display name
 - `email` - Email address
@@ -396,26 +425,31 @@ All commands include comprehensive error handling:
 ### Common Error Messages
 
 **User not found**:
+
 ```
 CommandError: User "nonexistent_user" does not exist
 ```
 
 **Invalid role**:
+
 ```
 CommandError: argument --role: invalid choice: 'invalid' (choose from 'resident', 'student', 'all')
 ```
 
 **Missing CSV file**:
+
 ```
 CommandError: File not found: missing_file.csv
 ```
 
 **Invalid CSV format**:
+
 ```
 CommandError: CSV must contain columns: username, days, reason
 ```
 
 **Permission denied**:
+
 ```
 CommandError: Cannot extend access for departed user. Use --force to override.
 ```

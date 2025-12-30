@@ -4,7 +4,7 @@
 
 This file should be created as `docs/apps/dischargereports.md` during Phase 5 of implementation.
 
-### Content Structure:
+### Content Structure
 
 ```markdown
 # Discharge Reports (apps/dischargereports)
@@ -110,6 +110,7 @@ docker compose exec eqmd python manage.py import_firebase_discharge_reports \
 ```
 
 ### Command Options
+
 - `--credentials-file`: Firebase service account JSON
 - `--database-url`: Firebase Realtime Database URL  
 - `--dry-run`: Show what would be imported without saving
@@ -117,7 +118,9 @@ docker compose exec eqmd python manage.py import_firebase_discharge_reports \
 - `--limit`: Limit number of records (testing)
 
 ### Firebase Data Structure
+
 The command imports from `patientDischargeReports` reference with this structure:
+
 ```json
 {
   "firebase-key": {
@@ -141,6 +144,7 @@ The command imports from `patientDischargeReports` reference with this structure
 ```
 
 ### Data Mapping
+
 | Firebase Field | Django Field |
 |----------------|--------------|
 | `content.admissionDate` | `admission_date` |
@@ -155,7 +159,9 @@ The command imports from `patientDischargeReports` reference with this structure
 | `content.dischargeRecommendations` | `discharge_recommendations` |
 
 ### PatientAdmission Creation
+
 The import command automatically creates `PatientAdmission` records:
+
 - `admission_type`: "scheduled"
 - `discharge_type`: "medical"  
 - `is_active`: False
@@ -165,6 +171,7 @@ The import command automatically creates `PatientAdmission` records:
 ## Testing
 
 ### Running Tests
+
 ```bash
 # All discharge report tests
 DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/tests/
@@ -176,6 +183,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/
 ```
 
 ### Test Coverage
+
 - Model validation and methods
 - CRUD view functionality  
 - Permission and draft logic
@@ -186,6 +194,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/
 ## Permissions
 
 ### Draft System Permissions
+
 - **Create**: Any authenticated user with event creation rights
 - **Edit Draft**: Original creator or users with edit permissions  
 - **Edit Finalized**: Standard 24-hour window applies
@@ -193,6 +202,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/
 - **View**: Standard patient access permissions
 
 ### Timeline Integration
+
 - Reports appear in patient timeline with proper filtering
 - Event cards show appropriate actions based on permissions
 - Draft status clearly indicated in UI
@@ -202,22 +212,26 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/
 ### Common Issues
 
 **Firebase Import Fails**
+
 - Verify credentials file path and permissions
 - Check database URL format
 - Ensure patients exist before importing reports
 - Use `--dry-run` to test configuration
 
 **Print Layout Issues**  
+
 - Test across different browsers
 - Verify CSS media queries for print
 - Check hospital branding template tags
 
 **Timeline Not Showing Reports**
+
 - Verify `DISCHARGE_REPORT_EVENT` constant  
 - Check event card template registration
 - Test timeline filtering JavaScript
 
 **Draft Logic Problems**
+
 - Verify `is_draft` field default value
 - Check view permission logic
 - Test save button functionality
@@ -225,6 +239,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/
 ## Development Notes
 
 ### Adding New Fields
+
 1. Add field to model with migration
 2. Update form class and widgets  
 3. Modify templates (create, update, detail, print)
@@ -232,10 +247,12 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/
 5. Add to test fixtures
 
 ### Extending Print Layout
+
 1. Modify `dischargereport_print.html` template
 2. Update print CSS for new sections
 3. Test pagination with additional content
 4. Verify hospital branding integration
 
 This documentation provides comprehensive coverage of the discharge reports feature for both users and developers.
+
 ```

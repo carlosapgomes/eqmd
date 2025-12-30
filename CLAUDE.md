@@ -1,14 +1,18 @@
 <!-- OPENSPEC:START -->
+
 # OpenSpec Instructions
 
 These instructions are for AI assistants working in this project.
 
 Always open `@/openspec/AGENTS.md` when the request:
+
 - Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
+- Introduces new capabilities, breaking changes, architecture shifts, or
+  big performance/security work
 - Sounds ambiguous and you need the authoritative spec before coding
 
 Use `@/openspec/AGENTS.md` to learn:
+
 - How to create and apply change proposals
 - Spec format and conventions
 - Project structure and guidelines
@@ -102,7 +106,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/accounts/tests/te
 # Test terms acceptance functionality (when tests are available)
 DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/accounts/tests/test_terms_acceptance.py
 
-# Test terms acceptance middleware (when tests are available)  
+# Test terms acceptance middleware (when tests are available)
 DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/core/tests/test_terms_middleware.py
 
 # Manual verification of terms system
@@ -143,7 +147,7 @@ npm install && npm run build
 ```
 ├── assets/                    # SOURCE FILES (committed to git)
 │   ├── js/                   # JavaScript source files
-│   ├── scss/                 # SCSS source files  
+│   ├── scss/                 # SCSS source files
 │   ├── images/               # Image assets
 │   └── index.js              # Webpack entry point
 ├── static/                    # WEBPACK OUTPUT (committed, but regenerated)
@@ -157,16 +161,19 @@ npm install && npm run build
 ### Where to Put New Files
 
 #### ✅ JavaScript Files
+
 - **Source**: `assets/js/your_file.js`
 - **Output**: `static/js/your_file.js` (auto-generated)
 - **Template**: `{% static 'js/your_file.js' %}`
 
-#### ✅ CSS/SCSS Files  
+#### ✅ CSS/SCSS Files
+
 - **Source**: `assets/scss/your_file.scss`
 - **Output**: `static/your_file.css` (auto-generated)
 - **Template**: `{% static 'your_file.css' %}`
 
 #### ✅ Images
+
 - **Source**: `assets/images/your_image.png`
 - **Output**: `static/images/your_image.png` (auto-copied)
 - **Template**: `{% static 'images/your_image.png' %}`
@@ -190,10 +197,7 @@ Add to webpack entry points:
 
 ```javascript
 entry: {
-  your_bundle: [
-    "./assets/js/file1.js",
-    "./assets/js/file2.js"
-  ]
+  your_bundle: ["./assets/js/file1.js", "./assets/js/file2.js"];
 }
 ```
 
@@ -207,33 +211,38 @@ npm run build    # Compiles and copies all assets
 
 - **❌ NEVER edit files in `static/` directly** - Webpack overwrites them
 - **✅ ALWAYS put source files in `assets/`**
-- **✅ ALWAYS update `webpack.config.js` for new files**  
+- **✅ ALWAYS update `webpack.config.js` for new files**
 - **✅ ALWAYS run `npm run build` after changes**
 - **📝 COMMIT both `assets/` and `static/` to git**
 
 ## Frontend Styling Guidelines
 
+`<!-- markdownlint-disable MD036 -->`
 **IMPORTANT: Bootstrap vs Django Admin Styling**
 
-### ✅ Use Bootstrap 5.3 for:
+### ✅ Use Bootstrap 5.3 for
+
 - **User-facing templates** (`templates/` directories in apps)
 - **Main application interface** (patient management, forms, dashboards)
 - **Public pages** (login, landing pages, user workflows)
 - **Custom views and templates** accessed by medical staff
 
-### ❌ Keep Django Admin styling for:
+### ❌ Keep Django Admin styling for
+
 - **Admin interface templates** (`templates/admin/` directories)
 - **Django admin customizations**
 - **Administrative backend interfaces**
 - **Staff-only management interfaces**
 
-### Key Rules:
+### Key Rules
+
 - **NEVER** add Bootstrap CSS/JS to admin templates - use vanilla JavaScript instead
 - **ALWAYS** use Bootstrap for main application templates and user-facing interfaces
 - **MAINTAIN** Django's default admin styling for consistency and functionality
 - **PREFER** vanilla JavaScript over Bootstrap JS in admin contexts when needed
 
-### Examples:
+### Examples
+
 ```
 ✅ templates/patients/patient_list.html - Use Bootstrap
 ✅ templates/pdf_forms/form_fill.html - Use Bootstrap
@@ -275,7 +284,8 @@ The clinical research module supports PostgreSQL's advanced full-text search wit
 
 - **Auto-optimization**: `diabetes` → `diabetes*`, `diabetes dor` → `diabetes & dor`
 - **Exact phrases**: `"diabetes mellitus"`, `"dor torácica"`
-- **Boolean logic**: `diabetes & hipertensão`, `diabetes | hipertensão`, `diabetes & !gestacional`
+- **Boolean logic**: `diabetes & hipertensão`, `diabetes | hipertensão`,
+  `diabetes & !gestacional`
 - **Prefix matching**: `medicaç*`, `cardio*`, `hiperten*`
 - **Complex queries**: `diabetes & (medicaç* | insulin*)`
 
@@ -285,11 +295,13 @@ The clinical research module supports PostgreSQL's advanced full-text search wit
 
 ## Firebase Import
 
-For incremental sync of patients and dailynotes from Firebase Realtime Database, see the detailed guide:
+For incremental sync of patients and dailynotes from Firebase Realtime Database,
+see the detailed guide:
 
 **📖 [Firebase Import Documentation](docs/firebase-import.md)**
 
 Quick command reference:
+
 ```bash
 # Single command sync (patients + dailynotes)
 uv run python manage.py sync_firebase_data \
@@ -402,7 +414,7 @@ docker compose exec eqmd python manage.py bulk_user_operations set-expiration --
 docker compose exec eqmd python manage.py lifecycle_report --output-file report.csv
 ```
 
-**📖 Detailed documentation**: 
+**📖 Detailed documentation**:
 - [docs/security/user-lifecycle-management.md](docs/security/user-lifecycle-management.md) - Complete system overview
 - [docs/security/user-lifecycle-admin-setup.md](docs/security/user-lifecycle-admin-setup.md) - Admin configuration guide
 - [docs/security/user-lifecycle-cronjobs.md](docs/security/user-lifecycle-cronjobs.md) - Automated scheduling setup
@@ -444,7 +456,7 @@ can_edit_event(user, event)                 # 24h time window
 can_change_patient_status(user, patient, status)  # Doctors/residents only
 ````
 
-### Key Commands
+## Key Commands
 
 ```bash
 uv run python manage.py setup_groups
@@ -497,5 +509,5 @@ Event card templates extend `event_card_base.html` with blocks:
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
-
+NEVER proactively create documentation files (\*.md) or README files. Only
+create documentation files if explicitly requested by the User.

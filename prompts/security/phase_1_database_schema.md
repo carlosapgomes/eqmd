@@ -610,4 +610,3 @@ EqmdCustomUser.objects.update(account_status='active')
 ---
 
 **Next Phase**: [Phase 2: Middleware and Core Logic](phase_2_middleware_core_logic.md)
-

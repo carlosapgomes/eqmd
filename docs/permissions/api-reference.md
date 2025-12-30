@@ -26,17 +26,21 @@ All permission utility functions are available in `apps.core.permissions.utils`.
 Check if a user can access a specific patient.
 
 **Parameters:**
+
 - `user` (User): The user to check permissions for
 - `patient` (Patient): The patient object to check access to
 
 **Returns:**
+
 - `bool`: True if user can access the patient, False otherwise
 
 **Rules:**
+
 - **Universal Access**: All medical staff can access all patients in the single hospital environment
 - **Simplified Architecture**: No hospital context restrictions for single hospital operations
 
 **Example:**
+
 ```python
 from apps.core.permissions import can_access_patient
 
@@ -52,20 +56,24 @@ else:
 Check if a user can change a patient's status.
 
 **Parameters:**
+
 - `user` (User): The user to check permissions for
 - `patient` (Patient): The patient object
 - `new_status` (str): The new status to change to
 
 **Returns:**
+
 - `bool`: True if user can change the status, False otherwise
 
 **Rules:**
+
 - Doctors & Residents: Can change any patient status (including discharge)
 - Nurses/Physiotherapists: Limited status changes (cannot discharge patients)
 - Students: Cannot change patient status
 - Special rule: Nurses can admit emergency patients to inpatient status
 
 **Example:**
+
 ```python
 from apps.core.permissions import can_change_patient_status
 
@@ -80,18 +88,22 @@ if can_change_patient_status(request.user, patient, 'discharged'):
 Check if a user can modify patient personal information.
 
 **Parameters:**
+
 - `user` (User): The user to check permissions for
 - `patient` (Patient): The patient object
 
 **Returns:**
+
 - `bool`: True if user can change personal data, False otherwise
 
 **Rules:**
+
 - **Doctors/Residents**: Can change patient personal data
 - **Others**: Cannot change patient personal data
 - **Universal Access**: All doctors and residents can edit personal data for any patient in the hospital
 
 **Example:**
+
 ```python
 from apps.core.permissions import can_change_patient_personal_data
 
@@ -105,13 +117,16 @@ if can_change_patient_personal_data(request.user, patient):
 Check if a patient should be visible in search results for a user.
 
 **Parameters:**
+
 - `user` (User): The user performing the search
 - `patient` (Patient): The patient object
 
 **Returns:**
+
 - `bool`: True if patient should be visible, False otherwise
 
 **Example:**
+
 ```python
 from apps.core.permissions import can_see_patient_in_search
 
@@ -129,17 +144,21 @@ visible_patients = [
 Check if a user can edit a specific event.
 
 **Parameters:**
+
 - `user` (User): The user to check permissions for
 - `event` (Event): The event object
 
 **Returns:**
+
 - `bool`: True if user can edit the event, False otherwise
 
 **Rules:**
+
 - Only event creators can edit their events
 - Editing restricted to 24 hours after event creation
 
 **Example:**
+
 ```python
 from apps.core.permissions import can_edit_event
 
@@ -153,17 +172,21 @@ if can_edit_event(request.user, event):
 Check if a user can delete a specific event.
 
 **Parameters:**
+
 - `user` (User): The user to check permissions for
 - `event` (Event): The event object
 
 **Returns:**
+
 - `bool`: True if user can delete the event, False otherwise
 
 **Rules:**
+
 - Only event creators can delete their events
 - Events can only be deleted within 24 hours of creation
 
 **Example:**
+
 ```python
 from apps.core.permissions import can_delete_event
 
@@ -179,12 +202,15 @@ if can_delete_event(request.user, event):
 Check if a user is a medical doctor.
 
 **Parameters:**
+
 - `user` (User): The user to check
 
 **Returns:**
+
 - `bool`: True if user is a doctor, False otherwise
 
 **Example:**
+
 ```python
 from apps.core.permissions import is_doctor
 
@@ -193,18 +219,20 @@ if is_doctor(request.user):
     pass
 ```
 
-
 #### `get_user_profession_type(user) -> str`
 
 Get the profession type for a user.
 
 **Parameters:**
+
 - `user` (User): The user to get profession type for
 
 **Returns:**
+
 - `str`: The profession type string
 
 **Example:**
+
 ```python
 from apps.core.permissions import get_user_profession_type
 
@@ -221,13 +249,16 @@ if profession == 'medical_doctor':
 Check if user has a specific Django permission.
 
 **Parameters:**
+
 - `user` (User): The user to check
 - `permission` (str): Permission string (e.g., 'patients.add_patient')
 
 **Returns:**
+
 - `bool`: True if user has permission, False otherwise
 
 **Example:**
+
 ```python
 from apps.core.permissions import has_django_permission
 
@@ -241,13 +272,16 @@ if has_django_permission(request.user, 'patients.add_patient'):
 Check if user is in a specific group.
 
 **Parameters:**
+
 - `user` (User): The user to check
 - `group_name` (str): Name of the group
 
 **Returns:**
+
 - `bool`: True if user is in group, False otherwise
 
 **Example:**
+
 ```python
 from apps.core.permissions import is_in_group
 
@@ -274,8 +308,8 @@ Check if user can manage events.
 
 Check if user can view events.
 
-
 **Example:**
+
 ```python
 from apps.core.permissions import can_manage_patients, can_view_events
 
@@ -297,13 +331,16 @@ All decorators are available in `apps.core.permissions.decorators`.
 Decorator that checks if user can access the patient specified in the URL.
 
 **Parameters:**
+
 - Expects 'patient_id' or 'pk' parameter in the view function
 
 **Returns:**
+
 - `HttpResponseForbidden` if access denied
 - Calls the original view if access granted
 
 **Example:**
+
 ```python
 from apps.core.permissions import patient_access_required
 
@@ -318,6 +355,7 @@ def patient_detail_view(request, patient_id):
 Decorator that requires the user to be a doctor.
 
 **Example:**
+
 ```python
 from apps.core.permissions import doctor_required
 
@@ -332,9 +370,11 @@ def discharge_patient_view(request, patient_id):
 Decorator that checks if user can edit the event specified in the URL.
 
 **Parameters:**
+
 - Expects 'event_id' or 'pk' parameter in the view function
 
 **Example:**
+
 ```python
 from apps.core.permissions import can_edit_event_required
 
@@ -350,6 +390,7 @@ def event_edit_view(request, event_id):
 Decorator that ensures user has hospital context.
 
 **Example:**
+
 ```python
 from apps.core.permissions import hospital_context_required
 
@@ -365,9 +406,11 @@ def hospital_specific_view(request):
 Decorator that checks if user can change patient personal data.
 
 **Parameters:**
+
 - Expects 'patient_id' or 'pk' parameter in the view function
 
 **Example:**
+
 ```python
 from apps.core.permissions import patient_data_change_required
 
@@ -383,9 +426,11 @@ def patient_edit_personal_data_view(request, patient_id):
 Decorator that checks if user can delete the event specified in the URL.
 
 **Parameters:**
+
 - Expects 'event_id' or 'pk' parameter in the view function
 
 **Example:**
+
 ```python
 from apps.core.permissions import can_delete_event_required
 
@@ -407,6 +452,7 @@ All template tags are available by loading `permission_tags`.
 Check if user has a specific Django permission.
 
 **Usage:**
+
 ```django
 {% load permission_tags %}
 {% if user|has_permission:"patients.add_patient" %}
@@ -419,6 +465,7 @@ Check if user has a specific Django permission.
 Check if user is in a specific group.
 
 **Usage:**
+
 ```django
 {% if user|in_group:"Medical Doctors" %}
     <p>Welcome, Doctor!</p>
@@ -430,6 +477,7 @@ Check if user is in a specific group.
 Check if user has a specific profession type.
 
 **Usage:**
+
 ```django
 {% if user|is_profession:"medical_doctor" %}
     <p>Doctor-specific content</p>
@@ -443,6 +491,7 @@ Check if user has a specific profession type.
 Check if user can manage patients.
 
 **Usage:**
+
 ```django
 {% if user|can_manage_patients %}
     <a href="{% url 'patients:create' %}">Add Patient</a>
@@ -454,6 +503,7 @@ Check if user can manage patients.
 Check if user can view events.
 
 **Usage:**
+
 ```django
 {% if user|can_view_events %}
     <a href="{% url 'events:list' %}">View Events</a>
@@ -467,6 +517,7 @@ Check if user can view events.
 Check if user can change patient personal data.
 
 **Usage:**
+
 ```django
 {% can_user_change_patient_personal_data user patient as can_change_data %}
 {% if can_change_data %}
@@ -479,6 +530,7 @@ Check if user can change patient personal data.
 Check if user can delete an event.
 
 **Usage:**
+
 ```django
 {% can_user_delete_event user event as can_delete %}
 {% if can_delete %}
@@ -493,6 +545,7 @@ Check if user can delete an event.
 Check if user has all of the specified permissions.
 
 **Usage:**
+
 ```django
 {% check_multiple_permissions user "patients.add_patient" "patients.change_patient" as has_all_perms %}
 {% if has_all_perms %}
@@ -505,6 +558,7 @@ Check if user has all of the specified permissions.
 Check if user has any of the specified permissions.
 
 **Usage:**
+
 ```django
 {% check_any_permission user "patients.add_patient" "patients.view_patient" as has_any_perm %}
 {% if has_any_perm %}
@@ -519,6 +573,7 @@ Check if user has any of the specified permissions.
 Display debug information about user permissions.
 
 **Usage:**
+
 ```django
 {% permission_debug user %}
 ```
@@ -528,6 +583,7 @@ Display debug information about user permissions.
 Display performance information about permission checks.
 
 **Usage:**
+
 ```django
 {% permission_performance_widget user %}
 ```
@@ -537,6 +593,7 @@ Display performance information about permission checks.
 Get cache statistics for permission system.
 
 **Usage:**
+
 ```django
 {% permission_cache_stats as cache_stats %}
 <p>Cache hit ratio: {{ cache_stats.hit_ratio|floatformat:2 }}%</p>
@@ -551,11 +608,13 @@ All cache utilities are available in `apps.core.permissions.cache`.
 Decorator for caching permission check results.
 
 **Parameters:**
+
 - `permission_type` (str): Type of permission being cached
 - `use_object_id` (bool): Whether to include object ID in cache key
 - `timeout` (int): Cache timeout in seconds
 
 **Example:**
+
 ```python
 from apps.core.permissions.cache import cache_permission_result
 
@@ -570,9 +629,11 @@ def can_access_patient(user, patient):
 Invalidate all cached permissions for a specific user.
 
 **Parameters:**
+
 - `user_id` (int): The user's ID
 
 **Example:**
+
 ```python
 from apps.core.permissions import invalidate_user_permissions
 
@@ -585,10 +646,12 @@ invalidate_user_permissions(user.id)
 Invalidate cached permissions for a specific object.
 
 **Parameters:**
+
 - `object_type` (str): Type of object (e.g., 'patient', 'event')
 - `object_id` (str): ID of the object
 
 **Example:**
+
 ```python
 from apps.core.permissions import invalidate_object_permissions
 
@@ -601,6 +664,7 @@ invalidate_object_permissions('patient', patient.id)
 Clear all permission cache.
 
 **Example:**
+
 ```python
 from apps.core.permissions import clear_permission_cache
 
@@ -613,9 +677,11 @@ clear_permission_cache()
 Get cache statistics.
 
 **Returns:**
+
 - `dict`: Cache statistics including hits, misses, and hit ratio
 
 **Example:**
+
 ```python
 from apps.core.permissions import get_cache_stats
 
@@ -628,9 +694,11 @@ print(f"Hit ratio: {stats['hit_ratio']:.2%}")
 Check if permission caching is enabled.
 
 **Returns:**
+
 - `bool`: True if caching is enabled, False otherwise
 
 **Example:**
+
 ```python
 from apps.core.permissions import is_caching_enabled
 
@@ -648,9 +716,11 @@ All query optimization utilities are available in `apps.core.permissions.queries
 Get a user queryset with optimized permission-related queries.
 
 **Returns:**
+
 - `QuerySet`: Optimized user queryset
 
 **Example:**
+
 ```python
 from apps.core.permissions.queries import get_optimized_user_queryset
 
@@ -663,6 +733,7 @@ users = get_optimized_user_queryset().filter(is_active=True)
 Get a patient queryset with optimized queries.
 
 **Returns:**
+
 - `QuerySet`: Optimized patient queryset
 
 ### `get_optimized_event_queryset()`
@@ -670,20 +741,23 @@ Get a patient queryset with optimized queries.
 Get an event queryset with optimized queries.
 
 **Returns:**
-- `QuerySet`: Optimized event queryset
 
+- `QuerySet`: Optimized event queryset
 
 ### `get_patients_for_user(user)`
 
 Get patients accessible to a specific user.
 
 **Parameters:**
+
 - `user` (User): The user to get patients for
 
 **Returns:**
+
 - `QuerySet`: Patients accessible to the user
 
 **Example:**
+
 ```python
 from apps.core.permissions.queries import get_patients_for_user
 
@@ -696,21 +770,24 @@ accessible_patients = get_patients_for_user(request.user)
 Get events accessible to a specific user.
 
 **Parameters:**
+
 - `user` (User): The user to get events for
 
 **Returns:**
-- `QuerySet`: Events accessible to the user
 
+- `QuerySet`: Events accessible to the user
 
 ### `get_recent_patients_optimized(user, limit=10)`
 
 Get recent patients with optimized queries.
 
 **Parameters:**
+
 - `user` (User): The user to get patients for
 - `limit` (int): Maximum number of patients to return
 
 **Returns:**
+
 - `QuerySet`: Recent patients with optimized queries
 
 ### `get_permission_summary_optimized(user)`
@@ -718,12 +795,15 @@ Get recent patients with optimized queries.
 Get a comprehensive permission summary with optimized queries.
 
 **Parameters:**
+
 - `user` (User): The user to get summary for
 
 **Returns:**
+
 - `dict`: Comprehensive permission summary
 
 **Example:**
+
 ```python
 from apps.core.permissions.queries import get_permission_summary_optimized
 
@@ -744,6 +824,7 @@ The custom permission backend is available in `apps.core.backends.EquipeMedPermi
 - `events.delete_event`
 
 **Example:**
+
 ```python
 # Using Django's permission system with objects
 if user.has_perm('patients.change_patient_personal_data', patient):
@@ -762,6 +843,7 @@ if user.has_perm('events.delete_event', event):
 Set up role-based permission groups.
 
 **Usage:**
+
 ```bash
 # Set up all profession-based groups
 uv run python manage.py setup_groups
@@ -775,6 +857,7 @@ uv run python manage.py setup_groups --force
 Monitor and analyze permission system performance.
 
 **Usage:**
+
 ```bash
 # Show cache statistics
 uv run python manage.py permission_performance --action=stats
@@ -825,6 +908,7 @@ All constants are available in `apps.core.permissions.constants`.
 - `PERMISSION_CACHE_PREFIX = 'eqmd_perm'`
 
 **Example:**
+
 ```python
 from apps.core.permissions.constants import MEDICAL_DOCTOR, EVENT_EDIT_TIME_LIMIT
 

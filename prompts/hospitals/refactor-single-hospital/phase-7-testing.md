@@ -17,6 +17,7 @@
 ### 1. Remove Hospital App Tests
 
 **Delete hospital-specific test files:**
+
 - [ ] Delete `apps/hospitals/tests/` (entire directory)
 - [ ] Remove hospital model tests
 - [ ] Remove hospital view tests
@@ -27,12 +28,14 @@
 **Simplify permission tests (`apps/core/tests/test_permissions.py`):**
 
 **Remove hospital-context tests:**
+
 - [ ] Remove `test_hospital_context_required`
 - [ ] Remove `test_patient_hospital_access`
 - [ ] Remove `test_cross_hospital_access`
 - [ ] Remove hospital membership tests
 
 **Update role-based permission tests:**
+
 ```python
 # Before (complex hospital + role tests)
 def test_doctor_can_access_hospital_patients(self):
@@ -70,11 +73,13 @@ def test_all_roles_can_access_patients(self):
 **Simplify patient tests (`apps/patients/tests/test_models.py`):**
 
 **Remove hospital validation tests:**
+
 - [ ] Remove `test_inpatient_requires_hospital`
 - [ ] Remove `test_outpatient_no_hospital_required`
 - [ ] Remove `test_hospital_assignment_validation`
 
 **Update patient creation tests:**
+
 ```python
 # Before (hospital-aware tests)
 def test_patient_creation_with_hospital(self):
@@ -101,11 +106,13 @@ def test_patient_creation(self):
 **Simplify view tests (`apps/patients/tests/test_views.py`):**
 
 **Remove hospital context tests:**
+
 - [ ] Remove hospital filtering tests
 - [ ] Remove hospital selection tests
 - [ ] Remove cross-hospital access tests
 
 **Update patient view tests:**
+
 ```python
 # Before (hospital context required)
 def test_patient_list_requires_hospital_context(self):
@@ -133,11 +140,13 @@ def test_patient_list_access(self):
 **Simplify form tests (`apps/patients/tests/test_forms.py`):**
 
 **Remove hospital field tests:**
+
 - [ ] Remove hospital field validation tests
 - [ ] Remove hospital selection tests
 - [ ] Remove PatientHospitalRecord form tests
 
 **Update patient form tests:**
+
 ```python
 # Before (complex hospital validation)
 def test_patient_form_hospital_required_for_inpatient(self):
@@ -167,6 +176,7 @@ def test_patient_form_valid_data(self):
 **Simplify event tests (`apps/events/tests/`, `apps/dailynotes/tests/`):**
 
 **Remove hospital context from event tests:**
+
 - [ ] Remove hospital filtering from event tests
 - [ ] Remove hospital context from event creation tests
 - [ ] Simplify event permission tests
@@ -176,6 +186,7 @@ def test_patient_form_valid_data(self):
 **Simplify factory_boy factories:**
 
 **Update UserFactory (`apps/accounts/tests/factories.py`):**
+
 ```python
 # Before (hospital assignments)
 class UserFactory(factory.django.DjangoModelFactory):
@@ -205,6 +216,7 @@ class UserFactory(factory.django.DjangoModelFactory):
 ```
 
 **Update PatientFactory (`apps/patients/tests/factories.py`):**
+
 ```python
 # Before (hospital assignments)
 class PatientFactory(factory.django.DjangoModelFactory):
@@ -229,6 +241,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 ### 8. Remove Hospital-Related Fixtures
 
 **Clean up test fixtures:**
+
 - [ ] Remove hospital JSON fixtures
 - [ ] Remove PatientHospitalRecord fixtures
 - [ ] Update patient fixtures to remove hospital references
@@ -236,6 +249,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 ### 9. Update Integration Tests
 
 **Simplify integration tests:**
+
 - [ ] Remove hospital context from integration tests
 - [ ] Update user workflow tests to remove hospital selection
 - [ ] Simplify patient management workflow tests
@@ -243,6 +257,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 ### 10. Performance Tests
 
 **Update performance tests:**
+
 - [ ] Remove hospital-related performance tests
 - [ ] Update query performance tests (should be faster)
 - [ ] Test simplified permission checking performance
@@ -250,6 +265,7 @@ class PatientFactory(factory.django.DjangoModelFactory):
 ### 11. Add New Tests for Simplified System
 
 **Add tests for simplified permission system:**
+
 ```python
 class SimplifiedPermissionTests(TestCase):
     def test_doctor_access_all_patients(self):
@@ -303,6 +319,7 @@ class SimplifiedPermissionTests(TestCase):
 ## Test Command Updates
 
 **Update test runner commands:**
+
 ```bash
 # Remove hospital-specific test commands
 # Update test configurations to exclude removed apps
@@ -317,6 +334,7 @@ uv run python manage.py test apps.accounts.tests
 ## Coverage Analysis
 
 **Update test coverage:**
+
 - [ ] Remove hospital app from coverage reports
 - [ ] Ensure core functionality maintains coverage
 - [ ] Test coverage for simplified permission system
@@ -325,6 +343,7 @@ uv run python manage.py test apps.accounts.tests
 ## Mock and Patch Updates
 
 **Update test mocks:**
+
 - [ ] Remove hospital context mocks
 - [ ] Remove hospital membership mocks
 - [ ] Simplify permission checking mocks
@@ -332,13 +351,15 @@ uv run python manage.py test apps.accounts.tests
 ## Database Test Optimizations
 
 **Optimize test database:**
+
 - [ ] Remove hospital-related test database setup
 - [ ] Simplify test data creation
 - [ ] Update database transaction tests
 
 ## Files to Modify
 
-### Test Files to Update:
+### Test Files to Update
+
 - [ ] `apps/core/tests/test_permissions.py` - Major simplification
 - [ ] `apps/patients/tests/test_models.py` - Remove hospital tests
 - [ ] `apps/patients/tests/test_views.py` - Remove hospital context
@@ -347,11 +368,13 @@ uv run python manage.py test apps.accounts.tests
 - [ ] `apps/events/tests/` - Remove hospital context
 - [ ] `apps/dailynotes/tests/` - Remove hospital context
 
-### Test Factories to Update:
+### Test Factories to Update
+
 - [ ] `apps/accounts/tests/factories.py` - Remove hospital assignments
 - [ ] `apps/patients/tests/factories.py` - Remove hospital fields
 
-### Files to Delete:
+### Files to Delete
+
 - [ ] `apps/hospitals/tests/` (entire directory)
 - [ ] Hospital-specific test fixtures
 - [ ] Hospital integration test files
@@ -359,6 +382,7 @@ uv run python manage.py test apps.accounts.tests
 ## Validation Checklist
 
 **Run comprehensive tests:**
+
 ```bash
 # Run all tests
 uv run python manage.py test
@@ -373,6 +397,7 @@ uv run python manage.py test apps.accounts.tests
 ```
 
 Before proceeding to Phase 8:
+
 - [ ] All existing tests pass
 - [ ] No hospital-related test failures
 - [ ] Permission tests cover simplified system
@@ -383,6 +408,7 @@ Before proceeding to Phase 8:
 ## Performance Testing
 
 **Expected test performance improvements:**
+
 - Faster test execution (simpler setup)
 - Faster database operations in tests
 - Reduced test complexity
@@ -391,6 +417,7 @@ Before proceeding to Phase 8:
 ## Test Documentation
 
 **Update test documentation:**
+
 - [ ] Update test README files
 - [ ] Remove hospital testing documentation
 - [ ] Update testing guidelines

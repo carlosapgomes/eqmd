@@ -59,6 +59,7 @@ SITE_NAME="Your Hospital Name"  # Name shown in email templates
 ## Configuration Examples
 
 ### Production Setup
+
 ```bash
 # .env file for production
 HOSPITAL_NAME="St. Mary's Medical Center"
@@ -74,6 +75,7 @@ SITE_NAME="St. Mary's Medical Center"
 ```
 
 ### Development Setup
+
 ```bash
 # .env file for development
 HOSPITAL_NAME="Development Hospital"
@@ -90,6 +92,7 @@ SITE_NAME="Development Hospital"
 ## Usage in Templates
 
 ### Basic Hospital Information
+
 ```django
 {% load hospital_tags %}
 <h1>{% hospital_name %}</h1>
@@ -99,6 +102,7 @@ SITE_NAME="Development Hospital"
 ```
 
 ### Hospital Branding
+
 ```django
 {% load hospital_tags %}
 {% hospital_header %}  <!-- Renders complete hospital header -->
@@ -112,11 +116,13 @@ SITE_NAME="Development Hospital"
 ## Customization
 
 ### Adding New Configuration Options
+
 1. Add environment variable to `HOSPITAL_CONFIG` in settings
 2. Create corresponding template tag in `hospital_tags.py`
 3. Update templates to use new configuration
 
 ### Logo Handling
+
 - **logo_path**: Use for local static files
 - **logo_url**: Use for external CDN or URL-based logos
 - Template tags automatically handle both cases
@@ -145,6 +151,7 @@ HOSPITAL_SHORT_ID="hmc"
 ### PWA Manifest
 
 The system automatically generates a dynamic PWA manifest at `/manifest.json` that includes:
+
 - **name**: `"EquipeMed - [Hospital Name]"` or `"EquipeMed - Plataforma Médica"`
 - **short_name**: `"[ShortId]Eqmd"` or `"EquipeMed"`
 - **theme_color**: Always `"#2E5BBA"` (EquipeMed brand color)
@@ -170,6 +177,7 @@ HOSPITAL_ADDRESS="Rua Central, 456, Salvador, BA"
 ```
 
 **Benefits:**
+
 - ✅ Maintains EquipeMed branding consistency
 - ✅ Users can distinguish between hospital instances
 - ✅ PWA installations show hospital context
@@ -198,11 +206,13 @@ The system automatically updates the Django Site object when the container start
 ### Before/After Email Examples
 
 **Before configuration** (shows "example.com"):
+
 ```
 Subject: [example.com] Confirme seu endereço de email
 ```
 
 **After configuration** with `SITE_DOMAIN=yourhospital.com`:
+
 ```
 Subject: [yourhospital.com] Confirme seu endereço de email
 ```

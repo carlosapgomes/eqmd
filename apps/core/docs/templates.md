@@ -27,6 +27,7 @@ templates/
 **Purpose**: Root template providing basic HTML structure and common elements.
 
 #### Features
+
 - HTML5 document structure
 - Bootstrap CSS and JavaScript
 - Bootstrap Icons
@@ -35,6 +36,7 @@ templates/
 - Common blocks for customization
 
 #### Block Structure
+
 ```django
 {% block title %}EquipeMed{% endblock title %}
 {% block extra_head %}{% endblock extra_head %}
@@ -45,12 +47,14 @@ templates/
 ```
 
 #### CSS Framework
+
 - **Bootstrap**: Latest version via CDN
 - **Bootstrap Icons**: Icon library
 - **Custom CSS**: Medical-themed color scheme
 - **Flexbox Layout**: Sticky footer implementation
 
 #### Footer Implementation
+
 ```html
 <footer class="mt-auto py-3 bg-light">
     <div class="container text-center">
@@ -64,6 +68,7 @@ templates/
 **Purpose**: Application-specific base template extending `base.html` with navigation and layout.
 
 #### Features
+
 - Fixed top navigation bar
 - Collapsible sidebar navigation
 - Mobile-responsive offcanvas menu
@@ -72,6 +77,7 @@ templates/
 - Main content area
 
 #### Block Structure
+
 ```django
 {% extends "base.html" %}
 {% block extra_head %}{% endblock %}
@@ -83,6 +89,7 @@ templates/
 ```
 
 #### Navigation Features
+
 - **Top Bar**: Brand, notifications, user menu
 - **Sidebar**: Main navigation menu (desktop)
 - **Offcanvas**: Mobile navigation menu
@@ -97,6 +104,7 @@ templates/
 **Purpose**: Public-facing homepage for EquipeMed
 
 #### Template Structure
+
 ```django
 {% extends "base.html" %}
 
@@ -115,8 +123,9 @@ templates/
 #### Sections
 
 ##### Hero Section
+
 - **Purpose**: Main value proposition and call-to-action
-- **Features**: 
+- **Features**:
   - Compelling headline
   - Feature description
   - Primary and secondary CTAs
@@ -138,6 +147,7 @@ templates/
 ```
 
 ##### Features Section
+
 - **Purpose**: Showcase key application features
 - **Layout**: Card-based grid layout
 - **Features**:
@@ -147,6 +157,7 @@ templates/
   - Security and compliance
 
 ##### Benefits Section
+
 - **Purpose**: Highlight value propositions
 - **Features**:
   - Efficiency improvements
@@ -155,6 +166,7 @@ templates/
   - Cost savings
 
 ##### CTA Section
+
 - **Purpose**: Final conversion opportunity
 - **Features**:
   - Strong call-to-action
@@ -162,6 +174,7 @@ templates/
   - Trust indicators
 
 #### Responsive Design
+
 - **Mobile-first**: Optimized for mobile devices
 - **Breakpoints**: Bootstrap responsive breakpoints
 - **Navigation**: Collapsible mobile menu
@@ -174,6 +187,7 @@ templates/
 **Purpose**: Main interface for authenticated users
 
 #### Template Structure
+
 ```django
 {% extends "base_app.html" %}
 {% load static %}
@@ -191,6 +205,7 @@ templates/
 #### Sections
 
 ##### Welcome Section
+
 - **Purpose**: Personalized greeting and context
 - **Features**:
   - User name display
@@ -214,6 +229,7 @@ templates/
 ```
 
 ##### Stats Cards
+
 - **Purpose**: Key metrics overview
 - **Features**:
   - Patient count
@@ -222,6 +238,7 @@ templates/
   - System status
 
 ##### Recent Activity
+
 - **Purpose**: Latest user actions and system events
 - **Features**:
   - Activity timeline
@@ -230,6 +247,7 @@ templates/
   - Quick actions
 
 ##### Quick Actions
+
 - **Purpose**: Common tasks and shortcuts
 - **Features**:
   - Add new patient
@@ -240,6 +258,7 @@ templates/
 ## Styling and Design System
 
 ### Color Scheme
+
 The templates use a medical-themed color palette:
 
 ```css
@@ -258,12 +277,14 @@ The templates use a medical-themed color palette:
 ```
 
 ### Typography
+
 - **Font Family**: System font stack (Bootstrap default)
 - **Headings**: Bold weights for hierarchy
 - **Body Text**: Regular weight, good contrast
 - **Small Text**: Muted colors for secondary information
 
 ### Components
+
 - **Cards**: Consistent card styling with shadows
 - **Buttons**: Medical-themed button variants
 - **Navigation**: Consistent navigation styling
@@ -272,6 +293,7 @@ The templates use a medical-themed color palette:
 ## Template Tags and Filters
 
 ### Django Template Tags Used
+
 ```django
 {% load static %}          # Static files
 {% url 'namespace:name' %} # URL generation
@@ -281,6 +303,7 @@ The templates use a medical-themed color palette:
 ```
 
 ### Custom Context Variables
+
 ```django
 {{ page_title }}          # Page title
 {{ user.first_name }}     # User information
@@ -289,7 +312,9 @@ The templates use a medical-themed color palette:
 ## Responsive Behavior
 
 ### Breakpoints
+
 Following Bootstrap 5 breakpoints:
+
 - **xs**: <576px (mobile)
 - **sm**: ≥576px (mobile landscape)
 - **md**: ≥768px (tablet)
@@ -297,6 +322,7 @@ Following Bootstrap 5 breakpoints:
 - **xl**: ≥1200px (large desktop)
 
 ### Mobile Optimizations
+
 - **Navigation**: Offcanvas sidebar for mobile
 - **Content**: Stacked layouts on small screens
 - **Touch**: Appropriate touch targets
@@ -305,12 +331,14 @@ Following Bootstrap 5 breakpoints:
 ## Accessibility
 
 ### Current Implementation
+
 - **Semantic HTML**: Proper heading hierarchy
 - **ARIA Labels**: Basic ARIA attributes
 - **Keyboard Navigation**: Standard browser behavior
 - **Color Contrast**: Good contrast ratios
 
 ### Recommended Improvements
+
 1. **ARIA Landmarks**: Add landmark roles
 2. **Focus Management**: Improve focus indicators
 3. **Screen Readers**: Add more descriptive text
@@ -319,11 +347,13 @@ Following Bootstrap 5 breakpoints:
 ## Performance Considerations
 
 ### Current Optimizations
+
 - **CSS/JS**: Minified Bootstrap from CDN
 - **Images**: Optimized image sizes
 - **Caching**: Browser caching headers
 
 ### Recommended Improvements
+
 1. **Critical CSS**: Inline critical CSS
 2. **Lazy Loading**: Implement lazy loading for images
 3. **Code Splitting**: Split JavaScript bundles
@@ -332,12 +362,14 @@ Following Bootstrap 5 breakpoints:
 ## Future Enhancements
 
 ### Planned Features
+
 1. **Dark Mode**: Theme switching capability
 2. **PWA**: Progressive Web App features
 3. **Animations**: Smooth transitions and animations
 4. **Customization**: User-customizable themes
 
 ### Template Improvements
+
 1. **Component Library**: Reusable template components
 2. **Template Fragments**: Smaller, reusable template pieces
 3. **Dynamic Content**: AJAX-loaded content areas

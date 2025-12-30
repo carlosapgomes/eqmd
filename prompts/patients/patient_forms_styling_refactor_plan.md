@@ -7,11 +7,13 @@ This plan outlines the complete refactoring of the patient forms and templates t
 ## Current State Assessment
 
 ### Files to Refactor
+
 - `apps/patients/forms.py` - PatientForm class enhancement
 - `apps/patients/templates/patients/patient_form.html` - Split into create/update templates
 - Create new: `patient_create.html` and `patient_update.html`
 
 ### Reference Files (Keep Consistent)
+
 - `apps/outpatientprescriptions/forms/prescription_forms.py` - Form styling patterns
 - `apps/outpatientprescriptions/templates/outpatientprescription_create.html` - Create template pattern
 - `apps/outpatientprescriptions/templates/outpatientprescription_update.html` - Update template pattern
@@ -20,6 +22,7 @@ This plan outlines the complete refactoring of the patient forms and templates t
 ## Phase 1: Form Enhancement (PatientForm)
 
 ### Step 1.1: Form Widget Enhancement
+
 **Location**: `apps/patients/forms.py`
 
 1. **Add medical theme classes**:
@@ -37,6 +40,7 @@ This plan outlines the complete refactoring of the patient forms and templates t
    - Add `record_number` field for initial creation (create template only)
 
 3. **Widget Enhancements**:
+
    ```python
    widgets = {
        'name': forms.TextInput(attrs={
@@ -54,6 +58,7 @@ This plan outlines the complete refactoring of the patient forms and templates t
    ```
 
 ### Step 1.2: Form Sections Implementation
+
 - Create `FormSection` class for grouping related fields
 - Implement `get_form_sections()` method
 - Add medical section styling with colored borders
@@ -62,9 +67,11 @@ This plan outlines the complete refactoring of the patient forms and templates t
 ## Phase 2: Template Splitting
 
 ### Step 2.1: Create patient_create.html
+
 **Location**: `apps/patients/templates/patients/patient_create.html`
 
 1. **Template Structure**:
+
    ```html
    {% extends "base.html" %}
    {% load static %}
@@ -87,9 +94,11 @@ This plan outlines the complete refactoring of the patient forms and templates t
    - Section 6: Initial Record Number
 
 ### Step 2.2: Create patient_update.html
+
 **Location**: `apps/patients/templates/patients/patient_update.html`
 
 1. **Template Structure**:
+
    ```html
    {% extends "base.html" %}
    {% load static %}
@@ -112,6 +121,7 @@ This plan outlines the complete refactoring of the patient forms and templates t
 ## Phase 3: Medical Theme Implementation
 
 ### Step 3.1: Medical Form Sections
+
 Implement consistent medical form sections:
 
 ```css
@@ -138,6 +148,7 @@ Implement consistent medical form sections:
 ```
 
 ### Step 3.2: Icon Integration
+
 Add Bootstrap icons to all fields:
 
 - **Name**: `bi-person-fill` icon
@@ -150,6 +161,7 @@ Add Bootstrap icons to all fields:
 - **Tags**: `bi-tag` icon
 
 ### Step 3.3: Responsive Layout
+
 Implement responsive grid system:
 
 ```html
@@ -166,6 +178,7 @@ Implement responsive grid system:
 ## Phase 4: Form Field Enhancements
 
 ### Step 4.1: Enhanced Field Configuration
+
 Update all form fields with proper medical styling:
 
 1. **Name Field**:
@@ -189,6 +202,7 @@ Update all form fields with proper medical styling:
    - Current status indicators
 
 ### Step 4.2: Tags Implementation
+
 Enhance tags functionality:
 
 1. **Tags Display**:
@@ -204,6 +218,7 @@ Enhance tags functionality:
 ## Phase 5: Error Handling & Validation
 
 ### Step 5.1: Client-side Validation
+
 Implement comprehensive client-side validation:
 
 - Real-time field validation
@@ -212,6 +227,7 @@ Implement comprehensive client-side validation:
 - Form submission prevention
 
 ### Step 5.2: Server-side Validation
+
 Enhance server-side validation:
 
 - Custom validators for medical fields
@@ -222,6 +238,7 @@ Enhance server-side validation:
 ## Phase 6: Navigation & Context
 
 ### Step 6.1: Breadcrumb Navigation
+
 Implement consistent breadcrumb navigation:
 
 ```html
@@ -234,6 +251,7 @@ Implement consistent breadcrumb navigation:
 ```
 
 ### Step 6.2: Context Headers
+
 Add medical-themed headers:
 
 ```html
@@ -249,11 +267,13 @@ Add medical-themed headers:
 ## Phase 7: Testing & Quality Assurance
 
 ### Step 7.1: Cross-browser Testing
+
 - Chrome, Firefox, Safari, Edge
 - Mobile responsiveness
 - Form functionality across devices
 
 ### Step 7.2: Accessibility Testing
+
 - Screen reader compatibility
 - Keyboard navigation
 - ARIA labels and roles
@@ -262,21 +282,25 @@ Add medical-themed headers:
 ## Implementation Timeline
 
 ### Week 1: Form Enhancement
+
 - [ ] Enhance PatientForm class
 - [ ] Add medical styling to form widgets
 - [ ] Implement form sections
 
 ### Week 2: Template Creation
+
 - [ ] Create patient_create.html
 - [ ] Create patient_update.html
 - [ ] Implement medical theme styling
 
 ### Week 3: Styling & Integration
+
 - [ ] Add Bootstrap icons
 - [ ] Implement responsive layout
 - [ ] Add error handling
 
 ### Week 4: Testing & Refinement
+
 - [ ] Cross-browser testing
 - [ ] Accessibility testing
 - [ ] User experience refinement
@@ -284,18 +308,21 @@ Add medical-themed headers:
 ## Success Criteria
 
 ### Visual Consistency
+
 - ✅ All fields use medical theme colors
 - ✅ Consistent spacing and typography
 - ✅ Proper Bootstrap 5.3 components
 - ✅ Medical icon integration
 
 ### User Experience
+
 - ✅ Intuitive form organization
 - ✅ Clear section boundaries
 - ✅ Responsive design
 - ✅ Helpful error messages
 
 ### Code Quality
+
 - ✅ DRY principles followed
 - ✅ Consistent naming conventions
 - ✅ Proper accessibility
@@ -304,12 +331,14 @@ Add medical-themed headers:
 ## Risk Mitigation
 
 ### Potential Issues
+
 1. **Breaking changes**: Maintain backward compatibility
 2. **Data migration**: No database changes required
 3. **Performance**: Optimize for large patient lists
 4. **Browser support**: Test extensively across browsers
 
 ### Mitigation Strategies
+
 - Staged deployment with feature flags
 - Comprehensive testing suite
 - Rollback plan ready

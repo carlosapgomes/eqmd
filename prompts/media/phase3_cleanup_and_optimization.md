@@ -821,4 +821,3 @@ A clean, maintainable media upload system with:
 - Server-side processing
 - Secure file handling
 - Excellent user experience
-

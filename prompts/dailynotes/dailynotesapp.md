@@ -82,4 +82,3 @@ And can be initialized in the template like this:
 ## Permissions
 
 This app inherits all permissions from the `events` app.
-

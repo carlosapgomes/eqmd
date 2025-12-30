@@ -483,6 +483,7 @@ EquipeMed uses an **HTML + browser print** strategy for all document printing ne
 #### Implementation Pattern
 
 ##### 1. Print View Class
+
 ```python
 class DocumentPrintView(LoginRequiredMixin, DetailView):
     model = YourModel
@@ -496,6 +497,7 @@ class DocumentPrintView(LoginRequiredMixin, DetailView):
 ```
 
 ##### 2. Print Template Structure
+
 ```html
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -537,6 +539,7 @@ class DocumentPrintView(LoginRequiredMixin, DetailView):
 ```
 
 ##### 3. Print Button Implementation
+
 ```html
 <a href="{% url 'app:document_print' pk=object.pk %}" 
    class="btn btn-outline-primary" 
@@ -549,6 +552,7 @@ class DocumentPrintView(LoginRequiredMixin, DetailView):
 #### Medical Document Standards
 
 ##### Document Structure
+
 - **Header**: Hospital name and document title
 - **Patient Section**: Demographics table with key information
 - **Content Area**: Main document content with proper spacing
@@ -556,12 +560,14 @@ class DocumentPrintView(LoginRequiredMixin, DetailView):
 - **Footer**: Generation timestamp and metadata
 
 ##### Typography for Print
+
 - **Font**: Times New Roman (professional medical standard)
 - **Size**: 11-12px for body text
 - **Line Height**: 1.3-1.4 for readability
 - **Headers**: Bold, appropriate hierarchy
 
 ##### Print-Specific CSS
+
 ```css
 @media print {
     @page {
@@ -589,6 +595,7 @@ class DocumentPrintView(LoginRequiredMixin, DetailView):
 ```
 
 #### URL Patterns
+
 ```python
 # In app/urls.py
 path('<uuid:pk>/print/', views.DocumentPrintView.as_view(), name='document_print'),

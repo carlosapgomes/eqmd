@@ -9,7 +9,7 @@ It looks like there may be some overlap between the CSS and JS code in the media
 - apps/mediafiles/static/mediafiles/css/mediafiles.css
 - apps/mediafiles/static/mediafiles/css/photo.css
 
-2. JS code
+1. JS code
 
 - apps/mediafiles/static/mediafiles/js/mediafiles.js
 - apps/mediafiles/static/mediafiles/js/photo.js

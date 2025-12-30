@@ -930,4 +930,3 @@ class Migration(migrations.Migration):
 ```
 
 This comprehensive set of code examples provides all the necessary components to implement the full text search functionality for clinical research in the EquipeMed system.
-

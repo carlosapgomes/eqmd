@@ -4,15 +4,17 @@
 
 Following successful completion of Phase 1 (webpack integration), Phase 2 addresses critical code duplication issues identified in the static assets audit:
 
-### Duplication Problems Identified:
+### Duplication Problems Identified
+
 - **JavaScript utility functions** duplicated between `mediafiles.js` and `photo.js`
 - **CSS pattern repetition** across media type files
 - **Configuration objects** duplicated across JavaScript modules
 - **Maintenance overhead** from keeping multiple copies in sync
 
-### Specific Duplications Found:
+### Specific Duplications Found
 
-#### JavaScript Duplications:
+#### JavaScript Duplications
+
 1. **`formatFileSize()` function** - Identical implementations in:
    - `apps/mediafiles/static/mediafiles/js/mediafiles.js` (lines 27-33)
    - `apps/mediafiles/static/mediafiles/js/photo.js` (lines 29-35)
@@ -29,7 +31,8 @@ Following successful completion of Phase 1 (webpack integration), Phase 2 addres
    - `apps/mediafiles/static/mediafiles/js/mediafiles.js` (lines 108-160)
    - `apps/mediafiles/static/mediafiles/js/photo.js` (lines 82-150)
 
-#### CSS Duplications:
+#### CSS Duplications
+
 1. **Media thumbnail styles** - Repeated patterns across files
 2. **Upload area styling** - Similar implementations in photo/video/photoseries
 3. **Modal control styles** - Duplicated across media types
@@ -37,14 +40,16 @@ Following successful completion of Phase 1 (webpack integration), Phase 2 addres
 
 ## Technical Reasoning
 
-### Why Deduplication is Critical:
+### Why Deduplication is Critical
+
 1. **Maintainability**: Single source of truth for shared functionality
 2. **Consistency**: Ensures identical behavior across all media types
 3. **Bundle Size**: Reduces JavaScript and CSS bundle size
 4. **Bug Prevention**: Fixes in shared code automatically apply everywhere
 5. **Developer Experience**: Clearer code organization and easier debugging
 
-### Dependency Management Strategy:
+### Dependency Management Strategy
+
 - Establish clear module hierarchy with `MediaFiles` as the base
 - Create shared utility modules for common functionality
 - Implement proper dependency injection patterns
@@ -53,6 +58,7 @@ Following successful completion of Phase 1 (webpack integration), Phase 2 addres
 ## Implementation Plan
 
 ### Step 1: Create Shared Utility Module
+
 **Estimated Time: 30 minutes**
 
 **1.1 Extract Shared Utilities from mediafiles.js**
@@ -241,6 +247,7 @@ window.MediaFiles = (function() {
 ```
 
 ### Step 2: Refactor photo.js to Use Shared Utilities
+
 **Estimated Time: 45 minutes**
 
 **2.1 Remove Duplicate Functions from photo.js**
@@ -248,6 +255,7 @@ window.MediaFiles = (function() {
 **File: `apps/mediafiles/static/mediafiles/js/photo.js`**
 
 **BEFORE (lines 22-39) - REMOVE:**
+
 ```javascript
 // Use shared utilities from MediaFiles
 const utils = window.MediaFiles ? window.MediaFiles.utils : {
@@ -271,6 +279,7 @@ const utils = window.MediaFiles ? window.MediaFiles.utils : {
 ```
 
 **AFTER - REPLACE WITH:**
+
 ```javascript
 // Use shared utilities from MediaFiles (required dependency)
 const utils = window.MediaFiles.utils;
@@ -286,6 +295,7 @@ if (!window.MediaFiles) {
 **2.2 Remove Duplicate Configuration**
 
 **BEFORE (lines 42-46) - REMOVE:**
+
 ```javascript
 // Get shared config from MediaFiles
 const sharedConfig = window.MediaFiles ? window.MediaFiles.config : {
@@ -300,6 +310,7 @@ const sharedConfig = window.MediaFiles ? window.MediaFiles.config : {
 **2.3 Refactor Drag and Drop Implementation**
 
 **BEFORE (lines 62-141) - REPLACE:**
+
 ```javascript
 setupDragAndDrop: function() {
     const uploadAreas = document.querySelectorAll('.photo-upload-form');
@@ -337,6 +348,7 @@ handleDrop: function(e) {
 ```
 
 **AFTER - REPLACE WITH:**
+
 ```javascript
 setupDragAndDrop: function() {
     dragDrop.setupDragAndDrop(
@@ -350,6 +362,7 @@ setupDragAndDrop: function() {
 **2.4 Update File Validation to Use Shared Config**
 
 **BEFORE (lines 166-187) - UPDATE:**
+
 ```javascript
 validatePhoto: function(file) {
     // Check file type
@@ -377,6 +390,7 @@ validatePhoto: function(file) {
 ```
 
 **AFTER - REPLACE WITH:**
+
 ```javascript
 validatePhoto: function(file) {
     // Check file type
@@ -404,6 +418,7 @@ validatePhoto: function(file) {
 ```
 
 ### Step 3: CSS Consolidation and Deduplication
+
 **Estimated Time: 60 minutes**
 
 **3.1 Consolidate Common Media Styles**
@@ -617,12 +632,14 @@ validatePhoto: function(file) {
 **3.3 Update VideoClip and PhotoSeries CSS**
 
 Apply similar deduplication to:
+
 - `apps/mediafiles/static/mediafiles/css/videoclip.css`
 - `apps/mediafiles/static/mediafiles/css/photoseries.css`
 
 Remove duplicated upload, preview, and validation styles, replacing with shared classes.
 
 ### Step 4: Update Other JavaScript Files
+
 **Estimated Time: 30 minutes**
 
 **4.1 Update photoseries.js and videoclip.js**
@@ -638,6 +655,7 @@ const config = window.MediaFiles.config;
 ```
 
 ### Step 5: Dependency Loading Order Verification
+
 **Estimated Time: 15 minutes**
 
 **5.1 Verify Webpack Entry Order**
@@ -666,9 +684,11 @@ entry: {
 ## Testing Procedures
 
 ### Pre-Deployment Testing
+
 **Estimated Time: 45 minutes**
 
 #### Test 1: Shared Utility Functions
+
 ```javascript
 // Browser console testing
 console.log(window.MediaFiles.utils.formatFileSize(1024)); // Should return "1 KB"
@@ -676,6 +696,7 @@ window.MediaFiles.utils.showToast('Test message', 'success'); // Should show toa
 ```
 
 #### Test 2: Photo Functionality
+
 ```bash
 # Test photo upload with new shared utilities
 # 1. Navigate to photo upload form
@@ -686,6 +707,7 @@ window.MediaFiles.utils.showToast('Test message', 'success'); // Should show toa
 ```
 
 #### Test 3: PhotoSeries and VideoClip
+
 ```bash
 # Test that all media types still work correctly
 # 1. Test PhotoSeries carousel and controls
@@ -695,6 +717,7 @@ window.MediaFiles.utils.showToast('Test message', 'success'); // Should show toa
 ```
 
 #### Test 4: Bundle Size Verification
+
 ```bash
 # Check bundle size reduction
 ls -la static/main-bundle.js static/main.css
@@ -704,6 +727,7 @@ ls -la static/main-bundle.js static/main.css
 ```
 
 ### Automated Testing
+
 ```bash
 # Run full test suite
 uv run python manage.py test apps.mediafiles
@@ -717,17 +741,20 @@ npm test
 
 ## Risk Assessment and Mitigation
 
-### High Risk Scenarios:
+### High Risk Scenarios
 
 #### Risk 1: Dependency Loading Issues
+
 **Probability: Medium | Impact: High**
 
 **Symptoms:**
+
 - "MediaFiles is not defined" errors
 - Photo/PhotoSeries/VideoClip functionality broken
 - Inconsistent behavior across media types
 
 **Mitigation:**
+
 - Webpack entry order ensures MediaFiles loads first
 - Add explicit dependency checks in modules
 - Comprehensive testing before deployment
@@ -735,14 +762,17 @@ npm test
 **Rollback:** Restore individual utility functions in each file
 
 #### Risk 2: CSS Specificity Conflicts
+
 **Probability: Low | Impact: Medium**
 
 **Symptoms:**
+
 - Styling inconsistencies
 - Media type specific styles not applying
 - Layout issues on media pages
 
 **Mitigation:**
+
 - Maintain CSS specificity hierarchy
 - Test all media types thoroughly
 - Use CSS class inheritance properly
@@ -750,14 +780,17 @@ npm test
 **Rollback:** Restore individual CSS files
 
 #### Risk 3: Functionality Regressions
+
 **Probability: Low | Impact: High**
 
 **Symptoms:**
+
 - Upload functionality broken
 - Validation not working
 - Modal interactions failing
 
 **Mitigation:**
+
 - Extensive manual testing
 - Automated test coverage
 - Gradual rollout approach
@@ -766,20 +799,23 @@ npm test
 
 ## Success Criteria
 
-### Code Quality Metrics:
+### Code Quality Metrics
+
 1. ✅ Zero duplicate utility functions across JavaScript files
 2. ✅ Shared configuration object used by all modules
 3. ✅ CSS duplication reduced by >50%
 4. ✅ Consistent code patterns across all media types
 5. ✅ Proper dependency management implemented
 
-### Performance Metrics:
+### Performance Metrics
+
 1. ✅ Bundle size reduction of 10-20KB
 2. ✅ No increase in page load times
 3. ✅ Identical functionality performance
 4. ✅ No new JavaScript errors
 
-### Maintainability Metrics:
+### Maintainability Metrics
+
 1. ✅ Single source of truth for shared utilities
 2. ✅ Clear module dependency hierarchy
 3. ✅ Consistent error handling patterns
@@ -787,13 +823,15 @@ npm test
 
 ## Post-Implementation Actions
 
-### Immediate (Week 1):
+### Immediate (Week 1)
+
 - [ ] Monitor for any functionality regressions
 - [ ] Verify bundle size improvements
 - [ ] Update developer documentation
 - [ ] Create coding standards for future media modules
 
-### Short-term (Month 1):
+### Short-term (Month 1)
+
 - [ ] Implement additional shared utilities as needed
 - [ ] Consider further CSS consolidation opportunities
 - [ ] Plan Phase 3 advanced optimizations

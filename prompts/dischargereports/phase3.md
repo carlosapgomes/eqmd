@@ -128,7 +128,7 @@ event card for discharge report events {% endcomment %} {% block event_actions
 {% endblock event_content %}
 ```
 
-2. ADD PRINT VIEW TO VIEWS.PY:
+1. ADD PRINT VIEW TO VIEWS.PY:
 
 ```python
 # Add this to views.py
@@ -147,14 +147,14 @@ class DischargeReportPrintView(LoginRequiredMixin, DetailView):
         return context
 ```
 
-3. ADD PRINT URL TO URLS.PY:
+1. ADD PRINT URL TO URLS.PY:
 
 ```python
 # Add this to urlpatterns in urls.py
 path('<uuid:pk>/print/', views.DischargeReportPrintView.as_view(), name='dischargereport_print'),
 ```
 
-4. CREATE BASIC PRINT TEMPLATE:
+1. CREATE BASIC PRINT TEMPLATE:
    apps/dischargereports/templates/dischargereports/dischargereport_print.html:
 
 ```html
@@ -222,7 +222,7 @@ path('<uuid:pk>/print/', views.DischargeReportPrintView.as_view(), name='dischar
 </html>
 ```
 
-5. UPDATE TIMELINE FILTERING:
+1. UPDATE TIMELINE FILTERING:
    Find the timeline template (likely in apps/patients or apps/events) and add discharge reports to the filter options.
 
 Look for JavaScript filter code and add:
@@ -246,7 +246,7 @@ And add HTML filter option:
 <label for="filter-discharge-reports">Relatórios de Alta</label>
 ```
 
-6. VERIFY EVENT TYPE REGISTRATION:
+1. VERIFY EVENT TYPE REGISTRATION:
    Confirm that apps/events/models.py has:
 
 - DISCHARGE_REPORT_EVENT = 6 in constants

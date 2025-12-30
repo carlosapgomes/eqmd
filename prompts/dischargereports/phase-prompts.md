@@ -28,7 +28,8 @@ mkdir -p apps/dischargereports/{templates/dischargereports,templatetags,migratio
 ```
 
 Create these files:
-- apps/dischargereports/__init__.py (empty)
+
+- apps/dischargereports/**init**.py (empty)
 - apps/dischargereports/apps.py
 - apps/dischargereports/models.py  
 - apps/dischargereports/admin.py
@@ -36,7 +37,8 @@ Create these files:
 - apps/dischargereports/views.py
 - apps/dischargereports/forms.py
 
-2. IMPLEMENT MODELS.PY:
+1. IMPLEMENT MODELS.PY:
+
 ```python
 from django.db import models
 from apps.events.models import Event
@@ -131,7 +133,8 @@ class DischargeReport(Event):
         return f"Relatório de Alta - {self.patient.name} - {self.discharge_date.strftime('%d/%m/%Y')}{draft_text}"
 ```
 
-3. IMPLEMENT APPS.PY:
+1. IMPLEMENT APPS.PY:
+
 ```python
 from django.apps import AppConfig
 
@@ -142,7 +145,8 @@ class DischargereportsConfig(AppConfig):
     verbose_name = 'Relatórios de Alta'
 ```
 
-4. IMPLEMENT ADMIN.PY:
+1. IMPLEMENT ADMIN.PY:
+
 ```python
 from django.contrib import admin
 from .models import DischargeReport
@@ -178,7 +182,8 @@ class DischargeReportAdmin(admin.ModelAdmin):
     )
 ```
 
-5. CREATE EMPTY FILES:
+1. CREATE EMPTY FILES:
+
 ```python
 # apps/dischargereports/urls.py
 from django.urls import path
@@ -194,26 +199,30 @@ from django.shortcuts import render
 from django import forms
 ```
 
-6. ADD TO INSTALLED_APPS in settings/base.py:
+1. ADD TO INSTALLED_APPS in settings/base.py:
 Add 'apps.dischargereports' to INSTALLED_APPS list.
 
-7. GENERATE AND RUN MIGRATION:
+2. GENERATE AND RUN MIGRATION:
+
 ```bash
 uv run python manage.py makemigrations dischargereports
 uv run python manage.py migrate
 ```
 
 VERIFICATION:
+
 - Django admin shows "Relatórios de Alta" section
 - Can create discharge report in admin
 - Model saves with correct event_type = 6
 - All fields display properly in admin
 
 DELIVERABLES:
+
 - Working DischargeReport model
-- Admin interface 
+- Admin interface
 - Database migration applied
 - App registered in settings
+
 ```
 
 ---
@@ -221,9 +230,11 @@ DELIVERABLES:
 ## Phase 2 Prompt: Basic CRUD Operations
 
 ```
+
 Implement CRUD views and templates for Django discharge reports app.
 
 CONTEXT:
+
 - Phase 1 completed: DischargeReport model exists extending Event
 - Model has fields: admission_date, discharge_date, medical_specialty, admission_history, problems_and_diagnosis, exams_list, procedures_list, inpatient_medical_history, discharge_status, discharge_recommendations, is_draft
 - Bootstrap 5.3 styling, Portuguese localization
@@ -235,6 +246,7 @@ GOAL: Create complete CRUD interface with forms, views, and templates.
 TASKS:
 
 1. UPDATE FORMS.PY:
+
 ```python
 from django import forms
 from .models import DischargeReport
@@ -306,7 +318,8 @@ class DischargeReportForm(forms.ModelForm):
         return cleaned_data
 ```
 
-2. UPDATE VIEWS.PY:
+1. UPDATE VIEWS.PY:
+
 ```python
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
@@ -401,7 +414,8 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 ```
 
-3. UPDATE URLS.PY:
+1. UPDATE URLS.PY:
+
 ```python
 from django.urls import path
 from . import views
@@ -417,14 +431,16 @@ urlpatterns = [
 ]
 ```
 
-4. CREATE TEMPLATES:
+1. CREATE TEMPLATES:
 
 Create base directory structure:
+
 ```bash
 mkdir -p apps/dischargereports/templates/dischargereports
 ```
 
 apps/dischargereports/templates/dischargereports/dischargereport_create.html:
+
 ```html
 {% extends 'base.html' %}
 {% load static %}
@@ -527,18 +543,21 @@ apps/dischargereports/templates/dischargereports/dischargereport_create.html:
 ```
 
 Create similar templates for:
+
 - dischargereport_update.html (same as create but with "Editar" title)
 - dischargereport_detail.html (read-only view)
 - dischargereport_list.html (table of reports)
 - dischargereport_confirm_delete.html (deletion confirmation)
 
-5. REGISTER URLS IN MAIN PROJECT:
+1. REGISTER URLS IN MAIN PROJECT:
 Add to main urls.py:
+
 ```python
 path('dischargereports/', include('apps.dischargereports.urls')),
 ```
 
 VERIFICATION:
+
 - All CRUD operations work
 - Draft/final save buttons function
 - Form validation works
@@ -546,10 +565,12 @@ VERIFICATION:
 - Draft-only deletion enforced
 
 DELIVERABLES:
+
 - Complete CRUD interface
 - Working forms with validation
 - Bootstrap 5.3 templates
 - Draft/final save logic
+
 ```
 
 ---
@@ -557,9 +578,11 @@ DELIVERABLES:
 ## Phase 3 Prompt: Event System Integration
 
 ```
+
 Integrate discharge reports with the patient timeline and event system.
 
 CONTEXT:
+
 - Phase 2 completed: DischargeReport CRUD interface works
 - Project has existing Event system with patient timeline
 - Event cards located in apps/events/templates/events/partials/
@@ -572,6 +595,7 @@ TASKS:
 
 1. CREATE EVENT CARD TEMPLATE:
 apps/events/templates/events/partials/event_card_dischargereport.html:
+
 ```html
 {% extends "events/partials/event_card_base.html" %}
 {% load permission_tags %}
@@ -684,7 +708,8 @@ Extends the base event card for discharge report events
 {% endblock event_content %}
 ```
 
-2. ADD PRINT VIEW TO VIEWS.PY:
+1. ADD PRINT VIEW TO VIEWS.PY:
+
 ```python
 # Add this to views.py
 from django.http import HttpResponse
@@ -702,14 +727,16 @@ class DischargeReportPrintView(LoginRequiredMixin, DetailView):
         return context
 ```
 
-3. ADD PRINT URL TO URLS.PY:
+1. ADD PRINT URL TO URLS.PY:
+
 ```python
 # Add this to urlpatterns in urls.py
 path('<uuid:pk>/print/', views.DischargeReportPrintView.as_view(), name='dischargereport_print'),
 ```
 
-4. CREATE BASIC PRINT TEMPLATE:
+1. CREATE BASIC PRINT TEMPLATE:
 apps/dischargereports/templates/dischargereports/dischargereport_print.html:
+
 ```html
 {% load static %}
 {% load hospital_tags %}
@@ -755,10 +782,11 @@ apps/dischargereports/templates/dischargereports/dischargereport_print.html:
 </html>
 ```
 
-5. UPDATE TIMELINE FILTERING:
+1. UPDATE TIMELINE FILTERING:
 Find the timeline template (likely in apps/patients or apps/events) and add discharge reports to the filter options.
 
 Look for JavaScript filter code and add:
+
 ```javascript
 // Add to timeline filtering
 case 'discharge_reports':
@@ -766,18 +794,21 @@ case 'discharge_reports':
 ```
 
 And add HTML filter option:
+
 ```html
 <input type="checkbox" id="filter-discharge-reports" class="filter-checkbox" data-filter="discharge_reports" checked>
 <label for="filter-discharge-reports">Relatórios de Alta</label>
 ```
 
-6. VERIFY EVENT TYPE REGISTRATION:
+1. VERIFY EVENT TYPE REGISTRATION:
 Confirm that apps/events/models.py has:
+
 - DISCHARGE_REPORT_EVENT = 6 in constants
 - "Relatório de Alta" in EVENT_TYPE_CHOICES
 - Proper badge class and icon mappings
 
 VERIFICATION:
+
 - Discharge reports appear in patient timeline
 - Event card displays correctly with proper buttons
 - Print functionality works
@@ -785,10 +816,12 @@ VERIFICATION:
 - Draft status shows properly in event card
 
 DELIVERABLES:
+
 - Custom event card template
 - Timeline integration
 - Print view and template  
 - Updated timeline filtering
+
 ```
 
 ---
@@ -796,9 +829,11 @@ DELIVERABLES:
 ## Phase 4 Prompt: Print/PDF Generation
 
 ```
+
 Create professional Portuguese PDF reports for discharge reports with hospital branding.
 
 CONTEXT:
+
 - Phase 3 completed: Basic print template exists
 - Project uses hospital template tags for branding
 - Need professional Portuguese layout with pagination
@@ -811,6 +846,7 @@ TASKS:
 
 1. CREATE COMPREHENSIVE PRINT TEMPLATE:
 apps/dischargereports/templates/dischargereports/dischargereport_print.html:
+
 ```html
 {% load static %}
 {% load hospital_tags %}
@@ -955,13 +991,15 @@ apps/dischargereports/templates/dischargereports/dischargereport_print.html:
 </html>
 ```
 
-2. CREATE PRINT CSS FILE:
+1. CREATE PRINT CSS FILE:
 Create directory and file:
+
 ```bash
 mkdir -p apps/dischargereports/static/dischargereports/css
 ```
 
 apps/dischargereports/static/dischargereports/css/print.css:
+
 ```css
 /* Print Styles for Discharge Reports */
 
@@ -1238,14 +1276,16 @@ body {
 }
 ```
 
-3. UPDATE STATIC FILES:
+1. UPDATE STATIC FILES:
 Run webpack build to process the new CSS:
+
 ```bash
 npm run build
 ```
 
-4. ADD PRINT BUTTON TO DETAIL TEMPLATE:
+1. ADD PRINT BUTTON TO DETAIL TEMPLATE:
 Update apps/dischargereports/templates/dischargereports/dischargereport_detail.html to add print button:
+
 ```html
 <!-- Add this button to the detail template -->
 <a href="{% url 'apps.dischargereports:dischargereport_print' pk=report.pk %}" 
@@ -1255,6 +1295,7 @@ Update apps/dischargereports/templates/dischargereports/dischargereport_detail.h
 ```
 
 VERIFICATION:
+
 - Print template displays all sections correctly
 - Hospital branding appears properly
 - CSS styling works in print preview
@@ -1262,10 +1303,12 @@ VERIFICATION:
 - Print button works from detail view and event card
 
 DELIVERABLES:
+
 - Professional Portuguese print template
 - Print-specific CSS styling
 - Hospital branding integration
 - Print buttons in UI
+
 ```
 
 ---
@@ -1273,9 +1316,11 @@ DELIVERABLES:
 ## Phase 5 Prompt: Firebase Import Command
 
 ```
+
 Create Firebase import management command for discharge reports with PatientAdmission creation.
 
 CONTEXT:
+
 - DischargeReport model exists with all fields
 - Firebase data in "patientDischargeReports" reference
 - Need to create PatientAdmission records for each imported report
@@ -1287,14 +1332,16 @@ GOAL: Create management command to import discharge reports from Firebase.
 TASKS:
 
 1. CREATE COMMAND DIRECTORY:
+
 ```bash
 mkdir -p apps/dischargereports/management/commands
 touch apps/dischargereports/management/__init__.py
 touch apps/dischargereports/management/commands/__init__.py
 ```
 
-2. CREATE IMPORT COMMAND:
+1. CREATE IMPORT COMMAND:
 apps/dischargereports/management/commands/import_firebase_discharge_reports.py:
+
 ```python
 import json
 import sys
@@ -1630,10 +1677,11 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("=" * 60))
 ```
 
-3. CREATE FEATURE DOCUMENTATION:
+1. CREATE FEATURE DOCUMENTATION:
 Create docs/apps/dischargereports.md with comprehensive documentation including the Firebase import command usage, data mapping, and troubleshooting guide. Use the template from docs-template.md created earlier.
 
-4. TEST THE COMMAND:
+2. TEST THE COMMAND:
+
 ```bash
 # Test with dry run
 uv run python manage.py import_firebase_discharge_reports \
@@ -1649,7 +1697,8 @@ uv run python manage.py import_firebase_discharge_reports \
   --dry-run
 ```
 
-5. ADD DOCKER COMMAND EXAMPLES TO DOCS:
+1. ADD DOCKER COMMAND EXAMPLES TO DOCS:
+
 ```bash
 # Docker version
 docker compose exec eqmd python manage.py import_firebase_discharge_reports \
@@ -1658,6 +1707,7 @@ docker compose exec eqmd python manage.py import_firebase_discharge_reports \
 ```
 
 VERIFICATION:
+
 - Command runs without errors
 - Dry run shows correct data parsing
 - DischargeReport objects created correctly
@@ -1666,10 +1716,12 @@ VERIFICATION:
 - Error handling works for missing patients
 
 DELIVERABLES:
+
 - Working Firebase import command
 - PatientAdmission creation logic
 - Comprehensive feature documentation
 - Docker command examples
+
 ```
 
 ---
@@ -1677,9 +1729,11 @@ DELIVERABLES:
 ## Phase 6 Prompt: Advanced Features & Permissions
 
 ```
+
 Implement draft logic, permissions, and UI polish for discharge reports.
 
 CONTEXT:
+
 - Phases 1-5 completed: Full CRUD, timeline integration, print, Firebase import
 - Draft system partially implemented (is_draft field exists)
 - Need to refine draft logic, permissions, and UI polish
@@ -1690,6 +1744,7 @@ GOAL: Polish the discharge reports feature with proper draft logic and permissio
 TASKS:
 
 1. UPDATE MODELS.PY - ADD DRAFT VALIDATION:
+
 ```python
 # Add this method to DischargeReport model
 def can_be_edited_by_user(self, user):
@@ -1720,7 +1775,8 @@ def status_badge_class(self):
     return "badge bg-warning text-dark" if self.is_draft else "badge bg-success"
 ```
 
-2. UPDATE VIEWS.PY - IMPROVE PERMISSION LOGIC:
+1. UPDATE VIEWS.PY - IMPROVE PERMISSION LOGIC:
+
 ```python
 # Update existing views with better permission checking
 
@@ -1778,9 +1834,10 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 ```
 
-3. UPDATE TEMPLATES - IMPROVE DRAFT UI:
+1. UPDATE TEMPLATES - IMPROVE DRAFT UI:
 
 Update dischargereport_detail.html:
+
 ```html
 {% extends 'base.html' %}
 {% load static %}
@@ -1891,7 +1948,8 @@ Update dischargereport_detail.html:
 {% endblock %}
 ```
 
-4. UPDATE LIST TEMPLATE - ADD STATUS COLUMN:
+1. UPDATE LIST TEMPLATE - ADD STATUS COLUMN:
+
 ```html
 <!-- Add to dischargereport_list.html table -->
 <th>Status</th>
@@ -1921,14 +1979,16 @@ Update dischargereport_detail.html:
 </td>
 ```
 
-5. ADD HELP TEXT TO FORMS:
+1. ADD HELP TEXT TO FORMS:
+
 ```python
 # Update DischargeReportForm widgets with better help text
 'is_draft': forms.HiddenInput(),  # Hide from form, controlled by buttons
 # Add help text to other fields as needed
 ```
 
-6. UPDATE EVENT CARD TEMPLATE:
+1. UPDATE EVENT CARD TEMPLATE:
+
 ```html
 <!-- Update apps/events/templates/events/partials/event_card_dischargereport.html -->
 <!-- Add draft status indicator -->
@@ -1948,7 +2008,8 @@ Update dischargereport_detail.html:
 {% endif %}
 ```
 
-7. ADD ADMIN IMPROVEMENTS:
+1. ADD ADMIN IMPROVEMENTS:
+
 ```python
 # Update admin.py
 @admin.register(DischargeReport)
@@ -1964,6 +2025,7 @@ class DischargeReportAdmin(admin.ModelAdmin):
 ```
 
 VERIFICATION:
+
 - Draft/finalized status displays correctly throughout UI
 - Edit permissions work properly (drafts vs 24h window)
 - Delete only works for drafts
@@ -1971,10 +2033,12 @@ VERIFICATION:
 - Admin interface shows status properly
 
 DELIVERABLES:
+
 - Refined draft logic and permissions
 - Improved UI with status indicators
 - Better permission checking
 - Enhanced admin interface
+
 ```
 
 ---
@@ -1982,9 +2046,11 @@ DELIVERABLES:
 ## Phase 7 Prompt: Testing & Documentation
 
 ```
+
 Create comprehensive tests and complete documentation for discharge reports feature.
 
 CONTEXT:
+
 - All previous phases completed: Full discharge reports functionality
 - Need comprehensive test coverage for models, views, permissions, Firebase import
 - Need to complete feature documentation
@@ -1995,13 +2061,15 @@ GOAL: Complete test suite and comprehensive documentation.
 TASKS:
 
 1. CREATE TEST DIRECTORY STRUCTURE:
+
 ```bash
 mkdir -p apps/dischargereports/tests
 touch apps/dischargereports/tests/__init__.py
 ```
 
-2. CREATE MODEL TESTS:
+1. CREATE MODEL TESTS:
 apps/dischargereports/tests/test_models.py:
+
 ```python
 from datetime import date, datetime, timedelta
 from django.test import TestCase
@@ -2135,8 +2203,9 @@ class DischargeReportModelTests(TestCase):
         self.assertEqual(final_report.status_badge_class, "badge bg-success")
 ```
 
-3. CREATE VIEW TESTS:
+1. CREATE VIEW TESTS:
 apps/dischargereports/tests/test_views.py:
+
 ```python
 from datetime import date, datetime
 from django.test import TestCase, Client
@@ -2290,8 +2359,9 @@ class DischargeReportViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
 ```
 
-4. CREATE FIREBASE IMPORT TESTS:
+1. CREATE FIREBASE IMPORT TESTS:
 apps/dischargereports/tests/test_firebase_import.py:
+
 ```python
 from datetime import date, datetime
 from unittest.mock import Mock, patch, MagicMock
@@ -2418,8 +2488,9 @@ class FirebaseImportTests(TestCase):
         self.assertFalse(admission.is_active)
 ```
 
-5. CREATE INTEGRATION TESTS:
+1. CREATE INTEGRATION TESTS:
 apps/dischargereports/tests/test_integration.py:
+
 ```python
 from datetime import date, datetime
 from django.test import TestCase, Client
@@ -2499,14 +2570,16 @@ class DischargeReportIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 403)
 ```
 
-6. COMPLETE FEATURE DOCUMENTATION:
+1. COMPLETE FEATURE DOCUMENTATION:
 Create comprehensive docs/apps/dischargereports.md using the template from docs-template.md, including:
+
 - All testing commands
 - Troubleshooting section  
 - Development notes
 - Firebase import documentation
 
-7. CREATE TEST RUNNER SCRIPT:
+1. CREATE TEST RUNNER SCRIPT:
+
 ```bash
 # Add to documentation - testing commands
 # All tests
@@ -2522,6 +2595,7 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/dischargereports/
 ```
 
 VERIFICATION:
+
 - All tests pass
 - Good test coverage (>80%)
 - Integration tests cover complete workflows
@@ -2529,10 +2603,12 @@ VERIFICATION:
 - Documentation is comprehensive and accurate
 
 DELIVERABLES:
+
 - Comprehensive test suite
 - Feature documentation in docs/apps/dischargereports.md
 - Testing command documentation
 - Integration test coverage
+
 ```
 
 Perfect! These prompts provide complete, self-contained implementation guides for each phase. Each prompt includes all necessary context, code examples, and verification steps needed to implement that specific phase successfully.

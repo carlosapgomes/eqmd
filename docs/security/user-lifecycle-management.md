@@ -66,6 +66,7 @@ Default expiration periods by profession:
 ### 1. Automatic Expiration Checking
 
 The system automatically:
+
 - Updates user statuses based on expiration dates
 - Transitions users from `active` → `expiring_soon` → `expired`
 - Blocks access for expired users via middleware
@@ -74,6 +75,7 @@ The system automatically:
 ### 2. Activity Tracking
 
 Simple timestamp-based tracking:
+
 - Updates `last_meaningful_activity` on significant actions
 - Excludes static files, AJAX polling, and health checks
 - Identifies inactive users for administrative review
@@ -82,6 +84,7 @@ Simple timestamp-based tracking:
 ### 3. Renewal Workflow
 
 Self-service renewal process:
+
 1. User accesses renewal form when required
 2. Provides current position, supervisor info, and justification
 3. Creates renewal request record for admin review
@@ -91,6 +94,7 @@ Self-service renewal process:
 ### 4. Email Notifications
 
 Automated email warnings sent at:
+
 - 30 days before expiration
 - 14 days before expiration
 - 7 days before expiration
@@ -102,6 +106,7 @@ Rate limiting prevents spam (max one notification per week).
 ### 5. Administrative Tools
 
 Management commands provide:
+
 - Daily expiration checking and status updates
 - Bulk user access extension
 - Inactive user reporting
@@ -127,6 +132,7 @@ MIDDLEWARE = [
 ### Audit History Integration
 
 All lifecycle changes are tracked through the existing audit history system:
+
 - User status changes logged with reasons
 - Admin actions tracked with user attribution  
 - Historical data available through Django admin "History" buttons
@@ -134,6 +140,7 @@ All lifecycle changes are tracked through the existing audit history system:
 ### Permission System Integration
 
 Lifecycle management respects existing permissions:
+
 - Superusers bypass all lifecycle restrictions
 - Medical staff have different expiration rules than students/residents
 - Supervisor relationships enable approval workflows
@@ -141,16 +148,19 @@ Lifecycle management respects existing permissions:
 ## Security Considerations
 
 ### Data Protection
+
 - Activity tracking uses simple timestamps (no sensitive patient data)
 - All lifecycle changes logged in audit trails
 - Supervisor assignments require proper admin permissions
 
 ### Privacy Compliance
+
 - Minimal data collection (timestamps only)
 - Clear expiration notifications to users
 - Self-service renewal reduces administrative burden
 
 ### Access Control
+
 - Expired users immediately blocked from all access
 - Departed users cannot access system at all
 - Renewal requests require supervisor verification
@@ -158,6 +168,7 @@ Lifecycle management respects existing permissions:
 ## Performance Impact
 
 The system is designed for minimal performance impact:
+
 - Simple database fields with appropriate indexes
 - Efficient middleware with graceful error handling
 - Activity updates only on meaningful actions
@@ -166,14 +177,18 @@ The system is designed for minimal performance impact:
 ## Monitoring and Alerting
 
 ### Logging
+
 All lifecycle events are logged to `security.user_lifecycle` logger:
+
 - Status transitions
 - Access attempts by restricted users  
 - Command execution results
 - Error conditions
 
 ### Metrics
+
 Key metrics tracked:
+
 - Users by status distribution
 - Expiration warning delivery success rate
 - Renewal request processing time
@@ -184,11 +199,13 @@ Key metrics tracked:
 The current implementation provides essential functionality with room for growth:
 
 ### Phase 4 (Future): Enhanced Admin Interface
+
 - Custom dashboard views with visualizations
 - Advanced bulk operations interface  
 - Renewal request management interface
 
 ### Phase 5 (Future): Advanced Features
+
 - Predictive analytics and behavior analysis
 - API endpoints for external integrations
 - Multi-channel notifications (SMS, Slack)
@@ -205,6 +222,7 @@ The current implementation provides essential functionality with room for growth
 ## Support
 
 For implementation questions or issues:
+
 1. Check the admin setup guide for configuration steps
 2. Review management command documentation for usage examples
 3. Check logs in `/var/log/django/` for error details

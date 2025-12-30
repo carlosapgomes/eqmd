@@ -417,12 +417,14 @@ class Migration(migrations.Migration):
 ### Pre-Migration Checklist
 
 1. **Database Backup**
+
    ```bash
    # Create full database backup
    pg_dump eqmd_db > backup_pre_mediafiles_$(date +%Y%m%d_%H%M%S).sql
    ```
 
 2. **Environment Validation**
+
    ```bash
    # Verify Django environment
    python manage.py check --deploy
@@ -432,6 +434,7 @@ class Migration(migrations.Migration):
    ```
 
 3. **Dependency Verification**
+
    ```bash
    # Ensure all dependencies are installed
    pip install Pillow ffmpeg-python

@@ -54,6 +54,7 @@ docker compose --profile dev up eqmd-dev
 ```
 
 **Configuration:**
+
 ```yaml
 # docker-compose.yml (dev profile)
 eqmd-dev:
@@ -286,6 +287,7 @@ curl http://localhost:8778/health/
 #### VS Code
 
 `.vscode/settings.json`:
+
 ```json
 {
     "python.defaultInterpreterPath": "docker compose exec eqmd-dev python",
@@ -300,6 +302,7 @@ curl http://localhost:8778/health/
 ```
 
 `.vscode/tasks.json`:
+
 ```json
 {
     "version": "2.0.0",
@@ -329,12 +332,14 @@ curl http://localhost:8778/health/
 #### Django Debug Toolbar
 
 Add to development requirements:
+
 ```python
 # requirements/dev.txt
 django-debug-toolbar
 ```
 
 Enable in settings:
+
 ```python
 # settings/dev.py
 if DEBUG:
@@ -347,6 +352,7 @@ if DEBUG:
 #### Remote Debugging
 
 For breakpoint debugging:
+
 ```python
 # Install in development image
 pip install debugpy
@@ -358,6 +364,7 @@ debugpy.wait_for_client()
 ```
 
 Docker compose configuration:
+
 ```yaml
 eqmd-dev:
   ports:
@@ -398,6 +405,7 @@ docker compose exec eqmd-dev python manage.py shell
 ### Environment Files
 
 `.env.dev`:
+
 ```bash
 # Development-specific settings
 DEBUG=True
@@ -422,6 +430,7 @@ HOSPITAL_EMAIL=dev@localhost
 ```
 
 `.env.test`:
+
 ```bash
 # Test-specific settings
 DEBUG=False
@@ -452,6 +461,7 @@ docker compose --env-file .env.prod up eqmd
 ### Common Problems
 
 #### Permission Denied
+
 ```bash
 # Fix container permissions
 sudo chown -R $USER:$USER .
@@ -462,6 +472,7 @@ docker compose build --no-cache eqmd-dev
 ```
 
 #### Static Files Not Loading
+
 ```bash
 # Rebuild static files
 npm run build
@@ -472,6 +483,7 @@ docker compose exec eqmd-dev ls -la /app/staticfiles/
 ```
 
 #### Database Locked
+
 ```bash
 # Stop all containers
 docker compose down
@@ -485,6 +497,7 @@ docker compose exec eqmd-dev python manage.py migrate
 ```
 
 #### Container Won't Start
+
 ```bash
 # Check logs
 docker compose logs eqmd-dev
@@ -535,6 +548,7 @@ docker compose exec eqmd-dev bandit -r apps/
 ### Commit Hooks
 
 Setup pre-commit hooks:
+
 ```bash
 # Install pre-commit
 pip install pre-commit

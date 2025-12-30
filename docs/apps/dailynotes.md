@@ -12,6 +12,7 @@
 ## Advanced Features (Slice 5)
 
 ### Patient Integration
+
 - **Patient-specific daily note views** with date filtering
 - **Search & Filtering**: Advanced search by content, patient, creator, and date ranges
 - **Dashboard Integration**: Recent daily notes widget and statistics counters
@@ -42,6 +43,7 @@
 ## Model Architecture
 
 ### DailyNote Model
+
 ```python
 class DailyNote(Event):
     content = models.TextField(
@@ -61,6 +63,7 @@ class DailyNote(Event):
 ```
 
 ### Inheritance Benefits
+
 - Inherits UUID primary key from Event
 - Automatic audit trail tracking
 - 24-hour edit window enforcement
@@ -70,6 +73,7 @@ class DailyNote(Event):
 ## Views and URL Patterns
 
 ### Core Views
+
 - `DailyNoteListView`: Paginated list with search/filter
 - `DailyNoteDetailView`: Individual note display
 - `DailyNoteCreateView`: Form-based creation
@@ -78,11 +82,13 @@ class DailyNote(Event):
 - `DailyNoteDuplicateView`: Create copy of existing note
 
 ### Patient-Specific Views
+
 - `PatientDailyNotesView`: Notes filtered by patient
 - `PatientDailyNotesPrintView`: Print-friendly format
 - `PatientEvolutionReportView`: Comprehensive evolution report
 
 ### URL Configuration
+
 ```python
 urlpatterns = [
     path('', DailyNoteListView.as_view(), name='dailynote_list'),
@@ -100,6 +106,7 @@ urlpatterns = [
 ## Search and Filtering
 
 ### Search Fields
+
 - Content (full-text search)
 - Patient name
 - Creator username
@@ -107,6 +114,7 @@ urlpatterns = [
 - Event datetime
 
 ### Filter Options
+
 - Patient selection (dropdown)
 - Creator selection (dropdown)
 - Date range picker
@@ -114,6 +122,7 @@ urlpatterns = [
 - Recent activity filters
 
 ### Advanced Search Form
+
 ```python
 class DailyNoteSearchForm(forms.Form):
     content = forms.CharField(required=False, label="Conteúdo")
@@ -136,13 +145,16 @@ class DailyNoteSearchForm(forms.Form):
 ### Template Tags
 
 #### recent_dailynotes_widget
+
 ```django
 {% load dailynotes_tags %}
 {% recent_dailynotes_widget limit=5 %}
 ```
+
 Displays recent daily notes with quick access links.
 
 #### dailynotes_count_today
+
 ```django
 {% load dailynotes_tags %}
 {% dailynotes_count_today as today_count %}
@@ -150,6 +162,7 @@ Displays recent daily notes with quick access links.
 ```
 
 #### dailynotes_count_week
+
 ```django
 {% load dailynotes_tags %}
 {% dailynotes_count_week as week_count %}
@@ -157,6 +170,7 @@ Displays recent daily notes with quick access links.
 ```
 
 ### Dashboard Statistics
+
 - Daily notes created today
 - Weekly daily notes statistics
 - Top creators this month
@@ -166,6 +180,7 @@ Displays recent daily notes with quick access links.
 ## Duplicate Functionality
 
 ### Implementation Details
+
 ```python
 class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
     model = DailyNote
@@ -187,12 +202,14 @@ class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
 ```
 
 ### Access Points
+
 1. **Detail View**: Duplicate button on individual note page
 2. **List View**: Duplicate action in note list
 3. **Patient Timeline**: Duplicate button on event card
 4. **Quick Actions**: Keyboard shortcut support
 
 ### Permission Checks
+
 - User must have `events.add_event` permission
 - User must be able to access the source patient
 - Original note must be accessible to user
@@ -200,12 +217,14 @@ class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
 ## Print and Export Features
 
 ### Print Views
+
 - **Individual Note Print**: Single note with patient context
 - **Patient Evolution Report**: All notes for patient in chronological order
 - **Date Range Reports**: Notes within specified date range
 - **Creator Reports**: All notes by specific user
 
 ### Print Styling
+
 ```css
 @media print {
     .dailynote-print {
@@ -225,6 +244,7 @@ class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
 ```
 
 ### Export Options
+
 - PDF generation using ReportLab
 - CSV export for data analysis
 - JSON export for API integration
@@ -233,6 +253,7 @@ class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
 ## Performance Optimizations
 
 ### Database Indexes
+
 ```python
 class DailyNote(Event):
     class Meta:
@@ -244,6 +265,7 @@ class DailyNote(Event):
 ```
 
 ### Query Optimization
+
 ```python
 # Optimized list view query
 def get_queryset(self):
@@ -255,12 +277,14 @@ def get_queryset(self):
 ```
 
 ### Caching Strategy
+
 - Filter dropdown options cached for 5 minutes
 - Patient access permissions cached per request
 - Recent notes widget cached for 2 minutes
 - Statistics counters cached for 10 minutes
 
 ### Pagination Optimization
+
 ```python
 class DailyNoteListView(ListView):
     paginate_by = 20
@@ -270,6 +294,7 @@ class DailyNoteListView(ListView):
 ## Template Integration
 
 ### Timeline Card Template
+
 Location: `apps/events/templates/events/partials/event_card_dailynote.html`
 
 ```django
@@ -291,6 +316,7 @@ Location: `apps/events/templates/events/partials/event_card_dailynote.html`
 ```
 
 ### Form Templates
+
 - Bootstrap 5 styling
 - Real-time character counting
 - Auto-save draft functionality
@@ -299,18 +325,21 @@ Location: `apps/events/templates/events/partials/event_card_dailynote.html`
 ## Testing Strategy
 
 ### Unit Tests
+
 - Model validation tests
 - Permission checking tests
 - Duplicate functionality tests
 - Search and filter tests
 
 ### Integration Tests
+
 - Timeline integration tests
 - Dashboard widget tests
 - Print view tests
 - Performance benchmarks
 
 ### Test Coverage
+
 - Model methods: 100%
 - View functions: 95%
 - Template tags: 90%
@@ -319,12 +348,14 @@ Location: `apps/events/templates/events/partials/event_card_dailynote.html`
 ## Localization
 
 ### Portuguese Translations
+
 - Complete pt-BR translation
 - Medical terminology consistency
 - Date/time format localization
 - Cultural adaptations for Brazilian healthcare
 
 ### Template Strings
+
 ```python
 # apps/dailynotes/models.py
 verbose_name = "Evolução"

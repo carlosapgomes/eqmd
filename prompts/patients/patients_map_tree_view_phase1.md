@@ -442,4 +442,3 @@ Verify that `apps/patients/templates/patients/patient_base.html` exists and exte
 ## Transition to Phase 2
 
 Once Phase 1 is complete and tested, proceed to Phase 2 for enhanced JavaScript interactivity, search functionality, and improved styling.
-

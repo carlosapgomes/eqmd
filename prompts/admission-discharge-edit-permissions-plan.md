@@ -222,11 +222,13 @@ path('patients/<uuid:patient_id>/admissions/<uuid:admission_id>/cancel-discharge
 
 #### 4.1 Update Timeline Event Cards
 
-**Files**: 
+**Files**:
+
 - `apps/events/templates/events/partials/event_card_admission.html`
 - `apps/events/templates/events/partials/event_card_discharge.html`
 
 **Admission Card Actions** (`event_card_admission.html`):
+
 ```html
 {% block event_actions %}
 <div class="btn-group btn-group-sm">
@@ -263,6 +265,7 @@ path('patients/<uuid:patient_id>/admissions/<uuid:admission_id>/cancel-discharge
 ```
 
 **Discharge Card Actions** (`event_card_discharge.html`):
+
 ```html
 {% block event_actions %}
 <div class="btn-group btn-group-sm">
@@ -480,18 +483,21 @@ Document the new edit capabilities for medical staff.
 The timeline system already has dedicated cards for admission and discharge events. This implementation will enhance them with proper permission-based action buttons:
 
 ### Admission Timeline Card
-- **View button** (always visible) 
+
+- **View button** (always visible)
 - **Edit Admission button** (if `can_edit_admission_data`)
 - **Discharge button** (if `can_discharge_patient` and admission is active)
 
 ### Discharge Timeline Card  
+
 - **View button** (always visible)
 - **Edit Discharge button** (if `can_edit_discharge_data`)
 - **Cancel Discharge button** (if `can_cancel_discharge`)
 
 ### Modal Integration
+
 - Same modals will be shared between patient detail page and timeline
-- JavaScript will handle modal population based on `data-admission-id` 
+- JavaScript will handle modal population based on `data-admission-id`
 - Forms will submit to same view endpoints
 
 This creates a **consistent editing experience** across both the patient detail page and timeline view.
@@ -567,4 +573,3 @@ This creates a **consistent editing experience** across both the patient detail 
 - Batch edit capabilities for multiple admissions
 - Advanced permission rules (department-based, etc.)
 - Mobile-optimized edit interface
-

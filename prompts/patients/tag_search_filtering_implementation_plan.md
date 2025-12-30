@@ -7,6 +7,7 @@ Implement comprehensive tag search and filtering functionality across both the P
 ## Current State Analysis
 
 ### What Exists
+
 - ✅ Complete tag management system (AllowedTag, Tag models)
 - ✅ Tag assignment/removal functionality
 - ✅ Tag display in patient list and ward map
@@ -14,6 +15,7 @@ Implement comprehensive tag search and filtering functionality across both the P
 - ✅ Status and ward filtering
 
 ### What's Missing
+
 - ❌ Tag filtering in PatientListView
 - ❌ Tag filter dropdown in patient list template
 - ❌ Tag filtering in WardPatientMapView
@@ -69,6 +71,7 @@ from django.db.models import Exists, OuterRef
 ```
 
 ### Considerations
+
 - Use `.distinct()` to avoid duplicate patients when multiple tags match
 - Only show tags that are actually assigned to patients
 - Handle invalid tag IDs gracefully
@@ -132,6 +135,7 @@ from django.db.models import Exists, OuterRef
 ```
 
 ### Considerations
+
 - Use tag colors in dropdown for visual consistency
 - Preserve other filter parameters when removing tag filter
 - Update column layout to accommodate new filter
@@ -198,6 +202,7 @@ def get_context_data(self, **kwargs):
 ```
 
 ### Considerations
+
 - Apply tag filter before building ward patient lists
 - Only include tags that are assigned to current inpatients/emergency patients
 - Maintain existing ward capacity calculations
@@ -287,6 +292,7 @@ filterByTag(tagId) {
 **Alternative approach for more robust tag matching:**
 
 **Template Update**:
+
 ```html
 <!-- Add data attributes to patient items -->
 <div class="patient-item p-3 mb-2 bg-white border rounded" 
@@ -294,6 +300,7 @@ filterByTag(tagId) {
 ```
 
 **JavaScript Update**:
+
 ```javascript
 filterByTag(tagId) {
   const patients = document.querySelectorAll('.patient-item');
@@ -532,27 +539,32 @@ class TagFilteringTests(TestCase):
 ## Implementation Considerations
 
 ### Database Performance
+
 - Use existing `prefetch_related()` for tag relationships (already implemented)
 - Simple `distinct()` queries are sufficient for this scale (~100-4000 patients)
 - No additional database indexes needed for tag filtering at this volume
 
 ### User Experience
+
 - Show tag colors in filter dropdowns
 - Preserve filter state in URLs
 - Provide clear visual feedback for filtered results
 - Handle empty states gracefully
 
 ### Accessibility
+
 - Ensure proper ARIA labels for filter dropdowns
 - Maintain keyboard navigation
 - Provide screen reader friendly filter descriptions
 
 ### Error Handling
+
 - Handle invalid tag IDs gracefully
 - Provide fallback behavior for JavaScript failures
 - Show user-friendly error messages
 
 ### Mobile Responsiveness
+
 - Ensure filter dropdowns work well on mobile
 - Consider collapsible filter sections for small screens
 - Test touch interactions
@@ -562,6 +574,7 @@ class TagFilteringTests(TestCase):
 ## Success Criteria
 
 ### Functional Requirements
+
 - ✅ Users can filter patients by tags in patient list
 - ✅ Users can filter patients by tags in ward map
 - ✅ Tag names are searchable in text search
@@ -569,11 +582,13 @@ class TagFilteringTests(TestCase):
 - ✅ Filter state is preserved in URLs
 
 ### Performance Requirements
+
 - ✅ Tag filtering queries execute in < 500ms
 - ✅ JavaScript filtering is smooth on mobile devices
 - ✅ Page load time remains acceptable with tag data
 
 ### Usability Requirements
+
 - ✅ Filter interface is intuitive and discoverable
 - ✅ Tag colors are preserved in filter dropdowns
 - ✅ Clear visual feedback for filtered results
@@ -584,15 +599,18 @@ class TagFilteringTests(TestCase):
 ## Files to Modify
 
 ### Backend Files
+
 - `apps/patients/views.py` - PatientListView and WardPatientMapView
 - `apps/patients/tests/test_tag_filtering.py` - New test file
 
 ### Frontend Files
+
 - `apps/patients/templates/patients/patient_list.html` - Add tag filter
 - `apps/patients/templates/patients/ward_patient_map.html` - Add tag filter
 - `assets/js/ward_patient_map.js` - Implement filterByTag method
 
 ### Build Files
+
 - No webpack changes needed (existing files)
 
 ---
@@ -600,6 +618,7 @@ class TagFilteringTests(TestCase):
 ## Rollback Plan
 
 If issues arise:
+
 1. Remove tag filter from templates (UI changes)
 2. Remove tag filtering logic from views (backend changes)
 3. Remove filterByTag JavaScript method

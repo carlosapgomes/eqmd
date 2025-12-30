@@ -20,7 +20,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-3. Verify app configuration:
+1. Verify app configuration:
 
    ```bash
    python manage.py shell -c "from apps.events import apps; print(apps.EventsConfig)"
@@ -40,7 +40,7 @@ class EventsAppConfigTest(TestCase):
         self.assertEqual(EventsConfig.name, 'apps.events')
 ```
 
-2. Run the test to verify configuration:
+1. Run the test to verify configuration:
 
    ```bash
    pytest apps/events/tests.py::EventsAppConfigTest -v

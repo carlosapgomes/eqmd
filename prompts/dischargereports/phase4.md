@@ -188,7 +188,7 @@ TASKS:
 </html>
 ```
 
-2. CREATE PRINT CSS FILE:
+1. CREATE PRINT CSS FILE:
    Create directory and file:
 
 ```bash
@@ -473,14 +473,14 @@ body {
 }
 ```
 
-3. UPDATE STATIC FILES:
+1. UPDATE STATIC FILES:
    Run webpack build to process the new CSS:
 
 ```bash
 npm run build
 ```
 
-4. ADD PRINT BUTTON TO DETAIL TEMPLATE:
+1. ADD PRINT BUTTON TO DETAIL TEMPLATE:
    Update apps/dischargereports/templates/dischargereports/dischargereport_detail.html to add print button:
 
 ```html

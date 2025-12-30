@@ -5,6 +5,7 @@
 **Overall Status:** Single-Hospital Refactor COMPLETE
 
 ## Quick Context
+
 - **Project:** EquipeMed Django medical platform
 - **Goal:** Remove multi-hospital architecture, simplify to single-hospital with environment configuration
 - **Approach:** Greenfield refactor (fresh migrations, no data preservation)
@@ -25,12 +26,15 @@
 ## Detailed Progress Log
 
 ### Phase 1: Analysis and Preparation
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - `refactor-single-hospital/hospital-inventory.md` (created)
 - `refactor-single-hospital/refactor-progress.md` (updated)
 
-**Key Discoveries:** 
+**Key Discoveries:**
+
 - 36 test files require modification/removal
 - 3 core models need refactoring (User, Patient, PatientHospitalRecord)
 - 1 entire app to remove (hospitals with 50+ files)
@@ -43,8 +47,10 @@
 **Validation:** ✓ Complete inventory created, all dependencies mapped, risk assessment complete
 
 ### Phase 2: Database Models Refactor
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - `config/settings.py` - Removed hospitals app from INSTALLED_APPS
 - `config/urls.py` - Commented out hospitals URL patterns
 - `apps/accounts/models.py` - Removed hospital fields (hospitals, last_hospital) and methods (get_default_hospital, is_hospital_member)
@@ -57,14 +63,16 @@
 - **Created:** Fresh initial migration files for all apps (no hospitals)
 - **Deleted:** Entire `apps/hospitals/` directory
 
-**Database Changes:** 
+**Database Changes:**
+
 - Fresh SQLite database created with simplified schema
 - Hospital and PatientHospitalRecord tables completely removed
 - User model simplified (no hospital relationship fields)  
 - Patient model simplified (no current_hospital field)
 - All apps migrated successfully with new clean schema
 
-**Issues Encountered:** 
+**Issues Encountered:**
+
 - Multiple import errors from deleted hospitals app required systematic fixing
 - PatientHospitalRecord references throughout codebase needed temporary commenting
 - Hospital context middleware and URLs needed temporary disabling
@@ -72,8 +80,10 @@
 **Validation:** ✓ `python manage.py check` passes, ✓ Models create/query successfully, ✓ Admin interfaces load, ✓ Fresh migrations completed
 
 ### Phase 3: Permission System Simplification
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - `apps/core/permissions/utils.py` - Drastically simplified from 758 lines to 383 lines (~49% reduction)
 - `apps/core/permissions/decorators.py` - Removed `hospital_context_required` decorator
 - `apps/core/permissions/cache.py` - Removed hospital context from cache keys and logic
@@ -81,14 +91,16 @@
 - `apps/core/management/commands/setup_groups.py` - Disabled hospital permissions
 - `apps/core/management/commands/assign_users_to_hospitals.py` - Disabled (renamed to .disabled)
 
-**Permission Rules Applied:** 
+**Permission Rules Applied:**
+
 - **Doctors/Residents:** Full access to all patients + discharge + personal data changes
 - **Others (Nurses/Physiotherapists/Students):** Full access to all patients but no discharge/personal data changes
 - **All users:** Can access all patients (no hospital context restrictions)
 - **Time-based rules:** 24-hour edit/delete window for events preserved
 - **Role-based restrictions:** Event creation and management preserved
 
-**Issues Encountered:** 
+**Issues Encountered:**
+
 - Hospital-related imports required systematic removal
 - Cache system required simplification of key generation
 - Template tags needed hospital context functions removed
@@ -96,8 +108,10 @@
 **Validation:** ✓ Line count reduced from ~756 to 383 lines, ✓ All hospital context logic removed, ✓ 2-tier permission model implemented, ✓ Management commands updated
 
 ### Phase 4: Views and Forms Cleanup
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - `apps/patients/views.py` - Removed hospital context logic, simplified queryset filtering
 - `apps/patients/forms.py` - Removed hospital record forms and validation
 - `apps/core/views.py` - Removed hospital context from API responses
@@ -116,7 +130,8 @@
 - `apps/core/permission_demo.py` - Commented out hospital context functionality
 - `apps/core/urls.py` - Commented out hospital context test URLs
 
-**Key Changes:** 
+**Key Changes:**
+
 - Removed all `@hospital_context_required` decorators from views
 - Simplified patient queryset filtering to use role-based permissions only
 - Removed hospital record forms and nested form logic from patient forms
@@ -125,7 +140,8 @@
 - Updated permission system imports to remove hospital-related functions
 - Commented out hospital context test views and demo functionality
 
-**Issues Encountered:** 
+**Issues Encountered:**
+
 - Multiple import errors from removed hospital context functions
 - Hospital context decorators used across many apps required systematic removal
 - Test and demo files had extensive hospital context logic that needed commenting
@@ -133,8 +149,10 @@
 **Validation:** ✓ `python manage.py check` passes with no issues
 
 ### Phase 5: Templates and Frontend
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - `apps/core/templatetags/hospital_tags.py` - Created hospital configuration template tags
 - `apps/core/templates/core/partials/hospital_header.html` - Created hospital header partial
 - `templates/base_app.html` - Removed hospital selection UI, added hospital header
@@ -145,7 +163,8 @@
 - `apps/historyandphysicals/templatetags/historyandphysical_tags.py` - Removed hospital context filtering
 - `apps/dailynotes/templatetags/dailynote_tags.py` - Removed hospital context filtering
 
-**Template Tags Created:** 
+**Template Tags Created:**
+
 - `hospital_name()` - Get configured hospital name from settings
 - `hospital_address()` - Get configured hospital address from settings
 - `hospital_phone()` - Get configured hospital phone from settings
@@ -154,7 +173,8 @@
 - `hospital_header()` - Render hospital header with configuration
 - `hospital_branding()` - Get complete hospital branding info
 
-**Key Changes:** 
+**Key Changes:**
+
 - Removed hospital selection dropdown and context switching UI from base template
 - Simplified patient forms by removing hospital record sections and JavaScript
 - Removed hospital filters from patient list and dashboard widgets
@@ -162,7 +182,8 @@
 - Cleaned all template tags from hospital context filtering logic
 - Added hospital header partial for consistent branding across pages
 
-**Issues Encountered:** 
+**Issues Encountered:**
+
 - Complex hospital selection JavaScript in base_app.html needed complete removal
 - Multiple template tag files had hospital context filtering that needed cleaning
 - Patient form had extensive hospital record management that was removed
@@ -170,33 +191,40 @@
 **Validation:** ✓ Hospital configuration template tags implemented, ✓ Hospital selection UI removed, ✓ Patient templates simplified, ✓ Template tags cleaned
 
 ### Phase 6: Settings and Configuration
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - `config/settings.py` - Removed hospital middleware, context processor, added HOSPITAL_CONFIG
 - `apps/core/management/commands/setup_groups.py` - Removed PatientHospitalRecord references
 - `apps/core/management/commands/populate_sample_data.py` - Removed hospital creation/assignment logic
 - **Deleted:** `apps/core/management/commands/assign_users_to_hospitals.py.disabled` and cache file
 
-**Configuration Changes:** 
+**Configuration Changes:**
+
 - Removed hospital middleware and context processor (already commented out)
 - Added HOSPITAL_CONFIG environment-based settings for single hospital configuration
 - Removed hospital app from INSTALLED_APPS (already done in Phase 2)
 - Environment variables: HOSPITAL_NAME, HOSPITAL_ADDRESS, HOSPITAL_PHONE, HOSPITAL_EMAIL, HOSPITAL_WEBSITE, HOSPITAL_LOGO_PATH, HOSPITAL_LOGO_URL
 
-**Management Commands Updated:** 
+**Management Commands Updated:**
+
 - `setup_groups.py` - Removed all PatientHospitalRecord imports and references
 - `populate_sample_data.py` - Removed hospital creation, user-hospital assignments, PatientHospitalRecord creation
 - **Deleted:** `assign_users_to_hospitals.py` (hospital-specific functionality)
 
-**Issues Encountered:** 
+**Issues Encountered:**
+
 - PatientHospitalRecord references needed removal from management commands
 - Hospital creation logic in populate_sample_data required complete rewrite
 
 **Validation:** ✓ `python manage.py check` passes, ✓ Django settings load successfully, ✓ HOSPITAL_CONFIG available, ✓ Management commands available
 
 ### Phase 7: Testing Refactor
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - `apps/core/tests/test_permissions/test_utils.py` - Completely rewritten for simplified permission system
 - `apps/core/tests/test_permissions/test_role_permissions.py` - Removed hospital management functions
 - `apps/core/tests/test_permissions/test_integration.py` - Completely rewritten to remove hospital context
@@ -204,26 +232,30 @@
 - `apps/outpatientprescriptions/tests/factories.py` - Removed hospital references and HospitalFactory
 - `apps/core/permissions/utils.py` - Fixed None value handling in permission functions
 
-**Tests Updated/Removed:** 
+**Tests Updated/Removed:**
+
 - Hospital app tests: Completely removed (already deleted with app)
 - Permission tests: Rewritten to test simplified system (all roles access all patients)
 - Patient model tests: Updated to match actual Patient model fields (name vs first_name/last_name)
 - Factory files: Removed hospital assignments and HospitalFactory
 
-**New Tests Added:** 
+**New Tests Added:**
+
 - `apps/core/tests/test_permissions/test_simplified_system.py` - Comprehensive test suite for simplified permission system
 - 11 new test methods covering universal patient access, role-based discharge/personal data permissions
 - Performance tests for simplified system
 - Edge case tests for None values and unauthenticated users
 
 **Permission System Test Results:**
+
 - **Universal Access:** ✓ All roles (doctor, resident, nurse, physiotherapist, student) can access all patients
 - **Discharge Permissions:** ✓ Only doctors/residents can discharge patients  
 - **Personal Data:** ✓ Only doctors/residents can change patient personal data
 - **Event Editing:** ✓ 24-hour time restrictions preserved, only creators can edit events
 - **Role Hierarchy:** ✓ Role-based permissions maintained while removing hospital complexity
 
-**Issues Encountered:** 
+**Issues Encountered:**
+
 - Initial test failures due to None value handling in permission functions (fixed)
 - Patient model field name mismatch (name vs first_name/last_name) (fixed)
 - Test expectation issues with event editing permissions (fixed)
@@ -231,20 +263,24 @@
 **Validation:** ✓ All simplified permission tests pass (11/11), ✓ Patient model tests pass (13/13), ✓ Permission utility functions handle edge cases properly
 
 ### Phase 8: Documentation Update
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - `CLAUDE.md` - Complete rewrite removing hospital complexity, added hospital configuration section
 - `README.md` - Updated with simplified project description, single-hospital features, uv commands
 - `.env.example` - Added hospital configuration variables while preserving task master settings
 - `MIGRATION.md` - Created comprehensive migration guide for single-hospital architecture
 
-**Documentation Changes:** 
+**Documentation Changes:**
+
 - **CLAUDE.md**: Removed hospitals app section, simplified permission system documentation, added hospital configuration template tags, updated all commands to use `uv run`
 - **README.md**: Complete rewrite with single-hospital focus, simplified features list, environment-based hospital config, production deployment guide
 - **Hospital Configuration**: Added environment-based setup with template tags and branding options
 - **Migration Guide**: Created detailed guide explaining architecture changes, fresh installation steps, and benefits
 
 **Key Documentation Updates:**
+
 - All command examples now use `uv run` prefix
 - Permission system simplified from hospital+role to role-only
 - Hospital configuration moved from database to environment variables
@@ -252,15 +288,18 @@
 - Updated architecture overview removing hospital models and relationships
 - Added comprehensive environment variable documentation
 
-**Issues Encountered:** 
+**Issues Encountered:**
+
 - Existing .env.example contained task master configuration (preserved and extended)
 - Extensive hospital-related documentation required complete rewriting
 
 **Validation:** ✓ Documentation accurately reflects simplified architecture, ✓ All commands use uv run, ✓ Hospital configuration documented, ✓ Migration guide comprehensive
 
 ### Phase 9: Documentation Audit & Update
+
 **Status:** COMPLETED  
-**Files Modified:** 
+**Files Modified:**
+
 - **Deleted:** `docs/patients/hospital_records.md` and `docs/patients/hospital_records.pt-BR.md` (obsolete PatientHospitalRecord documentation)
 - `docs/permissions/README.md` - Complete rewrite for simplified 2-tier permission system
 - `docs/patients/patient_management.md` - Removed hospital assignment sections, updated for universal patient access
@@ -269,25 +308,29 @@
 - `docs/permissions/api-reference.md` - Removed hospital context requirements, updated commands to `uv run`
 - `docs/mediafiles/index.md` - Removed hospital context references
 
-**Documentation Removed:** 
+**Documentation Removed:**
+
 - Hospital records documentation (English and Portuguese)
 - Hospital assignment workflows
 - Hospital context management sections
 - Complex multi-hospital permission rules
 
 **Documentation Updates:**
+
 - All Django commands updated to use `uv run` prefix throughout documentation
 - Permission system simplified from hospital+role to role-only documentation
 - Patient management simplified to universal access model
 - Hospital configuration moved from database to environment variable documentation
 
-**Accuracy Issues Found:** 
+**Accuracy Issues Found:**
+
 - 13 documentation files contained outdated `python manage.py` commands (fixed)
 - Multiple files referenced obsolete hospital assignment logic (removed)
 - Permission documentation contained complex hospital context rules (simplified)
 - MediaFiles documentation had hospital context references (updated)
 
-**Issues Encountered:** 
+**Issues Encountered:**
+
 - Extensive hospital-related documentation required complete rewriting rather than simple updates
 - Permission system documentation was deeply embedded with hospital context concepts
 - Sample data documentation needed major restructuring for single-hospital architecture
@@ -306,6 +349,7 @@
 ## Notes and Lessons Learned
 
 ### Phase 1 Insights
+
 - Hospital architecture is more deeply embedded than initially estimated
 - Permission system has extensive hospital context dependencies
 - PatientHospitalRecord model removal will have significant cascading effects
@@ -328,6 +372,7 @@
 The single-hospital refactor has been successfully completed. The EquipeMed platform now operates as a simplified single-hospital system with:
 
 ### ✅ Architecture Changes Completed
+
 - **Models**: Hospital and PatientHospitalRecord removed, fresh migrations created
 - **Permissions**: Simplified from hospital+role to role-only (2-tier system)
 - **Views/Forms**: Hospital context logic removed, simplified patient management
@@ -337,6 +382,7 @@ The single-hospital refactor has been successfully completed. The EquipeMed plat
 - **Documentation**: Complete rewrite removing hospital complexity, commands updated to `uv run`
 
 ### ✅ Key Benefits Achieved
+
 - **Simpler Architecture**: Removed complex hospital assignment logic
 - **Universal Access**: All medical staff can access all patients
 - **Environment Configuration**: Hospital settings via environment variables
@@ -345,4 +391,5 @@ The single-hospital refactor has been successfully completed. The EquipeMed plat
 - **Better User Experience**: No hospital selection required, streamlined workflows
 
 ### ✅ Ready for Production
+
 The refactored system is now ready for single-hospital deployments with improved simplicity, performance, and maintainability.

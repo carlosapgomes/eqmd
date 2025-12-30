@@ -1,9 +1,11 @@
 # Phase 4: Optimization, Testing, and Documentation
 
 ## Objective
+
 Optimize the new bundle architecture, conduct comprehensive testing, document the new system, and establish monitoring for future maintenance.
 
 ## Prerequisites
+
 - Phases 1, 2, and 3 completed successfully
 - All functionality verified working
 - No JavaScript errors in console
@@ -12,7 +14,9 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
 ## Step-by-Step Implementation
 
 ### Step 1: Bundle Size Analysis and Optimization
+
 1. **Analyze current bundle sizes:**
+
    ```bash
    # Generate bundle analysis
    npm run build
@@ -30,6 +34,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - videoclip-bundle.js
 
 3. **Optimize webpack configuration:**
+
    ```javascript
    // In webpack.config.js
    optimization: {
@@ -55,6 +60,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    ```
 
 ### Step 2: Performance Testing
+
 1. **Measure page load times:**
    - Photo create page before/after
    - PhotoSeries create page before/after
@@ -72,6 +78,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - Desktop broadband
 
 ### Step 3: Cross-Browser Compatibility Testing
+
 1. **Test in major browsers:**
    - Chrome (latest)
    - Firefox (latest)
@@ -92,6 +99,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - JavaScript disabled scenarios
 
 ### Step 4: Mobile and Responsive Testing
+
 1. **Test on mobile devices:**
    - Photo upload from camera
    - Touch interactions
@@ -104,7 +112,9 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - Mobile browser quirks
 
 ### Step 5: Create Comprehensive Test Suite
+
 1. **Create automated tests for bundle loading:**
+
    ```javascript
    // In tests/frontend/bundle-loading.test.js
    describe('Bundle Loading', () => {
@@ -129,7 +139,9 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - Test error handling
 
 ### Step 6: Documentation Updates
+
 1. **Update CLAUDE.md with new architecture:**
+
    ```markdown
    ## Frontend JavaScript Architecture (Updated)
    
@@ -155,6 +167,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    ```
 
 2. **Create developer documentation:**
+
    ```markdown
    # MediaFiles JavaScript Development Guide
    
@@ -173,7 +186,9 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    ```
 
 ### Step 7: Monitoring and Alerting Setup
+
 1. **Add bundle size monitoring:**
+
    ```javascript
    // In webpack.config.js
    plugins: [
@@ -191,7 +206,9 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - Monitor for bundle loading errors
 
 ### Step 8: Error Handling and Fallbacks
+
 1. **Add graceful fallbacks:**
+
    ```javascript
    // In templates
    document.addEventListener('DOMContentLoaded', function() {
@@ -215,7 +232,9 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - Monitor for common issues
 
 ### Step 9: Performance Benchmarking
+
 1. **Create performance benchmarks:**
+
    ```javascript
    // Performance measurement script
    const measurePageLoad = () => {
@@ -237,6 +256,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - Load time improvements
 
 ### Step 10: Final Verification and Cleanup
+
 1. **Complete end-to-end testing:**
    - Create new photo → upload → preview → save
    - Create new photo series → multiple upload → preview → save  
@@ -255,6 +275,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - Proper error messages (no stack traces in production)
 
 ### Step 11: Deployment Preparation
+
 1. **Create deployment checklist:**
    - [ ] Webpack build successful
    - [ ] All bundles generated correctly
@@ -267,6 +288,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - [ ] Performance benchmarked
 
 2. **Create rollback procedure:**
+
    ```bash
    # Emergency rollback commands
    git checkout HEAD~1 -- webpack.config.js
@@ -277,6 +299,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    ```
 
 ## Expected Outcomes
+
 - ✅ Optimized bundle sizes and loading performance
 - ✅ Comprehensive test coverage
 - ✅ Complete documentation of new architecture
@@ -285,6 +308,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
 - ✅ Developer guidelines for future maintenance
 
 ## Success Metrics
+
 1. **Performance Improvements:**
    - Bundle sizes reduced by at least 30% per page
    - Page load time improved by at least 20%
@@ -303,6 +327,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
    - Monitored bundle sizes
 
 ## Final Testing Checklist
+
 - [ ] All mediafiles functionality works correctly
 - [ ] No cross-module interference
 - [ ] Bundle loading optimized
@@ -315,6 +340,7 @@ Optimize the new bundle architecture, conduct comprehensive testing, document th
 - [ ] Deployment ready
 
 ## Notes
+
 - This phase focuses on polish and production readiness
 - All functionality should be working from previous phases
 - Focus on optimization, testing, and documentation

@@ -461,4 +461,3 @@ After migration to PostgreSQL:
 - [ ] Train team on PostgreSQL-specific operations
 
 This migration will significantly improve EquipeMed's performance and scalability for medical team collaboration.
-

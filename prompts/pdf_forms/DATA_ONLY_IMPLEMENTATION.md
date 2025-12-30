@@ -7,12 +7,14 @@ This guide provides step-by-step instructions for implementing the data-only app
 ## Architecture Summary
 
 ### Before (File-Based Approach)
+
 ```
 Form Submission → Generate PDF → Store PDF File + Form Data → Serve PDF File
 Storage: ~100KB-2MB per submission
 ```
 
-### After (Data-Only Approach) 
+### After (Data-Only Approach)
+
 ```
 Form Submission → Store Form Data Only → Generate PDF on Download → Stream PDF Response
 Storage: ~1-5KB per submission (95%+ reduction)
@@ -25,15 +27,18 @@ Storage: ~1-5KB per submission (95%+ reduction)
 **File**: `apps/pdf_forms/models.py`
 
 Remove the following fields from `PDFFormSubmission`:
+
 - `generated_pdf` (FileField)
-- `original_filename` (CharField) 
+- `original_filename` (CharField)
 - `file_size` (PositiveIntegerField)
 
 Keep only:
+
 - `form_data` (JSONField) - This becomes the single source of truth
 - All Event model fields (patient, created_by, event_datetime, etc.)
 
 **Key Model Methods to Update:**
+
 ```python
 class PDFFormSubmission(Event):
     # Only keep form_data field
@@ -324,17 +329,20 @@ class PDFFormSubmissionFactory(factory.django.DjangoModelFactory):
 ## Performance Implications
 
 ### Storage Savings
+
 - **Before**: ~100KB-2MB per submission
 - **After**: ~1-5KB per submission
 - **Total Reduction**: 95%+ storage savings
 
 ### Generation Performance
+
 - **PDF Generation Time**: 1-3 seconds per download
 - **Memory Usage**: ~10-50MB during generation
 - **Concurrency**: Multiple generations can run simultaneously
 - **Caching**: Template files cached for better performance
 
 ### User Experience
+
 - **Download Delay**: Users experience 1-3 second delay for PDF generation
 - **Progress Indication**: Consider adding loading indicators for downloads
 - **Error Handling**: Comprehensive error messages for generation failures
@@ -342,18 +350,21 @@ class PDFFormSubmissionFactory(factory.django.DjangoModelFactory):
 ## Testing Procedures
 
 ### Development Testing
+
 1. **Form Submission**: Verify forms save only data, no PDF files created
 2. **PDF Download**: Test PDF generation from stored form data
 3. **Field Rendering**: Ensure all field types render correctly in PDFs
 4. **Error Handling**: Test behavior with corrupted or missing form data
 
 ### Integration Testing
+
 1. **Patient Timeline**: Verify PDF submissions appear correctly
 2. **Permission System**: Test download access control
 3. **Event System**: Ensure proper Event model integration
 4. **Admin Interface**: Test admin functionality with data-only approach
 
 ### Performance Testing
+
 1. **Load Testing**: Test multiple simultaneous PDF generations
 2. **Memory Monitoring**: Monitor ReportLab memory usage
 3. **Generation Speed**: Measure PDF creation time under load
@@ -364,6 +375,7 @@ class PDFFormSubmissionFactory(factory.django.DjangoModelFactory):
 If needed, the system can be rolled back to file-based storage:
 
 ### Emergency Rollback Steps
+
 1. **Stop PDF Downloads**: Temporarily disable download functionality
 2. **Restore Model Fields**: Add back `generated_pdf`, `original_filename`, `file_size` fields
 3. **Update Views**: Restore file serving logic in download view
@@ -371,6 +383,7 @@ If needed, the system can be rolled back to file-based storage:
 5. **Update Templates**: Restore file-related UI elements
 
 ### Data Migration for Rollback
+
 ```python
 # Management command to regenerate PDFs from form_data
 def regenerate_pdfs():
@@ -382,6 +395,7 @@ def regenerate_pdfs():
 ## Deployment Checklist
 
 ### Pre-Deployment
+
 - [ ] All tests pass in development environment
 - [ ] PDF generation tested with all field types
 - [ ] Performance testing completed
@@ -389,6 +403,7 @@ def regenerate_pdfs():
 - [ ] Template updates reviewed
 
 ### Deployment Steps
+
 1. **Deploy Code**: Update application code
 2. **Run Migrations**: Apply any database changes (if needed)
 3. **Test Downloads**: Verify PDF generation works in production
@@ -396,6 +411,7 @@ def regenerate_pdfs():
 5. **Update Documentation**: Ensure user documentation reflects changes
 
 ### Post-Deployment Monitoring
+
 - Monitor PDF generation success rates
 - Track generation performance metrics
 - Watch for memory usage spikes
@@ -404,17 +420,20 @@ def regenerate_pdfs():
 ## Benefits Summary
 
 ### Storage Efficiency
+
 - **95%+ storage reduction** compared to file-based approach
 - Linear growth based on form submissions, not file sizes
 - Significant cost reduction for cloud storage
 
 ### System Simplification
+
 - No file cleanup scripts required
 - Only database backup needed for forms
 - No file migration between environments
 - Easier disaster recovery
 
 ### Flexibility
+
 - Can update PDF templates without affecting existing data
 - Potential for multiple output formats (PDF, Word, etc.)
 - Easier analytics and reporting on form data

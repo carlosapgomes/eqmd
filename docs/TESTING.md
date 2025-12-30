@@ -99,6 +99,7 @@ directory = htmlcov
 ### Test Settings (config/test_settings.py)
 
 Optimized settings for fast test execution:
+
 - In-memory SQLite database
 - Disabled migrations
 - Simple password hashing
@@ -131,6 +132,7 @@ apps/
 ### 1. Model Tests (`test_models.py`)
 
 Tests for Django models including:
+
 - Model creation and validation
 - Model methods and properties
 - Model relationships
@@ -138,6 +140,7 @@ Tests for Django models including:
 - String representations
 
 **Example:**
+
 ```python
 def test_user_creation_with_factory(self):
     """Test that a user can be created using the factory."""
@@ -150,12 +153,14 @@ def test_user_creation_with_factory(self):
 ### 2. Form Tests (`test_forms.py`)
 
 Tests for Django forms including:
+
 - Form validation
 - Form saving
 - Error handling
 - Field validation
 
 **Example:**
+
 ```python
 def test_form_valid_data(self):
     """Test form with valid data."""
@@ -172,6 +177,7 @@ def test_form_valid_data(self):
 ### 3. View Tests (`test_views.py`)
 
 Tests for Django views including:
+
 - HTTP response codes
 - Template usage
 - Context data
@@ -179,6 +185,7 @@ Tests for Django views including:
 - Permissions
 
 **Example:**
+
 ```python
 def test_landing_page_accessible(self):
     """Test that landing page is accessible without authentication."""
@@ -190,6 +197,7 @@ def test_landing_page_accessible(self):
 ### 4. URL Tests (`test_urls.py`)
 
 Tests for URL patterns including:
+
 - URL resolution
 - Reverse URL lookup
 - URL accessibility
@@ -198,6 +206,7 @@ Tests for URL patterns including:
 ### 5. Template Tests (`test_templates.py`)
 
 Tests for Django templates including:
+
 - Template existence
 - Template inheritance
 - Content verification
@@ -271,6 +280,7 @@ Coverage reports are generated in multiple formats:
 2. **HTML report**: Detailed coverage report in `htmlcov/` directory
 
 To view HTML coverage report:
+
 ```bash
 # Generate report
 uv run pytest --cov=apps --cov-report=html
@@ -366,24 +376,28 @@ Tests should be run automatically in CI/CD pipelines:
 #### Key Features Tested
 
 **Model Testing**:
+
 - User creation with different profession types
 - Profile automatic creation via Django signals
 - Model validation and constraints
 - Relationship testing (OneToOne User-Profile)
 
 **Form Testing**:
+
 - Valid and invalid data scenarios
 - Password strength validation
 - Email format validation
 - Username uniqueness testing
 
 **View Testing**:
+
 - Authentication requirements
 - Template rendering
 - Context data validation
 - Permission checks
 
 **Template Testing**:
+
 - Template inheritance
 - Content verification
 - Bootstrap integration

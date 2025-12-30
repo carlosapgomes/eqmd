@@ -3,6 +3,7 @@
 ### Step 1: Create Integration Tests
 
 1. Create test_integration.py:
+
    ```python
    from django.test import TestCase
    from django.urls import reverse
@@ -10,6 +11,7 @@
    from apps.patients.models import Patient, PatientHospitalRecord, AllowedTag
    from apps.hospitals.models import Hospital, Ward
    ```
+
    - Test patient-hospital integration
    - Test patient-ward integration
    - Test complete patient workflow
@@ -30,6 +32,7 @@
    ```
 
 3. Test basic model relationships:
+
    ```bash
    python manage.py shell -c "from apps.patients.models import Patient; from apps.hospitals.models import Hospital; from django.contrib.auth import get_user_model; User = get_user_model(); user = User.objects.first(); hospital = Hospital.objects.first() or Hospital.objects.create(name='Test Hospital', created_by=user, updated_by=user); patient = Patient.objects.first() or Patient.objects.create(name='Test Patient', status=0, created_by=user, updated_by=user); patient.current_hospital = hospital; patient.save(); print(f'Integration test: Patient {patient.name} assigned to hospital {patient.current_hospital.name}')"
    ```
@@ -54,6 +57,7 @@
    ```
 
 3. Verify groups are created:
+
    ```bash
    python manage.py shell -c "from django.contrib.auth.models import Group; groups = Group.objects.filter(name__in=['Patient Managers', 'Patient Viewers']); print(f'Patient groups: {[g.name for g in groups]}')"
    ```
@@ -70,6 +74,7 @@
    - View patient history
 
 2. Verify workflow steps through Django shell:
+
    ```bash
    python manage.py shell -c "from apps.patients.models import Patient; from apps.hospitals.models import Hospital, Ward; from django.contrib.auth import get_user_model; User = get_user_model(); user = User.objects.first(); hospital = Hospital.objects.first(); patient = Patient.objects.create(name='Workflow Test', status=0, created_by=user, updated_by=user); patient.admit_to_hospital(hospital, user=user); print(f'Workflow test: Patient admitted to {patient.current_hospital.name}')"
    ```
@@ -83,6 +88,7 @@
    ```
 
 2. Verify context processors are registered:
+
    ```bash
    python manage.py shell -c "from django.conf import settings; context_processors = [p for p in settings.TEMPLATES[0]['OPTIONS']['context_processors'] if 'patients' in p]; print(f'Patient context processors: {context_processors}')"
    ```
@@ -103,6 +109,7 @@
    - Test with unauthenticated user
 
 3. Verify test coverage:
+
    ```bash
    coverage run --source=apps.patients manage.py test apps.patients
    coverage report

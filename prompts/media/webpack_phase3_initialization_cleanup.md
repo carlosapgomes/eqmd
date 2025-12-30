@@ -1,9 +1,11 @@
 # Phase 3: Remove Auto-Initialization and Clean Up Module Conflicts
 
 ## Objective
+
 Remove automatic initialization patterns from JavaScript modules and eliminate cross-module interference to ensure clean, predictable loading behavior.
 
 ## Prerequisites
+
 - Phase 1 and Phase 2 completed successfully
 - All templates loading correct bundles
 - JavaScript functionality verified working
@@ -12,6 +14,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
 ## Step-by-Step Implementation
 
 ### Step 1: Analyze Current Auto-Initialization Patterns
+
 1. **Document current DOMContentLoaded listeners:**
    - photo.js - currently has debugging but no auto-init
    - photoseries.js - has auto-initialization on lines 833-848
@@ -23,9 +26,11 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    - Any other conflicting selectors
 
 ### Step 2: Remove PhotoSeries Auto-Initialization
+
 1. **Update apps/mediafiles/static/mediafiles/js/photoseries.js:**
-   
+
    **Remove the entire auto-initialization block (lines 833-848):**
+
    ```javascript
    // REMOVE THIS ENTIRE BLOCK:
    // Auto-initialize when DOM is ready
@@ -48,6 +53,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    ```
 
 2. **Keep only the public API methods:**
+
    ```javascript
    // Keep the return statement with public methods
    return {
@@ -60,9 +66,11 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    ```
 
 ### Step 3: Remove VideoClip Auto-Initialization
+
 1. **Update apps/mediafiles/static/mediafiles/js/videoclip.js:**
-   
+
    **Find and remove any DOMContentLoaded auto-initialization:**
+
    ```javascript
    // Look for and remove patterns like:
    document.addEventListener('DOMContentLoaded', function() {
@@ -75,9 +83,11 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
 2. **Ensure manual initialization only through public API.**
 
 ### Step 4: Clean Up Photo.js Debug Code
+
 1. **Update apps/mediafiles/static/mediafiles/js/photo.js:**
-   
+
    **Remove debug tracking code added in investigation:**
+
    ```javascript
    // REMOVE debug tracking variables and code:
    let initCallCount = 0;
@@ -95,6 +105,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    ```
 
 2. **Remove debug logging from photoUpload.init():**
+
    ```javascript
    init: function() {
        // Remove: this.initCallCount++; and console.log statements
@@ -105,6 +116,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    ```
 
 3. **Remove debug logging from setupEventListeners():**
+
    ```javascript
    setupEventListeners: function() {
        // Remove all console.log statements
@@ -113,9 +125,11 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    ```
 
 ### Step 5: Resolve Element ID Conflicts
+
 1. **Make PhotoSeries use more specific selectors:**
-   
+
    **In photoseries.js, update element selection:**
+
    ```javascript
    // Instead of checking for generic 'uploadArea'
    // Use more specific checks:
@@ -136,9 +150,11 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    - Update corresponding JavaScript selectors
 
 ### Step 6: Clean Up MediaFiles.js Global Initialization
+
 1. **Review apps/mediafiles/static/mediafiles/js/mediafiles.js:**
-   
+
 2. **Remove any auto-initialization that might conflict:**
+
    ```javascript
    // Remove any DOMContentLoaded listeners that auto-initialize modules
    // Keep only utility functions and modal functionality
@@ -147,9 +163,11 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
 3. **Ensure MediaFiles.js only provides utilities, not module initialization.**
 
 ### Step 7: Update Public API Methods for Manual Control
+
 1. **Ensure each module has clear initialization methods:**
-   
+
    **PhotoSeries public API:**
+
    ```javascript
    return {
        // Core initialization
@@ -168,7 +186,9 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
 2. **Similar pattern for VideoClip and other modules.**
 
 ### Step 8: Add Page Context Detection (Optional Enhancement)
+
 1. **Add page type detection utility:**
+
    ```javascript
    // In mediafiles.js or as separate utility
    const PageContext = {
@@ -182,6 +202,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
 2. **Use context in template initialization scripts for extra safety.**
 
 ### Step 9: Testing and Verification
+
 1. **Test each page individually:**
    - Photo create/edit: Only Photo.init() should run
    - PhotoSeries create/edit: Only PhotoSeries.init() should run
@@ -200,12 +221,14 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    - Proper cleanup and initialization
 
 ### Step 10: Final Template Cleanup
+
 1. **Review all template initialization scripts:**
    - Ensure each template only initializes its required modules
    - Remove any redundant initialization calls
    - Add error handling for missing modules
 
 2. **Standardize initialization pattern:**
+
    ```javascript
    document.addEventListener('DOMContentLoaded', function() {
        // Only initialize what this page needs
@@ -216,6 +239,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    ```
 
 ## Expected Outcomes
+
 - ✅ No cross-module interference or initialization
 - ✅ Clean console output with only relevant messages
 - ✅ Each page loads and initializes only required functionality
@@ -224,7 +248,9 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
 - ✅ Predictable initialization behavior
 
 ## Rollback Plan
+
 1. **Restore JavaScript files:**
+
    ```bash
    git checkout HEAD -- apps/mediafiles/static/mediafiles/js/
    ```
@@ -232,6 +258,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
 2. **If needed, restore auto-initialization patterns with proper page detection.**
 
 ## Common Issues and Solutions
+
 1. **Module not initializing:**
    - Check that template calls the correct init method
    - Verify bundle loading completed before init call
@@ -245,6 +272,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
    - Add null checks before element manipulation
 
 ## Testing Checklist
+
 - [ ] Photo pages: No PhotoSeries console messages
 - [ ] Photo pages: Only Photo-related functionality active
 - [ ] PhotoSeries pages: Only PhotoSeries functionality active
@@ -258,6 +286,7 @@ Remove automatic initialization patterns from JavaScript modules and eliminate c
 - [ ] Proper error handling for missing elements
 
 ## Notes
+
 - This phase removes automatic behaviors and requires explicit initialization
 - Templates become responsible for knowing what to initialize
 - This is the most critical phase for functionality - thorough testing required

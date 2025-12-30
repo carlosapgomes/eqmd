@@ -183,4 +183,3 @@ Create a "Mapa de Pacientes" (Patients Map) page that displays a hierarchical tr
 - [Patient Implementation Plan](patient_implementation_plan.md)
 - [docs/apps/patients.md](../../docs/apps/patients.md)
 - [docs/permissions/](../../docs/permissions/)
-

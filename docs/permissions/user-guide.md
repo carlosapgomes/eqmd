@@ -9,9 +9,11 @@ This guide explains how the EquipeMed permission system works from a user perspe
 EquipeMed uses a role-based permission system based on medical professions. Each role has different levels of access to patients, medical records, and system features.
 
 ### Medical Doctors
+
 **Full Access** - Complete control over all system features
 
 **Permissions:**
+
 - ✅ View, create, edit, and delete patients
 - ✅ Change patient status (including discharge)
 - ✅ Edit patient personal data
@@ -21,14 +23,17 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 - ✅ Edit/delete own medical records within 24 hours
 
 **Special Privileges:**
+
 - Only doctors can discharge patients
 - Only doctors can edit patient personal information
 - Full access to all patient statuses (inpatient, outpatient, emergency, discharged, transferred)
 
 ### Residents
+
 **Full Access** - Complete control over all system features (same as Medical Doctors)
 
 **Permissions:**
+
 - ✅ View, create, edit, and delete patients
 - ✅ Change patient status (including discharge)
 - ✅ Edit patient personal data
@@ -39,14 +44,17 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 - ✅ Access all patient statuses (inpatient, outpatient, emergency, discharged, transferred)
 
 **Special Privileges:**
+
 - Identical permissions to Medical Doctors
 - Full system access for training and clinical work
 - No restrictions on patient management or status changes
 
 ### Nurses
+
 **Extended Patient Management** - Comprehensive patient care capabilities
 
 **Permissions:**
+
 - ✅ View, create, and edit patients
 - ✅ Manage patient record numbers and admissions
 - ✅ Limited patient status changes (cannot discharge)
@@ -61,6 +69,7 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 - ✅ View-only access to history & physicals (physician documents)
 
 **Special Rules:**
+
 - Can change emergency patients to inpatient status
 - Cannot perform patient discharge
 - Can create and manage patient records
@@ -68,9 +77,11 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 - Cannot create or edit history & physical documents (physician responsibility)
 
 ### Physiotherapists
+
 **Limited Access** - Therapy documentation only
 
 **Permissions:**
+
 - ✅ View patients (read-only access)
 - ❌ Cannot create, edit, or delete patients
 - ❌ Cannot change patient status
@@ -82,15 +93,18 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 - ✅ Create, edit, and delete therapy simple notes only
 
 **Focus:**
+
 - Physiotherapy documentation through simple notes
 - View-only access to patient information
 - No involvement in patient management or medical decisions
 - Focused on therapeutic care documentation
 
 ### Students
+
 **Supervised Learning Access** - Focused on observation and supervised documentation
 
 **Permissions:**
+
 - ✅ View all patients (learning purposes)
 - ✅ View all medical documentation (daily notes, H&P, prescriptions)
 - ✅ View medical events and hospital information
@@ -105,6 +119,7 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 - ❌ Cannot submit PDF forms
 
 **Learning Model:**
+
 - Simple notes serve as supervised observations
 - Residents review student notes and promote to formal records
 - Media documentation helps with wound and surgical progress tracking
@@ -115,6 +130,7 @@ EquipeMed uses a role-based permission system based on medical professions. Each
 ### Hospital Configuration
 
 EquipeMed is configured for single hospital operation using environment-based configuration:
+
 - Hospital name, address, and contact information set via environment variables
 - No hospital selection required - all users work within the same hospital
 - Simplified patient access without hospital context restrictions
@@ -192,6 +208,7 @@ EquipeMed is configured for single hospital operation using environment-based co
 ### Patient Personal Data
 
 Patient personal data includes:
+
 - Name, date of birth, contact information
 - Identification numbers (ID, fiscal number, health card)
 - Address and emergency contacts
@@ -239,7 +256,6 @@ Patient personal data includes:
 3. **Update Status**: Change the patient status field
 4. **Save Changes**: Submit the form
 
-
 ## Troubleshooting
 
 ### "You don't have permission" Messages
@@ -258,7 +274,6 @@ Patient personal data includes:
 - **Creator Check**: You can only edit your own records
 - **Time Limit**: Records can only be edited within 24 hours
 - **Permission Level**: Verify you have event editing permissions
-
 
 ## Getting Help
 

@@ -9,7 +9,7 @@ This directory contains a comprehensive plan to clean up outdated and redundant 
 After analysis of the `docs/` directory, key issues identified:
 
 - **Historical Migration Documents**: Multiple large files documenting completed migrations (FilePond, etc.)
-- **Redundant Testing Documentation**: 3 overlapping testing guides 
+- **Redundant Testing Documentation**: 3 overlapping testing guides
 - **Duplicate App Documentation**: Old detailed docs vs. new comprehensive guides
 - **Outdated Architecture Docs**: References to completed migrations
 - **Orphaned Translation Files**: .pt-BR.md files that may be outdated
@@ -35,6 +35,7 @@ Execute phases sequentially:
 ## Safety Measures
 
 Each phase includes:
+
 - Archive deleted content in cleanup branch
 - Verify no active links to deleted documentation  
 - Update navigation and cross-references

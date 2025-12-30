@@ -27,7 +27,9 @@ Patient (denormalized current values)
 ## Implementation Phases
 
 ### Phase 1: Core Models and Database Schema
+
 **File**: `patient_record_tracking_phase1_models.md`
+
 - Create PatientRecordNumber model
 - Create PatientAdmission model
 - Add denormalized fields to Patient model
@@ -35,7 +37,9 @@ Patient (denormalized current values)
 - Update admin interfaces
 
 ### Phase 2: Event Integration and Timeline
+
 **File**: `patient_record_tracking_phase2_events.md`
+
 - Create RecordNumberChangeEvent model
 - Create AdmissionEvent and DischargeEvent models
 - Add new event types to Event.EVENT_TYPE_CHOICES
@@ -43,7 +47,9 @@ Patient (denormalized current values)
 - Update event creation logic
 
 ### Phase 3: Business Logic and Automation
+
 **File**: `patient_record_tracking_phase3_logic.md`
+
 - Implement automatic denormalization updates
 - Create signal handlers for data consistency
 - Add duration calculation methods
@@ -51,7 +57,9 @@ Patient (denormalized current values)
 - Add validation and business rules
 
 ### Phase 4: User Interface and Forms
+
 **File**: `patient_record_tracking_phase4_ui.md`
+
 - Update patient forms with record number fields
 - Create admission/discharge forms
 - Update patient detail templates
@@ -59,7 +67,9 @@ Patient (denormalized current values)
 - Add quick action buttons
 
 ### Phase 5: API and Integration
+
 **File**: `patient_record_tracking_phase5_api.md`
+
 - Restore and update hospital record API endpoints
 - Add new API endpoints for record tracking
 - Update permission checks
@@ -67,7 +77,9 @@ Patient (denormalized current values)
 - Update search functionality
 
 ### Phase 6: Testing and Validation
+
 **File**: `patient_record_tracking_phase6_testing.md`
+
 - Create comprehensive test suite
 - Test data migration scenarios
 - Validate business logic

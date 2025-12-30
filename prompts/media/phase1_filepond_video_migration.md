@@ -506,4 +506,3 @@ python manage.py migrate
 ## Next Phase
 
 Once Phase 1 is complete and tested, proceed to Phase 2 for Photo and PhotoSeries migration.
-

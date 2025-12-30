@@ -7,6 +7,7 @@ This phase establishes the foundation for the media upload feature in EquipeMed.
 ## Architecture Decision
 
 **Chosen Approach**: Single app with multiple specialized models
+
 - **Photo** model for single images (uses existing PHOTO_EVENT = 3)
 - **PhotoSeries** model for image series (uses existing PHOTO_SERIES_EVENT = 9)  
 - **VideoClip** model for short video clips (new VIDEO_CLIP_EVENT = 10)
@@ -27,6 +28,7 @@ uv run python manage.py startapp mediafiles apps/mediafiles
 ```
 
 **Expected Structure**:
+
 ```
 apps/mediafiles/
 ├── __init__.py
@@ -57,6 +59,7 @@ apps/mediafiles/
 **Action**: Create template and static directories
 
 **Directories to create**:
+
 - `apps/mediafiles/templates/mediafiles/`
 - `apps/mediafiles/templates/mediafiles/partials/`
 - `apps/mediafiles/static/mediafiles/`
@@ -80,6 +83,7 @@ apps/mediafiles/
 **Action**: Verify and enhance media settings
 
 **Settings to verify/add**:
+
 - MEDIA_URL = "media/"
 - MEDIA_ROOT = BASE_DIR / "media"
 - FILE_UPLOAD_MAX_MEMORY_SIZE (set to 5MB for images)
@@ -92,8 +96,9 @@ apps/mediafiles/
 **Action**: Add media-specific configuration
 
 **New settings to add**:
-- MEDIA_IMAGE_MAX_SIZE = 5 * 1024 * 1024  # 5MB
-- MEDIA_VIDEO_MAX_SIZE = 50 * 1024 * 1024  # 50MB
+
+- MEDIA_IMAGE_MAX_SIZE = 5 *1024* 1024  # 5MB
+- MEDIA_VIDEO_MAX_SIZE = 50 *1024* 1024  # 50MB
 - MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes in seconds
 - MEDIA_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 - MEDIA_ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
@@ -105,6 +110,7 @@ apps/mediafiles/
 **Action**: Add security-specific configuration for media files
 
 **New security settings to add**:
+
 - MEDIA_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 - MEDIA_ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov']
 - MEDIA_MAX_FILENAME_LENGTH = 100
@@ -120,6 +126,7 @@ apps/mediafiles/
 **Action**: Add VIDEO_CLIP_EVENT to the Event model
 
 **Changes needed**:
+
 1. Add `VIDEO_CLIP_EVENT = 10` constant
 2. Add to EVENT_TYPE_CHOICES: `(VIDEO_CLIP_EVENT, "Vídeo Curto")`
 3. Update `get_event_type_badge_class()` method to include video type
@@ -153,9 +160,10 @@ uv add ffmpeg-python
 ```
 
 **Note**: Requires ffmpeg system installation (already installed on dev machines):
+
 - Ubuntu/Debian: `sudo apt install ffmpeg`
 - macOS: `brew install ffmpeg`
-- Windows: Download from https://ffmpeg.org/
+- Windows: Download from <https://ffmpeg.org/>
 
 ### 4.3 Update Requirements Documentation
 
@@ -172,6 +180,7 @@ uv add ffmpeg-python
 **Action**: Set up proper app configuration
 
 **Content structure**:
+
 - Set name = 'apps.mediafiles'
 - Set verbose_name = 'Media Files'
 - Add ready() method for signal registration if needed
@@ -183,6 +192,7 @@ uv add ffmpeg-python
 **Action**: Create URL namespace structure
 
 **URL patterns to define**:
+
 - App namespace: 'mediafiles'
 - Placeholder patterns for future implementation
 - Include patterns for each media type
@@ -194,6 +204,7 @@ uv add ffmpeg-python
 **Action**: Include media app URLs
 
 **Changes**:
+
 - Add `path('mediafiles/', include('apps.mediafiles.urls', namespace='mediafiles'))`
 - Ensure media file serving is configured for development
 
@@ -206,6 +217,7 @@ uv add ffmpeg-python
 **Action**: Create utility functions for media processing
 
 **Functions to implement**:
+
 - Image resizing and thumbnail generation
 - Video thumbnail extraction
 - File validation functions
@@ -221,6 +233,7 @@ uv add ffmpeg-python
 **Action**: Create template tags for media display
 
 **Template tags to implement**:
+
 - `mediafiles_thumbnail` - Display media thumbnails
 - `mediafiles_duration` - Format video duration
 - `mediafiles_file_size` - Format file sizes
@@ -233,6 +246,7 @@ uv add ffmpeg-python
 **Action**: Document the planned database schema
 
 **Tables to create**:
+
 - `mediafiles_mediafile` - Core file storage and metadata
 - `mediafiles_photo` - Single photo events (inherits from Event)
 - `mediafiles_photoseries` - Photo series events (inherits from Event)
@@ -244,6 +258,7 @@ uv add ffmpeg-python
 **Action**: Define file organization strategy with secure naming
 
 **Storage structure**:
+
 ```
 media/
 ├── photos/
@@ -271,6 +286,7 @@ media/
 ```
 
 **Security Features**:
+
 - UUID-based filenames prevent enumeration attacks
 - Original filenames stored in database only
 - No patient information in file paths
@@ -286,6 +302,7 @@ media/
 **Action**: Implement secure file naming and validation functions
 
 **Security utilities to implement**:
+
 ```python
 def get_secure_upload_path(instance, filename):
     """Generate secure upload path with UUID filename"""
@@ -310,6 +327,7 @@ def clean_filename(filename):
 **Action**: Create comprehensive file validation
 
 **Validators to implement**:
+
 - File size validation
 - MIME type validation
 - File extension validation
@@ -324,6 +342,7 @@ def clean_filename(filename):
 **Action**: Implement security middleware for file serving
 
 **Middleware features**:
+
 - Permission-based file access control
 - Rate limiting for file downloads
 - Secure headers for file responses
@@ -335,6 +354,7 @@ def clean_filename(filename):
 **Action**: Set up secure file serving configuration
 
 **Security measures**:
+
 - Prevent direct file system access
 - Use Django views for all file serving
 - Implement proper HTTP headers
@@ -348,6 +368,7 @@ def clean_filename(filename):
 **Action**: Set up comprehensive testing framework
 
 **Test files to create**:
+
 - `test_models.py` - Model validation and behavior
 - `test_views.py` - View functionality and permissions
 - `test_forms.py` - Form validation and file handling
@@ -360,6 +381,7 @@ def clean_filename(filename):
 **Action**: Create sample media files for testing
 
 **Test files needed**:
+
 - Sample JPEG images (various sizes)
 - Sample PNG images
 - Sample MP4 video (under 2 minutes)
@@ -377,6 +399,7 @@ def clean_filename(filename):
 **Action**: Document the mediafiles app architecture and usage
 
 **Documentation sections**:
+
 - Overview and purpose
 - Model relationships
 - File handling strategy
@@ -390,6 +413,7 @@ def clean_filename(filename):
 **Action**: Add media app section to the main documentation
 
 **Content to add**:
+
 - MediaFiles app overview
 - Key features and capabilities
 - URL structure
@@ -402,6 +426,7 @@ def clean_filename(filename):
 **Action**: Confirm the app is properly installed
 
 **Verification steps**:
+
 1. Run `uv run python manage.py check` - should pass without errors
 2. Run `uv run python manage.py migrate` - should complete successfully
 3. Access Django admin - mediafiles app should appear
@@ -412,6 +437,7 @@ def clean_filename(filename):
 **Action**: Test security measures are properly implemented
 
 **Security verification checklist**:
+
 - [ ] UUID-based file naming working
 - [ ] File extension validation enforced
 - [ ] File size limits respected
@@ -426,6 +452,7 @@ def clean_filename(filename):
 **Action**: Ensure foundation is ready for vertical slice implementation
 
 **Checklist**:
+
 - [ ] App structure created
 - [ ] Settings updated
 - [ ] Dependencies installed
@@ -438,11 +465,13 @@ def clean_filename(filename):
 ## Next Steps
 
 After completing Phase 1, ask for permission to proceed to Phase 2 with the three vertical slice implementations:
+
 1. Single Image implementation (Photo model)
 2. Image Series implementation (PhotoSeries model)
 3. Short Video Clips implementation (VideoClip model)
 
 Each vertical slice will follow the pattern:
+
 - Slice 1: Model and Admin
 - Slice 2: Forms and Views
 - Slice 3: Templates and Testing
@@ -450,6 +479,7 @@ Each vertical slice will follow the pattern:
 ## Success Criteria
 
 Phase 1 is complete when:
+
 - MediaFiles app is properly installed and configured
 - All dependencies are installed and working
 - Event model includes new video event type

@@ -255,4 +255,3 @@
 | 5     | `config/settings.py`, `config/urls.py`                                                                   |
 
 **Total Estimated Time: 9.5-13.5 hours**
-

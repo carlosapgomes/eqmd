@@ -12,6 +12,7 @@
 ## Technical Reference Files
 
 This directory contains technical reference documentation:
+
 - Database schemas and storage structures
 - Security implementation details  
 - Migration documentation (historical)

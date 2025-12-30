@@ -114,6 +114,7 @@
    ```
 
 4. Verify widget templates:
+
    ```bash
    python manage.py shell -c "from django.template.loader import get_template; print(get_template('patients/widgets/patient_stats.html')); print(get_template('patients/widgets/recent_patients.html'))"
    ```
@@ -171,6 +172,7 @@
    ```
 
 3. Verify sidebar template:
+
    ```bash
    python manage.py shell -c "from django.template.loader import get_template; print(get_template('patients/includes/sidebar_items.html'))"
    ```
@@ -243,6 +245,7 @@
    ```
 
 3. Verify context processors:
+
    ```bash
    python manage.py shell -c "from apps.patients.context_processors import patient_stats, recent_patients; from django.http import HttpRequest; request = HttpRequest(); request.user = __import__('django.contrib.auth').get_user_model().objects.first(); print(patient_stats(request)); print(recent_patients(request))"
    ```
@@ -309,6 +312,7 @@
    ```
 
 4. Verify template tags:
+
    ```bash
    python manage.py shell -c "from django.template import Template, Context; from apps.patients.models import Patient; patient = Patient.objects.first(); if patient: print(Template('{% load patient_tags %}{% patient_status_badge patient.status %}').render(Context({'patient': patient})))"
    ```
@@ -405,6 +409,7 @@
    ```
 
 2. Run the integration tests:
+
    ```bash
    python manage.py test apps.patients.tests.test_integration
    ```

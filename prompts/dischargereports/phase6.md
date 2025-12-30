@@ -44,7 +44,7 @@ def status_badge_class(self):
     return "badge bg-warning text-dark" if self.is_draft else "badge bg-success"
 ````
 
-2. UPDATE VIEWS.PY - IMPROVE PERMISSION LOGIC:
+1. UPDATE VIEWS.PY - IMPROVE PERMISSION LOGIC:
 
 ```python
 # Update existing views with better permission checking
@@ -103,7 +103,7 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 ```
 
-3. UPDATE TEMPLATES - IMPROVE DRAFT UI:
+1. UPDATE TEMPLATES - IMPROVE DRAFT UI:
 
 Update dischargereport_detail.html:
 
@@ -235,7 +235,7 @@ Update dischargereport_detail.html:
 {% endblock %}
 ```
 
-4. UPDATE LIST TEMPLATE - ADD STATUS COLUMN:
+1. UPDATE LIST TEMPLATE - ADD STATUS COLUMN:
 
 ```html
 <!-- Add to dischargereport_list.html table -->
@@ -266,7 +266,7 @@ Update dischargereport_detail.html:
 </td>
 ```
 
-5. ADD HELP TEXT TO FORMS:
+1. ADD HELP TEXT TO FORMS:
 
 ```python
 # Update DischargeReportForm widgets with better help text
@@ -274,7 +274,7 @@ Update dischargereport_detail.html:
 # Add help text to other fields as needed
 ```
 
-6. UPDATE EVENT CARD TEMPLATE:
+1. UPDATE EVENT CARD TEMPLATE:
 
 ```html
 <!-- Update apps/events/templates/events/partials/event_card_dischargereport.html -->
@@ -297,7 +297,7 @@ Update dischargereport_detail.html:
 {% endif %}
 ```
 
-7. ADD ADMIN IMPROVEMENTS:
+1. ADD ADMIN IMPROVEMENTS:
 
 ```python
 # Update admin.py

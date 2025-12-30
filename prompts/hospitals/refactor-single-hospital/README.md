@@ -53,6 +53,7 @@ Execute the phases in this exact order, with each phase being a separate coding 
 ## Success Criteria
 
 After completion:
+
 - All tests pass
 - No hospital-related code remains
 - Permission system is simplified

@@ -28,4 +28,3 @@ I want to know your thoughts on how to implement this feature.
 Please, think hard on this feature and give me your recommendations on
 how to implement it considering the context, the requirements above and
 the UI/UX.
-

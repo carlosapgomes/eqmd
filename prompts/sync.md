@@ -6,7 +6,7 @@ docker compose run --rm \
  -v ./firebase-key.json:/app/firebase-key.json:ro \
  eqmd python manage.py sync_firebase_data \
  --credentials-file firebase-key.json \
- --database-url https://sisphgrs.firebaseio.com/ \
+ --database-url <https://sisphgrs.firebaseio.com/> \
  --project-name sisphgrs \
  --since-date 2016-01-01 \
  --chunk-size 1000 \
@@ -18,7 +18,7 @@ docker compose run --rm \
  -v ./firebase-key.json:/app/firebase-key.json:ro \
  eqmd python manage.py sync_firebase_data \
  --credentials-file firebase-key.json \
- --database-url https://sisphgrs.firebaseio.com/ \
+ --database-url <https://sisphgrs.firebaseio.com/> \
  --project-name sisphgrs \
  --since-date 2016-01-01 \
  --chunk-size 500 \
