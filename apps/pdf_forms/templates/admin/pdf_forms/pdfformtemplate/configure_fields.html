@@ -1865,7 +1865,12 @@ function updateSelectedField() {
     if (dataSource && dataSourceKey) {
         fieldConfig.data_source = dataSource;
         fieldConfig.data_source_key = dataSourceKey;
-        fieldConfig.linked_readonly = linkedReadonly;
+        // Only set linked_readonly if true, otherwise omit the property
+        if (linkedReadonly) {
+            fieldConfig.linked_readonly = true;
+        } else {
+            delete fieldConfig.linked_readonly;
+        }
     } else {
         delete fieldConfig.data_source;
         delete fieldConfig.data_source_key;
