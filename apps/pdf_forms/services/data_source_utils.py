@@ -127,6 +127,9 @@ class DataSourceUtils:
         # Group fields by data source AND section
         groups = {}  # Key: "datasource_section", Value: {fields: {}, section: ""}
 
+        # First, collect all linked fields with their order information
+        linked_fields_by_group = {}
+        
         for field_name, field_config in fields.items():
             if not isinstance(field_config, dict):
                 continue
@@ -145,16 +148,39 @@ class DataSourceUtils:
             # Create unique group key combining data source and section
             group_key = f"{source_name}_{section}"
 
-            # Initialize group if not exists
-            if group_key not in groups:
-                groups[group_key] = {
-                    'fields': {},
+            # Initialize group collection if not exists
+            if group_key not in linked_fields_by_group:
+                linked_fields_by_group[group_key] = {
                     'data': data_sources[source_name],
                     'section': section,
-                    'data_source': source_name
+                    'data_source': source_name,
+                    'field_info': []
                 }
 
-            # Add field to group
-            groups[group_key]['fields'][field_name] = source_key
+            # Store field with order information
+            field_order = field_config.get('field_order', 999)  # Default to high number if no order
+            linked_fields_by_group[group_key]['field_info'].append({
+                'name': field_name,
+                'source_key': source_key,
+                'order': field_order,
+                'linked_readonly': field_config.get('linked_readonly', False)
+            })
+
+        # Now build the final groups with proper field ordering
+        for group_key, group_info in linked_fields_by_group.items():
+            # Sort fields by field_order to ensure primary field (lowest order) comes first
+            sorted_fields = sorted(group_info['field_info'], key=lambda x: x['order'])
+            
+            # Build the final fields dict in the correct order
+            ordered_fields = {}
+            for field_info in sorted_fields:
+                ordered_fields[field_info['name']] = field_info['source_key']
+            
+            groups[group_key] = {
+                'fields': ordered_fields,
+                'data': group_info['data'],
+                'section': group_info['section'],
+                'data_source': group_info['data_source']
+            }
 
         return groups
