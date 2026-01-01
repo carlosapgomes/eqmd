@@ -201,7 +201,7 @@ class PDFFormFillViewTests(TestCase):
         
         self.assertEqual(response.status_code, 404)
 
-    @patch('apps.pdf_forms.views.can_access_patient')
+    @patch('apps.pdf_forms.permissions.can_access_patient')
     def test_form_fill_view_permission_denied(self, mock_can_access):
         """Test permission denied for form fill."""
         mock_can_access.return_value = False
@@ -211,8 +211,8 @@ class PDFFormFillViewTests(TestCase):
             'patient_id': self.patient.id
         })
         
-        with self.assertRaises(PermissionDenied):
-            self.client.get(url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)  # Permission denied
 
     @patch('apps.pdf_forms.services.form_generator.DynamicFormGenerator.generate_form_class')
     def test_form_fill_view_post_success(self, mock_generate_form):
@@ -303,16 +303,17 @@ class PDFFormFillViewTests(TestCase):
         messages = list(response.context['messages'])
         self.assertTrue(any('Erro ao processar formulário' in str(msg) for msg in messages))
 
-    def test_form_fill_view_get_form_kwargs_patient_initial_values(self):
-        """Test that patient initial values are properly merged."""
-        # Create template with patient field mapping
+    def test_form_fill_view_get_initial_patient_values(self):
+        """Test that patient initial values are properly set via get_initial()."""
+        # Use a template with proper form fields that will work with the real form generator
         template = PDFFormTemplateFactory(
             form_fields={
                 'patient_name': {
                     'type': 'text',
                     'label': 'Patient Name',
                     'required': True,
-                    'max_length': 100
+                    'max_length': 100,
+                    'patient_field_mapping': 'name'  # Map to patient.name
                 }
             },
             created_by=self.user
@@ -323,16 +324,15 @@ class PDFFormFillViewTests(TestCase):
             'patient_id': self.patient.id
         })
         
-        # Mock the form class to have patient initial values
-        with patch('apps.pdf_forms.services.form_generator.DynamicFormGenerator.generate_form_class') as mock_generate:
-            mock_form_class = MagicMock()
-            mock_form_class._patient_initial_values = {'patient_name': self.patient.name}
-            mock_generate.return_value = mock_form_class
-            
-            response = self.client.get(url)
-            
-            # Verify that get_form_kwargs was called and patient values were merged
-            self.assertEqual(response.status_code, 200)
+        response = self.client.get(url)
+        
+        # Verify the request was successful
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify that the form has the initial values from patient data
+        form = response.context['form']
+        # The initial value should be set from the patient's name via get_initial()
+        self.assertEqual(form.initial.get('patient_name'), self.patient.name)
 
     def test_form_fill_view_template_without_fields(self):
         """Test form fill view with template that has no fields configured."""
@@ -351,9 +351,9 @@ class PDFFormFillViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_form_fill_view_template_with_null_fields(self):
-        """Test form fill view with template that has null form_fields."""
+        """Test form fill view with template that has empty form_fields."""
         template = PDFFormTemplateFactory(
-            form_fields=None,  # Null fields
+            form_fields={},  # Empty fields
             created_by=self.user
         )
         

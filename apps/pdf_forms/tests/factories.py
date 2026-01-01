@@ -19,6 +19,8 @@ class UserFactory(DjangoModelFactory):
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
     is_active = True
+    password_change_required = False  # Don't require password change in tests
+    terms_accepted = True  # Accept terms to avoid terms middleware redirect
 
 
 class SuperUserFactory(DjangoModelFactory):
@@ -32,6 +34,8 @@ class SuperUserFactory(DjangoModelFactory):
     is_active = True
     is_superuser = True
     is_staff = True
+    password_change_required = False  # Don't require password change in tests
+    terms_accepted = True  # Accept terms to avoid terms middleware redirect
 
 
 class DoctorFactory(DjangoModelFactory):
@@ -44,6 +48,8 @@ class DoctorFactory(DjangoModelFactory):
     last_name = factory.Faker('last_name')
     is_active = True
     profession_type = User.MEDICAL_DOCTOR
+    password_change_required = False  # Don't require password change in tests
+    terms_accepted = True  # Accept terms to avoid terms middleware redirect
 
 
 class NurseFactory(DjangoModelFactory):
@@ -56,6 +62,8 @@ class NurseFactory(DjangoModelFactory):
     last_name = factory.Faker('last_name')
     is_active = True
     profession_type = User.NURSE
+    password_change_required = False  # Don't require password change in tests
+    terms_accepted = True  # Accept terms to avoid terms middleware redirect
 
 
 class WardFactory(DjangoModelFactory):
