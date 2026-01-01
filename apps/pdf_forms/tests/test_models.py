@@ -170,6 +170,7 @@ class PDFFormModelIntegrationTests(TestCase):
     def setUp(self):
         self.user = UserFactory()
         self.patient = PatientFactory(created_by=self.user)
+        self.template = PDFFormTemplateFactory(created_by=self.user)
 
     def test_template_patient_relationship(self):
         """Test that templates can be used with multiple patients."""
@@ -278,10 +279,8 @@ class PDFFormModelIntegrationTests(TestCase):
     def test_pdf_form_template_configuration_status(self):
         """Test configuration_status property."""
         # Test with no PDF file
-        template1 = PDFFormTemplateFactory(
-            pdf_file=None,
-            created_by=self.user
-        )
+        template1 = PDFFormTemplateFactory(created_by=self.user)
+        template1.pdf_file = None
         self.assertEqual(template1.configuration_status, "Sem PDF")
         
         # Test with PDF but no configuration
@@ -532,18 +531,16 @@ class PDFFormModelIntegrationTests(TestCase):
 
     def test_pdf_form_template_is_configured_edge_cases(self):
         """Test is_configured property edge cases."""
-        # Test with empty string
+        # Test with empty dict
         template1 = PDFFormTemplateFactory(
-            form_fields='',
+            form_fields={},
             created_by=self.user
         )
         self.assertFalse(template1.is_configured)
         
-        # Test with whitespace string
-        template2 = PDFFormTemplateFactory(
-            form_fields='   ',
-            created_by=self.user
-        )
+        # Test with None value
+        template2 = PDFFormTemplateFactory(created_by=self.user)
+        template2.form_fields = None
         self.assertFalse(template2.is_configured)
         
         # Test with valid configuration but empty dict

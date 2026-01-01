@@ -75,7 +75,8 @@ class PDFFormTemplateAdminTests(TestCase):
 
     def test_pdf_preview_method_without_file(self):
         """Test pdf_preview method without PDF file."""
-        template = PDFFormTemplateFactory(pdf_file=None)
+        template = PDFFormTemplateFactory()
+        template.pdf_file = None
         result = self.admin.pdf_preview(template)
         
         # Should return "No PDF"
@@ -83,8 +84,9 @@ class PDFFormTemplateAdminTests(TestCase):
 
     def test_configuration_status_display_methods(self):
         """Test configuration_status_display method."""
-        # Test with no PDF
-        template1 = PDFFormTemplateFactory(pdf_file=None)
+        # Test with no PDF - create template and manually set pdf_file to None
+        template1 = PDFFormTemplateFactory()
+        template1.pdf_file = None
         result1 = self.admin.configuration_status_display(template1)
         self.assertIn('Sem PDF', result1)
         self.assertIn('style="color: red;"', result1)
@@ -112,7 +114,8 @@ class PDFFormTemplateAdminTests(TestCase):
 
     def test_configure_fields_method_without_file(self):
         """Test configure_fields method without PDF file."""
-        template = PDFFormTemplateFactory(pdf_file=None)
+        template = PDFFormTemplateFactory()
+        template.pdf_file = None
         result = self.admin.configure_fields(template)
         
         # Should return "Upload PDF first"
@@ -192,7 +195,8 @@ class PDFFormTemplateAdminTests(TestCase):
 
     def test_pdf_preview_api_no_pdf(self):
         """Test pdf_preview_api with no PDF file."""
-        template = PDFFormTemplateFactory(pdf_file=None)
+        template = PDFFormTemplateFactory()
+        template.pdf_file = None
         
         url = reverse('admin:pdf_forms_pdfformtemplate_pdf_preview_api', args=[template.id])
         response = self.client.get(url)
