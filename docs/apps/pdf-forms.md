@@ -507,9 +507,328 @@ PDF_FORMS_CONFIG = {
 }
 ```
 
+## Data Sources and Linked Fields
+
+**NEW: Advanced data relationship functionality for automatic field population**
+
+Data Sources enable creation of reusable datasets that automatically populate related fields when a user selects a value. This creates "linked field" functionality where selecting one value automatically fills multiple related fields.
+
+### Features
+
+- **Reusable Datasets**: Define data once, use across multiple fields
+- **Automatic Population**: Select one value, related fields auto-fill
+- **Data Integrity**: Ensures consistency across related fields  
+- **Read-only Protection**: Auto-filled fields can be locked to prevent manual changes
+- **Multiple Data Sources**: Support multiple independent datasets per form
+- **Section Support**: Works seamlessly with section-based forms
+
+### Creating Data Sources
+
+#### 1. Access Data Source Manager
+
+In the visual field configurator:
+
+1. Go to **Admin** → **PDF Form Templates** → **Configure Fields**
+2. Scroll to the **"Data Sources"** section at the bottom
+3. Click **"Add Data Source"** to create a new dataset
+
+#### 2. Define Data Structure
+
+Each data source contains a list of items with consistent key-value pairs:
+
+**Example - Medical Procedures:**
+
+```json
+Data Source Name: "procedures"
+
+Item 1: {
+  "name": "Appendectomy", 
+  "code": "AP001", 
+  "duration": "2 hours", 
+  "room": "OR-1",
+  "anesthesia": "General"
+}
+
+Item 2: {
+  "name": "Cholecystectomy", 
+  "code": "CH002", 
+  "duration": "3 hours", 
+  "room": "OR-2",
+  "anesthesia": "General"
+}
+
+Item 3: {
+  "name": "Hernia Repair", 
+  "code": "HR003", 
+  "duration": "1 hour", 
+  "room": "OR-3",
+  "anesthesia": "Local"
+}
+```
+
+#### 3. Data Source Guidelines
+
+- **Consistent Structure**: All items must have the same keys
+- **Unique Names**: Use descriptive, unique data source names
+- **Key Naming**: Use clear, descriptive key names (avoid spaces)
+- **Data Types**: Support strings, numbers, dates
+
+### Linking Fields to Data Sources
+
+#### 1. Primary Selection Field
+
+Configure the field users will interact with:
+
+```json
+{
+  "procedure_selection": {
+    "type": "choice",
+    "label": "Select Procedure",
+    "data_source": "procedures",
+    "data_source_key": "name",
+    "x": 4.5, "y": 8.5, "width": 8.0, "height": 0.7,
+    "required": true
+  }
+}
+```
+
+This creates a dropdown with: ["Appendectomy", "Cholecystectomy", "Hernia Repair"]
+
+#### 2. Auto-Filled Fields
+
+Configure fields that auto-populate based on the selection:
+
+```json
+{
+  "procedure_code": {
+    "type": "text",
+    "label": "Procedure Code",
+    "data_source": "procedures",
+    "data_source_key": "code",
+    "linked_readonly": true,
+    "x": 13.0, "y": 8.5, "width": 4.0, "height": 0.7
+  },
+  "estimated_duration": {
+    "type": "text", 
+    "label": "Duration",
+    "data_source": "procedures",
+    "data_source_key": "duration",
+    "linked_readonly": true,
+    "x": 4.5, "y": 9.5, "width": 4.0, "height": 0.7
+  },
+  "operating_room": {
+    "type": "text",
+    "label": "Operating Room", 
+    "data_source": "procedures",
+    "data_source_key": "room",
+    "linked_readonly": true,
+    "x": 9.0, "y": 9.5, "width": 4.0, "height": 0.7
+  }
+}
+```
+
+#### 3. Field Configuration Properties
+
+**Data Source Linking Properties:**
+
+- `data_source`: Name of the data source to link to
+- `data_source_key`: Which property from the data source to use
+- `linked_readonly`: (Optional) Make field read-only when auto-filled
+
+### Complete Configuration Example
+
+```json
+{
+  "data_sources": {
+    "procedures": [
+      {
+        "name": "Appendectomy",
+        "code": "AP001", 
+        "duration": "2 hours",
+        "room": "OR-1",
+        "specialist": "Dr. Silva"
+      },
+      {
+        "name": "Cholecystectomy",
+        "code": "CH002",
+        "duration": "3 hours", 
+        "room": "OR-2",
+        "specialist": "Dr. Costa"
+      }
+    ],
+    "medications": [
+      {
+        "name": "Amoxicillin",
+        "dosage": "500mg",
+        "frequency": "3x daily",
+        "duration": "7 days"
+      },
+      {
+        "name": "Ibuprofen", 
+        "dosage": "400mg",
+        "frequency": "2x daily",
+        "duration": "5 days"
+      }
+    ]
+  },
+  "sections": {
+    "procedure_info": {
+      "label": "Procedure Information",
+      "order": 1,
+      "collapsed": false
+    },
+    "medication_info": {
+      "label": "Medication Information", 
+      "order": 2,
+      "collapsed": true
+    }
+  },
+  "fields": {
+    "procedure_name": {
+      "type": "choice",
+      "label": "Select Procedure",
+      "section": "procedure_info",
+      "field_order": 1,
+      "data_source": "procedures",
+      "data_source_key": "name",
+      "x": 4.5, "y": 8.5, "width": 8.0, "height": 0.7,
+      "required": true
+    },
+    "procedure_code": {
+      "type": "text", 
+      "label": "Code",
+      "section": "procedure_info",
+      "field_order": 2,
+      "data_source": "procedures",
+      "data_source_key": "code",
+      "linked_readonly": true,
+      "x": 13.0, "y": 8.5, "width": 4.0, "height": 0.7
+    },
+    "medication_name": {
+      "type": "choice",
+      "label": "Select Medication",
+      "section": "medication_info", 
+      "field_order": 1,
+      "data_source": "medications",
+      "data_source_key": "name",
+      "x": 4.5, "y": 12.0, "width": 8.0, "height": 0.7,
+      "required": false
+    },
+    "medication_dosage": {
+      "type": "text",
+      "label": "Dosage",
+      "section": "medication_info",
+      "field_order": 2, 
+      "data_source": "medications",
+      "data_source_key": "dosage",
+      "linked_readonly": true,
+      "x": 13.0, "y": 12.0, "width": 4.0, "height": 0.7
+    }
+  }
+}
+```
+
+### User Experience
+
+1. **User selects "Appendectomy"** from procedure dropdown
+2. **Auto-filled fields populate**:
+   - Procedure Code → "AP001"
+   - Duration → "2 hours" 
+   - Operating Room → "OR-1"
+   - Specialist → "Dr. Silva"
+3. **Read-only fields** cannot be manually edited
+4. **User can still edit** non-linked fields normally
+
+### Benefits
+
+- **Data Consistency**: Eliminates manual entry errors
+- **User Efficiency**: One selection populates multiple fields
+- **Maintainability**: Update data source once, affects all forms
+- **Professional Forms**: Ensures standardized data entry
+- **Reduced Training**: Users only need to know primary selections
+
+### Best Practices
+
+#### Data Source Design
+
+- **Logical Grouping**: Group related data together (procedures, medications, etc.)
+- **Complete Data**: Include all necessary related fields
+- **Standardized Names**: Use consistent naming conventions
+- **Validation**: Ensure all items have the same structure
+
+#### Field Configuration
+
+- **Primary Fields**: Use `choice` type for user selections
+- **Auto-Fill Fields**: Use appropriate field types (text, number, date)
+- **Read-Only Protection**: Enable `linked_readonly` for critical auto-filled data
+- **Clear Labels**: Make field relationships obvious to users
+
+### Common Use Cases
+
+#### Medical Procedures
+```json
+"procedures": [
+  {"name": "Surgery Name", "code": "Code", "duration": "Time", "room": "Location"}
+]
+```
+
+#### Medications
+```json
+"medications": [
+  {"name": "Drug Name", "dosage": "Amount", "frequency": "Schedule", "warnings": "Notes"}
+]
+```
+
+#### Hospital Departments
+```json
+"departments": [
+  {"name": "Dept Name", "head": "Manager", "phone": "Contact", "location": "Building"}
+]
+```
+
+#### Insurance Plans
+```json
+"insurance": [
+  {"plan": "Plan Name", "provider": "Company", "code": "ID", "copay": "Amount"}
+]
+```
+
+### Management Commands
+
+```bash
+# No specific commands - managed through admin interface
+# Data sources are stored as part of form configuration JSON
+```
+
+### Implementation Details
+
+Data sources are implemented using:
+- `apps.pdf_forms.services.data_source_utils.DataSourceUtils` - Core utilities
+- JavaScript frontend for real-time field linking
+- JSON storage within form template configuration
+- Section-aware field grouping support
+
 ## Troubleshooting
 
 ### Common Issues
+
+**Data Sources Not Appearing**:
+
+- Verify data source has valid name and structure
+- Check all items have identical keys  
+- Ensure data source is saved before linking fields
+
+**Auto-Fill Not Working**:
+
+- Confirm field `data_source` matches existing data source name
+- Verify `data_source_key` exists in all data items
+- Check JavaScript console for errors
+
+**Fields Not Updating**:
+
+- Ensure primary selection field has valid `data_source` configuration
+- Verify linked fields are in the same form section (if using sections)
+- Test with browser developer tools enabled
 
 **PDF Preview Not Working**:
 
@@ -528,3 +847,9 @@ PDF_FORMS_CONFIG = {
 - Enable template caching in production
 - Monitor memory usage during PDF generation
 - Consider background task queue for large forms
+
+**Data Source Errors**:
+
+- Validate JSON structure in data sources
+- Ensure consistent data types across all items
+- Check for special characters in keys or values
