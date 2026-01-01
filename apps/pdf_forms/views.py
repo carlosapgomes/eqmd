@@ -80,6 +80,10 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
     template_name = 'pdf_forms/form_fill.html'
 
     def dispatch(self, request, *args, **kwargs):
+        # Check authentication first - if not authenticated, LoginRequiredMixin will redirect
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+            
         # Get template and patient
         self.form_template = get_object_or_404(
             PDFFormTemplate,
@@ -128,6 +132,19 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
             context['linked_fields_map'] = form.__class__._linked_fields_map
 
         return context
+
+    def post(self, request, *args, **kwargs):
+        """Handle POST request with exception handling."""
+        try:
+            return super().post(request, *args, **kwargs)
+        except Exception as e:
+            messages.error(
+                request,
+                f"Erro ao processar formulário: {str(e)}"
+            )
+            # Return the form with error message
+            form = self.get_form()
+            return self.render_to_response(self.get_context_data(form=form))
 
     def form_valid(self, form):
         """Process form submission and save data only."""

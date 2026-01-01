@@ -84,14 +84,20 @@ class DynamicFormGenerator:
                 form_fields[field_name] = django_field
                 
                 # Check for auto-fill mapping and set initial value
-                auto_fill_path = config.get('auto_fill_mapping') or config.get('patient_field_mapping')
+                auto_fill_path = config.get('auto_fill_mapping')
+                patient_field_path = config.get('patient_field_mapping')
+                
+                field_value = None
                 if auto_fill_path:
                     field_value = DataFieldMapper.get_auto_fill_value(auto_fill_path, patient)
-                    if field_value is not None:
-                        # Format the value based on field type
-                        formatted_value = self._format_field_value(field_value, config.get('type', 'text'))
-                        if formatted_value is not None:
-                            initial_values[field_name] = formatted_value
+                elif patient_field_path:
+                    field_value = DataFieldMapper.get_patient_field_value(patient, patient_field_path)
+                    
+                if field_value is not None:
+                    # Format the value based on field type
+                    formatted_value = self._format_field_value(field_value, config.get('type', 'text'))
+                    if formatted_value is not None:
+                        initial_values[field_name] = formatted_value
 
         # Create form class dynamically
         form_class_name = f"{pdf_template.name.replace(' ', '')}Form"
