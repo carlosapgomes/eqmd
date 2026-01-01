@@ -1,19 +1,19 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
-from apps.pdf_forms.services.field_mapping import PatientFieldMapper, FieldMappingUtils
+from apps.pdf_forms.services.field_mapping import DataFieldMapper, FieldMappingUtils
 from apps.pdf_forms.tests.factories import PatientFactory, WardFactory
 from unittest.mock import Mock
 
 
-class PatientFieldMapperTests(TestCase):
-    """Test PatientFieldMapper utility functions."""
+class DataFieldMapperTests(TestCase):
+    """Test DataFieldMapper utility functions."""
 
     def setUp(self):
-        self.mapper = PatientFieldMapper()
+        pass  # DataFieldMapper is all static methods
 
     def test_get_available_patient_fields(self):
         """Test getting available patient fields."""
-        fields = PatientFieldMapper.get_available_patient_fields()
+        fields = DataFieldMapper.get_available_patient_fields()
         
         # Should return a dictionary
         self.assertIsInstance(fields, dict)
@@ -44,7 +44,7 @@ class PatientFieldMapperTests(TestCase):
         valid_fields = ['name', 'birthday', 'gender', 'ward.name', 'healthcard_number']
         
         for field_path in valid_fields:
-            is_valid, error = PatientFieldMapper.validate_patient_field_mapping('test_field', field_path)
+            is_valid, error = DataFieldMapper.validate_patient_field_mapping('test_field', field_path)
             self.assertTrue(is_valid)
             self.assertIsNone(error)
 
@@ -54,17 +54,17 @@ class PatientFieldMapperTests(TestCase):
         invalid_fields = ['invalid_field', 'nonexistent.path', 'ward.invalid_field']
         
         for field_path in invalid_fields:
-            is_valid, error = PatientFieldMapper.validate_patient_field_mapping('test_field', field_path)
+            is_valid, error = DataFieldMapper.validate_patient_field_mapping('test_field', field_path)
             self.assertFalse(is_valid)
             self.assertIn('Invalid patient field', error)
 
     def test_validate_patient_field_mapping_empty(self):
         """Test validation with empty field mapping."""
-        is_valid, error = PatientFieldMapper.validate_patient_field_mapping('test_field', '')
+        is_valid, error = DataFieldMapper.validate_patient_field_mapping('test_field', '')
         self.assertTrue(is_valid)
         self.assertIsNone(error)
         
-        is_valid, error = PatientFieldMapper.validate_patient_field_mapping('test_field', None)
+        is_valid, error = DataFieldMapper.validate_patient_field_mapping('test_field', None)
         self.assertTrue(is_valid)
         self.assertIsNone(error)
 
@@ -77,9 +77,9 @@ class PatientFieldMapperTests(TestCase):
         )
         
         # Test direct field access
-        self.assertEqual(PatientFieldMapper.get_patient_field_value(patient, 'name'), 'John Doe')
-        self.assertEqual(PatientFieldMapper.get_patient_field_value(patient, 'healthcard_number'), 'HC123456')
-        self.assertEqual(PatientFieldMapper.get_patient_field_value(patient, 'phone'), '555-1234')
+        self.assertEqual(DataFieldMapper.get_patient_field_value(patient, 'name'), 'John Doe')
+        self.assertEqual(DataFieldMapper.get_patient_field_value(patient, 'healthcard_number'), 'HC123456')
+        self.assertEqual(DataFieldMapper.get_patient_field_value(patient, 'phone'), '555-1234')
 
     def test_get_patient_field_value_related(self):
         """Test getting related field values from patient."""
@@ -87,48 +87,48 @@ class PatientFieldMapperTests(TestCase):
         patient = PatientFactory(ward=ward)
         
         # Test related field access
-        self.assertEqual(PatientFieldMapper.get_patient_field_value(patient, 'ward.name'), 'ICU')
-        self.assertEqual(PatientFieldMapper.get_patient_field_value(patient, 'ward.abbreviation'), 'ICU')
-        self.assertEqual(PatientFieldMapper.get_patient_field_value(patient, 'ward.floor'), 3)
+        self.assertEqual(DataFieldMapper.get_patient_field_value(patient, 'ward.name'), 'ICU')
+        self.assertEqual(DataFieldMapper.get_patient_field_value(patient, 'ward.abbreviation'), 'ICU')
+        self.assertEqual(DataFieldMapper.get_patient_field_value(patient, 'ward.floor'), 3)
 
     def test_get_patient_field_value_none_handling(self):
         """Test handling of None values and invalid paths."""
         patient = PatientFactory(name='John Doe')
         
         # Test with None patient
-        self.assertIsNone(PatientFieldMapper.get_patient_field_value(None, 'name'))
+        self.assertIsNone(DataFieldMapper.get_patient_field_value(None, 'name'))
         
         # Test with None field path
-        self.assertIsNone(PatientFieldMapper.get_patient_field_value(patient, None))
-        self.assertIsNone(PatientFieldMapper.get_patient_field_value(patient, ''))
+        self.assertIsNone(DataFieldMapper.get_patient_field_value(patient, None))
+        self.assertIsNone(DataFieldMapper.get_patient_field_value(patient, ''))
         
         # Test with invalid field path
-        self.assertIsNone(PatientFieldMapper.get_patient_field_value(patient, 'invalid_field'))
-        self.assertIsNone(PatientFieldMapper.get_patient_field_value(patient, 'ward.invalid_field'))
+        self.assertIsNone(DataFieldMapper.get_patient_field_value(patient, 'invalid_field'))
+        self.assertIsNone(DataFieldMapper.get_patient_field_value(patient, 'ward.invalid_field'))
         
         # Test with None related object
-        self.assertIsNone(PatientFieldMapper.get_patient_field_value(patient, 'ward.name'))
+        self.assertIsNone(DataFieldMapper.get_patient_field_value(patient, 'ward.name'))
 
     def test_get_field_type_compatibility(self):
         """Test field type compatibility checking."""
         # Test compatible types
-        self.assertTrue(PatientFieldMapper.get_field_type_compatibility('text', 'name'))
-        self.assertTrue(PatientFieldMapper.get_field_type_compatibility('choice', 'status'))
-        self.assertTrue(PatientFieldMapper.get_field_type_compatibility('date', 'birthday'))
-        self.assertTrue(PatientFieldMapper.get_field_type_compatibility('number', 'total_admissions_count'))
+        self.assertTrue(DataFieldMapper.get_field_type_compatibility('text', 'name'))
+        self.assertTrue(DataFieldMapper.get_field_type_compatibility('choice', 'status'))
+        self.assertTrue(DataFieldMapper.get_field_type_compatibility('date', 'birthday'))
+        self.assertTrue(DataFieldMapper.get_field_type_compatibility('number', 'total_admissions_count'))
         
         # Test incompatible types
-        self.assertFalse(PatientFieldMapper.get_field_type_compatibility('number', 'name'))
-        self.assertFalse(PatientFieldMapper.get_field_type_compatibility('date', 'phone'))
+        self.assertFalse(DataFieldMapper.get_field_type_compatibility('number', 'name'))
+        self.assertFalse(DataFieldMapper.get_field_type_compatibility('date', 'phone'))
 
     def test_get_field_type_compatibility_edge_cases(self):
         """Test edge cases for field type compatibility."""
         # Test with invalid patient field path
-        self.assertTrue(PatientFieldMapper.get_field_type_compatibility('text', 'invalid_field'))
+        self.assertTrue(DataFieldMapper.get_field_type_compatibility('text', 'invalid_field'))
         
         # Test with None patient field path
-        self.assertTrue(PatientFieldMapper.get_field_type_compatibility('text', None))
-        self.assertTrue(PatientFieldMapper.get_field_type_compatibility('text', ''))
+        self.assertTrue(DataFieldMapper.get_field_type_compatibility('text', None))
+        self.assertTrue(DataFieldMapper.get_field_type_compatibility('text', ''))
 
 
 class FieldMappingUtilsTests(TestCase):

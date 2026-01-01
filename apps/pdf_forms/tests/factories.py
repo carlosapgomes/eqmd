@@ -74,6 +74,7 @@ class WardFactory(DjangoModelFactory):
 class PDFFormTemplateFactory(DjangoModelFactory):
     class Meta:
         model = PDFFormTemplate
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f'Form Template {n}')
     description = factory.Faker('text', max_nb_chars=200)
@@ -115,6 +116,8 @@ class PDFFormTemplateFactory(DjangoModelFactory):
     def skip_validation(obj, create, extracted, **kwargs):
         if create:
             obj._skip_validation = True
+            obj.save()
+
 
 
 class PatientFactory(DjangoModelFactory):
