@@ -7,7 +7,16 @@
       <i class="bi bi-file-earmark-pdf text-danger"></i>
     </div>
     <div class="event-info">
-      <h6 class="event-title">{{ event.form_template.name }}</h6>
+      <div class="d-flex align-items-center">
+        <h6 class="event-title mb-0">{{ event.form_template.name }}</h6>
+        {% if event.form_template.form_type == 'HOSPITAL' %}
+        <span class="badge bg-primary ms-2">Hospital</span>
+        {% elif event.form_template.form_type == 'APAC' %}
+        <span class="badge bg-success ms-2">APAC</span>
+        {% elif event.form_template.form_type == 'AIH' %}
+        <span class="badge bg-info ms-2">AIH</span>
+        {% endif %}
+      </div>
       <small class="event-meta">
         Por {{ event.created_by.get_full_name|default:event.created_by.email }} em {{ event.event_datetime|date:"d/m/Y H:i" }}
       </small>

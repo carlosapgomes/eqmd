@@ -30,14 +30,14 @@ class PDFFormTemplateAdminTests(TestCase):
     def test_admin_list_display(self):
         """Test admin list display configuration."""
         expected_list_display = [
-            'name', 'configuration_status_display', 'hospital_specific', 
+            'name', 'form_type_display', 'configuration_status_display',
             'is_active', 'created_at', 'pdf_preview', 'configure_fields'
         ]
         self.assertEqual(self.admin.list_display, expected_list_display)
 
     def test_admin_list_filter(self):
         """Test admin list filter configuration."""
-        expected_list_filter = ['hospital_specific', 'is_active', 'created_at']
+        expected_list_filter = ['form_type', 'is_active', 'created_at']
         self.assertEqual(self.admin.list_filter, expected_list_filter)
 
     def test_admin_search_fields(self):
@@ -53,9 +53,9 @@ class PDFFormTemplateAdminTests(TestCase):
     def test_admin_fieldsets(self):
         """Test admin fieldsets configuration."""
         fieldsets = self.admin.fieldsets
-        
-        # Should have 4 fieldsets
-        self.assertEqual(len(fieldsets), 4)
+
+        # Should have 5 fieldsets (we added Form Type)
+        self.assertEqual(len(fieldsets), 5)
         
         # Check fieldset titles
         fieldset_titles = [fs[0] for fs in fieldsets]
@@ -321,6 +321,207 @@ class PDFFormTemplateAdminTests(TestCase):
         with self.assertRaises(Exception):  # Should raise ValidationError
             self.admin.validate_fields_config(invalid_config)
 
+    def test_form_type_display_hospital(self):
+        """Test form_type_display method for HOSPITAL type."""
+        self.template.form_type = 'HOSPITAL'
+        self.template.save()
+
+        result = self.admin.form_type_display(self.template)
+
+        # Should return primary badge
+        self.assertIn('Hospital', result)
+        self.assertIn('bg-primary', result)
+
+    def test_form_type_display_apac(self):
+        """Test form_type_display method for APAC type."""
+        apac_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='APAC'
+        )
+
+        result = self.admin.form_type_display(apac_template)
+
+        # Should return success badge
+        self.assertIn('APAC', result)
+        self.assertIn('bg-success', result)
+
+    def test_form_type_display_aih(self):
+        """Test form_type_display method for AIH type."""
+        aih_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='AIH'
+        )
+
+        result = self.admin.form_type_display(aih_template)
+
+        # Should return info badge
+        self.assertIn('AIH', result)
+        self.assertIn('bg-info', result)
+
+    def test_export_json_template_api_not_national_form(self):
+        """Test export_json_template_api refuses non-national forms."""
+        # Create hospital form
+        hospital_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='HOSPITAL',
+            form_fields={'patient_name': {'type': 'text', 'x': 5, 'y': 10}}
+        )
+
+        url = reverse('admin:pdf_forms_pdfformtemplate_export_json_api', args=[hospital_template.id])
+        response = self.client.get(url)
+
+        # Should return error
+        self.assertEqual(response.status_code, 400)
+        data = json.loads(response.content)
+        self.assertIn('error', data)
+        self.assertIn('only available for national forms', data['error'])
+
+    def test_export_json_template_api_no_configuration(self):
+        """Test export_json_template_api with no field configuration."""
+        # Create national form without configuration
+        apac_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='APAC',
+            form_fields={}
+        )
+
+        url = reverse('admin:pdf_forms_pdfformtemplate_export_json_api', args=[apac_template.id])
+        response = self.client.get(url)
+
+        # Should return error
+        self.assertEqual(response.status_code, 400)
+        data = json.loads(response.content)
+        self.assertIn('error', data)
+        self.assertIn('No field configuration', data['error'])
+
+    def test_export_json_template_api_permission_denied(self):
+        """Test export_json_template_api with permission denied."""
+        # Create regular user
+        regular_user = UserFactory()
+        self.client.force_login(regular_user)
+
+        # Create national form with configuration
+        apac_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='APAC',
+            form_fields={'patient_name': {'type': 'text', 'x': 5, 'y': 10}}
+        )
+
+        url = reverse('admin:pdf_forms_pdfformtemplate_export_json_api', args=[apac_template.id])
+        response = self.client.get(url)
+
+        # Should return permission denied
+        self.assertEqual(response.status_code, 403)
+
+    def test_export_json_template_api_success_apac(self):
+        """Test successful export_json_template_api for APAC form."""
+        # Create APAC form with configuration
+        apac_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='APAC',
+            name='APAC Form Test',
+            description='Test APAC form for export',
+            form_fields={
+                'patient_name': {'type': 'text', 'label': 'Patient Name', 'x': 5.0, 'y': 10.0},
+                'patient_age': {'type': 'number', 'label': 'Age', 'x': 5.0, 'y': 15.0}
+            }
+        )
+
+        url = reverse('admin:pdf_forms_pdfformtemplate_export_json_api', args=[apac_template.id])
+        response = self.client.get(url)
+
+        # Should return JSON file
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/json')
+
+        # Check filename
+        self.assertIn('attachment', response['Content-Disposition'])
+        self.assertIn('apac_form_test_apac_template.json', response['Content-Disposition'].lower())
+
+        # Parse and validate JSON content
+        json_data = json.loads(response.content)
+        self.assertIn('metadata', json_data)
+        self.assertIn('form_configuration', json_data)
+
+        # Check metadata
+        metadata = json_data['metadata']
+        self.assertEqual(metadata['form_name'], 'APAC Form Test')
+        self.assertEqual(metadata['form_type'], 'APAC')
+        self.assertEqual(metadata['description'], 'Test APAC form for export')
+        self.assertIn('exported_at', metadata)
+        self.assertIn('exported_by', metadata)
+        self.assertEqual(metadata['version'], '1.0')
+
+        # Check form configuration
+        form_config = json_data['form_configuration']
+        self.assertIn('patient_name', form_config)
+        self.assertIn('patient_age', form_config)
+
+    def test_export_json_template_api_success_aih(self):
+        """Test successful export_json_template_api for AIH form."""
+        # Create AIH form with configuration
+        aih_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='AIH',
+            name='AIH Form Test',
+            description='Test AIH form for export',
+            form_fields={
+                'hospital_name': {'type': 'text', 'label': 'Hospital', 'x': 5.0, 'y': 10.0}
+            }
+        )
+
+        url = reverse('admin:pdf_forms_pdfformtemplate_export_json_api', args=[aih_template.id])
+        response = self.client.get(url)
+
+        # Should return JSON file
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/json')
+
+        # Parse and validate JSON content
+        json_data = json.loads(response.content)
+        self.assertEqual(json_data['metadata']['form_type'], 'AIH')
+        self.assertEqual(json_data['metadata']['form_name'], 'AIH Form Test')
+
+    def test_configure_fields_view_developer_mode_context(self):
+        """Test configure_fields_view includes developer mode context for national forms."""
+        # Create national form
+        apac_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='APAC'
+        )
+
+        url = reverse('admin:pdf_forms_pdfformtemplate_configure_fields', args=[apac_template.id])
+        response = self.client.get(url)
+
+        # Should return successful response
+        self.assertEqual(response.status_code, 200)
+
+        # Check that developer mode context is included
+        context = response.context
+        self.assertTrue(context.get('is_developer_mode'))
+        self.assertTrue(context.get('is_national_form'))
+        self.assertEqual(context.get('form_type'), 'APAC')
+
+    def test_configure_fields_view_hospital_mode_context(self):
+        """Test configure_fields_view does not include developer mode for hospital forms."""
+        # Create hospital form
+        hospital_template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_type='HOSPITAL'
+        )
+
+        url = reverse('admin:pdf_forms_pdfformtemplate_configure_fields', args=[hospital_template.id])
+        response = self.client.get(url)
+
+        # Should return successful response
+        self.assertEqual(response.status_code, 200)
+
+        # Check that developer mode context is False
+        context = response.context
+        self.assertFalse(context.get('is_developer_mode'))
+        self.assertFalse(context.get('is_national_form'))
+        self.assertEqual(context.get('form_type'), 'HOSPITAL')
+
 
 class PDFFormSubmissionAdminTests(TestCase):
     """Test PDFFormSubmissionAdmin functionality."""
@@ -430,7 +631,7 @@ class PDFFormSubmissionAdminTests(TestCase):
     def test_get_queryset_optimization(self):
         """Test that get_queryset optimizes with select_related."""
         queryset = self.admin.get_queryset(None)
-        
+
         # Check that related objects are selected
         self.assertIn('patient', str(queryset.query))
         self.assertIn('created_by', str(queryset.query))
