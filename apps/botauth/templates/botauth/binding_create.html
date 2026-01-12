@@ -1,0 +1,41 @@
+{% extends "base_app.html" %}
+{% load i18n %}
+
+{% block title %}Vincular Conta Matrix{% endblock %}
+
+{% block app_content %}
+<div class="container mt-4">
+    <h2>Vincular Conta Matrix</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <p class="text-muted">
+                Informe seu ID Matrix para habilitar a criação de rascunhos 
+                de documentos via bot.
+            </p>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="id_matrix_id" class="form-label">ID Matrix</label>
+                    {{ form.matrix_id }}
+                    {% if form.matrix_id.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.matrix_id.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">
+                        Exemplo: @dr.silva:matrix.hospital.br
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Vincular</button>
+                <a href="{% url 'botauth:binding_status' %}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

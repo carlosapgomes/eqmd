@@ -849,15 +849,15 @@ uv run python manage.py migrate botauth
 
 ## Acceptance Criteria
 
-- [ ] BotClientProfile model extends OIDC Client with EQMD-specific fields
-- [ ] BotClientAuditLog tracks all bot management operations
-- [ ] BotClientService can create, suspend, reactivate bots
-- [ ] Credential validation works correctly
-- [ ] Scope validation enforces allowed/forbidden lists
-- [ ] Rate limiting fields exist (enforcement in Phase 06)
-- [ ] Admin interface allows managing bots
-- [ ] Management commands work (`create_bot`, `list_bots`)
-- [ ] All tests pass
+- [x] BotClientProfile model extends OIDC Client with EQMD-specific fields
+- [x] BotClientAuditLog tracks all bot management operations
+- [x] BotClientService can create, suspend, reactivate bots
+- [x] Credential validation works correctly
+- [x] Scope validation enforces allowed/forbidden lists
+- [x] Rate limiting fields exist (enforcement in Phase 06)
+- [x] Admin interface allows managing bots
+- [x] Management commands work (`create_bot`, `list_bots`)
+- [x] All tests pass
 
 ## Verification Commands
 
