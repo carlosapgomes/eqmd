@@ -10,7 +10,17 @@ from django.apps import apps
 class DataFieldMapper:
     """
     Utilities for mapping PDF form fields to patient and hospital data.
+    Enhanced with gender auto-fill capabilities.
     """
+
+    # Gender field patterns for automatic detection
+    GENDER_FIELD_PATTERNS = {
+        'male_checkbox': ['masculino', 'male', 'homem', 'M', 'masc'],
+        'female_checkbox': ['feminino', 'female', 'mulher', 'F', 'fem'],
+        'other_checkbox': ['outro', 'other', 'O'],
+        'not_informed_checkbox': ['nao_informado', 'not_informed', 'N', 'nao_info'],
+        'gender_text': ['sexo', 'genero', 'gender', 'sex']
+    }
 
     # Available patient fields with their types and labels
     PATIENT_FIELD_MAPPINGS = {
@@ -273,6 +283,206 @@ class DataFieldMapper:
         
         compatible_types = compatibility_matrix.get(form_field_type, [])
         return data_field_type in compatible_types
+
+    @classmethod
+    def detect_gender_field_type(cls, field_name):
+        """
+        Detect if a field name corresponds to a gender field type.
+        
+        Args:
+            field_name (str): Name of the form field to analyze
+            
+        Returns:
+            str|None: Gender field type ('male_checkbox', 'female_checkbox', 
+                     'other_checkbox', 'not_informed_checkbox', 'gender_text') or None
+        """
+        if not field_name:
+            return None
+            
+        field_name_lower = field_name.lower().replace('_', '').replace('-', '')
+        
+        # Order patterns by specificity to avoid false matches
+        # More specific patterns should be checked first
+        ordered_patterns = [
+            ('female_checkbox', ['feminino', 'female', 'mulher', 'fem']),
+            ('male_checkbox', ['masculino', 'male', 'homem', 'masc']),
+            ('not_informed_checkbox', ['naoinformado', 'notinformed', 'naoinfo']),
+            ('other_checkbox', ['outro', 'other']),
+            ('gender_text', ['sexo', 'genero', 'gender', 'sex']),
+        ]
+        
+        # Check each pattern category in order using original field name with separators
+        field_name_orig = field_name.lower()
+        for gender_type, patterns in ordered_patterns:
+            for pattern in patterns:
+                pattern_lower = pattern.lower()
+                # Check for various pattern matches using original field name
+                if (pattern_lower == field_name_orig or  # exact match
+                    field_name_orig.startswith(pattern_lower + '_') or  # starts with pattern_
+                    field_name_orig.startswith(pattern_lower + '-') or  # starts with pattern-
+                    field_name_orig.endswith('_' + pattern_lower) or    # ends with _pattern
+                    field_name_orig.endswith('-' + pattern_lower) or    # ends with -pattern
+                    ('_' + pattern_lower + '_' in field_name_orig) or   # contains _pattern_
+                    ('-' + pattern_lower + '-' in field_name_orig) or   # contains -pattern-
+                    ('_' + pattern_lower + '-' in field_name_orig) or   # contains _pattern-
+                    ('-' + pattern_lower + '_' in field_name_orig)):    # contains -pattern_
+                    
+                    # Additional check: avoid false positives with "other"
+                    if gender_type == 'other_checkbox' and pattern_lower == 'other':
+                        # Only match "other" if it's clearly a gender field
+                        # e.g., "check_other", "outro", "other_checkbox" but not "checkbox_other_purpose"
+                        if ('purpose' in field_name_orig or 'reason' in field_name_orig or 
+                            'category' in field_name_orig):
+                            continue
+                    return gender_type
+                    
+                # Also check with underscores/hyphens removed for patterns like "checkfeminino"
+                pattern_clean = pattern_lower.replace('_', '').replace('-', '')
+                if pattern_clean in field_name_lower and len(pattern_clean) > 2:  # avoid single chars
+                    # Additional validation for ambiguous patterns
+                    if gender_type == 'other_checkbox' and pattern_clean == 'other':
+                        if ('purpose' in field_name_lower or 'reason' in field_name_lower or 
+                            'category' in field_name_lower):
+                            continue
+                    return gender_type
+        
+        # Check single letter patterns last (most ambiguous)
+        single_letter_patterns = {
+            'f': 'female_checkbox',
+            'm': 'male_checkbox',
+            'o': 'other_checkbox',
+            'n': 'not_informed_checkbox'
+        }
+        
+        # For single letter patterns, check if the field name is exactly the letter
+        # or if it's a clear single-letter field (like 'F_checkbox', 'M_box', etc.)
+        field_name_clean = field_name_lower.replace('checkbox', '').replace('check', '').replace('box', '').strip('_-')
+        if field_name_clean in single_letter_patterns:
+            return single_letter_patterns[field_name_clean]
+                    
+        return None
+
+    @classmethod
+    def get_gender_checkbox_pairs(cls, field_config):
+        """
+        Find gender checkbox pairs in field configuration.
+        
+        Args:
+            field_config (dict): Complete field configuration
+            
+        Returns:
+            dict: Dictionary with gender types as keys and field names as values
+        """
+        gender_fields = {}
+        
+        if not isinstance(field_config, dict):
+            return gender_fields
+            
+        # Extract just the fields config
+        if 'fields' in field_config:
+            fields_config = field_config['fields']
+        else:
+            fields_config = field_config
+            
+        # Check each field for gender patterns
+        for field_name, config in fields_config.items():
+            if not isinstance(config, dict):
+                continue
+                
+            # Only process boolean/checkbox fields
+            field_type = config.get('type', 'text')
+            if field_type != 'boolean':
+                continue
+                
+            gender_type = cls.detect_gender_field_type(field_name)
+            if gender_type and gender_type.endswith('_checkbox'):
+                gender_fields[gender_type] = field_name
+                
+        return gender_fields
+
+    @classmethod
+    def get_gender_text_fields(cls, field_config):
+        """
+        Find gender text fields in field configuration.
+        
+        Args:
+            field_config (dict): Complete field configuration
+            
+        Returns:
+            list: List of field names that appear to be gender text fields
+        """
+        gender_text_fields = []
+        
+        if not isinstance(field_config, dict):
+            return gender_text_fields
+            
+        # Extract just the fields config
+        if 'fields' in field_config:
+            fields_config = field_config['fields']
+        else:
+            fields_config = field_config
+            
+        # Check each field for gender text patterns
+        for field_name, config in fields_config.items():
+            if not isinstance(config, dict):
+                continue
+                
+            # Process text, choice, or textarea fields
+            field_type = config.get('type', 'text')
+            if field_type in ['text', 'textarea', 'choice']:
+                gender_type = cls.detect_gender_field_type(field_name)
+                if gender_type == 'gender_text':
+                    gender_text_fields.append(field_name)
+                    
+        return gender_text_fields
+
+    @classmethod
+    def process_gender_auto_fill(cls, field_config, patient_gender):
+        """
+        Process gender fields for auto-fill based on patient gender.
+        
+        Args:
+            field_config (dict): Complete field configuration
+            patient_gender (str): Patient gender value ('M', 'F', 'O', 'N')
+            
+        Returns:
+            dict: Dictionary of field names to initial values
+        """
+        initial_values = {}
+        
+        if not patient_gender or not field_config:
+            return initial_values
+            
+        # Get gender checkbox pairs
+        gender_checkboxes = cls.get_gender_checkbox_pairs(field_config)
+        
+        # Set appropriate checkbox values
+        for gender_type, field_name in gender_checkboxes.items():
+            if gender_type == 'male_checkbox' and patient_gender == 'M':
+                initial_values[field_name] = True
+            elif gender_type == 'female_checkbox' and patient_gender == 'F':
+                initial_values[field_name] = True
+            elif gender_type == 'other_checkbox' and patient_gender == 'O':
+                initial_values[field_name] = True
+            elif gender_type == 'not_informed_checkbox' and patient_gender == 'N':
+                initial_values[field_name] = True
+            else:
+                initial_values[field_name] = False
+                
+        # Get gender text fields and set display values
+        gender_text_fields = cls.get_gender_text_fields(field_config)
+        gender_display_map = {
+            'M': 'Masculino',
+            'F': 'Feminino', 
+            'O': 'Outro',
+            'N': 'Não Informado'
+        }
+        
+        display_value = gender_display_map.get(patient_gender, 'Não Informado')
+        for field_name in gender_text_fields:
+            initial_values[field_name] = display_value
+            
+        return initial_values
 
 
 class FieldMappingUtils:

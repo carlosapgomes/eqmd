@@ -77,6 +77,13 @@ class DynamicFormGenerator:
         if not is_valid:
             raise ValidationError(f"Section validation failed: {'; '.join(errors)}")
 
+        # Process gender auto-fill if patient is available
+        gender_auto_fill = {}
+        if patient and patient.gender:
+            gender_auto_fill = DataFieldMapper.process_gender_auto_fill(
+                field_config, patient.gender
+            )
+
         # Create Django form fields
         for field_name, config in fields_config.items():
             django_field = self._create_django_field(field_name, config, field_config)
@@ -98,6 +105,10 @@ class DynamicFormGenerator:
                     formatted_value = self._format_field_value(field_value, config.get('type', 'text'))
                     if formatted_value is not None:
                         initial_values[field_name] = formatted_value
+                
+                # Check for gender auto-fill (takes precedence over manual mappings)
+                if field_name in gender_auto_fill:
+                    initial_values[field_name] = gender_auto_fill[field_name]
 
         # Create form class dynamically
         form_class_name = f"{pdf_template.name.replace(' ', '')}Form"
@@ -116,6 +127,12 @@ class DynamicFormGenerator:
         
         # Store initial values as a class attribute for later use
         form_class._patient_initial_values = initial_values
+
+        # Add gender field metadata to form class
+        form_class._gender_fields = {
+            'checkboxes': DataFieldMapper.get_gender_checkbox_pairs(field_config),
+            'text_fields': DataFieldMapper.get_gender_text_fields(field_config)
+        }
 
         # Add section metadata to form class
         sections_metadata = self._organize_sections(sections_config, fields_config)

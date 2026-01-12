@@ -129,6 +129,115 @@
     }
   }
 
+  class GenderFieldsManager {
+    constructor(genderFields) {
+      this.genderCheckboxes = genderFields.checkboxes || {};
+      this.genderTextFields = genderFields.text_fields || [];
+      this.init();
+    }
+
+    init() {
+      if (Object.keys(this.genderCheckboxes).length === 0 && this.genderTextFields.length === 0) {
+        return; // No gender fields to manage
+      }
+
+      this.initializeGenderSync();
+    }
+
+    initializeGenderSync() {
+      // Handle gender checkbox synchronization
+      const checkboxFields = Object.values(this.genderCheckboxes);
+      
+      checkboxFields.forEach(fieldName => {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (field && field.type === 'checkbox') {
+          field.addEventListener('change', (e) => {
+            this.handleGenderCheckboxChange(e.target);
+          });
+        }
+      });
+
+      // Add visual feedback for auto-filled gender fields
+      this.highlightAutoFilledGenderFields();
+    }
+
+    handleGenderCheckboxChange(changedCheckbox) {
+      if (changedCheckbox.checked) {
+        // Uncheck all other gender checkboxes (radio button behavior)
+        const allGenderCheckboxes = Object.values(this.genderCheckboxes);
+        
+        allGenderCheckboxes.forEach(fieldName => {
+          if (fieldName !== changedCheckbox.name) {
+            const otherCheckbox = document.querySelector(`[name="${fieldName}"]`);
+            if (otherCheckbox) {
+              otherCheckbox.checked = false;
+            }
+          }
+        });
+
+        // Update text fields if they exist
+        this.updateGenderTextFields(changedCheckbox);
+      }
+    }
+
+    updateGenderTextFields(checkedCheckbox) {
+      const genderDisplayMap = {
+        'male_checkbox': 'Masculino',
+        'female_checkbox': 'Feminino',
+        'other_checkbox': 'Outro',
+        'not_informed_checkbox': 'Não Informado'
+      };
+
+      // Find which gender type this checkbox represents
+      let genderDisplay = '';
+      for (const [genderType, fieldName] of Object.entries(this.genderCheckboxes)) {
+        if (fieldName === checkedCheckbox.name) {
+          genderDisplay = genderDisplayMap[genderType] || '';
+          break;
+        }
+      }
+
+      // Update all gender text fields
+      this.genderTextFields.forEach(fieldName => {
+        const textField = document.querySelector(`[name="${fieldName}"]`);
+        if (textField) {
+          textField.value = genderDisplay;
+          this.addVisualFeedback(textField);
+        }
+      });
+    }
+
+    highlightAutoFilledGenderFields() {
+      // Add visual indication for auto-filled gender fields
+      const allGenderFields = [
+        ...Object.values(this.genderCheckboxes),
+        ...this.genderTextFields
+      ];
+
+      allGenderFields.forEach(fieldName => {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (field && (field.checked || field.value)) {
+          field.classList.add('auto-filled-gender');
+          
+          // Remove highlight after a delay
+          setTimeout(() => {
+            field.classList.remove('auto-filled-gender');
+          }, 2000);
+        }
+      });
+    }
+
+    addVisualFeedback(field) {
+      field.classList.remove('is-invalid');
+      field.classList.add('auto-filled', 'auto-filled-gender');
+
+      // Remove feedback after animation
+      setTimeout(() => {
+        field.classList.remove('auto-filled', 'auto-filled-gender');
+      }, 1500);
+    }
+  }
+
   // Initialize when DOM is ready
   document.addEventListener('DOMContentLoaded', function() {
     // Check if linked fields data is available
@@ -140,6 +249,18 @@
         new LinkedFieldsManager(linkedFieldsMap);
       } catch (e) {
         console.error('Failed to initialize linked fields:', e);
+      }
+    }
+
+    // Check if gender fields data is available
+    const genderFieldsData = document.getElementById('gender-fields-data');
+
+    if (genderFieldsData) {
+      try {
+        const genderFields = JSON.parse(genderFieldsData.textContent);
+        new GenderFieldsManager(genderFields);
+      } catch (e) {
+        console.error('Failed to initialize gender fields:', e);
       }
     }
   });
