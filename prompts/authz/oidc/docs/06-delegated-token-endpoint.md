@@ -608,15 +608,15 @@ uv run python manage.py migrate botauth
 
 ## Acceptance Criteria
 
-- [ ] Bot can authenticate with client_id + client_secret
-- [ ] Endpoint looks up user via Matrix binding
-- [ ] User status is validated (is_active, account_status)
-- [ ] Scopes are validated against bot permissions and user role
-- [ ] JWT is issued with correct claims (sub, azp, scope, exp)
-- [ ] Token TTL is enforced (max 10 minutes)
-- [ ] All requests are audit logged
-- [ ] Rate limiting prevents abuse
-- [ ] All tests pass
+- [x] Bot can authenticate with client_id + client_secret
+- [x] Endpoint looks up user via Matrix binding
+- [x] User status is validated (is_active, account_status)
+- [x] Scopes are validated against bot permissions and user role
+- [x] JWT is issued with correct claims (sub, azp, scope, exp)
+- [x] Token TTL is enforced (max 10 minutes)
+- [x] All requests are audit logged
+- [x] Rate limiting prevents abuse
+- [x] All tests pass
 
 ## Verification Commands
 

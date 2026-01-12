@@ -499,9 +499,9 @@ OIDC_PROVIDER = {
 }
 
 # JWT signing key configuration for delegated tokens
-# Using RS256 for production-ready security
+# Using HS256 for HMAC-based security (appropriate for delegated tokens)
 DELEGATED_TOKEN_SECRET = os.getenv('DELEGATED_TOKEN_SECRET', SECRET_KEY)
-DELEGATED_TOKEN_ALGORITHM = 'RS256'  # RSA-based for production security
+DELEGATED_TOKEN_ALGORITHM = 'HS256'  # HMAC-SHA256 for delegated tokens
 DELEGATED_TOKEN_ISSUER = os.getenv('OIDC_ISSUER', 'eqmd')
 DELEGATED_TOKEN_AUDIENCE = 'eqmd-api'
 DELEGATED_TOKEN_LIFETIME_SECONDS = 600  # 10 minutes max

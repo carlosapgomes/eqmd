@@ -317,6 +317,66 @@ class BotClientProfile(models.Model):
             return None
 
 
+class DelegationAuditLog(models.Model):
+    """
+    Audit log for delegation token issuance.
+    Records every delegated token issued for compliance and debugging.
+    """
+    
+    class Status(models.TextChoices):
+        ISSUED = 'issued', 'Token Issued'
+        DENIED_INACTIVE_USER = 'denied_inactive', 'Denied: User Inactive'
+        DENIED_INVALID_SCOPES = 'denied_scopes', 'Denied: Invalid Scopes'
+        DENIED_BOT_SUSPENDED = 'denied_bot', 'Denied: Bot Suspended'
+        DENIED_RATE_LIMITED = 'denied_rate', 'Denied: Rate Limited'
+        DENIED_NO_BINDING = 'denied_binding', 'Denied: No Matrix Binding'
+        DENIED_DELEGATION_DISABLED = 'denied_disabled', 'Denied: Delegation Disabled'
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Request info
+    bot_client_id = models.CharField(max_length=255)
+    bot_name = models.CharField(max_length=100)
+    matrix_id = models.CharField(max_length=255)
+    requested_scopes = models.JSONField(default=list)
+    
+    # User info (may be null if binding not found)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='delegation_audit_logs'
+    )
+    user_email = models.EmailField(blank=True)
+    
+    # Result
+    status = models.CharField(max_length=30, choices=Status.choices)
+    granted_scopes = models.JSONField(default=list)
+    token_jti = models.CharField(max_length=36, blank=True)  # JWT ID if issued
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    
+    # Error details
+    error_message = models.TextField(blank=True)
+    
+    # Request metadata
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Delegation Audit Log'
+        verbose_name_plural = 'Delegation Audit Logs'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['bot_client_id', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.status} - {self.bot_name} for {self.user_email} @ {self.created_at}"
+
+
 class BotClientAuditLog(models.Model):
     """
     Audit log for bot client operations.
