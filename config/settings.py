@@ -95,6 +95,9 @@ INSTALLED_APPS = [
     "apps.pdfgenerator",  # PDF generator app
     "apps.dischargereports",  # Discharge reports app
     "apps.research",  # Clinical research app
+    # Bot Authentication (OIDC-based delegation)
+    "apps.botauth.apps.BotauthConfig",  # Bot authentication app
+    "oidc_provider",  # OIDC Provider (for bot delegation)
     # django-allauth
     "allauth",
     "allauth.account",
@@ -449,3 +452,56 @@ LOGGING = {
         },
     },
 }
+
+# =============================================================================
+# OIDC Provider Configuration (for Bot Delegation)
+# =============================================================================
+
+OIDC_PROVIDER = {
+    # Issuer identifier - must match what's in JWTs
+    'OIDC_ISSUER': os.getenv('OIDC_ISSUER', 'https://eqmd.local'),
+    
+    # Token expiration (these are defaults, delegation endpoint overrides)
+    'OIDC_TOKEN_EXPIRE': 600,  # 10 minutes max for delegated tokens
+    'OIDC_CODE_EXPIRE': 60,    # 1 minute for auth codes (not used for bots)
+    
+    # ID Token expiration
+    'OIDC_IDTOKEN_EXPIRE': 600,
+    
+    # Disable refresh tokens for bot clients
+    'OIDC_TOKEN_INTROSPECTION_ENABLED': True,
+    
+    # Custom claims (we'll add physician info)
+    'OIDC_EXTRA_SCOPE_CLAIMS': 'apps.botauth.claims.EqmdScopeClaims',
+    
+    # Session management (disabled for bots)
+    'OIDC_SESSION_MANAGEMENT_ENABLE': False,
+    
+    # Grant types allowed
+    'OIDC_GRANT_TYPE_SUPPORTED': [
+        'client_credentials',  # For bot authentication
+    ],
+    
+    # Response types (minimal for our use case)
+    'OIDC_RESPONSE_TYPES_SUPPORTED': [
+        'token',
+    ],
+    
+    # Scopes we support
+    'OIDC_SCOPES': {
+        'patient:read': 'Read patient demographics and status',
+        'exam:read': 'Read exam results',
+        'dailynote:draft': 'Create daily note drafts',
+        'dischargereport:draft': 'Create discharge report drafts',
+        'prescription:draft': 'Create prescription drafts',
+        'summary:generate': 'Generate summaries from existing data',
+    },
+}
+
+# JWT signing key configuration for delegated tokens
+# Using RS256 for production-ready security
+DELEGATED_TOKEN_SECRET = os.getenv('DELEGATED_TOKEN_SECRET', SECRET_KEY)
+DELEGATED_TOKEN_ALGORITHM = 'RS256'  # RSA-based for production security
+DELEGATED_TOKEN_ISSUER = os.getenv('OIDC_ISSUER', 'eqmd')
+DELEGATED_TOKEN_AUDIENCE = 'eqmd-api'
+DELEGATED_TOKEN_LIFETIME_SECONDS = 600  # 10 minutes max
