@@ -1,0 +1,65 @@
+{% extends "pdf_forms/base.html" %}
+{% load static %}
+
+{% block page_title %}Formulário AIH - {{ patient.name }}{% endblock %}
+
+{% block app_content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.id %}">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline do Paciente
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'pdf_forms:form_select' patient.id %}">
+        Formulários PDF
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      Formulário AIH
+    </li>
+  </ol>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Patient header -->
+      <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-file-earmark-medical me-2"></i>
+            Formulário AIH - {{ patient.name }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-0">
+            Formulário de Autorização de Internação Hospitalar
+          </p>
+        </div>
+      </div>
+
+      <!-- Development Notice -->
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Em Desenvolvimento</strong>
+        <p class="mb-0">
+          O formulário AIH está em desenvolvimento e estará disponível em breve.
+          Enquanto isso, você pode continuar utilizando os outros formulários disponíveis.
+        </p>
+      </div>
+
+      <!-- Back Button -->
+      <div class="text-center">
+        <a href="{% url 'pdf_forms:form_select' patient.id %}" class="btn btn-primary">
+          <i class="bi bi-arrow-left me-1"></i>
+          Voltar para Seleção de Formulários
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

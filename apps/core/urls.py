@@ -4,6 +4,7 @@ from . import test_views
 # from . import test_views_hospital_context  # Temporarily disabled for single-hospital refactor
 from . import test_views_role_permissions
 from . import permission_demo
+from .api import procedures as procedures_api
 
 app_name = "apps.core"
 
@@ -142,5 +143,22 @@ urlpatterns = [
         "demo/permissions/comparison/",
         permission_demo.demo_role_comparison,
         name="permission_demo_comparison",
+    ),
+    
+    # API endpoints for procedures
+    path(
+        "api/procedures/search/",
+        procedures_api.procedures_search,
+        name="procedures_search_api"
+    ),
+    path(
+        "api/procedures/<uuid:procedure_id>/",
+        procedures_api.procedure_detail,
+        name="procedure_detail_api"
+    ),
+    path(
+        "api/procedures/",
+        procedures_api.procedures_list,
+        name="procedures_list_api"
     ),
 ]

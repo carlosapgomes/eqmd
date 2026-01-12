@@ -1,0 +1,307 @@
+{% extends "pdf_forms/base.html" %}
+{% load static %}
+
+{% block page_title %}Formulário APAC - {{ patient.name }}{% endblock %}
+
+{% block app_content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.id %}">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline do Paciente
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'pdf_forms:form_select' patient.id %}">
+        Formulários PDF
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      Formulário APAC
+    </li>
+  </ol>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Patient header -->
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-file-earmark-medical me-2"></i>
+            Formulário APAC - {{ patient.name }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-0">
+            Formulário de Autorização de Procedimentos de Alta Complexidade
+          </p>
+        </div>
+      </div>
+
+      <!-- APAC Form -->
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">
+            <i class="bi bi-pencil-square me-2"></i>
+            Preenchimento do Formulário
+          </h6>
+        </div>
+        <div class="card-body">
+          <form method="post" id="apac-form">
+            {% csrf_token %}
+
+            <!-- Patient Information Section -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <h6 class="border-bottom pb-2 mb-3">
+                  <i class="bi bi-person me-2"></i>
+                  Dados do Paciente
+                </h6>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.patient_name.id_for_label }}" class="form-label">
+                    {{ form.patient_name.label }}
+                  </label>
+                  {{ form.patient_name }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.patient_gender.id_for_label }}" class="form-label">
+                    {{ form.patient_gender.label }}
+                  </label>
+                  {{ form.patient_gender }}
+                </div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.patient_birth_date.id_for_label }}" class="form-label">
+                    {{ form.patient_birth_date.label }}
+                  </label>
+                  {{ form.patient_birth_date }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.patient_cns.id_for_label }}" class="form-label">
+                    {{ form.patient_cns.label }}
+                  </label>
+                  {{ form.patient_cns }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Procedure Section -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <h6 class="border-bottom pb-2 mb-3">
+                  <i class="bi bi-clipboard2-pulse me-2"></i>
+                  Procedimento Autorizado
+                </h6>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="{{ form.procedure.id_for_label }}" class="form-label">
+                    {{ form.procedure.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.procedure }}
+                  <div class="form-text">
+                    Digite o código ou descrição do procedimento para buscar
+                  </div>
+                  {% if form.procedure.help_text %}
+                  <div class="form-text">{{ form.procedure.help_text }}</div>
+                  {% endif %}
+                  <div id="procedure-results" class="dropdown-menu w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.apac_type.id_for_label }}" class="form-label">
+                    {{ form.apac_type.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.apac_type }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.authorization_date.id_for_label }}" class="form-label">
+                    {{ form.authorization_date.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.authorization_date }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Diagnosis Section -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <h6 class="border-bottom pb-2 mb-3">
+                  <i class="bi bi-clipboard2-data me-2"></i>
+                  Diagnóstico
+                </h6>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <label for="{{ form.cid_code.id_for_label }}" class="form-label">
+                    {{ form.cid_code.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.cid_code }}
+                  {% if form.cid_code.help_text %}
+                  <div class="form-text">{{ form.cid_code.help_text }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-8">
+                <div class="mb-3">
+                  <label for="{{ form.main_diagnosis.id_for_label }}" class="form-label">
+                    {{ form.main_diagnosis.label }}
+                    <span class="text-danger">*</span>
+                  </label>
+                  {{ form.main_diagnosis }}
+                </div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-12">
+                <div class="mb-3">
+                  <label for="{{ form.additional_info.id_for_label }}" class="form-label">
+                    {{ form.additional_info.label }}
+                  </label>
+                  {{ form.additional_info }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="row">
+              <div class="col-12">
+                <hr>
+                <div class="d-flex justify-content-between">
+                  <a href="{% url 'pdf_forms:form_select' patient.id %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Cancelar
+                  </a>
+                  <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Salvar Formulário APAC
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Procedure search functionality
+    const procedureInput = $('#{{ form.procedure.id_for_label }}');
+    const resultsContainer = $('#procedure-results');
+    let searchTimeout;
+
+    procedureInput.on('input', function() {
+        const query = $(this).val().trim();
+        
+        // Clear previous timeout
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            resultsContainer.hide();
+            return;
+        }
+        
+        // Debounce search
+        searchTimeout = setTimeout(function() {
+            $.ajax({
+                url: '{% url "apps.core:procedures_search_api" %}',
+                method: 'GET',
+                data: {
+                    q: query,
+                    limit: 10
+                },
+                success: function(response) {
+                    displayResults(response.results);
+                },
+                error: function() {
+                    console.error('Error searching procedures');
+                }
+            });
+        }, 300);
+    });
+
+    function displayResults(results) {
+        resultsContainer.empty();
+        
+        if (results.length === 0) {
+            resultsContainer.hide();
+            return;
+        }
+        
+        results.forEach(function(procedure) {
+            const item = $('<div class="dropdown-item">')
+                .html(`
+                    <strong>${procedure.code}</strong><br>
+                    <small class="text-muted">${procedure.short_description || procedure.description}</small>
+                `)
+                .css('cursor', 'pointer')
+                .on('click', function() {
+                    procedureInput.val(`${procedure.code} - ${procedure.description}`);
+                    procedureInput.data('procedure-id', procedure.id);
+                    resultsContainer.hide();
+                });
+            
+            resultsContainer.append(item);
+        });
+        
+        resultsContainer.show();
+    }
+
+    // Hide results when clicking outside
+    $(document).on('click', function(e) {
+        if (!procedureInput.is(e.target) && !resultsContainer.is(e.target)) {
+            resultsContainer.hide();
+        }
+    });
+
+    // Form validation
+    $('#apac-form').on('submit', function(e) {
+        const procedureValue = procedureInput.val().trim();
+        if (!procedureValue || !procedureInput.data('procedure-id')) {
+            e.preventDefault();
+            alert('Por favor, selecione um procedimento válido da lista de sugestões.');
+            procedureInput.focus();
+        }
+    });
+});
+</script>
+{% endblock %}
