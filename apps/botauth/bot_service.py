@@ -12,27 +12,12 @@ from .models import BotClientProfile, BotClientAuditLog
 logger = logging.getLogger('security.bot_management')
 
 
-# Default scopes that can be assigned to bots
-ALLOWED_BOT_SCOPES = [
-    'patient:read',
-    'exam:read',
-    'dailynote:draft',
-    'dischargereport:draft',
-    'prescription:draft',
-    'summary:generate',
-]
+# Import scope utilities from the centralized scope registry
+from .scopes import get_allowed_bot_scopes, get_forbidden_bot_scopes
 
-# Scopes that must NEVER be assigned to bots
-FORBIDDEN_BOT_SCOPES = [
-    'patient:write',
-    'note:finalize',
-    'prescription:sign',
-    'discharge:finalize',
-    'user:read',
-    'user:write',
-    'admin:read',
-    'admin:write',
-]
+# Use these functions instead of hardcoded lists
+ALLOWED_BOT_SCOPES = get_allowed_bot_scopes()
+FORBIDDEN_BOT_SCOPES = get_forbidden_bot_scopes()
 
 
 class BotClientService:

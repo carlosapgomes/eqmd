@@ -104,7 +104,7 @@ Phases MUST be executed in order. Each phase has explicit acceptance criteria th
 | 02    | OIDC Provider Setup        | ✅       | Install django-oidc-provider, zero behavior change |
 | 03    | Matrix Identity Binding    | ✅       | Link Matrix IDs to EQMD users                      |
 | 04    | Bot Client Registration    | ✅       | Model bots as OIDC clients                         |
-| 05    | Scope System               | Yes      | Define and enforce authorization scopes            |
+| 05    | Scope System               | ✅       | Define and enforce authorization scopes            |
 | 06    | Delegated Token Endpoint   | Yes      | Core delegation mechanism                          |
 | 07    | DRF Authentication Backend | Yes      | Validate delegated JWTs in API                     |
 | 08    | Bot API Layer              | Yes      | REST API for bot operations                        |
