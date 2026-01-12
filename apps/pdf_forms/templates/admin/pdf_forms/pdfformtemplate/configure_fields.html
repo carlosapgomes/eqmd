@@ -912,9 +912,25 @@ body.modal-open {
 {% block content %}
 <h1>{{ title }}</h1>
 
+{% if is_developer_mode %}
+<div class="alert alert-warning" style="margin: 15px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; color: #856404;">
+    <strong>🔧 Developer Mode - National Form ({{ form_type }})</strong>
+    <br>• This form is in developer mode for JSON template generation
+    <br>• Use the visual configurator to design the form layout
+    <br>• Export the JSON template and include it in the codebase
+    <br>• The template will be used for the hardcoded {{ form_type }} form implementation
+    <br>• Changes made here will be exported as JSON for the development team
+</div>
+{% endif %}
+
 <div class="toolbar">
     <button class="btn btn-primary" id="add-field-btn">Add Field</button>
     <button class="btn btn-success" id="save-fields-btn">Save Configuration</button>
+    {% if is_developer_mode %}
+    <button class="btn btn-info" id="export-json-btn">
+        <i class="bi bi-download"></i> Export JSON Template
+    </button>
+    {% endif %}
     <button class="btn btn-secondary" onclick="window.history.back()">Back to Template</button>
     
     <div style="float: right;">
@@ -1618,7 +1634,15 @@ function setupEventListeners() {
     
     // Save fields button
     document.getElementById('save-fields-btn').addEventListener('click', saveFields);
-    
+
+    {% if is_developer_mode %}
+    // Export JSON template button (developer mode only)
+    const exportBtn = document.getElementById('export-json-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportJSONTemplate);
+    }
+    {% endif %}
+
     // Field form changes
     document.getElementById('field-form').addEventListener('input', updateSelectedField);
     document.getElementById('field-type').addEventListener('change', handleFieldTypeChange);
@@ -2384,6 +2408,62 @@ function saveFields() {
         saveBtn.disabled = false;
     });
 }
+
+{% if is_developer_mode %}
+function exportJSONTemplate() {
+    // Save current field before exporting
+    if (selectedField) {
+        updateSelectedField();
+    }
+
+    const templateId = '{{ template.id }}';
+    const apiUrl = `../api/export-json/`;
+
+    // Show loading state
+    const exportBtn = document.getElementById('export-json-btn');
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '<i class="bi bi-spinner spinner-border-sm"></i> Exporting...';
+    exportBtn.disabled = true;
+
+    fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Export failed');
+            });
+        }
+    })
+    .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = blob.type.includes('json') ?
+            `{{ template.name|lower|slice:":30" }}_{{ template.form_type|lower }}_template.json` :
+            'template.json';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showSuccess('JSON template exported successfully! You can now include this file in the codebase.');
+    })
+    .catch(error => {
+        showError('Error exporting JSON template: ' + error.message);
+    })
+    .finally(() => {
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+    });
+}
+{% endif %}
 
 // Section Management Functions
 function updateSectionsList() {

@@ -5,15 +5,18 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.core.exceptions import ValidationError, PermissionDenied
+from django.conf import settings
 import json
+import os
+from datetime import datetime
 from .models import PDFFormTemplate, PDFFormSubmission
 from .services.field_mapping import DataFieldMapper
 
 
 @admin.register(PDFFormTemplate)
 class PDFFormTemplateAdmin(admin.ModelAdmin):
-    list_display = ['name', 'configuration_status_display', 'hospital_specific', 'is_active', 'created_at', 'pdf_preview', 'configure_fields']
-    list_filter = ['hospital_specific', 'is_active', 'created_at']
+    list_display = ['name', 'form_type_display', 'configuration_status_display', 'is_active', 'created_at', 'pdf_preview', 'configure_fields']
+    list_filter = ['form_type', 'is_active', 'created_at']
     search_fields = ['name', 'description']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
     
@@ -27,8 +30,12 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
             'description': 'Optional: Manually configure field positions using JSON, or leave empty and use the visual configurator after saving.',
             'classes': ('collapse',)
         }),
+        ('Form Type', {
+            'fields': ('form_type',),
+            'description': 'Select the type of form. National forms (APAC/AIH) enable developer mode for JSON template generation.'
+        }),
         ('Settings', {
-            'fields': ('hospital_specific', 'is_active')
+            'fields': ('is_active',)
         }),
         ('Audit', {
             'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
@@ -55,6 +62,11 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.save_fields_api),
                 name='pdf_forms_pdfformtemplate_save_fields_api'
             ),
+            path(
+                '<path:object_id>/api/export-json/',
+                self.admin_site.admin_view(self.export_json_template_api),
+                name='pdf_forms_pdfformtemplate_export_json_api'
+            ),
         ]
         return custom_urls + urls
     
@@ -68,6 +80,9 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
         
         # Get available auto-fill choices for mapping (patient and hospital data)
         auto_fill_choices = DataFieldMapper.get_auto_fill_choices()
+
+        # Check if this is developer mode for national forms
+        is_developer_mode = template.is_national_form
 
         context = {
             'template': template,
@@ -89,6 +104,9 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
             'auto_fill_choices': auto_fill_choices,
             'current_fields_json': json.dumps(template.form_fields or {}),
             'admin_media_prefix': '/static/admin/',
+            'is_developer_mode': is_developer_mode,
+            'is_national_form': template.is_national_form,
+            'form_type': template.form_type,
         }
         
         return render(request, 'admin/pdf_forms/pdfformtemplate/configure_fields.html', context)
@@ -245,7 +263,61 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
                 return format_html('<a href="{}" class="button" style="background-color: #ffc107; color: #000;">Configurar Campos</a>', url)
         return "Upload PDF first"
     configure_fields.short_description = "Configuração"
-    
+
+    def form_type_display(self, obj):
+        """Display form type with colored badge."""
+        if obj.form_type == 'HOSPITAL':
+            return format_html('<span class="badge bg-primary">Hospital</span>')
+        elif obj.form_type == 'APAC':
+            return format_html('<span class="badge bg-success">APAC</span>')
+        elif obj.form_type == 'AIH':
+            return format_html('<span class="badge bg-info">AIH</span>')
+        else:
+            return format_html('<span class="badge bg-secondary">{}</span>', obj.form_type)
+    form_type_display.short_description = "Tipo"
+
+    def export_json_template_api(self, request, object_id):
+        """API endpoint to export field configuration as JSON template for national forms."""
+        template = get_object_or_404(PDFFormTemplate, id=object_id)
+        
+        # Ensure user has permission to change this template
+        if not self.has_change_permission(request, template):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Only allow export for national forms
+        if not template.is_national_form:
+            return JsonResponse({'error': 'JSON export is only available for national forms (APAC/AIH)'}, status=400)
+        
+        if not template.form_fields:
+            return JsonResponse({'error': 'No field configuration to export'}, status=400)
+        
+        try:
+            # Create JSON template with metadata
+            json_template = {
+                'metadata': {
+                    'form_name': template.name,
+                    'form_type': template.form_type,
+                    'description': template.description,
+                    'exported_at': datetime.now().isoformat(),
+                    'exported_by': request.user.get_full_name() or request.user.email,
+                    'version': '1.0'
+                },
+                'form_configuration': template.form_fields
+            }
+            
+            # Generate filename
+            safe_form_name = template.name.lower().replace(' ', '_').replace('-', '_')
+            filename = f"{safe_form_name}_{template.form_type.lower()}_template.json"
+            
+            # Create JSON response
+            response = HttpResponse(json.dumps(json_template, indent=2), content_type='application/json')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            return JsonResponse({'error': f'Error exporting JSON template: {str(e)}'}, status=500)
+
     def save_model(self, request, obj, form, change):
         if not change:
             obj.created_by = request.user
