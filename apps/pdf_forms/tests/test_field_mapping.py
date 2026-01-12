@@ -401,3 +401,319 @@ class FieldMappingUtilsTests(TestCase):
         # Should return default configuration
         self.assertIsInstance(config, dict)
         self.assertIn('patient_name', config)
+
+
+class DataFieldMapperGenderTests(TestCase):
+    """Test gender-specific functionality in DataFieldMapper."""
+
+    def test_detect_gender_field_type_male_checkbox(self):
+        """Test detection of male checkbox field patterns."""
+        male_field_names = [
+            'masculino',
+            'male',
+            'homem', 
+            'M',
+            'masc',
+            'check_masculino',
+            'masculino_box',
+            'male-checkbox'
+        ]
+        
+        for field_name in male_field_names:
+            result = DataFieldMapper.detect_gender_field_type(field_name)
+            self.assertEqual(result, 'male_checkbox', 
+                           f"Field '{field_name}' should be detected as male_checkbox")
+
+    def test_detect_gender_field_type_female_checkbox(self):
+        """Test detection of female checkbox field patterns."""
+        female_field_names = [
+            'feminino',
+            'female',
+            'mulher',
+            'F',
+            'fem',
+            'check_feminino',
+            'female_box',
+            'feminino-checkbox'
+        ]
+        
+        for field_name in female_field_names:
+            result = DataFieldMapper.detect_gender_field_type(field_name)
+            self.assertEqual(result, 'female_checkbox', 
+                           f"Field '{field_name}' should be detected as female_checkbox")
+
+    def test_detect_gender_field_type_other_checkbox(self):
+        """Test detection of other checkbox field patterns."""
+        other_field_names = [
+            'outro',
+            'other',
+            'O',
+            'check_outro',
+            'other_checkbox'
+        ]
+        
+        for field_name in other_field_names:
+            result = DataFieldMapper.detect_gender_field_type(field_name)
+            self.assertEqual(result, 'other_checkbox', 
+                           f"Field '{field_name}' should be detected as other_checkbox")
+
+    def test_detect_gender_field_type_not_informed_checkbox(self):
+        """Test detection of not informed checkbox field patterns."""
+        not_informed_field_names = [
+            'nao_informado',
+            'not_informed',
+            'N',
+            'nao_info',
+            'check_nao_informado'
+        ]
+        
+        for field_name in not_informed_field_names:
+            result = DataFieldMapper.detect_gender_field_type(field_name)
+            self.assertEqual(result, 'not_informed_checkbox', 
+                           f"Field '{field_name}' should be detected as not_informed_checkbox")
+
+    def test_detect_gender_field_type_text_fields(self):
+        """Test detection of gender text field patterns."""
+        gender_text_field_names = [
+            'sexo',
+            'genero',
+            'gender',
+            'sex',
+            'campo_sexo',
+            'gender_field'
+        ]
+        
+        for field_name in gender_text_field_names:
+            result = DataFieldMapper.detect_gender_field_type(field_name)
+            self.assertEqual(result, 'gender_text', 
+                           f"Field '{field_name}' should be detected as gender_text")
+
+    def test_detect_gender_field_type_non_gender_fields(self):
+        """Test detection with non-gender field names."""
+        non_gender_field_names = [
+            'patient_name',
+            'birthday', 
+            'address',
+            'phone',
+            'some_random_field',
+            'checkbox_other_purpose'
+        ]
+        
+        for field_name in non_gender_field_names:
+            result = DataFieldMapper.detect_gender_field_type(field_name)
+            self.assertIsNone(result, 
+                           f"Field '{field_name}' should not be detected as gender field")
+
+    def test_detect_gender_field_type_edge_cases(self):
+        """Test edge cases for gender field detection."""
+        # Empty or None field names
+        self.assertIsNone(DataFieldMapper.detect_gender_field_type(None))
+        self.assertIsNone(DataFieldMapper.detect_gender_field_type(''))
+        
+        # Case insensitive matching
+        self.assertEqual(DataFieldMapper.detect_gender_field_type('MASCULINO'), 'male_checkbox')
+        self.assertEqual(DataFieldMapper.detect_gender_field_type('Feminino'), 'female_checkbox')
+        
+        # Underscore and hyphen handling
+        self.assertEqual(DataFieldMapper.detect_gender_field_type('check-masculino'), 'male_checkbox')
+        self.assertEqual(DataFieldMapper.detect_gender_field_type('field_feminino'), 'female_checkbox')
+
+    def test_get_gender_checkbox_pairs(self):
+        """Test finding gender checkbox pairs in field configuration."""
+        field_config = {
+            'masculino_check': {
+                'type': 'boolean',
+                'label': 'Masculino',
+                'x': 5.0, 'y': 10.0
+            },
+            'feminino_check': {
+                'type': 'boolean',
+                'label': 'Feminino', 
+                'x': 8.0, 'y': 10.0
+            },
+            'patient_name': {
+                'type': 'text',
+                'label': 'Nome do Paciente'
+            },
+            'outro_checkbox': {
+                'type': 'boolean',
+                'label': 'Outro'
+            }
+        }
+        
+        gender_checkboxes = DataFieldMapper.get_gender_checkbox_pairs(field_config)
+        
+        # Should find male and female checkboxes
+        self.assertEqual(gender_checkboxes['male_checkbox'], 'masculino_check')
+        self.assertEqual(gender_checkboxes['female_checkbox'], 'feminino_check')
+        self.assertEqual(gender_checkboxes['other_checkbox'], 'outro_checkbox')
+        
+        # Should not include text fields
+        self.assertNotIn('gender_text', gender_checkboxes)
+
+    def test_get_gender_checkbox_pairs_sectioned_config(self):
+        """Test finding gender checkboxes in sectioned field configuration."""
+        field_config = {
+            'sections': {
+                'patient_info': {'name': 'Patient Information', 'order': 1}
+            },
+            'fields': {
+                'masculino': {
+                    'type': 'boolean',
+                    'label': 'Masculino',
+                    'section': 'patient_info'
+                },
+                'feminino': {
+                    'type': 'boolean',
+                    'label': 'Feminino',
+                    'section': 'patient_info'
+                }
+            }
+        }
+        
+        gender_checkboxes = DataFieldMapper.get_gender_checkbox_pairs(field_config)
+        
+        self.assertEqual(gender_checkboxes['male_checkbox'], 'masculino')
+        self.assertEqual(gender_checkboxes['female_checkbox'], 'feminino')
+
+    def test_get_gender_text_fields(self):
+        """Test finding gender text fields in field configuration."""
+        field_config = {
+            'sexo': {
+                'type': 'text',
+                'label': 'Sexo',
+                'x': 5.0, 'y': 15.0
+            },
+            'genero_choice': {
+                'type': 'choice',
+                'label': 'Gênero',
+                'choices': ['M', 'F']
+            },
+            'patient_name': {
+                'type': 'text',
+                'label': 'Nome do Paciente'
+            },
+            'masculino_check': {
+                'type': 'boolean',
+                'label': 'Masculino'
+            }
+        }
+        
+        gender_text_fields = DataFieldMapper.get_gender_text_fields(field_config)
+        
+        # Should find text and choice gender fields
+        self.assertIn('sexo', gender_text_fields)
+        self.assertIn('genero_choice', gender_text_fields)
+        
+        # Should not include non-gender fields or checkboxes
+        self.assertNotIn('patient_name', gender_text_fields)
+        self.assertNotIn('masculino_check', gender_text_fields)
+
+    def test_process_gender_auto_fill_male(self):
+        """Test gender auto-fill processing for male patient."""
+        field_config = {
+            'masculino': {'type': 'boolean', 'label': 'Masculino'},
+            'feminino': {'type': 'boolean', 'label': 'Feminino'},
+            'outro': {'type': 'boolean', 'label': 'Outro'},
+            'sexo': {'type': 'text', 'label': 'Sexo'},
+            'patient_name': {'type': 'text', 'label': 'Nome'}
+        }
+        
+        initial_values = DataFieldMapper.process_gender_auto_fill(field_config, 'M')
+        
+        # Male checkbox should be checked
+        self.assertTrue(initial_values['masculino'])
+        self.assertFalse(initial_values['feminino'])
+        self.assertFalse(initial_values['outro'])
+        
+        # Text field should have display value
+        self.assertEqual(initial_values['sexo'], 'Masculino')
+        
+        # Non-gender fields should not be affected
+        self.assertNotIn('patient_name', initial_values)
+
+    def test_process_gender_auto_fill_female(self):
+        """Test gender auto-fill processing for female patient."""
+        field_config = {
+            'masculino': {'type': 'boolean', 'label': 'Masculino'},
+            'feminino': {'type': 'boolean', 'label': 'Feminino'},
+            'sexo': {'type': 'text', 'label': 'Sexo'}
+        }
+        
+        initial_values = DataFieldMapper.process_gender_auto_fill(field_config, 'F')
+        
+        # Female checkbox should be checked
+        self.assertFalse(initial_values['masculino'])
+        self.assertTrue(initial_values['feminino'])
+        
+        # Text field should have display value
+        self.assertEqual(initial_values['sexo'], 'Feminino')
+
+    def test_process_gender_auto_fill_other(self):
+        """Test gender auto-fill processing for other gender."""
+        field_config = {
+            'masculino': {'type': 'boolean', 'label': 'Masculino'},
+            'feminino': {'type': 'boolean', 'label': 'Feminino'},
+            'outro': {'type': 'boolean', 'label': 'Outro'},
+            'genero': {'type': 'choice', 'label': 'Gênero', 'choices': ['M', 'F', 'O']}
+        }
+        
+        initial_values = DataFieldMapper.process_gender_auto_fill(field_config, 'O')
+        
+        # Other checkbox should be checked
+        self.assertFalse(initial_values['masculino'])
+        self.assertFalse(initial_values['feminino'])
+        self.assertTrue(initial_values['outro'])
+        
+        # Text field should have display value
+        self.assertEqual(initial_values['genero'], 'Outro')
+
+    def test_process_gender_auto_fill_not_informed(self):
+        """Test gender auto-fill processing for not informed gender."""
+        field_config = {
+            'masculino': {'type': 'boolean', 'label': 'Masculino'},
+            'feminino': {'type': 'boolean', 'label': 'Feminino'},
+            'nao_informado': {'type': 'boolean', 'label': 'Não Informado'},
+            'sexo': {'type': 'text', 'label': 'Sexo'}
+        }
+        
+        initial_values = DataFieldMapper.process_gender_auto_fill(field_config, 'N')
+        
+        # Not informed checkbox should be checked
+        self.assertFalse(initial_values['masculino'])
+        self.assertFalse(initial_values['feminino'])
+        self.assertTrue(initial_values['nao_informado'])
+        
+        # Text field should have display value
+        self.assertEqual(initial_values['sexo'], 'Não Informado')
+
+    def test_process_gender_auto_fill_no_gender_fields(self):
+        """Test gender auto-fill processing when no gender fields exist."""
+        field_config = {
+            'patient_name': {'type': 'text', 'label': 'Nome do Paciente'},
+            'birthday': {'type': 'date', 'label': 'Data de Nascimento'}
+        }
+        
+        initial_values = DataFieldMapper.process_gender_auto_fill(field_config, 'M')
+        
+        # Should return empty dict when no gender fields found
+        self.assertEqual(initial_values, {})
+
+    def test_process_gender_auto_fill_edge_cases(self):
+        """Test gender auto-fill processing edge cases."""
+        field_config = {
+            'masculino': {'type': 'boolean', 'label': 'Masculino'},
+            'sexo': {'type': 'text', 'label': 'Sexo'}
+        }
+        
+        # Test with None gender
+        initial_values = DataFieldMapper.process_gender_auto_fill(field_config, None)
+        self.assertEqual(initial_values, {})
+        
+        # Test with empty gender
+        initial_values = DataFieldMapper.process_gender_auto_fill(field_config, '')
+        self.assertEqual(initial_values, {})
+        
+        # Test with None field config
+        initial_values = DataFieldMapper.process_gender_auto_fill(None, 'M')
+        self.assertEqual(initial_values, {})
