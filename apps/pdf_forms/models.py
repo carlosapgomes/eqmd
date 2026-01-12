@@ -46,7 +46,19 @@ class PDFFormTemplate(models.Model):
             PDFFormSecurity.validate_field_configuration(self.form_fields)
             return self.form_fields
 
-    # Hospital customization
+    # Form type selection
+    form_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('HOSPITAL', 'Hospital Specific'),
+            ('APAC', 'APAC National'),
+            ('AIH', 'AIH National'),
+        ],
+        default='HOSPITAL',
+        verbose_name="Tipo de Formulário"
+    )
+
+    # Hospital customization (kept for backward compatibility)
     hospital_specific = models.BooleanField(
         default=True,
         verbose_name="Específico do Hospital"
@@ -110,6 +122,11 @@ class PDFFormTemplate(models.Model):
         if not self.form_fields:
             return False
         return 'data_sources' in self.form_fields
+
+    @property
+    def is_national_form(self):
+        """Check if this is a national form (APAC/AIH)."""
+        return self.form_type in ['APAC', 'AIH']
     
     @property 
     def configuration_status(self):
@@ -132,6 +149,7 @@ class PDFFormTemplate(models.Model):
         indexes = [
             models.Index(fields=['is_active'], name='pdf_form_template_active_idx'),
             models.Index(fields=['hospital_specific'], name='pdf_form_template_hospital_idx'),
+            models.Index(fields=['form_type'], name='pdf_form_template_type_idx'),
         ]
 
 

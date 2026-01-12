@@ -43,37 +43,115 @@
         </div>
       </div>
 
-      <!-- Form templates -->
-      {% if form_templates %}
-      <div class="row">
-        {% for template in form_templates %}
-        <div class="col-md-6 col-lg-4 mb-3">
-          <div class="card h-100">
-            <div class="card-body">
-              <h6 class="card-title">
-                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
-                {{ template.name }}
-              </h6>
-              {% if template.description %}
-              <p class="card-text text-muted small">
-                {{ template.description }}
-              </p>
-              {% endif %}
+      <!-- Hospital Forms Section -->
+      {% if hospital_forms %}
+      <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+          <h6 class="mb-0">
+            <i class="bi bi-hospital me-2"></i>
+            Formulários do Hospital
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            {% for template in hospital_forms %}
+            <div class="col-md-6 col-lg-4 mb-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                    {{ template.name }}
+                  </h6>
+                  {% if template.description %}
+                  <p class="card-text text-muted small">
+                    {{ template.description }}
+                  </p>
+                  {% endif %}
+                </div>
+                <div class="card-footer">
+                  <a
+                    href="{% url 'pdf_forms:form_fill' template.id patient.id %}"
+                    class="btn btn-primary btn-sm"
+                  >
+                    <i class="bi bi-pencil me-1"></i>
+                    Preencher Formulário
+                  </a>
+                </div>
+              </div>
             </div>
-            <div class="card-footer">
-              <a
-                href="{% url 'pdf_forms:form_fill' template.id patient.id %}"
-                class="btn btn-primary btn-sm"
-              >
-                <i class="bi bi-pencil me-1"></i>
-                Preencher Formulário
-              </a>
-            </div>
+            {% endfor %}
           </div>
         </div>
-        {% endfor %}
       </div>
-      {% else %}
+      {% endif %}
+
+      <!-- National Forms Section -->
+      {% if national_forms %}
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0">
+            <i class="bi bi-globe me-2"></i>
+            Formulários Nacionais
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            {% for template in national_forms %}
+            <div class="col-md-6 col-lg-4 mb-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                    {{ template.name }}
+                    {% if template.form_type == 'APAC' %}
+                    <span class="badge bg-success ms-2">APAC</span>
+                    {% elif template.form_type == 'AIH' %}
+                    <span class="badge bg-info ms-2">AIH</span>
+                    {% endif %}
+                  </h6>
+                  {% if template.description %}
+                  <p class="card-text text-muted small">
+                    {{ template.description }}
+                  </p>
+                  {% endif %}
+                </div>
+                <div class="card-footer">
+                  {% if template.form_type == 'APAC' %}
+                  <a
+                    href="{% url 'pdf_forms:apac_form' patient.id %}"
+                    class="btn btn-success btn-sm"
+                  >
+                    <i class="bi bi-pencil me-1"></i>
+                    Preencher APAC
+                  </a>
+                  {% elif template.form_type == 'AIH' %}
+                  <a
+                    href="{% url 'pdf_forms:aih_form' patient.id %}"
+                    class="btn btn-info btn-sm"
+                  >
+                    <i class="bi bi-pencil me-1"></i>
+                    Preencher AIH
+                  </a>
+                  {% else %}
+                  <a
+                    href="{% url 'pdf_forms:form_fill' template.id patient.id %}"
+                    class="btn btn-primary btn-sm"
+                  >
+                    <i class="bi bi-pencil me-1"></i>
+                    Preencher Formulário
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- No forms available message -->
+      {% if not hospital_forms and not national_forms %}
       <div class="alert alert-info">
         <i class="bi bi-info-circle me-2"></i>
         Nenhum formulário PDF disponível no momento.
