@@ -99,11 +99,11 @@ Phases MUST be executed in order. Each phase has explicit acceptance criteria th
 
 | Phase | Name                       | Critical | Description                                        |
 | ----- | -------------------------- | -------- | -------------------------------------------------- |
-| 00    | Overview                   | -        | This document                                      |
-| 01    | Baseline Assessment        | Yes      | Audit current auth, identify protected endpoints   |
-| 02    | OIDC Provider Setup        | Yes      | Install django-oidc-provider, zero behavior change |
-| 03    | Matrix Identity Binding    | Yes      | Link Matrix IDs to EQMD users                      |
-| 04    | Bot Client Registration    | Yes      | Model bots as OIDC clients                         |
+| 00    | Overview                   | ✅       | This document                                      |
+| 01    | Baseline Assessment        | ✅       | Audit current auth, identify protected endpoints   |
+| 02    | OIDC Provider Setup        | ✅       | Install django-oidc-provider, zero behavior change |
+| 03    | Matrix Identity Binding    | ✅       | Link Matrix IDs to EQMD users                      |
+| 04    | Bot Client Registration    | ✅       | Model bots as OIDC clients                         |
 | 05    | Scope System               | Yes      | Define and enforce authorization scopes            |
 | 06    | Delegated Token Endpoint   | Yes      | Core delegation mechanism                          |
 | 07    | DRF Authentication Backend | Yes      | Validate delegated JWTs in API                     |
@@ -160,8 +160,8 @@ admin:*               - Any admin operations
 
 ### What Needs to Be Added
 
-- `MatrixUserBinding`: Link matrix_id ↔ user
-- OIDC Client registry (via django-oidc-provider)
+- ✅ `MatrixUserBinding`: Link matrix_id ↔ user (Phase 03 completed)
+- OIDC Client registry (via django-oidc-provider) (Phase 02 completed)
 - `is_draft` and related fields on Event model
 - Delegated token endpoint
 - DRF authentication backend for delegated JWTs
@@ -172,9 +172,9 @@ admin:*               - Any admin operations
 
 After all phases complete:
 
-1. ✅ Physician can link their Matrix account to EQMD
-2. ✅ Matrix bot can request delegated token for a physician
-3. ✅ Delegated token allows bot to create drafts only
+1. ✅ Physician can link their Matrix account to EQMD (Phase 03 completed)
+2. Matrix bot can request delegated token for a physician
+3. Delegated token allows bot to create drafts only
 4. ✅ Drafts expire automatically after 36 hours
 5. ✅ Physician can review and promote drafts
 6. ✅ Promoted documents show physician as author

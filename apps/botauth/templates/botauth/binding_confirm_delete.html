@@ -1,0 +1,27 @@
+{% extends "base_app.html" %}
+{% load i18n %}
+
+{% block title %}Remover Vinculação{% endblock %}
+
+{% block app_content %}
+<div class="container mt-4">
+    <h2>Remover Vinculação Matrix</h2>
+    
+    <div class="card border-danger">
+        <div class="card-body">
+            <p>Tem certeza que deseja remover a vinculação com <code>{{ object.matrix_id }}</code>?</p>
+            <p class="text-muted">
+                Após remover, o bot Matrix não poderá mais criar rascunhos em seu nome.
+            </p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Sim, Remover</button>
+                <a href="{% url 'botauth:binding_status' %}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
