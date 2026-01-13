@@ -151,15 +151,15 @@ class DelegatedRequestLoggingMiddleware:
 
 ## Acceptance Criteria
 
-- [ ] Valid tokens populate request.user with physician
-- [ ] Valid tokens populate request.actor with bot client_id
-- [ ] Valid tokens populate request.scopes
-- [ ] Valid tokens set request.is_delegated = True
-- [ ] Expired tokens return 401
-- [ ] Tokens for inactive users rejected
-- [ ] Tokens for suspended bots rejected
-- [ ] Session auth still works for humans
-- [ ] All tests pass
+- [x] Valid tokens populate request.user with physician
+- [x] Valid tokens populate request.actor with bot client_id
+- [x] Valid tokens populate request.scopes
+- [x] Valid tokens set request.is_delegated = True
+- [x] Expired tokens return 401
+- [x] Tokens for inactive users rejected
+- [x] Tokens for suspended bots rejected
+- [x] Session auth still works for humans
+- [x] All tests pass
 
 ## Verification Commands
 

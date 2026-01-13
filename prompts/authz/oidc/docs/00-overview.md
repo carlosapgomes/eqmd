@@ -106,7 +106,7 @@ Phases MUST be executed in order. Each phase has explicit acceptance criteria th
 | 04    | Bot Client Registration    | ✅       | Model bots as OIDC clients                         |
 | 05    | Scope System               | ✅       | Define and enforce authorization scopes            |
 | 06    | Delegated Token Endpoint   | ✅       | Core delegation mechanism                          |
-| 07    | DRF Authentication Backend | Yes      | Validate delegated JWTs in API                     |
+| 07    | DRF Authentication Backend | ✅       | Validate delegated JWTs in API                     |
 | 08    | Bot API Layer              | Yes      | REST API for bot operations                        |
 | 09    | Draft Lifecycle            | Yes      | is_draft field, expiration, cleanup                |
 | 10    | Document Promotion         | Yes      | Draft → definitive flow                            |
