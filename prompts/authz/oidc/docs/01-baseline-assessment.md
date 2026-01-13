@@ -170,13 +170,13 @@ None - this phase is audit only.
 
 ## Acceptance Criteria
 
-- [ ] Feature branch created: `feature/oidc-delegated-bots`
-- [ ] `current-auth-audit.md` documents all authentication backends and middleware
-- [ ] `endpoint-inventory.md` lists ALL endpoints with bot access recommendation
-- [ ] `bot-forbidden-endpoints.md` explicitly lists endpoints bots must never access
-- [ ] `decorator-bot-behavior.md` documents expected bot behavior for each decorator
-- [ ] All existing permission tests pass
-- [ ] No code changes made (audit only)
+- [x] Feature branch created: `feature/oidc-delegated-bots`
+- [x] `current-auth-audit.md` documents all authentication backends and middleware
+- [x] `endpoint-inventory.md` lists ALL endpoints with bot access recommendation
+- [x] `bot-forbidden-endpoints.md` explicitly lists endpoints bots must never access
+- [x] `decorator-bot-behavior.md` documents expected bot behavior for each decorator
+- [x] All existing permission tests pass
+- [x] No code changes made (audit only)
 
 ## Verification Commands
 

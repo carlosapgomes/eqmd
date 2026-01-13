@@ -240,13 +240,13 @@ uv run python manage.py migrate events
 
 ## Acceptance Criteria
 
-- [ ] Event model has `is_draft` and related fields
-- [ ] Default queryset excludes drafts
-- [ ] `with_drafts()` and `drafts_only()` managers work
-- [ ] Cleanup command deletes expired drafts
-- [ ] Existing views only show definitive documents
-- [ ] Physicians can see their pending drafts
-- [ ] All tests pass
+- [x] Event model has `is_draft` and related fields
+- [x] Default queryset excludes drafts
+- [x] `with_drafts()` and `drafts_only()` managers work
+- [x] Cleanup command deletes expired drafts
+- [x] Existing views only show definitive documents
+- [x] Physicians can see their pending drafts
+- [x] All tests pass
 
 ## Verification Commands
 
