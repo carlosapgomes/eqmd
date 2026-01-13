@@ -353,6 +353,7 @@ MEDIA_VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB input limit
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
+        'apps.botauth.authentication.DelegatedJWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
