@@ -298,13 +298,13 @@ urlpatterns = [
 
 ## Acceptance Criteria
 
-- [ ] Drafts can be promoted to definitive documents
-- [ ] Authorship transfers to approving physician
-- [ ] Bot references removed from final document
-- [ ] Audit trail preserved via django-simple-history
-- [ ] Drafts can be rejected and deleted
-- [ ] Only authorized users can approve
-- [ ] All tests pass
+- [x] Drafts can be promoted to definitive documents
+- [x] Authorship transfers to approving physician
+- [x] Bot references removed from final document
+- [x] Audit trail preserved via django-simple-history
+- [x] Drafts can be rejected and deleted
+- [x] Only authorized users can approve
+- [x] All tests pass
 
 ## Security Notes
 

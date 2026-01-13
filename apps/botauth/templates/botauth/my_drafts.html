@@ -1,0 +1,60 @@
+{% extends "base_app.html" %}
+{% load i18n %}
+
+{% block title %}Meus Rascunhos{% endblock %}
+
+{% block app_content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Meus Rascunhos</h2>
+        <a href="{% url 'apps.core:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar ao Dashboard
+        </a>
+    </div>
+    
+    {% if drafts %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            Estes rascunhos foram criados por bots sob sua delegação. 
+            Revise e aprove para torná-los documentos definitivos.
+        </div>
+        
+        <div class="list-group">
+            {% for draft in drafts %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">
+                        {{ draft.get_event_type_display }} - {{ draft.patient.name }}
+                    </h5>
+                    <small class="text-muted">
+                        Expira em {{ draft.draft_expires_at|timesince }}
+                    </small>
+                </div>
+                <p class="mb-1">{{ draft.description }}</p>
+                <small class="text-muted">
+                    Criado via bot: {{ draft.draft_created_by_bot }}
+                </small>
+                <div class="mt-2">
+                    <a href="{% url 'botauth:draft_detail' draft.pk %}" 
+                       class="btn btn-sm btn-primary">
+                        Revisar
+                    </a>
+                    <form method="post" action="{% url 'botauth:draft_reject' draft.pk %}" 
+                          class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Rejeitar este rascunho?')">
+                            Rejeitar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-secondary">
+            Nenhum rascunho pendente de revisão.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
