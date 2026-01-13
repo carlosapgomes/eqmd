@@ -110,7 +110,7 @@ Phases MUST be executed in order. Each phase has explicit acceptance criteria th
 | 08    | Bot API Layer              | ✅       | REST API for bot operations                        |
 | 09    | Draft Lifecycle            | ✅       | is_draft field, expiration, cleanup                |
 | 10    | Document Promotion         | ✅       | Draft → definitive flow                            |
-| 11    | Audit Logging              | Yes      | Comprehensive delegation audit trail               |
+| 11    | Audit Logging              | ✅       | Comprehensive delegation audit trail               |
 | 12    | Kill Switches & Revocation | Yes      | Emergency controls                                 |
 | 99    | Validation Checklist       | Yes      | Security verification                              |
 
@@ -166,7 +166,7 @@ admin:*               - Any admin operations
 - ✅ Delegated token endpoint (Phase 06 completed)
 - ✅ DRF authentication backend for delegated JWTs (Phase 07 completed)
 - ✅ Bot API endpoints (Phase 08 completed)
-- Audit models for delegation events
+- ✅ Audit models for delegation events (Phase 11 completed)
 
 ## Success Criteria (End State)
 

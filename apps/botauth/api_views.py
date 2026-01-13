@@ -13,6 +13,7 @@ from .models import MatrixUserBinding, BotClientProfile, DelegationAuditLog
 from .bot_service import BotClientService
 from .scopes import validate_delegation_scopes
 from .tokens import DelegatedTokenGenerator
+from .audit import AuditLogger, AuditEventType
 
 logger = logging.getLogger('security.delegation')
 
@@ -77,7 +78,8 @@ class DelegatedTokenView(APIView):
                 scopes=requested_scopes,
                 status=DelegationAuditLog.Status.DENIED_BOT_SUSPENDED,
                 error='Invalid client credentials or bot suspended',
-                ip_address=ip_address
+                ip_address=ip_address,
+                request=request
             )
             return Response(
                 {'error': 'Invalid client credentials'},
@@ -93,7 +95,8 @@ class DelegatedTokenView(APIView):
                 scopes=requested_scopes,
                 status=DelegationAuditLog.Status.DENIED_RATE_LIMITED,
                 error='Rate limit exceeded',
-                ip_address=ip_address
+                ip_address=ip_address,
+                request=request
             )
             return Response(
                 {'error': 'Rate limit exceeded. Try again later.'},
@@ -111,7 +114,8 @@ class DelegatedTokenView(APIView):
                 scopes=requested_scopes,
                 status=DelegationAuditLog.Status.DENIED_NO_BINDING,
                 error='No valid Matrix binding found',
-                ip_address=ip_address
+                ip_address=ip_address,
+                request=request
             )
             return Response(
                 {'error': 'No valid user binding for this Matrix ID'},
@@ -129,7 +133,8 @@ class DelegatedTokenView(APIView):
                 scopes=requested_scopes,
                 status=DelegationAuditLog.Status.DENIED_INACTIVE_USER,
                 error=denial_reason,
-                ip_address=ip_address
+                ip_address=ip_address,
+                request=request
             )
             return Response(
                 {'error': denial_reason},
@@ -150,7 +155,8 @@ class DelegatedTokenView(APIView):
                 scopes=requested_scopes,
                 status=DelegationAuditLog.Status.DENIED_INVALID_SCOPES,
                 error='; '.join(errors),
-                ip_address=ip_address
+                ip_address=ip_address,
+                request=request
             )
             return Response(
                 {'error': 'Invalid scopes', 'details': errors},
@@ -190,6 +196,19 @@ class DelegatedTokenView(APIView):
             ip_address=ip_address
         )
         
+        # New centralized audit logging
+        AuditLogger.log(
+            event_type=AuditEventType.TOKEN_ISSUED,
+            request=request,
+            user=user,
+            bot=bot_profile,
+            details={
+                'scopes': requested_scopes,
+                'expires_in': expires_in,
+                'matrix_id': matrix_id
+            }
+        )
+        
         logger.info(
             f"Delegated token issued: bot={bot_profile.display_name}, "
             f"user={user.email}, scopes={requested_scopes}"
@@ -224,7 +243,7 @@ class DelegatedTokenView(APIView):
         return None
     
     def _log_denial(self, client_id, matrix_id, scopes, status, error,
-                    ip_address, bot_name='', user=None):
+                    ip_address, bot_name='', user=None, request=None):
         """Log a denied delegation request."""
         DelegationAuditLog.objects.create(
             bot_client_id=client_id,
@@ -242,6 +261,23 @@ class DelegatedTokenView(APIView):
         logger.warning(
             f"Delegation denied: client={client_id}, matrix={matrix_id}, "
             f"reason={error}"
+        )
+        
+        # New centralized audit logging
+        AuditLogger.log(
+            event_type=AuditEventType.DELEGATION_DENIED,
+            request=request,
+            user=user,
+            details={
+                'client_id': client_id,
+                'bot_name': bot_name,
+                'matrix_id': matrix_id,
+                'scopes': scopes,
+                'status': status,
+                'error': error
+            },
+            success=False,
+            error=error
         )
     
     def _get_client_ip(self, request):
