@@ -23,6 +23,12 @@ urlpatterns = [
          views.MatrixBindingDeleteView.as_view(), 
          name='binding_delete'),
     
+    # Draft management
+    path('drafts/', views.MyDraftsView.as_view(), name='my_drafts'),
+    path('drafts/<uuid:pk>/', views.DraftDetailView.as_view(), name='draft_detail'),
+    path('drafts/<uuid:pk>/promote/', views.DraftPromoteView.as_view(), name='draft_promote'),
+    path('drafts/<uuid:pk>/reject/', views.DraftRejectView.as_view(), name='draft_reject'),
+    
     # Delegation endpoint
     path('api/delegated-token/', DelegatedTokenView.as_view(), name='delegated_token'),
     

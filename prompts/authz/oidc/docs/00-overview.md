@@ -109,7 +109,7 @@ Phases MUST be executed in order. Each phase has explicit acceptance criteria th
 | 07    | DRF Authentication Backend | ✅       | Validate delegated JWTs in API                     |
 | 08    | Bot API Layer              | ✅       | REST API for bot operations                        |
 | 09    | Draft Lifecycle            | ✅       | is_draft field, expiration, cleanup                |
-| 10    | Document Promotion         | Yes      | Draft → definitive flow                            |
+| 10    | Document Promotion         | ✅       | Draft → definitive flow                            |
 | 11    | Audit Logging              | Yes      | Comprehensive delegation audit trail               |
 | 12    | Kill Switches & Revocation | Yes      | Emergency controls                                 |
 | 99    | Validation Checklist       | Yes      | Security verification                              |

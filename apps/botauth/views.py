@@ -6,13 +6,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, TemplateView, ListView
+from django.views.generic import CreateView, DeleteView, TemplateView, ListView, DetailView, View
 from django.http import HttpResponseBadRequest
 from django.utils import timezone
 
 from .models import MatrixUserBinding
 from .services import MatrixBindingService
 from .forms import MatrixBindingForm
+from .promotion_service import DraftPromotionService
 
 
 class MatrixBindingCreateView(LoginRequiredMixin, CreateView):
@@ -111,3 +112,69 @@ class MyDraftsView(LoginRequiredMixin, ListView):
             draft_delegated_by=self.request.user,
             draft_expires_at__gt=timezone.now()
         ).select_subclasses().order_by('-created_at')
+
+
+class DraftDetailView(LoginRequiredMixin, DetailView):
+    """View draft details for review."""
+    
+    template_name = 'botauth/draft_detail.html'
+    context_object_name = 'draft'
+    
+    def get_queryset(self):
+        from apps.events.models import Event
+        return Event.all_objects.filter(
+            is_draft=True,
+            draft_delegated_by=self.request.user
+        ).select_subclasses()
+
+
+class DraftPromoteView(LoginRequiredMixin, View):
+    """Promote a draft to definitive document."""
+    
+    def post(self, request, pk):
+        from apps.events.models import Event
+        
+        draft = get_object_or_404(
+            Event.all_objects.filter(is_draft=True).select_subclasses(),
+            pk=pk
+        )
+        
+        try:
+            promoted = DraftPromotionService.promote_draft(
+                draft=draft,
+                approving_user=request.user
+            )
+            messages.success(
+                request,
+                'Documento promovido com sucesso. Você é agora o autor do registro.'
+            )
+            return redirect(promoted.get_absolute_url())
+        except ValueError as e:
+            messages.error(request, str(e))
+            return redirect('botauth:my_drafts')
+
+
+class DraftRejectView(LoginRequiredMixin, View):
+    """Reject and delete a draft."""
+    
+    def post(self, request, pk):
+        from apps.events.models import Event
+        
+        draft = get_object_or_404(
+            Event.all_objects.filter(is_draft=True).select_subclasses(),
+            pk=pk
+        )
+        
+        reason = request.POST.get('reason', '')
+        
+        try:
+            DraftPromotionService.reject_draft(
+                draft=draft,
+                rejecting_user=request.user,
+                reason=reason
+            )
+            messages.success(request, 'Rascunho rejeitado e removido.')
+        except ValueError as e:
+            messages.error(request, str(e))
+        
+        return redirect('botauth:my_drafts')
