@@ -2,6 +2,7 @@ from django.contrib import admin
 from oidc_provider.models import Client
 from .models import MatrixUserBinding, MatrixBindingAuditLog, BotClientProfile, BotClientAuditLog
 from .bot_service import BotClientService, ALLOWED_BOT_SCOPES
+from .audit import BotAuditLog
 
 
 @admin.register(MatrixUserBinding)
@@ -143,6 +144,51 @@ class BotClientAuditLogAdmin(admin.ModelAdmin):
     readonly_fields = [
         'id', 'bot_profile', 'client_id', 'bot_name', 'event_type',
         'event_details', 'performed_by', 'created_at'
+    ]
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BotAuditLog)
+class BotAuditLogAdmin(admin.ModelAdmin):
+    """Admin interface for the centralized bot audit log."""
+    list_display = [
+        'timestamp', 'event_type', 'user_email', 'bot_name', 
+        'success', 'ip_address'
+    ]
+    list_filter = ['event_type', 'success', 'timestamp']
+    search_fields = ['user_email', 'bot_name', 'bot_client_id', 'ip_address']
+    readonly_fields = [
+        'id', 'event_type', 'event_id', 'timestamp',
+        'user_id', 'user_email', 'bot_client_id', 'bot_name',
+        'patient_id', 'event_object_id',
+        'ip_address', 'user_agent', 'token_jti', 'scopes',
+        'details', 'success', 'error_message'
+    ]
+    
+    fieldsets = [
+        ('Event Information', {
+            'fields': ['id', 'event_type', 'event_id', 'timestamp']
+        }),
+        ('Actor Information', {
+            'fields': ['user_id', 'user_email', 'bot_client_id', 'bot_name']
+        }),
+        ('Target Information', {
+            'fields': ['patient_id', 'event_object_id']
+        }),
+        ('Request Context', {
+            'fields': ['ip_address', 'user_agent', 'token_jti', 'scopes']
+        }),
+        ('Event Details', {
+            'fields': ['details', 'success', 'error_message']
+        }),
     ]
     
     def has_add_permission(self, request):

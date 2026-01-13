@@ -6,6 +6,8 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
+from .audit import AuditLogger, AuditEventType
+
 logger = logging.getLogger('security.promotion')
 
 
@@ -66,6 +68,20 @@ class DraftPromotionService:
         )
         draft.save()
         
+        # Audit logging
+        AuditLogger.log(
+            event_type=AuditEventType.DRAFT_PROMOTED,
+            user=approving_user,
+            patient=draft.patient if hasattr(draft, 'patient') else None,
+            event_object=draft,
+            details={
+                'original_author': original_created_by.email,
+                'bot': draft.draft_created_by_bot,
+                'event_type': draft.get_event_type_display(),
+                'modifications': modifications or {}
+            }
+        )
+        
         logger.info(
             f"Draft promoted: id={draft.id}, "
             f"type={draft.get_event_type_display()}, "
@@ -120,6 +136,19 @@ class DraftPromotionService:
             f"Draft rejected: id={draft.id}, "
             f"rejected_by={rejecting_user.email}, "
             f"reason={reason}"
+        )
+        
+        # Audit logging before deletion
+        AuditLogger.log(
+            event_type=AuditEventType.DRAFT_REJECTED,
+            user=rejecting_user,
+            patient=draft.patient if hasattr(draft, 'patient') else None,
+            event_object=draft,
+            details={
+                'reason': reason,
+                'event_type': draft.get_event_type_display(),
+                'bot': draft.draft_created_by_bot
+            }
         )
         
         # Hard delete the draft
