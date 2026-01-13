@@ -52,13 +52,6 @@ class DischargeReport(Event):
         help_text="Especialidade responsável pela alta"
     )
 
-    # Draft system
-    is_draft = models.BooleanField(
-        default=True,
-        verbose_name="É Rascunho",
-        help_text="Indica se o relatório ainda é um rascunho editável"
-    )
-
     class Meta:
         verbose_name = "Relatório de Alta"
         verbose_name_plural = "Relatórios de Alta"
@@ -66,7 +59,6 @@ class DischargeReport(Event):
         indexes = [
             models.Index(fields=['admission_date']),
             models.Index(fields=['discharge_date']),
-            models.Index(fields=['is_draft']),
             models.Index(fields=['medical_specialty']),
         ]
 
@@ -75,6 +67,10 @@ class DischargeReport(Event):
         from .utils import clean_discharge_report_text_fields
         
         self.event_type = Event.DISCHARGE_REPORT_EVENT
+        
+        # Set default draft status for new discharge reports
+        if not self.pk and not hasattr(self, 'is_draft'):
+            self.is_draft = True
         
         # Clean text fields before saving
         clean_discharge_report_text_fields(self)

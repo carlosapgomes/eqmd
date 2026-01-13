@@ -97,6 +97,34 @@ class Event(SoftDeleteModel):
         verbose_name="Atualizado por",
     )
 
+    # Draft fields for bot-created content
+    is_draft = models.BooleanField(
+        default=False,
+        verbose_name="É Rascunho",
+        help_text="Indica se este evento é um rascunho criado por bot"
+    )
+    draft_created_by_bot = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Criado por Bot",
+        help_text="Client ID do bot que criou o rascunho"
+    )
+    draft_delegated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="delegated_drafts",
+        verbose_name="Delegado por",
+        help_text="Usuário que delegou permissão ao bot"
+    )
+    draft_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Expira em",
+        help_text="Quando o rascunho expira automaticamente"
+    )
+
     objects = SoftDeleteInheritanceManager()
     
     # History tracking
@@ -306,6 +334,8 @@ class Event(SoftDeleteModel):
                 fields=["patient", "event_type", "-event_datetime"],
                 name="event_pt_type_dt_idx",
             ),
+            models.Index(fields=["is_draft", "draft_expires_at"], name="event_draft_expires_idx"),
+            models.Index(fields=["draft_created_by_bot"], name="event_draft_bot_idx"),
         ]
 
 

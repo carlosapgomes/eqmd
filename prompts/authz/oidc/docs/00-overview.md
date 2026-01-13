@@ -107,7 +107,7 @@ Phases MUST be executed in order. Each phase has explicit acceptance criteria th
 | 05    | Scope System               | ✅       | Define and enforce authorization scopes            |
 | 06    | Delegated Token Endpoint   | ✅       | Core delegation mechanism                          |
 | 07    | DRF Authentication Backend | ✅       | Validate delegated JWTs in API                     |
-| 08    | Bot API Layer              | Yes      | REST API for bot operations                        |
+| 08    | Bot API Layer              | ✅       | REST API for bot operations                        |
 | 09    | Draft Lifecycle            | Yes      | is_draft field, expiration, cleanup                |
 | 10    | Document Promotion         | Yes      | Draft → definitive flow                            |
 | 11    | Audit Logging              | Yes      | Comprehensive delegation audit trail               |
@@ -161,11 +161,11 @@ admin:*               - Any admin operations
 ### What Needs to Be Added
 
 - ✅ `MatrixUserBinding`: Link matrix_id ↔ user (Phase 03 completed)
-- OIDC Client registry (via django-oidc-provider) (Phase 02 completed)
-- `is_draft` and related fields on Event model
-- Delegated token endpoint
-- DRF authentication backend for delegated JWTs
-- Bot API endpoints
+- ✅ OIDC Client registry (via django-oidc-provider) (Phase 02 completed)
+- ✅ `is_draft` and related fields on Event model (Phase 08 completed)
+- ✅ Delegated token endpoint (Phase 06 completed)
+- ✅ DRF authentication backend for delegated JWTs (Phase 07 completed)
+- ✅ Bot API endpoints (Phase 08 completed)
 - Audit models for delegation events
 
 ## Success Criteria (End State)
@@ -173,8 +173,8 @@ admin:*               - Any admin operations
 After all phases complete:
 
 1. ✅ Physician can link their Matrix account to EQMD (Phase 03 completed)
-2. Matrix bot can request delegated token for a physician
-3. Delegated token allows bot to create drafts only
+2. ✅ Matrix bot can request delegated token for a physician
+3. ✅ Delegated token allows bot to create drafts only
 4. ✅ Drafts expire automatically after 36 hours
 5. ✅ Physician can review and promote drafts
 6. ✅ Promoted documents show physician as author

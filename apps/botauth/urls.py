@@ -1,6 +1,10 @@
 from django.urls import path
 from . import views
 from .api_views import DelegatedTokenView
+from .bot_api_views import (
+    BotPatientListView, BotPatientDetailView,
+    BotDailyNoteDraftCreateView, BotPatientSummaryView
+)
 
 app_name = 'botauth'
 
@@ -19,6 +23,12 @@ urlpatterns = [
          views.MatrixBindingDeleteView.as_view(), 
          name='binding_delete'),
     
-    # Bot API endpoints
+    # Delegation endpoint
     path('api/delegated-token/', DelegatedTokenView.as_view(), name='delegated_token'),
+    
+    # Bot API endpoints
+    path('api/bot/patients/', BotPatientListView.as_view(), name='bot_patient_list'),
+    path('api/bot/patients/<uuid:pk>/', BotPatientDetailView.as_view(), name='bot_patient_detail'),
+    path('api/bot/patients/<uuid:pk>/summary/', BotPatientSummaryView.as_view(), name='bot_patient_summary'),
+    path('api/bot/dailynotes/draft/', BotDailyNoteDraftCreateView.as_view(), name='bot_dailynote_draft'),
 ]
