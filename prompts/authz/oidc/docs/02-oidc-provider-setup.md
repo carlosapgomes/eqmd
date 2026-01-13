@@ -224,17 +224,17 @@ uv run python manage.py runserver
 
 ## Acceptance Criteria
 
-- [ ] `django-oidc-provider` installed and in pyproject.toml
-- [ ] `pyjwt` installed and in pyproject.toml
-- [ ] `oidc_provider` in INSTALLED_APPS
-- [ ] `apps.botauth` app created and in INSTALLED_APPS
-- [ ] OIDC migrations applied successfully
-- [ ] RSA key generated (`creatersakey` command)
-- [ ] OIDC_PROVIDER settings configured
-- [ ] OIDC URLs mounted at `/o/`
-- [ ] All existing authentication tests pass
-- [ ] Manual login via allauth still works
-- [ ] No new endpoints are publicly accessible without authentication
+- [x] `django-oidc-provider` installed and in pyproject.toml
+- [x] `pyjwt` installed and in pyproject.toml
+- [x] `oidc_provider` in INSTALLED_APPS
+- [x] `apps.botauth` app created and in INSTALLED_APPS
+- [x] OIDC migrations applied successfully
+- [x] RSA key generated (`creatersakey` command)
+- [x] OIDC_PROVIDER settings configured
+- [x] OIDC URLs mounted at `/o/`
+- [x] All existing authentication tests pass
+- [x] Manual login via allauth still works
+- [x] No new endpoints are publicly accessible without authentication
 
 ## Verification Commands
 

@@ -22,6 +22,26 @@ class SoftDeleteInheritanceManager(InheritanceManager):
         return SoftDeleteInheritanceQuerySet(self.model, using=self._db).deleted()
 
 
+class EventManager(SoftDeleteInheritanceManager):
+    """Manager that excludes drafts by default."""
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(is_draft=False)
+    
+    def with_drafts(self):
+        """Include drafts in queryset."""
+        return SoftDeleteInheritanceQuerySet(self.model, using=self._db).active()
+    
+    def drafts_only(self):
+        """Get only drafts."""
+        return SoftDeleteInheritanceQuerySet(self.model, using=self._db).active().filter(is_draft=True)
+    
+    def expired_drafts(self):
+        """Get expired drafts for cleanup."""
+        from django.utils import timezone
+        return self.drafts_only().filter(draft_expires_at__lt=timezone.now())
+
+
 class Event(SoftDeleteModel):
     HISTORY_AND_PHYSICAL_EVENT = 0
     DAILY_NOTE_EVENT = 1
@@ -124,8 +144,24 @@ class Event(SoftDeleteModel):
         verbose_name="Expira em",
         help_text="Quando o rascunho expira automaticamente"
     )
+    
+    draft_promoted_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Promovido em",
+        help_text="Data/hora em que o rascunho foi promovido a definitivo"
+    )
+    
+    draft_promoted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='promoted_drafts',
+        verbose_name="Promovido por",
+        help_text="Usuário que promoveu este rascunho a definitivo"
+    )
 
-    objects = SoftDeleteInheritanceManager()
+    objects = EventManager()
+    all_objects = SoftDeleteInheritanceManager()
     
     # History tracking
     history = HistoricalRecords(

@@ -921,16 +921,16 @@ class MatrixBindingServiceTest(TestCase):
 
 ## Acceptance Criteria
 
-- [ ] MatrixUserBinding model created with all fields
-- [ ] MatrixBindingAuditLog model created for audit trail
-- [ ] Migration applied successfully
-- [ ] Admin interface allows managing bindings
-- [ ] Users can create bindings via web interface
-- [ ] Verification token flow works
-- [ ] `is_valid_for_delegation()` correctly checks user status
-- [ ] `get_user_for_matrix_id()` returns user for valid bindings
-- [ ] All binding operations create audit log entries
-- [ ] Tests pass for model and service
+- [x] MatrixUserBinding model created with all fields
+- [x] MatrixBindingAuditLog model created for audit trail
+- [x] Migration applied successfully
+- [x] Admin interface allows managing bindings
+- [x] Users can create bindings via web interface
+- [x] Verification token flow works
+- [x] `is_valid_for_delegation()` correctly checks user status
+- [x] `get_user_for_matrix_id()` returns user for valid bindings
+- [x] All binding operations create audit log entries
+- [x] Tests pass for model and service
 
 ## Verification Commands
 

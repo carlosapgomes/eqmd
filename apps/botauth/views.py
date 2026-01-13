@@ -6,8 +6,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, TemplateView
+from django.views.generic import CreateView, DeleteView, TemplateView, ListView
 from django.http import HttpResponseBadRequest
+from django.utils import timezone
 
 from .models import MatrixUserBinding
 from .services import MatrixBindingService
@@ -95,3 +96,18 @@ class MatrixBindingDeleteView(LoginRequiredMixin, DeleteView):
         )
         messages.success(self.request, 'Vinculação Matrix removida.')
         return redirect(self.success_url)
+
+
+class MyDraftsView(LoginRequiredMixin, ListView):
+    """View for physicians to see their pending drafts."""
+    
+    template_name = 'botauth/my_drafts.html'
+    context_object_name = 'drafts'
+    
+    def get_queryset(self):
+        from apps.events.models import Event
+        return Event.all_objects.filter(
+            is_draft=True,
+            draft_delegated_by=self.request.user,
+            draft_expires_at__gt=timezone.now()
+        ).select_subclasses().order_by('-created_at')

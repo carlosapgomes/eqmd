@@ -76,6 +76,7 @@ urlpatterns = [
     path("pdf-forms/", include("apps.pdf_forms.urls", namespace="pdf_forms")),
     path("dischargereports/", include("apps.dischargereports.urls")),
     path("research/", include("apps.research.urls", namespace="apps.research")),
+    path("auth/", include("apps.botauth.urls", namespace="botauth")),
     # OIDC Provider endpoints (minimal exposure)
     # We only need the token endpoint for client_credentials
     path("o/", include("oidc_provider.urls", namespace="oidc_provider")),
