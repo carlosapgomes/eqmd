@@ -1,8 +1,10 @@
 from django.contrib import admin
 from oidc_provider.models import Client
-from .models import MatrixUserBinding, MatrixBindingAuditLog, BotClientProfile, BotClientAuditLog
+from .models import (MatrixUserBinding, MatrixBindingAuditLog, BotClientProfile, 
+                     BotClientAuditLog, BotDelegationConfig)
 from .bot_service import BotClientService, ALLOWED_BOT_SCOPES
 from .audit import BotAuditLog
+from .killswitch import KillSwitchService
 
 
 @admin.register(MatrixUserBinding)
@@ -195,6 +197,51 @@ class BotAuditLogAdmin(admin.ModelAdmin):
         return False
     
     def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BotDelegationConfig)
+class BotDelegationConfigAdmin(admin.ModelAdmin):
+    """Admin interface for the global bot delegation kill switch."""
+    list_display = ['delegation_enabled', 'maintenance_mode', 'updated_at']
+    readonly_fields = ['disabled_at', 'disabled_by', 'updated_at']
+    
+    fieldsets = [
+        ('Kill Switch', {
+            'fields': ['delegation_enabled', 'disabled_at', 'disabled_by', 'disabled_reason'],
+            'description': 'Emergency control to disable all bot delegation'
+        }),
+        ('Maintenance', {
+            'fields': ['maintenance_mode', 'maintenance_message']
+        }),
+        ('Rate Limiting', {
+            'fields': ['global_rate_limit']
+        }),
+        ('Audit', {
+            'fields': ['updated_at'],
+            'classes': ['collapse']
+        }),
+    ]
+    
+    actions = ['emergency_disable', 'enable_delegation']
+    
+    def emergency_disable(self, request, queryset):
+        KillSwitchService.disable_delegation(
+            request.user, 
+            reason='Admin emergency disable'
+        )
+        self.message_user(request, '🚨 Bot delegation DISABLED')
+    emergency_disable.short_description = '🚨 EMERGENCY: Disable all bot delegation'
+    
+    def enable_delegation(self, request, queryset):
+        KillSwitchService.enable_delegation(request.user)
+        self.message_user(request, '✅ Bot delegation enabled')
+    enable_delegation.short_description = '✅ Enable bot delegation'
+    
+    def has_add_permission(self, request):
         return False
     
     def has_delete_permission(self, request, obj=None):

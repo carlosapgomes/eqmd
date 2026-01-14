@@ -422,3 +422,78 @@ class BotClientAuditLog(models.Model):
         verbose_name = 'Bot Client Audit Log'
         verbose_name_plural = 'Bot Client Audit Logs'
         ordering = ['-created_at']
+
+
+class BotDelegationConfig(models.Model):
+    """
+    Singleton model for global bot delegation configuration.
+    """
+    
+    # Global kill switch
+    delegation_enabled = models.BooleanField(
+        default=True,
+        help_text="Master switch to enable/disable all bot delegation"
+    )
+    
+    disabled_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When delegation was disabled"
+    )
+    disabled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='disabled_delegation'
+    )
+    disabled_reason = models.TextField(
+        blank=True,
+        help_text="Reason for disabling delegation"
+    )
+    
+    # Rate limiting overrides
+    global_rate_limit = models.PositiveIntegerField(
+        default=1000,
+        help_text="Maximum delegations per hour across all bots"
+    )
+    
+    # Maintenance mode
+    maintenance_mode = models.BooleanField(
+        default=False,
+        help_text="If True, delegation returns maintenance message"
+    )
+    maintenance_message = models.TextField(
+        blank=True,
+        default="Bot delegation is temporarily unavailable for maintenance."
+    )
+    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Bot Delegation Configuration'
+        verbose_name_plural = 'Bot Delegation Configuration'
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists
+        self.pk = 1
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        pass  # Prevent deletion
+    
+    @classmethod
+    def get_config(cls):
+        """Get or create the singleton config."""
+        config, _ = cls.objects.get_or_create(pk=1)
+        return config
+    
+    @classmethod
+    def is_delegation_enabled(cls):
+        """Quick check if delegation is enabled."""
+        config = cls.get_config()
+        return config.delegation_enabled and not config.maintenance_mode
+    
+    def __str__(self):
+        status = '🟢 Enabled' if self.delegation_enabled else '🔴 Disabled'
+        if self.maintenance_mode:
+            status = '🟡 Maintenance'
+        return f"Bot Delegation Config - {status}"

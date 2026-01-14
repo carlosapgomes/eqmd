@@ -14,6 +14,7 @@ from .bot_service import BotClientService
 from .scopes import validate_delegation_scopes
 from .tokens import DelegatedTokenGenerator
 from .audit import AuditLogger, AuditEventType
+from .killswitch import KillSwitchService
 
 logger = logging.getLogger('security.delegation')
 
@@ -44,6 +45,21 @@ class DelegatedTokenView(APIView):
     permission_classes = [AllowAny]  # Bot authenticates via client credentials
     
     def post(self, request):
+        # Check kill switch FIRST
+        if not KillSwitchService.is_delegation_enabled():
+            status_info = KillSwitchService.get_status()
+            
+            if status_info['maintenance_mode']:
+                return Response(
+                    {'error': status_info['maintenance_message']},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+            
+            return Response(
+                {'error': 'Bot delegation is currently disabled'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
         # Extract request data
         client_id = request.data.get('client_id')
         client_secret = request.data.get('client_secret')
