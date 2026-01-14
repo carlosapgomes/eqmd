@@ -84,7 +84,7 @@ class DraftPromotionServiceTest(TestCase):
                 created_by=self.doctor,
                 updated_by=self.doctor,
                 is_draft=True,
-                draft_created_by_bot=self.bot.client_id,
+                draft_created_by_bot=self.bot.client.client_id,
                 draft_delegated_by=self.doctor,
                 draft_expires_at=timezone.now() + timedelta(hours=24)
             )
@@ -256,9 +256,13 @@ class DraftPromotionViewsTest(TestCase):
             username='doctor',
             email='doctor@hospital.com',
             password='testpass',
+            first_name='Doctor',
+            last_name='Test',
             profession_type=0,  # Medical Doctor
             is_active=True,
-            account_status='active'
+            account_status='active',
+            terms_accepted=True,
+            password_change_required=False
         )
         
         # Create patient
@@ -285,13 +289,13 @@ class DraftPromotionViewsTest(TestCase):
                 created_by=self.doctor,
                 updated_by=self.doctor,
                 is_draft=True,
-                draft_created_by_bot=self.bot.client_id,
+                draft_created_by_bot=self.bot.client.client_id,
                 draft_delegated_by=self.doctor,
                 draft_expires_at=timezone.now() + timedelta(hours=24)
             )
         
         # Login
-        self.client.login(username='doctor', password='testpass')
+        self.client.force_login(self.doctor)
     
     def test_my_drafts_view(self):
         """Test the my drafts view."""
@@ -385,9 +389,13 @@ class DraftPromotionIntegrationTest(TestCase):
             username='doctor',
             email='doctor@hospital.com',
             password='testpass',
+            first_name='Doctor',
+            last_name='Test',
             profession_type=0,
             is_active=True,
-            account_status='active'
+            account_status='active',
+            terms_accepted=True,
+            password_change_required=False
         )
         
         # Create patient
@@ -404,7 +412,7 @@ class DraftPromotionIntegrationTest(TestCase):
             allowed_scopes=['patient:read', 'dailynote:draft']
         )
         
-        self.client.login(username='doctor', password='testpass')
+        self.client.force_login(self.doctor)
     
     @patch('apps.dailynotes.signals.update_search_vector', side_effect=mock_search_vector_update)
     def test_complete_draft_lifecycle(self, mock_update):

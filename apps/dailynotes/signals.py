@@ -38,9 +38,17 @@ def sanitize_content_for_search(content):
 def update_search_vector(sender, instance, created, **kwargs):
     """
     Update search vector when DailyNote is saved.
+    Only works in PostgreSQL, skips gracefully in other databases.
     """
     # Avoid recursion by checking if search_vector was already updated
     if hasattr(instance, '_search_vector_updated'):
+        return
+
+    # Check if we're using PostgreSQL - search vector only works with PostgreSQL
+    from django.db import connection
+    if connection.vendor != 'postgresql':
+        # Mark as updated to avoid recursion checks
+        instance._search_vector_updated = True
         return
 
     try:
