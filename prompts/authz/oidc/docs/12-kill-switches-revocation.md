@@ -379,14 +379,14 @@ uv run python manage.py migrate botauth
 
 ## Acceptance Criteria
 
-- [ ] Global kill switch disables all delegation
-- [ ] Kill switch check happens before any delegation
-- [ ] Maintenance mode returns friendly message
-- [ ] Cache ensures kill switch check is fast
-- [ ] Admin can toggle kill switch
-- [ ] CLI command works for emergency response
-- [ ] All actions are audit logged
-- [ ] All tests pass
+- [x] Global kill switch disables all delegation
+- [x] Kill switch check happens before any delegation
+- [x] Maintenance mode returns friendly message
+- [x] Cache ensures kill switch check is fast
+- [x] Admin can toggle kill switch
+- [x] CLI command works for emergency response
+- [x] All actions are audit logged
+- [x] All tests pass
 
 ## Emergency Procedures
 
