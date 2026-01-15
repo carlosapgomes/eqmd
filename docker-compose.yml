@@ -51,7 +51,6 @@ services:
         GROUP_ID: ${EQMD_GID:-1001}
     command: >
       sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
@@ -74,7 +73,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-eqmd_db}
       POSTGRES_USER: ${POSTGRES_USER:-eqmd_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eqmd_dev_password_123}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     # Conservative performance tuning for shared 6GB system (4 containers running)
     command: >
