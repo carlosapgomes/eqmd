@@ -8,8 +8,8 @@ COPY apps/ ./apps/
 COPY webpack.config.js ./
 RUN npm run build
 
-# Stage 2: Python application
-FROM python:3.11-slim
+# Stage 2: Python application  
+FROM python:3.12-slim
 WORKDIR /app
 
 # Set environment variables
@@ -54,8 +54,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY pyproject.toml ./
 
 # Install Python dependencies
-RUN uv pip install --system -r pyproject.toml
-# Install production server
+RUN uv pip install --system --editable .
+# Install production server explicitly
 RUN uv pip install --system gunicorn
 
 # Copy application code
