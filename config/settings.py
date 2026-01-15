@@ -478,14 +478,19 @@ OIDC_PROVIDER = {
     # Session management (disabled for bots)
     'OIDC_SESSION_MANAGEMENT_ENABLE': False,
     
+    # Custom authorization view for access control
+    'OIDC_AUTHORIZE_VIEW': 'apps.botauth.views.AuthorizeView',
+    
     # Grant types allowed
     'OIDC_GRANT_TYPE_SUPPORTED': [
         'client_credentials',  # For bot authentication
+        'authorization_code',  # For Synapse SSO
     ],
     
     # Response types (minimal for our use case)
     'OIDC_RESPONSE_TYPES_SUPPORTED': [
-        'token',
+        'code',  # For authorization_code grant (preferred)
+        'token',  # Keep for existing bot usage if needed
     ],
     
     # Scopes we support

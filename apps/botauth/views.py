@@ -1,14 +1,17 @@
 """
-Views for Matrix binding management.
+Views for Matrix binding management and OIDC authorization.
 """
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, TemplateView, ListView, DetailView, View
 from django.http import HttpResponseBadRequest
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from oidc_provider.views import AuthorizeView as BaseAuthorizeView
 
 from .models import MatrixUserBinding
 from .services import MatrixBindingService
@@ -178,3 +181,54 @@ class DraftRejectView(LoginRequiredMixin, View):
             messages.error(request, str(e))
         
         return redirect('botauth:my_drafts')
+
+
+# =============================================================================
+# OIDC Custom Authorization View
+# =============================================================================
+
+
+@method_decorator(login_required, name='dispatch')
+class AuthorizeView(BaseAuthorizeView):
+    """
+    Custom OIDC authorization view with access control.
+    
+    Ensures that only active users can complete OIDC authorization flows.
+    This prevents inactive users from accessing Matrix Synapse via SSO.
+    """
+    
+    def get(self, request, *args, **kwargs):
+        """Handle GET requests to authorization endpoint."""
+        # Check if user is active before proceeding
+        if not request.user.is_authenticated:
+            return super().get(request, *args, **kwargs)
+            
+        if not request.user.is_active:
+            # User account is inactive, deny authorization
+            context = {
+                'error': 'access_denied',
+                'error_description': 'Your account is currently inactive. Please contact your administrator.',
+                'user': request.user,
+            }
+            return render(request, 'oidc_provider/error.html', context, status=403)
+        
+        # User is active, proceed with normal authorization flow
+        return super().get(request, *args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+        """Handle POST requests to authorization endpoint."""
+        # Check if user is active before proceeding
+        if not request.user.is_authenticated:
+            return super().post(request, *args, **kwargs)
+            
+        if not request.user.is_active:
+            # User account is inactive, deny authorization
+            context = {
+                'error': 'access_denied', 
+                'error_description': 'Your account is currently inactive. Please contact your administrator.',
+                'user': request.user,
+            }
+            return render(request, 'oidc_provider/error.html', context, status=403)
+        
+        # User is active, proceed with normal authorization flow
+        return super().post(request, *args, **kwargs)

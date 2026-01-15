@@ -74,7 +74,7 @@ Important: Synapse/Element/nginx config files generally do not interpolate env v
 
 ## Deliverables (Documents in This Folder)
 - `prompts/matrix-updated/matrix-synapse-phase1-infrastructure.md` ✅ **COMPLETED**
-- `prompts/matrix-updated/matrix-synapse-phase2-eqmd-oidc-provider.md`
+- `prompts/matrix-updated/matrix-synapse-phase2-eqmd-oidc-provider.md` ✅ **COMPLETED**
 - `prompts/matrix-updated/matrix-synapse-phase3-synapse-config.md`
 - `prompts/matrix-updated/matrix-synapse-phase4-element-web-and-well-known.md`
 - `prompts/matrix-updated/matrix-synapse-phase5-policy-bot-and-lifecycle.md`
