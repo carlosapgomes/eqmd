@@ -15,6 +15,9 @@ Environment Variables Required:
     MATRIX_FQDN, CHAT_FQDN, EQMD_DOMAIN, MATRIX_PUBLIC_BASEURL, OIDC_ISSUER,
     MATRIX_DATABASE_PASSWORD, HOSPITAL_EMAIL, SYNAPSE_OIDC_CLIENT_SECRET
 
+Environment Variables Optional:
+    MATRIX_ADMIN_USERS, MATRIX_BOT_USER_ID
+
 Examples:
     # Generate all configs
     python scripts/generate_matrix_configs.py
@@ -92,14 +95,18 @@ def get_env_or_exit(var_name: str, default: str = None) -> str:
 
 def get_template_vars() -> Dict[str, str]:
     """Get all required template variables from environment."""
+    matrix_fqdn = get_env_or_exit('MATRIX_FQDN')
+    bot_user_id = os.environ.get('MATRIX_BOT_USER_ID') or f"@rzero_bot:{matrix_fqdn}"
     return {
-        'MATRIX_FQDN': get_env_or_exit('MATRIX_FQDN'),
+        'MATRIX_FQDN': matrix_fqdn,
         'CHAT_FQDN': get_env_or_exit('CHAT_FQDN'),
         'EQMD_DOMAIN': get_env_or_exit('EQMD_DOMAIN'),
         'MATRIX_PUBLIC_BASEURL': get_env_or_exit('MATRIX_PUBLIC_BASEURL'),
         'OIDC_ISSUER': get_env_or_exit('OIDC_ISSUER'),
         'MATRIX_DATABASE_PASSWORD': get_env_or_exit('MATRIX_DATABASE_PASSWORD'),
         'SYNAPSE_OIDC_CLIENT_SECRET': get_env_or_exit('SYNAPSE_OIDC_CLIENT_SECRET'),
+        'MATRIX_ADMIN_USERS': os.environ.get('MATRIX_ADMIN_USERS', ''),
+        'MATRIX_BOT_USER_ID': bot_user_id,
         'HOSPITAL_EMAIL': get_env_or_exit('HOSPITAL_EMAIL', 'admin@localhost'),
         'MATRIX_SYNAPSE_PORT': get_env_or_exit('MATRIX_SYNAPSE_PORT', '8008'),
         'MATRIX_ELEMENT_PORT': get_env_or_exit('MATRIX_ELEMENT_PORT', '8080'),
