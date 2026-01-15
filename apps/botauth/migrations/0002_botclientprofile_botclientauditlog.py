@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('botauth', '0001_initial'),
-        ('oidc_provider', '0028_alter_client_id_alter_code_id_alter_responsetype_id_and_more'),
+        ('oidc_provider', '0027_alter_rsakey_options'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
