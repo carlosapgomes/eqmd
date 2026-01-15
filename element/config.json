@@ -1,0 +1,80 @@
+{
+    "default_server_config": {
+        "m.homeserver": {
+            "base_url": "https://matrix.sispep.com/",
+            "server_name": "matrix.sispep.com"
+        }
+    },
+    "brand": "EquipeMed Chat",
+    "integrations_ui_url": "",
+    "integrations_rest_url": "",
+    "integrations_widgets_urls": [],
+    "bug_report_endpoint_url": "",
+    "defaultCountryCode": "BR",
+    "showLabsSettings": false,
+    "features": {
+        "feature_spaces": false,
+        "feature_communities_v2_prototypes": false,
+        "feature_pinning": true,
+        "feature_custom_status": false,
+        "feature_custom_tags": false,
+        "feature_state_counters": false,
+        "feature_many_integration_managers": false,
+        "feature_mjolnir": false,
+        "feature_dm_verification": false,
+        "feature_bridge_state": false,
+        "feature_presence_in_room_list": false,
+        "feature_custom_themes": false
+    },
+    "default_federate": false,
+    "default_theme": "light",
+    "roomDirectory": {
+        "servers": ["matrix.sispep.com"]
+    },
+    "enable_presence_by_hs_url": {
+        "https://matrix.sispep.com/": false
+    },
+    "terms_and_conditions_links": [
+        {
+            "url": "https://app.sispep.com/privacy-policy",
+            "text": "Privacy Policy"
+        },
+        {
+            "url": "https://app.sispep.com/terms-of-service", 
+            "text": "Terms of Service"
+        }
+    ],
+    "sso_redirect_options": {
+        "immediate": true
+    },
+    "embedded_pages": {
+        "home_url": "https://app.sispep.com/",
+        "login_for_welcome": false
+    },
+    "disable_guests": true,
+    "disable_login_language_selector": true,
+    "disable_3pid_login": true,
+    "default_server_name": "matrix.sispep.com",
+    "welcomeUserId": "@welcome:matrix.sispep.com",
+    "jitsi": {
+        "preferredDomain": ""
+    },
+    "element_call": {
+        "url": "",
+        "use_exclusively": false,
+        "participant_limit": 8
+    },
+    "map_style_url": "",
+    "branding": {
+        "welcomeBackgroundUrl": "",
+        "authHeaderLogoUrl": "",
+        "authFooterLinks": []
+    },
+    "login_for_welcome": false,
+    "posthog": {
+        "projectApiKey": "",
+        "apiHost": ""
+    },
+    "privacy_policy_url": "https://app.sispep.com/privacy-policy",
+    "cookie_policy_url": "https://app.sispep.com/privacy-policy"
+}

@@ -1,0 +1,219 @@
+# Configuration file for Synapse.
+#
+# This is a TEMPLATE file. It should be processed to substitute environment
+# variables before being used by Synapse.
+#
+# For a complete account of all configuration options and their defaults, see the
+# Synapse documentation at https://matrix-org.github.io/synapse/
+
+server_name: "${MATRIX_FQDN}"
+
+# PID file for Synapse
+pid_file: /data/homeserver.pid
+
+# Web interfaces and APIs
+listeners:
+  # Client-server API (Element connects here)
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+
+    resources:
+      - names: [client]
+        compress: false
+
+# Database configuration
+database:
+  name: psycopg2
+  args:
+    user: matrix_user
+    password: "${MATRIX_DATABASE_PASSWORD}"
+    database: matrix_db
+    host: postgres
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+# Logging configuration
+log_config: "/data/log_config.yaml"
+
+# Media store configuration
+media_store_path: /data/media_store
+
+# The largest allowed upload size in bytes
+max_upload_size: 50M
+
+# Maximum number of pixels that will be thumbnailed
+max_image_pixels: 32M
+
+# Whether to generate new thumbnails on the fly to precisely match
+# the resolution requested by the client.
+dynamic_thumbnails: false
+
+# List of thumbnail to precalculate when an image is uploaded.
+thumbnail_sizes:
+- width: 32
+  height: 32
+  method: crop
+- width: 96
+  height: 96
+  method: crop
+- width: 320
+  height: 240
+  method: scale
+- width: 640
+  height: 480
+  method: scale
+- width: 800
+  height: 600
+  method: scale
+
+# URL preview configuration
+url_preview_enabled: false
+
+# Maximum length of a URL preview
+max_spider_size: 10M
+
+# A list of URL preview blacklist
+url_preview_ip_range_blacklist:
+- '127.0.0.0/8'
+- '10.0.0.0/8'
+- '172.16.0.0/12'
+- '192.168.0.0/16'
+- '100.64.0.0/10'
+- '169.254.0.0/16'
+- '::1/128'
+- 'fe80::/64'
+- 'fc00::/7'
+
+# The public-facing base URL that clients use to access this Synapse server.
+public_baseurl: "${MATRIX_PUBLIC_BASEURL}"
+
+# Set to false to disable presence tracking on this homeserver.
+use_presence: true
+
+# Whether to require authentication to retrieve profile data (avatar, display name)
+require_auth_for_profile_requests: true
+
+# Restrict federation to approved servers only
+# Since we're disabling federation entirely, this is set to false
+federation_domain_whitelist: []
+
+# Prevent federation outbound traffic
+send_federation: false
+
+# Federation settings (disabled for security)
+federation_verify_certificates: false
+
+# Completely disable federation
+federation_enabled: false
+
+# Registration and guest access
+enable_registration: false
+enable_registration_without_verification: false
+registrations_require_3pid: []
+allowed_local_3pids: []
+enable_3pid_lookup: false
+registration_requires_token: false
+
+# Metrics for monitoring
+enable_metrics: false
+report_stats: false
+
+# Room directory settings
+enable_room_list_search: false
+alias_creation_rules:
+  - user_id: "*"
+    alias: "*"
+    action: deny
+room_list_publication_rules:
+  - user_id: "*"
+    alias: "*"
+    action: deny
+
+# User directory settings
+user_directory:
+    enabled: false
+
+# Push notification settings
+push:
+    enabled: false
+
+# Disable server notices
+server_notices:
+    system_mxid_localpart: notices
+    system_mxid_display_name: "Server Notices"
+    system_mxid_avatar_url: "mxc://server.com/notices"
+    room_name: "Server Notices"
+
+# Email configuration (disabled for now)
+# Commented out to avoid partial configuration errors
+# email:
+#   smtp_host: localhost
+#   smtp_port: 25
+#   enable_tls: false
+#   notif_from: "Matrix <noreply@${EQMD_DOMAIN}>"
+
+# Authentication providers (OIDC SSO with EquipeMed)
+# Disabled for Phase 1 - will be configured in Phase 2
+# oidc_providers:
+#   - idp_id: equipemed
+#     idp_name: "EquipeMed"
+#     discover: true
+#     issuer: "${OIDC_ISSUER}"
+#     client_id: "matrix_synapse_client"
+#     client_secret: "REPLACE_WITH_ACTUAL_CLIENT_SECRET"
+#     scopes: ["openid", "profile", "email"]
+#     allow_existing_users: true
+#     user_mapping_provider:
+#       config:
+#         localpart_template: "u_{{ user.sub }}"
+#         display_name_template: "{{ user.name | default(user.preferred_username) }}"
+#         email_template: "{{ user.email }}"
+
+# Signing keys
+signing_key_path: "/data/signing.key"
+
+# Secret key for generating access tokens
+# This will be auto-generated on first startup if missing
+# macaroon_secret_key: "AUTO_GENERATED_ON_STARTUP"
+
+# Trusted key servers for room version support
+# Since we're not federating, we can leave this minimal
+trusted_key_servers: []
+
+# Security and privacy settings
+password_config:
+   enabled: false  # OIDC only, no local passwords
+
+# Rate limiting
+rc_message:
+    per_second: 0.2
+    burst_count: 10
+
+rc_registration:
+    per_second: 0.1
+    burst_count: 3
+
+rc_login:
+    address:
+        per_second: 0.1
+        burst_count: 5
+    account:
+        per_second: 0.1
+        burst_count: 5
+    failed_attempts:
+        per_second: 0.1
+        burst_count: 5
+
+# Admin contact
+admin_contact: 'mailto:${HOSPITAL_EMAIL}'
+
+# Version compatibility
+suppress_key_server_warning: true
+
+# Experimental features
+experimental_features:
+    # Disable all experimental features for stability
+    spaces_enabled: false

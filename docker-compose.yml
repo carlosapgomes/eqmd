@@ -98,6 +98,47 @@ services:
       timeout: 5s
       retries: 5
 
+  # Matrix Synapse homeserver
+  matrix-synapse:
+    image: matrixdotorg/synapse:${SYNAPSE_VERSION:-v1.99.0}
+    container_name: ${CONTAINER_PREFIX:-eqmd}_matrix_synapse
+    restart: unless-stopped
+    user: "${EQMD_UID:-1001}:${EQMD_GID:-1001}"
+    ports:
+      - "127.0.0.1:${MATRIX_SYNAPSE_PORT:-8008}:8008"
+    volumes:
+      - ./matrix:/data
+      - matrix_media_store:/data/media_store
+    environment:
+      - SYNAPSE_SERVER_NAME=${MATRIX_FQDN:-matrix.yourhospital.com}
+      - SYNAPSE_REPORT_STATS=no
+    depends_on:
+      - postgres
+    extra_hosts:
+      # Allow Synapse container to reach OIDC issuer on host nginx
+      - "${EQMD_DOMAIN:-yourhospital.com}:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8008/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Element Web client
+  element-web:
+    image: vectorim/element-web:${ELEMENT_VERSION:-v1.11.58}
+    container_name: ${CONTAINER_PREFIX:-eqmd}_element_web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MATRIX_ELEMENT_PORT:-8080}:80"
+    volumes:
+      - ./element/config.json:/app/config.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   eqmd_database:
     name: ${CONTAINER_PREFIX:-eqmd}_database
@@ -110,5 +151,8 @@ volumes:
     driver: local
   postgres_data:
     name: ${CONTAINER_PREFIX:-eqmd}_postgres_data
+    driver: local
+  matrix_media_store:
+    name: ${CONTAINER_PREFIX:-eqmd}_matrix_media_store
     driver: local
 

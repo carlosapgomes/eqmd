@@ -1,0 +1,86 @@
+# Nginx configuration for Matrix Synapse (${MATRIX_FQDN})
+# This is a TEMPLATE file - process with environment variable substitution
+
+server {
+    listen 80;
+    server_name ${MATRIX_FQDN};
+    
+    # Redirect HTTP to HTTPS in production
+    return 301 https://$$server_name$$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${MATRIX_FQDN};
+
+    # SSL configuration (adjust paths as needed for your setup)
+    # ssl_certificate /path/to/ssl/cert.pem;
+    # ssl_certificate_key /path/to/ssl/private.key;
+    
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Client body size for file uploads (images, videos, documents)
+    client_max_body_size 50M;
+
+    # Matrix client-server API
+    location /_matrix {
+        proxy_pass http://127.0.0.1:${MATRIX_SYNAPSE_PORT};
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host $host;
+        
+        # Matrix-specific headers
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 5s;
+    }
+
+    # Synapse administration endpoints
+    location /_synapse/client {
+        proxy_pass http://127.0.0.1:${MATRIX_SYNAPSE_PORT};
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Block federation endpoints (defense in depth)
+    location /_matrix/federation {
+        return 404;
+    }
+
+    location /_matrix/key {
+        return 404;
+    }
+
+    # Block server-server API
+    location /_matrix/server {
+        return 404;
+    }
+
+    # Health check endpoint
+    location /health {
+        proxy_pass http://127.0.0.1:${MATRIX_SYNAPSE_PORT}/health;
+        proxy_set_header Host $host;
+        access_log off;
+    }
+
+    # Well-known delegation (served from Matrix domain)
+    location /.well-known/matrix/client {
+        return 200 '{"m.homeserver":{"base_url":"https://${MATRIX_FQDN}/"},"m.identity_server":{"base_url":""}}';
+        add_header Content-Type application/json;
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+        add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization";
+    }
+
+    # Deny all other requests
+    location / {
+        return 404;
+    }
+}
