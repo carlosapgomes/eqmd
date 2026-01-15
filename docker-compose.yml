@@ -133,6 +133,7 @@ services:
       - "127.0.0.1:${MATRIX_ELEMENT_PORT:-8080}:80"
     volumes:
       - ./element/config.json:/app/config.json:ro
+      - ./element/custom.css:/app/custom.css:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
       interval: 30s
@@ -155,4 +156,3 @@ volumes:
   matrix_media_store:
     name: ${CONTAINER_PREFIX:-eqmd}_matrix_media_store
     driver: local
-

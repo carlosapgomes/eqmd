@@ -18,8 +18,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             '--client-id',
-            default='synapse-matrix',
-            help='OIDC client ID for Synapse (default: synapse-matrix)'
+            default='matrix_synapse_client',
+            help='OIDC client ID for Synapse (default: matrix_synapse_client)'
         )
         parser.add_argument(
             '--matrix-fqdn',
@@ -101,17 +101,19 @@ class Command(BaseCommand):
         self.stdout.write("Add these settings to your Synapse homeserver.yaml:")
         self.stdout.write("")
         self.stdout.write("oidc_providers:")
-        self.stdout.write("  - idp_id: eqmd")
-        self.stdout.write("    idp_name: EquipeMed")
+        self.stdout.write("  - idp_id: equipemed")
+        self.stdout.write("    idp_name: \"EquipeMed\"")
+        self.stdout.write("    discover: true")
         self.stdout.write(f"    issuer: \"{os.getenv('OIDC_ISSUER', 'https://yourhospital.com/o')}\"")
         self.stdout.write(f"    client_id: \"{client.client_id}\"")
         self.stdout.write(f"    client_secret: \"{client.client_secret}\"")
-        self.stdout.write("    scopes: [\"openid\", \"profile\"]")
+        self.stdout.write("    scopes: [\"openid\", \"profile\", \"email\"]")
+        self.stdout.write("    allow_existing_users: true")
         self.stdout.write("    user_mapping_provider:")
         self.stdout.write("      config:")
-        self.stdout.write("        subject_claim: \"sub\"")
-        self.stdout.write("        localpart_template: \"{{ user.eqmd_role }}_{{ user.sub }}\"")
-        self.stdout.write("        display_name_template: \"{{ user.name }}\"")
+        self.stdout.write("        localpart_template: \"u_{{ user.sub }}\"")
+        self.stdout.write("        display_name_template: \"{{ user.name | default(user.preferred_username) }}\"")
+        self.stdout.write("        email_template: \"{{ user.email }}\"")
         self.stdout.write("")
         
         # Environment variable suggestions  

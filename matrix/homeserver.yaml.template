@@ -22,6 +22,16 @@ listeners:
     resources:
       - names: [client]
         compress: false
+        
+  # Admin API (internal access only, for user lifecycle management)
+  - port: 8009
+    tls: false
+    type: http
+    bind_addresses: ['127.0.0.1']  # Internal only - not exposed via nginx
+
+    resources:
+      - names: [admin]
+        compress: false
 
 # Database configuration
 database:
@@ -156,21 +166,28 @@ server_notices:
 #   notif_from: "Matrix <noreply@${EQMD_DOMAIN}>"
 
 # Authentication providers (OIDC SSO with EquipeMed)
-# Disabled for Phase 1 - will be configured in Phase 2
-# oidc_providers:
-#   - idp_id: equipemed
-#     idp_name: "EquipeMed"
-#     discover: true
-#     issuer: "${OIDC_ISSUER}"
-#     client_id: "matrix_synapse_client"
-#     client_secret: "REPLACE_WITH_ACTUAL_CLIENT_SECRET"
-#     scopes: ["openid", "profile", "email"]
-#     allow_existing_users: true
-#     user_mapping_provider:
-#       config:
-#         localpart_template: "u_{{ user.sub }}"
-#         display_name_template: "{{ user.name | default(user.preferred_username) }}"
-#         email_template: "{{ user.email }}"
+oidc_providers:
+  - idp_id: equipemed
+    idp_name: "EquipeMed"
+    discover: true
+    issuer: "${OIDC_ISSUER}"
+    client_id: "matrix_synapse_client"
+    client_secret: "${SYNAPSE_OIDC_CLIENT_SECRET}"
+    scopes: ["openid", "profile", "email"]
+    allow_existing_users: true
+    user_mapping_provider:
+      config:
+        localpart_template: "u_{{ user.sub }}"
+        display_name_template: "{{ user.name | default(user.preferred_username) }}"
+        email_template: "{{ user.email }}"
+        
+    # User attribute mapping for EquipeMed integration
+    user_profile_method: "userinfo_endpoint"
+    
+    # Additional claims configuration
+    extra_attributes:
+      - attribute: "eqmd_active"
+        value: "{{ user.eqmd_active | default(true) }}"
 
 # Signing keys
 signing_key_path: "/data/signing.key"
