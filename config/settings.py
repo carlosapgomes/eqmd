@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     # Bot Authentication (OIDC-based delegation)
     "apps.botauth.apps.BotauthConfig",  # Bot authentication app
     "oidc_provider",  # OIDC Provider (for bot delegation)
+    "apps.matrix_integration.apps.MatrixIntegrationConfig",
     # django-allauth
     "allauth",
     "allauth.account",

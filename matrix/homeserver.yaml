@@ -22,16 +22,6 @@ listeners:
     resources:
       - names: [client]
         compress: false
-        
-  # Admin API (internal access only, for user lifecycle management)
-  - port: 8009
-    tls: false
-    type: http
-    bind_addresses: ['127.0.0.1']  # Internal only - not exposed via nginx
-
-    resources:
-      - names: [admin]
-        compress: false
 
 # Database configuration
 database:
@@ -229,6 +219,16 @@ admin_contact: 'mailto:hgrs@saude.ba.gov.br'
 
 # Version compatibility
 suppress_key_server_warning: true
+
+# Synapse policy module (server-side enforcement)
+modules:
+  - module: "eqmd_policy.EqmdPolicyModule"
+    config:
+      admin_users: ""
+      bot_user_id: "@rzero_bot:matrix.sispep.com"
+      block_room_creation: true
+      block_invites: true
+      block_encryption: true
 
 # Experimental features
 experimental_features:

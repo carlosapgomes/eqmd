@@ -112,11 +112,9 @@ services:
     environment:
       - SYNAPSE_SERVER_NAME=${MATRIX_FQDN:-matrix.yourhospital.com}
       - SYNAPSE_REPORT_STATS=no
+      - PYTHONPATH=/data/modules
     depends_on:
       - postgres
-    extra_hosts:
-      # Allow Synapse container to reach OIDC issuer on host nginx
-      - "${EQMD_DOMAIN:-yourhospital.com}:host-gateway"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8008/health || exit 1"]
       interval: 30s
