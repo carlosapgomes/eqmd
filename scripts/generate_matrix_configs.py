@@ -13,7 +13,7 @@ Usage:
 
 Environment Variables Required:
     MATRIX_FQDN, CHAT_FQDN, EQMD_DOMAIN, MATRIX_PUBLIC_BASEURL, OIDC_ISSUER,
-    MATRIX_DATABASE_PASSWORD, HOSPITAL_EMAIL
+    MATRIX_DATABASE_PASSWORD, HOSPITAL_EMAIL, SYNAPSE_OIDC_CLIENT_SECRET
 
 Examples:
     # Generate all configs
@@ -99,6 +99,7 @@ def get_template_vars() -> Dict[str, str]:
         'MATRIX_PUBLIC_BASEURL': get_env_or_exit('MATRIX_PUBLIC_BASEURL'),
         'OIDC_ISSUER': get_env_or_exit('OIDC_ISSUER'),
         'MATRIX_DATABASE_PASSWORD': get_env_or_exit('MATRIX_DATABASE_PASSWORD'),
+        'SYNAPSE_OIDC_CLIENT_SECRET': get_env_or_exit('SYNAPSE_OIDC_CLIENT_SECRET'),
         'HOSPITAL_EMAIL': get_env_or_exit('HOSPITAL_EMAIL', 'admin@localhost'),
         'MATRIX_SYNAPSE_PORT': get_env_or_exit('MATRIX_SYNAPSE_PORT', '8008'),
         'MATRIX_ELEMENT_PORT': get_env_or_exit('MATRIX_ELEMENT_PORT', '8080'),

@@ -1,0 +1,14 @@
+/* Best-effort: hide room creation UI in Element Web. */
+.mx_RoomListHeader_plus,
+.mx_RoomListHeader_button,
+.mx_RoomListHeader_button--newRoom,
+.mx_RoomListHeader_button--newChat,
+.mx_RoomListHeader_button--newSpace,
+.mx_RoomListHeader_buttonCreateRoom,
+.mx_RoomListHeader_buttonCreateSpace,
+.mx_CreateRoomDialog,
+.mx_CreateRoomDialog_topic_field,
+.mx_CreateRoomDialog_advanced,
+.mx_CreateRoomDialog_encryption {
+    display: none !important;
+}
