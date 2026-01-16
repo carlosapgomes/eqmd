@@ -7,6 +7,7 @@ from apps.matrix_integration.services import (
     MatrixClient,
     MatrixConfig,
     SynapseAdminClient,
+    build_external_ids,
     build_matrix_user_id,
     display_name_for_user,
 )
@@ -48,10 +49,26 @@ class Command(BaseCommand):
         User = get_user_model()
         users = User.objects.all()
         for user in users:
+            localpart = None
+            try:
+                localpart = user.profile.matrix_localpart
+            except Exception:
+                localpart = None
             matrix_user_id = build_matrix_user_id(user, config.matrix_fqdn)
+            if not localpart:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Matrix localpart missing for {user}. Using fallback {matrix_user_id}"
+                    )
+                )
             display_name = display_name_for_user(user)
+            external_ids = build_external_ids(user, config.oidc_provider_id)
             if is_user_active(user):
-                admin_client.reactivate_user(matrix_user_id, display_name=display_name)
+                admin_client.reactivate_user(
+                    matrix_user_id,
+                    display_name=display_name,
+                    external_ids=external_ids,
+                )
                 continue
 
             try:

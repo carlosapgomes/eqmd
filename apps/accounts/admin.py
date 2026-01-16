@@ -1,9 +1,31 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.shortcuts import redirect
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
 from .models import EqmdCustomUser, UserProfile
 from .forms import EqmdCustomUserCreationForm, EqmdCustomUserChangeForm
+from apps.matrix_integration.services import (
+    MatrixConfig,
+    MatrixProvisioningError,
+    MatrixProvisioningService,
+)
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    extra = 0
+    fk_name = "user"
+    fields = (
+        "public_id",
+        "display_name",
+        "bio",
+        "matrix_localpart",
+        "matrix_provisioned_at",
+        "matrix_provisioned_by",
+    )
+    readonly_fields = ("public_id", "matrix_provisioned_at", "matrix_provisioned_by")
 
 class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
     add_form = EqmdCustomUserCreationForm
@@ -88,6 +110,7 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         'terms_accepted',
         'is_researcher',
     )
+    inlines = (UserProfileInline,)
     
     def save_model(self, request, obj, form, change):
         """
@@ -115,5 +138,112 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         
         return form
 
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "display_name",
+        "matrix_localpart",
+        "matrix_user_id",
+        "matrix_provisioned",
+        "matrix_provisioned_at",
+        "matrix_provisioned_by",
+    )
+    list_select_related = ("user", "matrix_provisioned_by")
+    readonly_fields = (
+        "public_id",
+        "matrix_user_id",
+        "matrix_provisioned_at",
+        "matrix_provisioned_by",
+    )
+    fields = (
+        "user",
+        "public_id",
+        "display_name",
+        "bio",
+        "matrix_localpart",
+        "matrix_user_id",
+        "matrix_provisioned_at",
+        "matrix_provisioned_by",
+    )
+    search_fields = ("user__email", "user__username", "matrix_localpart")
+    actions = ("provision_matrix_users",)
+    change_form_template = "admin/accounts/userprofile/change_form.html"
+
+    @admin.display(description="Matrix ID")
+    def matrix_user_id(self, obj):
+        if not obj.matrix_localpart:
+            return "-"
+        config = MatrixConfig.from_env()
+        return f"@{obj.matrix_localpart}:{config.matrix_fqdn}"
+
+    @admin.display(boolean=True, description="Matrix provisioned")
+    def matrix_provisioned(self, obj):
+        return bool(obj.matrix_provisioned_at)
+
+    @admin.action(description="Provision Matrix user(s)")
+    def provision_matrix_users(self, request, queryset):
+        config = MatrixConfig.from_env()
+        success_count = 0
+        for profile in queryset.select_related("user"):
+            try:
+                MatrixProvisioningService.provision_user(
+                    profile.user,
+                    config,
+                    performed_by=request.user,
+                )
+                success_count += 1
+            except MatrixProvisioningError as exc:
+                self.message_user(
+                    request,
+                    f"{profile.user}: {exc}",
+                    level=messages.ERROR,
+                )
+        if success_count:
+            self.message_user(
+                request,
+                f"Provisioned {success_count} Matrix user(s).",
+                level=messages.SUCCESS,
+            )
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        obj = self.get_object(request, object_id) if object_id else None
+        extra_context["show_matrix_provision"] = bool(
+            obj and obj.matrix_localpart
+        )
+        return super().changeform_view(
+            request,
+            object_id,
+            form_url,
+            extra_context=extra_context,
+        )
+
+    def response_change(self, request, obj):
+        if "_provision_matrix_user" in request.POST:
+            self._provision_single(request, obj)
+            return redirect(request.path)
+        return super().response_change(request, obj)
+
+    def _provision_single(self, request, profile):
+        try:
+            config = MatrixConfig.from_env()
+            matrix_user_id = MatrixProvisioningService.provision_user(
+                profile.user,
+                config,
+                performed_by=request.user,
+            )
+            self.message_user(
+                request,
+                f"Provisioned Matrix user {matrix_user_id}.",
+                level=messages.SUCCESS,
+            )
+        except MatrixProvisioningError as exc:
+            self.message_user(
+                request,
+                f"Matrix provisioning failed: {exc}",
+                level=messages.ERROR,
+            )
+
+
 admin.site.register(EqmdCustomUser, EqmdCustomUserAdmin)
-admin.site.register(UserProfile)

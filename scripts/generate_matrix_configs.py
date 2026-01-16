@@ -16,7 +16,7 @@ Environment Variables Required:
     MATRIX_DATABASE_PASSWORD, HOSPITAL_EMAIL, SYNAPSE_OIDC_CLIENT_SECRET
 
 Environment Variables Optional:
-    MATRIX_ADMIN_USERS, MATRIX_BOT_USER_ID
+    MATRIX_ADMIN_USERS, MATRIX_BOT_USER_ID, SYNAPSE_OIDC_PROVIDER_ID
 
 Examples:
     # Generate all configs
@@ -105,6 +105,7 @@ def get_template_vars() -> Dict[str, str]:
         'OIDC_ISSUER': get_env_or_exit('OIDC_ISSUER'),
         'MATRIX_DATABASE_PASSWORD': get_env_or_exit('MATRIX_DATABASE_PASSWORD'),
         'SYNAPSE_OIDC_CLIENT_SECRET': get_env_or_exit('SYNAPSE_OIDC_CLIENT_SECRET'),
+        'SYNAPSE_OIDC_PROVIDER_ID': os.environ.get('SYNAPSE_OIDC_PROVIDER_ID', 'equipemed'),
         'MATRIX_ADMIN_USERS': os.environ.get('MATRIX_ADMIN_USERS', ''),
         'MATRIX_BOT_USER_ID': bot_user_id,
         'HOSPITAL_EMAIL': get_env_or_exit('HOSPITAL_EMAIL', 'admin@localhost'),

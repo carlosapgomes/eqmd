@@ -157,7 +157,7 @@ server_notices:
 
 # Authentication providers (OIDC SSO with EquipeMed)
 oidc_providers:
-  - idp_id: equipemed
+  - idp_id: "${SYNAPSE_OIDC_PROVIDER_ID}"
     idp_name: "EquipeMed"
     discover: true
     issuer: "${OIDC_ISSUER}"
@@ -165,6 +165,7 @@ oidc_providers:
     client_secret: "${SYNAPSE_OIDC_CLIENT_SECRET}"
     scopes: ["openid", "profile", "email"]
     allow_existing_users: true
+    allow_new_users: false
     user_mapping_provider:
       config:
         localpart_template: "u_{{ user.sub }}"

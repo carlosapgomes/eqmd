@@ -32,7 +32,7 @@ Optional (defaults shown in `.env.example`):
 - `MATRIX_ADMIN_INTERNAL_URL` (default `http://matrix-synapse:8008`)
 - `MATRIX_CLIENT_INTERNAL_URL` (default `http://matrix-synapse:8008`)
 - `MATRIX_BOT_USER_ID` (default `@rzero_bot:${MATRIX_FQDN}`)
-- `MATRIX_ADMIN_USERS` (comma-separated Matrix user IDs in `@u_<public_id>:${MATRIX_FQDN}` format)
+- `MATRIX_ADMIN_USERS` (comma-separated Matrix user IDs in `@<localpart>:${MATRIX_FQDN}` format)
 - `MATRIX_GLOBAL_ROOM_NAME`
 
 ## OIDC Connectivity Note
@@ -54,12 +54,12 @@ python manage.py migrate
 ```
 
 ## Admin User IDs
-Admin users use the same Matrix ID mapping as normal users (based on `public_id`).
-To find a user's `public_id`, check the Django admin (User Profile) or run:
+Admin users use the same admin-managed Matrix localpart as normal users.
+To find a user's Matrix localpart, check the Django admin (User Profile) or run:
 ```bash
-python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); user=User.objects.get(username='admin'); print(user.profile.public_id)"
+python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); user=User.objects.get(username='admin'); print(user.profile.matrix_localpart)"
 ```
-Then set `MATRIX_ADMIN_USERS=@u_<public_id>:${MATRIX_FQDN}` in `.env`.
+Then set `MATRIX_ADMIN_USERS=@<localpart>:${MATRIX_FQDN}` in `.env`.
 
 ## Provision Rooms
 Create the global room and per-user DM rooms for active users:
