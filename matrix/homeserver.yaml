@@ -162,7 +162,7 @@ oidc_providers:
     discover: true
     issuer: "https://app.sispep.com/o"
     client_id: "matrix_synapse_client"
-    client_secret: "SIJNuildYCgGGk2COtcsIu1YtrSyZ7MFDg6uZncJQ4k"
+    client_secret: "uut_SNRPOnSXD-1ikTI9iMmvFPN0YKoGsVtrwrfa2hw"
     scopes: ["openid", "profile", "email"]
     allow_existing_users: true
     allow_new_users: false
