@@ -58,7 +58,23 @@ else
     exit 1
 fi
 
-# 2. Media files backup (if directory exists and has content)
+# 2. Matrix database backup (optional)
+print_info "Checking for Matrix database..."
+MATRIX_DB_EXISTS=$(docker compose exec -T postgres psql -U eqmd_user -tAc "SELECT 1 FROM pg_database WHERE datname='matrix_db'" || true)
+if [[ "$MATRIX_DB_EXISTS" == "1" ]]; then
+    print_info "Creating Matrix database backup..."
+    if docker compose exec -T postgres pg_dump -U eqmd_user matrix_db | gzip > "$BACKUP_DIR/matrix_db_backup_${TIMESTAMP}.sql.gz"; then
+        MATRIX_DB_SIZE=$(du -h "$BACKUP_DIR/matrix_db_backup_${TIMESTAMP}.sql.gz" | cut -f1)
+        print_status "Matrix database backup created: matrix_db_backup_${TIMESTAMP}.sql.gz ($MATRIX_DB_SIZE)"
+    else
+        print_error "Matrix database backup failed!"
+        exit 1
+    fi
+else
+    print_info "Matrix database not found; skipping Matrix DB backup"
+fi
+
+# 3. Media files backup (if directory exists and has content)
 if [ -d "./media" ] && [ "$(ls -A ./media 2>/dev/null)" ]; then
     print_info "Creating media files backup..."
     if tar -czf "$BACKUP_DIR/media_backup_${TIMESTAMP}.tar.gz" ./media/; then
@@ -72,7 +88,7 @@ else
     print_info "No media files found to backup (./media/ empty or missing)"
 fi
 
-# 3. PostgreSQL volume backup
+# 4. PostgreSQL volume backup
 print_info "Creating PostgreSQL volume backup..."
 POSTGRES_VOLUME=$(docker volume ls --format "{{.Name}}" | grep postgres_data | head -1)
 if [ -n "$POSTGRES_VOLUME" ]; then
@@ -88,16 +104,37 @@ else
     exit 1
 fi
 
+# 5. Matrix media store volume backup (optional)
+print_info "Checking for Matrix media store volume..."
+MATRIX_MEDIA_VOLUME=$(docker volume ls --format "{{.Name}}" | grep matrix_media_store | head -1)
+if [ -n "$MATRIX_MEDIA_VOLUME" ]; then
+    if docker run --rm -v "$MATRIX_MEDIA_VOLUME":/data -v "$(pwd)/$BACKUP_DIR":/backup alpine tar czf "/backup/matrix_media_store_${TIMESTAMP}.tar.gz" -C /data .; then
+        MATRIX_MEDIA_SIZE=$(du -h "$BACKUP_DIR/matrix_media_store_${TIMESTAMP}.tar.gz" | cut -f1)
+        print_status "Matrix media store backup created: matrix_media_store_${TIMESTAMP}.tar.gz ($MATRIX_MEDIA_SIZE)"
+    else
+        print_error "Matrix media store backup failed!"
+        exit 1
+    fi
+else
+    print_info "Matrix media store volume not found; skipping Matrix media backup"
+fi
+
 # Summary
 echo ""
 echo -e "${GREEN}🎉 Backup completed successfully!${NC}"
 echo ""
 echo "📋 Backup files created:"
 echo "- Database: $BACKUP_DIR/database_backup_${TIMESTAMP}.sql.gz"
+if [ -f "$BACKUP_DIR/matrix_db_backup_${TIMESTAMP}.sql.gz" ]; then
+    echo "- Matrix database: $BACKUP_DIR/matrix_db_backup_${TIMESTAMP}.sql.gz"
+fi
 if [ -f "$BACKUP_DIR/media_backup_${TIMESTAMP}.tar.gz" ]; then
     echo "- Media files: $BACKUP_DIR/media_backup_${TIMESTAMP}.tar.gz"
 fi
 echo "- PostgreSQL volume: $BACKUP_DIR/postgres_volume_${TIMESTAMP}.tar.gz"
+if [ -f "$BACKUP_DIR/matrix_media_store_${TIMESTAMP}.tar.gz" ]; then
+    echo "- Matrix media store: $BACKUP_DIR/matrix_media_store_${TIMESTAMP}.tar.gz"
+fi
 echo ""
 echo "💾 Total backup size: $(du -sh $BACKUP_DIR | cut -f1)"
 echo ""
@@ -105,5 +142,13 @@ echo "🚀 You can now safely run: sudo ./upgrade.sh"
 echo ""
 echo "🔄 To restore from backup (if needed):"
 echo "1. Database: gunzip -c $BACKUP_DIR/database_backup_${TIMESTAMP}.sql.gz | docker compose exec -T postgres psql -U eqmd_user -d eqmd_db"
-echo "2. Media: tar -xzf $BACKUP_DIR/media_backup_${TIMESTAMP}.tar.gz"
-echo "3. Volume: docker run --rm -v $POSTGRES_VOLUME:/data -v $(pwd)/$BACKUP_DIR:/backup alpine tar xzf /backup/postgres_volume_${TIMESTAMP}.tar.gz -C /data"
+if [ -f "$BACKUP_DIR/matrix_db_backup_${TIMESTAMP}.sql.gz" ]; then
+    echo "2. Matrix DB: gunzip -c $BACKUP_DIR/matrix_db_backup_${TIMESTAMP}.sql.gz | docker compose exec -T postgres psql -U eqmd_user -d matrix_db"
+fi
+if [ -f "$BACKUP_DIR/media_backup_${TIMESTAMP}.tar.gz" ]; then
+    echo "3. Media: tar -xzf $BACKUP_DIR/media_backup_${TIMESTAMP}.tar.gz"
+fi
+echo "4. Volume: docker run --rm -v $POSTGRES_VOLUME:/data -v $(pwd)/$BACKUP_DIR:/backup alpine tar xzf /backup/postgres_volume_${TIMESTAMP}.tar.gz -C /data"
+if [ -f "$BACKUP_DIR/matrix_media_store_${TIMESTAMP}.tar.gz" ]; then
+    echo "5. Matrix media: docker run --rm -v $MATRIX_MEDIA_VOLUME:/data -v $(pwd)/$BACKUP_DIR:/backup alpine tar xzf /backup/matrix_media_store_${TIMESTAMP}.tar.gz -C /data"
+fi
