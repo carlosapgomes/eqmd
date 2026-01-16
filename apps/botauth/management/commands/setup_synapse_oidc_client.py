@@ -9,7 +9,7 @@ import os
 import secrets
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from oidc_provider.models import Client
+from oidc_provider.models import Client, ResponseType
 
 
 class Command(BaseCommand):
@@ -65,22 +65,60 @@ class Command(BaseCommand):
                 secret_status = "generated new"
             else:
                 secret_status = "using existing"
+
+            # Ensure HS256 signing for Synapse to avoid JWKS dependency
+            if getattr(client, "jwt_alg", None) != "HS256":
+                client.jwt_alg = "HS256"
+                client.save(update_fields=["jwt_alg"])
             
-            # Update/set redirect URIs (idempotent)
-            current_uris = client.redirect_uris
-            if redirect_uri not in current_uris:
-                if current_uris:
-                    client.redirect_uris = f"{current_uris} {redirect_uri}"
+            # Update/set redirect URIs (idempotent, list or string field)
+            redirect_field = "_redirect_uris" if hasattr(client, "_redirect_uris") else "redirect_uris"
+            current_uris = getattr(client, redirect_field)
+            is_list_field = isinstance(current_uris, (list, tuple))
+            normalized_uris = []
+            was_char_list = False
+            if is_list_field:
+                if current_uris and all(isinstance(item, str) and len(item) == 1 for item in current_uris):
+                    # Stored as list of characters; reconstruct
+                    normalized_uris = ["".join(current_uris)]
+                    was_char_list = True
                 else:
-                    client.redirect_uris = redirect_uri
+                    normalized_uris = [uri for uri in current_uris if uri]
+            elif isinstance(current_uris, str):
+                normalized_uris = [uri for uri in current_uris.split() if uri]
+
+            needs_update = was_char_list
+            if redirect_uri not in normalized_uris:
+                normalized_uris.append(redirect_uri)
+                needs_update = True
+
+            if needs_update:
+                if is_list_field:
+                    setattr(client, redirect_field, normalized_uris)
+                else:
+                    setattr(client, redirect_field, " ".join(normalized_uris))
                 client.save()
                 uri_status = "added new redirect URI"
             else:
                 uri_status = "redirect URI already configured"
-            
+
             # Set allowed scopes for Synapse SSO
-            client.scopes = ['openid', 'profile', 'email']
+            scope_value = "openid profile email"
+            if hasattr(client, "_scope"):
+                client._scope = scope_value
+            elif hasattr(client, "scope"):
+                client.scope = scope_value
             client.save()
+
+            # Ensure response type includes authorization code
+            try:
+                code_response, _ = ResponseType.objects.get_or_create(
+                    value="code",
+                    defaults={"description": "Authorization code"},
+                )
+                client.response_types.add(code_response)
+            except Exception:
+                pass
         
         # Output results
         if created:
@@ -94,7 +132,8 @@ class Command(BaseCommand):
         
         self.stdout.write(f"  - Client secret: {secret_status}")
         self.stdout.write(f"  - Redirect URI: {uri_status}")
-        self.stdout.write(f"  - Allowed scopes: {client.scopes}")
+        scope_display = getattr(client, "_scope", None) or getattr(client, "scope", None) or scope_value
+        self.stdout.write(f"  - Allowed scopes: {scope_display}")
         
         # Show configuration details
         self.stdout.write(self.style.WARNING("\nSynapse Configuration:"))

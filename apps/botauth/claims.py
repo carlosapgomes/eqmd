@@ -7,6 +7,17 @@ Provides claims for both bot delegation and Synapse SSO integration.
 from oidc_provider.lib.claims import ScopeClaims
 
 
+def eqmd_sub_generator(user):
+    """Return stable subject identifier based on profile public_id."""
+    try:
+        profile = user.profile
+    except Exception:
+        from apps.accounts.models import UserProfile
+
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+    return str(getattr(profile, "public_id", user.pk))
+
+
 class EqmdScopeClaims(ScopeClaims):
     """Custom scope claims for EQMD delegation tokens and Synapse SSO."""
     
@@ -22,13 +33,7 @@ class EqmdScopeClaims(ScopeClaims):
         """OpenID Connect standard claims for user identity."""
         user = self.user
         
-        # Get the user profile for public_id
-        try:
-            profile = user.profile
-            public_id = str(profile.public_id)
-        except AttributeError:
-            # Fallback if no profile exists
-            public_id = f"user_{user.pk}"
+        public_id = eqmd_sub_generator(user)
         
         # Build full name with fallbacks
         full_name = user.get_full_name()

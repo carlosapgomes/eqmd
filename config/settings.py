@@ -469,6 +469,7 @@ OIDC_PROVIDER = {
     
     # ID Token expiration
     'OIDC_IDTOKEN_EXPIRE': 600,
+    'OIDC_IDTOKEN_SUB_GENERATOR': 'apps.botauth.claims.eqmd_sub_generator',
     
     # Disable refresh tokens for bot clients
     'OIDC_TOKEN_INTROSPECTION_ENABLED': True,
@@ -496,6 +497,9 @@ OIDC_PROVIDER = {
     
     # Scopes we support
     'OIDC_SCOPES': {
+        'openid': 'OpenID Connect scope',
+        'profile': 'Basic profile claims',
+        'email': 'Email address',
         'patient:read': 'Read patient demographics and status',
         'exam:read': 'Read exam results',
         'dailynote:draft': 'Create daily note drafts',
