@@ -53,6 +53,18 @@ Create the new Matrix tracking tables:
 python manage.py migrate
 ```
 
+## Admin Provisioning (Matrix Users)
+Provision Matrix users before they log in via OIDC.
+
+1) Open Django Admin → User Profiles.
+2) Set `matrix_localpart` (lowercase, memorable, no `@` or domain).
+3) Save, then click **Provision Matrix User** (or select multiple profiles and use the action).
+4) Confirm `matrix_provisioned_at` is set and the Matrix binding is verified.
+
+Notes:
+- If a user already has a different Matrix binding, provisioning will fail; resolve the binding first.
+- Synapse uses `external_ids` with the profile UUID, so OIDC logins will only work after provisioning.
+
 ## Admin User IDs
 Admin users use the same admin-managed Matrix localpart as normal users.
 To find a user's Matrix localpart, check the Django admin (User Profile) or run:
