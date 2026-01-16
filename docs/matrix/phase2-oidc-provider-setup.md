@@ -37,19 +37,19 @@ OIDC_PROVIDER = {
         'client_credentials',  # For bot authentication
         'authorization_code',  # For Synapse SSO
     ],
-    
+
     # Response types (code preferred for security)
     'OIDC_RESPONSE_TYPES_SUPPORTED': [
         'code',  # For authorization_code grant (preferred)
         'token',  # Keep for existing bot usage if needed
     ],
-    
+
     # Custom authorization view for access control
     'OIDC_AUTHORIZE_VIEW': 'apps.botauth.views.AuthorizeView',
-    
+
     # Custom claims implementation
     'OIDC_EXTRA_SCOPE_CLAIMS': 'apps.botauth.claims.EqmdScopeClaims',
-    
+
     # Other existing settings...
 }
 ```
@@ -61,10 +61,10 @@ Implemented in `apps/botauth/claims.py`:
 ```python
 class EqmdScopeClaims(ScopeClaims):
     """Custom scope claims for EQMD delegation tokens and Synapse SSO."""
-    
+
     info_openid = [
         'sub',
-        'name', 
+        'name',
         'preferred_username',
         'eqmd_active',
         'eqmd_role',
@@ -73,27 +73,27 @@ class EqmdScopeClaims(ScopeClaims):
     def scope_openid(self):
         """OpenID Connect standard claims for user identity."""
         user = self.user
-        
+
         # Use UserProfile.public_id for stable identity
         profile = user.profile
         public_id = str(profile.public_id)
-        
+
         # Build full name with fallbacks
         full_name = user.get_full_name()
         if not full_name.strip():
             full_name = user.email or user.username
-        
+
         # Map profession type to stable ASCII slugs
         profession_mapping = {
             user.MEDICAL_DOCTOR: 'medical_doctor',
-            user.RESIDENT: 'resident', 
+            user.RESIDENT: 'resident',
             user.NURSE: 'nurse',
             user.PHYSIOTERAPIST: 'physiotherapist',
             user.STUDENT: 'student',
         }
-        
+
         eqmd_role = profession_mapping.get(user.profession_type, 'unknown') if user.profession_type is not None else 'unknown'
-        
+
         return {
             'sub': public_id,
             'name': full_name,
@@ -112,16 +112,16 @@ Custom authorization view in `apps/botauth/views.py`:
 class AuthorizeView(BaseAuthorizeView):
     """
     Custom OIDC authorization view with access control.
-    
+
     Ensures that only active users can complete OIDC authorization flows.
     This prevents inactive users from accessing Matrix Synapse via SSO.
     """
-    
+
     def get(self, request, *args, **kwargs):
         """Handle GET requests to authorization endpoint."""
         if not request.user.is_authenticated:
             return super().get(request, *args, **kwargs)
-            
+
         if not request.user.is_active:
             # User account is inactive, deny authorization
             context = {
@@ -130,7 +130,7 @@ class AuthorizeView(BaseAuthorizeView):
                 'user': request.user,
             }
             return render(request, 'oidc_provider/error.html', context, status=403)
-        
+
         # User is active, proceed with normal authorization flow
         return super().get(request, *args, **kwargs)
 ```
@@ -151,6 +151,33 @@ uv run python manage.py setup_synapse_oidc_client \
   --matrix-fqdn matrix.yourdomain.com \
   --force-new-secret
 ```
+
+### Database Reset / First Bootstrap
+
+If the Django database is new or has been wiped, the OIDC RSA key and client
+settings are missing. Without a key, the JWKS endpoint is empty and Synapse
+fails login with `Invalid JSON Web Key Set`.
+
+Run the following in order:
+
+```bash
+# 1) Create RSA key so JWKS is populated
+uv run python manage.py creatersakey
+
+# 2) Ensure Synapse OIDC client uses RS256 (JWKS-backed)
+uv run python manage.py shell -c "
+from oidc_provider.models import Client
+client = Client.objects.get(client_id='matrix_synapse_client')
+client.jwt_alg = 'RS256'
+client.save(update_fields=['jwt_alg'])
+"
+
+# 3) Restart Synapse to pick up JWKS changes
+sudo docker compose restart matrix-synapse
+```
+
+Note: `setup_synapse_oidc_client` now sets `jwt_alg` to `RS256` by default. If
+you previously ran it with `HS256`, apply the `RS256` update above.
 
 ### Generated Configuration
 
@@ -204,14 +231,14 @@ before users attempt OIDC login so the `external_ids` link exists.
 
 ### Professional Role Mapping (OIDC Claim)
 
-| EquipeMed Profession | Matrix Role Slug |
-|---------------------|------------------|
-| Medical Doctor | `medical_doctor` |
-| Resident | `resident` |
-| Nurse | `nurse` |
-| Physiotherapist | `physiotherapist` |
-| Student | `student` |
-| Unknown/Null | `unknown` |
+| EquipeMed Profession | Matrix Role Slug  |
+| -------------------- | ----------------- |
+| Medical Doctor       | `medical_doctor`  |
+| Resident             | `resident`        |
+| Nurse                | `nurse`           |
+| Physiotherapist      | `physiotherapist` |
+| Student              | `student`         |
+| Unknown/Null         | `unknown`         |
 
 ## OIDC Endpoints
 
@@ -264,7 +291,7 @@ Phase 2 provides the foundation for Phase 3 (Synapse OIDC client configuration).
 
 **Known Issue**: The current Django Docker container may fail to start due to a psycopg2 import error. This is being addressed by:
 
-1. Updating Dockerfile to use Python 3.12 (to match pyproject.toml requirement)  
+1. Updating Dockerfile to use Python 3.12 (to match pyproject.toml requirement)
 2. Ensuring proper psycopg2-binary installation via uv
 
 For immediate testing, use local development with `DATABASE_HOST=localhost` while the Docker image is being fixed.
@@ -274,9 +301,11 @@ For immediate testing, use local development with `DATABASE_HOST=localhost` whil
 ### Common Issues
 
 #### Claims AttributeError
+
 ```
 AttributeError: 'EqmdCustomUser' object has no attribute 'profile'
 ```
+
 **Solution**: Ensure all users have UserProfile objects. Create them if missing:
 
 ```python
@@ -286,16 +315,21 @@ for user in EqmdCustomUser.objects.all():
 ```
 
 #### OIDC Authorization Errors
+
 ```
 access_denied: Your account is currently inactive
 ```
+
 **Expected**: This is the access control working. Inactive users cannot access Matrix.
 
 #### Missing Client Secret
+
 ```
 KeyError: 'client_secret'
 ```
+
 **Solution**: Re-run the setup command:
+
 ```bash
 uv run python manage.py setup_synapse_oidc_client --force-new-secret
 ```
@@ -303,16 +337,19 @@ uv run python manage.py setup_synapse_oidc_client --force-new-secret
 ## Security Considerations
 
 ### Access Control
+
 - Only active EquipeMed users can complete OIDC authorization
 - User lifecycle management automatically blocks Matrix access for inactive accounts
 - No bypass mechanisms - validation occurs on every login attempt
 
 ### Identity Stability
+
 - Uses UUID-based public_id for stable user identity
 - Profession-based localpart prevents username collisions
 - Display name updates automatically reflect EquipeMed changes
 
 ### Token Security
+
 - Authorization code flow provides secure token exchange
 - Client credentials use confidential client type
 - No implicit grant types enabled for enhanced security
@@ -320,8 +357,9 @@ uv run python manage.py setup_synapse_oidc_client --force-new-secret
 ## What's Next
 
 After completing Phase 2, proceed to:
+
 - **Phase 3**: Configure Synapse OIDC client integration
-- **Phase 4**: Set up Element Web well-known endpoints  
+- **Phase 4**: Set up Element Web well-known endpoints
 - **Phase 5**: Implement policy bot and room management
 - **Phase 6**: Production deployment and testing
 

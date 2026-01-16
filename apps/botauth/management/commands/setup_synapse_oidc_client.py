@@ -52,7 +52,7 @@ class Command(BaseCommand):
                 defaults={
                     'name': 'Matrix Synapse OIDC',
                     'client_type': 'confidential',
-                    'jwt_alg': 'HS256',
+                    'jwt_alg': 'RS256',
                     'require_consent': False,  # Skip consent screen for SSO
                     'reuse_consent': True,
                 }
@@ -66,9 +66,9 @@ class Command(BaseCommand):
             else:
                 secret_status = "using existing"
 
-            # Ensure HS256 signing for Synapse to avoid JWKS dependency
-            if getattr(client, "jwt_alg", None) != "HS256":
-                client.jwt_alg = "HS256"
+            # Ensure RS256 signing for Synapse so JWKS is used for validation
+            if getattr(client, "jwt_alg", None) != "RS256":
+                client.jwt_alg = "RS256"
                 client.save(update_fields=["jwt_alg"])
             
             # Update/set redirect URIs (idempotent, list or string field)
