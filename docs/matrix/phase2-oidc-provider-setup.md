@@ -158,16 +158,18 @@ The command outputs ready-to-use Synapse configuration:
 
 ```yaml
 oidc_providers:
-  - idp_id: eqmd
+  - idp_id: "${SYNAPSE_OIDC_PROVIDER_ID}"
     idp_name: EquipeMed
     issuer: "https://app.sispep.com/o"
     client_id: "synapse-matrix"
     client_secret: "generated_secret_here"
     scopes: ["openid", "profile"]
+    allow_existing_users: true
+    allow_new_users: false
     user_mapping_provider:
       config:
         subject_claim: "sub"
-        localpart_template: "{{ user.eqmd_role }}_{{ user.sub }}"
+        localpart_template: "u_{{ user.sub }}"
         display_name_template: "{{ user.name }}"
 ```
 
@@ -178,15 +180,16 @@ Added to `.env`:
 ```bash
 # Matrix Synapse OIDC Integration
 SYNAPSE_OIDC_CLIENT_SECRET=generated_secret_here
+SYNAPSE_OIDC_PROVIDER_ID=equipemed
 ```
 
 ## Security Features
 
 ### User Identity Mapping
 
-- **Stable Identity**: Uses `UserProfile.public_id` (UUID) for consistent user mapping
-- **Role-Based Localpart**: Matrix usernames include profession type (e.g., `medical_doctor_uuid`)
-- **Display Name Mapping**: Uses full name with email fallback
+- **Stable Identity**: Uses `UserProfile.public_id` (UUID) for the OIDC `sub`
+- **Admin-Managed MXID**: Matrix localpart is stored on the user profile and set by admins
+- **External ID Linking**: Synapse matches users via `external_ids` using the profile UUID
 
 ### Access Control
 
@@ -194,7 +197,12 @@ SYNAPSE_OIDC_CLIENT_SECRET=generated_secret_here
 - **Graceful Denial**: Inactive users see proper error message
 - **No Session Bypass**: Validation occurs on every authorization request
 
-### Professional Role Mapping
+### Provisioning Requirement
+
+Synapse is configured to allow only existing users. Provision Matrix accounts in Django admin
+before users attempt OIDC login so the `external_ids` link exists.
+
+### Professional Role Mapping (OIDC Claim)
 
 | EquipeMed Profession | Matrix Role Slug |
 |---------------------|------------------|

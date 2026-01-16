@@ -22,7 +22,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     professional_registration_number = factory.Faker('numerify', text='CRM-####')
     country_id_number = factory.Faker('numerify', text='###.###.###-##')
     fiscal_number = factory.Faker('numerify', text='###.###.###-##')
-    phone = factory.Faker('phone_number')
+    phone = factory.Faker('numerify', text='##########')
     is_active = True
     is_staff = False
     is_superuser = False

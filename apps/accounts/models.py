@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.utils import timezone
 from datetime import timedelta
 from simple_history.models import HistoricalRecords
@@ -196,6 +197,27 @@ class UserProfile(models.Model):
     public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     display_name = models.CharField(max_length=100, blank=True)
     bio = models.TextField(blank=True)
+    matrix_localpart = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r"^[a-z0-9][a-z0-9._-]{0,63}$",
+                message="Matrix localpart must use lowercase letters, numbers, dots, underscores, or hyphens.",
+            )
+        ],
+        help_text="Matrix localpart without @ or domain (e.g., joao.silva).",
+    )
+    matrix_provisioned_at = models.DateTimeField(null=True, blank=True)
+    matrix_provisioned_by = models.ForeignKey(
+        EqmdCustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="matrix_provisioned_profiles",
+    )
 
     # Read-only properties exposing user fields
     @property
@@ -231,6 +253,23 @@ class UserProfile(models.Model):
         if self.user.profession_type is not None:
             return self.user.get_profession_type_display()
         return ""
+
+    def _normalize_matrix_localpart(self):
+        if self.matrix_localpart is None:
+            return
+        localpart = self.matrix_localpart.strip()
+        if not localpart:
+            self.matrix_localpart = None
+            return
+        self.matrix_localpart = localpart.lower()
+
+    def clean(self):
+        self._normalize_matrix_localpart()
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self._normalize_matrix_localpart()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.display_name or self.full_name

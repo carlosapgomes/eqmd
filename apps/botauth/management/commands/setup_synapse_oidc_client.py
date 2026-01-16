@@ -136,11 +136,12 @@ class Command(BaseCommand):
         self.stdout.write(f"  - Allowed scopes: {scope_display}")
         
         # Show configuration details
+        provider_id = os.getenv("SYNAPSE_OIDC_PROVIDER_ID", "equipemed")
         self.stdout.write(self.style.WARNING("\nSynapse Configuration:"))
         self.stdout.write("Add these settings to your Synapse homeserver.yaml:")
         self.stdout.write("")
         self.stdout.write("oidc_providers:")
-        self.stdout.write("  - idp_id: equipemed")
+        self.stdout.write(f"  - idp_id: {provider_id}")
         self.stdout.write("    idp_name: \"EquipeMed\"")
         self.stdout.write("    discover: true")
         self.stdout.write(f"    issuer: \"{os.getenv('OIDC_ISSUER', 'https://yourhospital.com/o')}\"")
@@ -148,6 +149,7 @@ class Command(BaseCommand):
         self.stdout.write(f"    client_secret: \"{client.client_secret}\"")
         self.stdout.write("    scopes: [\"openid\", \"profile\", \"email\"]")
         self.stdout.write("    allow_existing_users: true")
+        self.stdout.write("    allow_new_users: false")
         self.stdout.write("    user_mapping_provider:")
         self.stdout.write("      config:")
         self.stdout.write("        localpart_template: \"u_{{ user.sub }}\"")
@@ -159,6 +161,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING("Environment Variables:"))
         self.stdout.write("Add to your .env file:")
         self.stdout.write(f"SYNAPSE_OIDC_CLIENT_SECRET={client.client_secret}")
+        self.stdout.write(f"SYNAPSE_OIDC_PROVIDER_ID={provider_id}")
         self.stdout.write("")
         
         self.stdout.write(

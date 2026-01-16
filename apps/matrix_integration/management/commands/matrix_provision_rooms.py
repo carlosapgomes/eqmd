@@ -7,6 +7,7 @@ from apps.matrix_integration.services import (
     MatrixClient,
     MatrixConfig,
     SynapseAdminClient,
+    build_external_ids,
     build_matrix_user_id,
     display_name_for_user,
 )
@@ -63,9 +64,25 @@ class Command(BaseCommand):
         self.stdout.write(f"Active users: {len(active_users)}")
 
         for user in active_users:
+            localpart = None
+            try:
+                localpart = user.profile.matrix_localpart
+            except Exception:
+                localpart = None
             matrix_user_id = build_matrix_user_id(user, config.matrix_fqdn)
+            if not localpart:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Matrix localpart missing for {user}. Using fallback {matrix_user_id}"
+                    )
+                )
             display_name = display_name_for_user(user)
-            admin_client.ensure_user(matrix_user_id, display_name=display_name)
+            external_ids = build_external_ids(user, config.oidc_provider_id)
+            admin_client.ensure_user(
+                matrix_user_id,
+                display_name=display_name,
+                external_ids=external_ids,
+            )
 
             if not options["skip_dm"]:
                 self._ensure_direct_room(matrix_client, user, matrix_user_id)
