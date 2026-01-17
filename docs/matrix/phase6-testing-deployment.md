@@ -8,6 +8,13 @@
 
 ## Core functional tests
 
+### 0) Bot process
+
+Start the bot process before DM testing:
+```bash
+python manage.py run_matrix_bot
+```
+
 ### 1) SSO login
 
 - Element Web: log in via SSO and verify sync completes.

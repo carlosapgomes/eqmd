@@ -438,7 +438,7 @@ class PatientAdmission(models.Model):
                 name="unique_active_admission_per_patient",
             ),
             models.CheckConstraint(
-                check=models.Q(discharge_datetime__isnull=True)
+                condition=models.Q(discharge_datetime__isnull=True)
                 | models.Q(discharge_datetime__gte=models.F("admission_datetime")),
                 name="discharge_after_admission",
             ),

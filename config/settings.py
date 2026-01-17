@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "django.contrib.postgres",
     "taggit",
     "simple_history",
     "apps.core",  # New app for core/pages functionality
@@ -440,6 +441,15 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
         },
+        'matrix_bot_audit': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'matrix_bot_audit.log'),
+            'when': 'D',
+            'interval': 1,
+            'backupCount': 60,
+            'encoding': 'utf-8',
+        },
     },
     'loggers': {
         'security.password_change': {
@@ -449,6 +459,11 @@ LOGGING = {
         },
         'security.user_lifecycle': {
             'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'matrix.bot.audit': {
+            'handlers': ['matrix_bot_audit'],
             'level': 'INFO',
             'propagate': False,
         },

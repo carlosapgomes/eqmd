@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from django.utils import timezone
 
 from apps.botauth.models import MatrixUserBinding
+from apps.matrix_integration.models import MatrixDirectRoom
 from apps.botauth.services import MatrixBindingService
 
 
@@ -29,6 +30,7 @@ class MatrixConfig:
     oidc_provider_id: str
     bot_user_id: str
     bot_access_token: str
+    bot_display_name: str
     global_room_name: str
 
     @classmethod
@@ -40,7 +42,8 @@ class MatrixConfig:
         oidc_provider_id = os.getenv("SYNAPSE_OIDC_PROVIDER_ID", "equipemed")
         bot_user_id = os.getenv("MATRIX_BOT_USER_ID", f"@rzero_bot:{matrix_fqdn}")
         bot_access_token = os.getenv("MATRIX_BOT_ACCESS_TOKEN", "")
-        global_room_name = os.getenv("MATRIX_GLOBAL_ROOM_NAME", "EquipeMed - Todos")
+        bot_display_name = os.getenv("MATRIX_BOT_DISPLAY_NAME", "RZero")
+        global_room_name = os.getenv("MATRIX_GLOBAL_ROOM_NAME", "Equipe - Todos")
         return cls(
             matrix_fqdn=matrix_fqdn,
             admin_base_url=admin_base_url,
@@ -49,6 +52,7 @@ class MatrixConfig:
             oidc_provider_id=oidc_provider_id,
             bot_user_id=bot_user_id,
             bot_access_token=bot_access_token,
+            bot_display_name=bot_display_name,
             global_room_name=global_room_name,
         )
 
@@ -99,12 +103,20 @@ class SynapseAdminClient:
         payload = {
             "admin": admin,
             "deactivated": deactivated,
-            "password": secrets.token_urlsafe(32),
         }
+        password = secrets.token_urlsafe(32)
+        payload["password"] = password
         if display_name:
             payload["displayname"] = display_name
         if external_ids:
             payload["external_ids"] = external_ids
+        try:
+            return self._client.request("PUT", f"/_synapse/admin/v2/users/{encoded}", payload)
+        except MatrixApiError as exc:
+            message = str(exc)
+            if "Password change disabled" not in message:
+                raise
+        payload.pop("password", None)
         return self._client.request("PUT", f"/_synapse/admin/v2/users/{encoded}", payload)
 
     def deactivate_user(self, user_id, erase=False):
@@ -124,6 +136,13 @@ class SynapseAdminClient:
 
     def create_login_token(self, user_id):
         encoded = urllib.parse.quote(user_id, safe="")
+        try:
+            return self._client.request(
+                "POST", f"/_synapse/admin/v1/users/{encoded}/login"
+            )
+        except MatrixApiError as exc:
+            if "M_UNRECOGNIZED" not in str(exc) and "404" not in str(exc):
+                raise
         return self._client.request("POST", f"/_synapse/admin/v2/users/{encoded}/login")
 
 
@@ -241,6 +260,37 @@ class MatrixProvisioningService:
         profile.save(update_fields=["matrix_provisioned_at", "matrix_provisioned_by"])
 
         return matrix_user_id
+
+
+class MatrixRoomProvisioningService:
+    @classmethod
+    def ensure_direct_room(cls, user, matrix_user_id, config, matrix_client=None):
+        if not config.bot_access_token:
+            raise MatrixProvisioningError("MATRIX_BOT_ACCESS_TOKEN is required")
+
+        matrix_client = matrix_client or MatrixClient(config)
+        direct_room = MatrixDirectRoom.objects.filter(user=user).first()
+        if direct_room:
+            try:
+                matrix_client.invite_user(direct_room.room_id, matrix_user_id)
+            except MatrixApiError:
+                return direct_room
+            return direct_room
+
+        payload = {
+            "invite": [matrix_user_id],
+            "is_direct": True,
+            "preset": "private_chat",
+        }
+        try:
+            response = matrix_client.create_room(payload)
+        except MatrixApiError as exc:
+            raise MatrixProvisioningError(str(exc)) from exc
+        room_id = response.get("room_id")
+        if not room_id:
+            raise MatrixProvisioningError(f"Failed to create DM room for {matrix_user_id}")
+
+        return MatrixDirectRoom.objects.create(user=user, room_id=room_id)
 
 
 def display_name_for_user(user):

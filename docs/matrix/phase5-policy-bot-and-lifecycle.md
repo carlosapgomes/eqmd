@@ -32,6 +32,7 @@ Optional (defaults shown in `.env.example`):
 - `MATRIX_ADMIN_INTERNAL_URL` (default `http://matrix-synapse:8008`)
 - `MATRIX_CLIENT_INTERNAL_URL` (default `http://matrix-synapse:8008`)
 - `MATRIX_BOT_USER_ID` (default `@rzero_bot:${MATRIX_FQDN}`)
+- `MATRIX_BOT_DISPLAY_NAME` (default `EquipeMed Bot`)
 - `MATRIX_ADMIN_USERS` (comma-separated Matrix user IDs in `@<localpart>:${MATRIX_FQDN}` format)
 - `MATRIX_GLOBAL_ROOM_NAME`
 
@@ -46,6 +47,19 @@ python manage.py setup_matrix_bot
 ```
 
 Save the printed token into `.env` as `MATRIX_BOT_ACCESS_TOKEN`.
+
+Update the bot display name (optional):
+```bash
+python manage.py setup_matrix_bot --display-name "rzero"
+```
+
+## Bot Bootstrap (Run)
+Start the bot process (long-running):
+```bash
+python manage.py run_matrix_bot
+```
+
+The bot command prefix is `!` (e.g., `!buscar ...`).
 
 ## Migrations
 Create the new Matrix tracking tables:
@@ -83,6 +97,14 @@ Optional flags:
 - `--skip-global`
 - `--skip-dm`
 - `--global-room-name "Your Name"`
+- `--include-inactive` (re-provision inactive users too)
+
+## Admin DM Provisioning
+From Django Admin → Users list:
+- Select user(s)
+- Action: **(Re)provisionar sala privada do bot**
+
+This reuses an existing DM room if one is already stored.
 
 ## Sync Lifecycle
 Deactivate Matrix accounts for inactive users and kick them from the global room:
