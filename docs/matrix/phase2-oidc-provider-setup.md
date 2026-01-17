@@ -230,6 +230,14 @@ SYNAPSE_OIDC_PROVIDER_ID=equipemed
 Synapse is configured to allow only existing users. Provision Matrix accounts in Django admin
 before users attempt OIDC login so the `external_ids` link exists.
 
+### Admin Token vs Password Login
+
+You can disable password login (`password_config.enabled: false`) after creating an admin
+account and generating `SYNAPSE_ADMIN_TOKEN`. OIDC SSO continues to work.
+
+Keep at least one admin token stored safely. If password login is disabled and all admin
+tokens are lost, you will need the `registration_shared_secret` path to bootstrap a new admin.
+
 ### Professional Role Mapping (OIDC Claim)
 
 | EquipeMed Profession | Matrix Role Slug  |
@@ -355,6 +363,30 @@ KeyError: 'client_secret'
 
 ```bash
 uv run python manage.py setup_synapse_oidc_client --force-new-secret
+```
+
+#### Cleanup JIT Users
+
+If legacy `@u_<id>` users were created during early OIDC tests, deactivate and erase them:
+
+```bash
+for mxid in '@u_22:matrix.sispep.com' '@u_23:matrix.sispep.com' '@u_24:matrix.sispep.com'; do
+  enc=$(printf '%s' "$mxid" | jq -sRr @uri)
+  curl -sS -X POST -H "Authorization: Bearer $SYNAPSE_ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"erase": true}' \
+    "http://localhost:8008/_synapse/admin/v1/deactivate/$enc"
+done
+```
+
+Verify:
+
+```bash
+for mxid in '@u_22:matrix.sispep.com' '@u_23:matrix.sispep.com' '@u_24:matrix.sispep.com'; do
+  enc=$(printf '%s' "$mxid" | jq -sRr @uri)
+  curl -sS -H "Authorization: Bearer $SYNAPSE_ADMIN_TOKEN" \
+    "http://localhost:8008/_synapse/admin/v2/users/$enc" | jq .
+done
 ```
 
 ## Security Considerations
