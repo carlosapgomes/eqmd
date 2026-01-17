@@ -267,11 +267,11 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
     def form_type_display(self, obj):
         """Display form type with colored badge."""
         if obj.form_type == 'HOSPITAL':
-            return format_html('<span class="badge bg-primary">Hospital</span>')
+            return format_html('<span class="badge bg-primary">{}</span>', 'Hospital')
         elif obj.form_type == 'APAC':
-            return format_html('<span class="badge bg-success">APAC</span>')
+            return format_html('<span class="badge bg-success">{}</span>', 'APAC')
         elif obj.form_type == 'AIH':
-            return format_html('<span class="badge bg-info">AIH</span>')
+            return format_html('<span class="badge bg-info">{}</span>', 'AIH')
         else:
             return format_html('<span class="badge bg-secondary">{}</span>', obj.form_type)
     form_type_display.short_description = "Tipo"
