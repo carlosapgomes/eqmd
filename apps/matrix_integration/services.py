@@ -160,9 +160,12 @@ def build_external_ids(user, oidc_provider_id):
         return None
     if not oidc_provider_id:
         return None
+    auth_provider = oidc_provider_id
+    if not auth_provider.startswith("oidc-"):
+        auth_provider = f"oidc-{auth_provider}"
     return [
         {
-            "auth_provider": oidc_provider_id,
+            "auth_provider": auth_provider,
             "external_id": str(profile.public_id),
         }
     ]

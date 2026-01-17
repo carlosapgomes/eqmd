@@ -196,8 +196,9 @@ oidc_providers:
     user_mapping_provider:
       config:
         subject_claim: "sub"
-        localpart_template: "u_{{ user.sub }}"
-        display_name_template: "{{ user.name }}"
+        localpart_template: "{{ user.matrix_localpart }}"
+        display_name_template: "{{ user.name | default(user.preferred_username) | default(user.email) }}"
+    user_profile_method: "userinfo_endpoint"
 ```
 
 ## Environment Variables
@@ -276,6 +277,28 @@ claims = EqmdScopeClaims(user=user, scope=['openid'])
 print('Claims:', claims.scope_openid())
 "
 ```
+
+### Verify Matrix Localpart Mapping
+
+```bash
+# Fetch a recent access token for a user who logged in via OIDC
+uv run python manage.py shell -c "
+from oidc_provider.models import Token
+from apps.accounts.models import EqmdCustomUser
+
+user = EqmdCustomUser.objects.get(username='apgomes')
+token = Token.objects.filter(user=user).order_by('-id').first()
+print(token.access_token if token else 'NO_TOKEN')
+"
+```
+
+```bash
+# Verify the userinfo payload includes matrix_localpart
+curl -sS -H "Authorization: Bearer <TOKEN>" https://app.sispep.com/o/userinfo | jq .
+```
+
+Expected output includes `matrix_localpart` (e.g., `ap.gomes`). Element should then show
+`@ap.gomes:matrix.sispep.com` during SSO login.
 
 ### Verify OIDC Discovery
 
