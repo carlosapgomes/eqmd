@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.matrix_integration.models import MatrixDirectRoom, MatrixGlobalRoom
+from apps.matrix_integration.models import MatrixGlobalRoom
 from apps.matrix_integration.services import (
     MatrixApiError,
     MatrixClient,
     MatrixConfig,
+    MatrixRoomProvisioningService,
+    MatrixProvisioningError,
     SynapseAdminClient,
     build_external_ids,
     build_matrix_user_id,
@@ -44,6 +46,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Skip per-user DM provisioning",
         )
+        parser.add_argument(
+            "--include-inactive",
+            action="store_true",
+            help="Include inactive users when provisioning rooms",
+        )
 
     def handle(self, *args, **options):
         config = MatrixConfig.from_env()
@@ -60,10 +67,16 @@ class Command(BaseCommand):
             global_room = self._ensure_global_room(matrix_client, config, options)
 
         User = get_user_model()
-        active_users = [user for user in User.objects.filter(is_active=True) if is_user_active(user)]
-        self.stdout.write(f"Active users: {len(active_users)}")
+        if options["include_inactive"]:
+            users = list(User.objects.all())
+            self.stdout.write(f"All users: {len(users)}")
+        else:
+            users = [
+                user for user in User.objects.filter(is_active=True) if is_user_active(user)
+            ]
+            self.stdout.write(f"Active users: {len(users)}")
 
-        for user in active_users:
+        for user in users:
             localpart = None
             try:
                 localpart = user.profile.matrix_localpart
@@ -85,7 +98,19 @@ class Command(BaseCommand):
             )
 
             if not options["skip_dm"]:
-                self._ensure_direct_room(matrix_client, user, matrix_user_id)
+                try:
+                    MatrixRoomProvisioningService.ensure_direct_room(
+                        user,
+                        matrix_user_id,
+                        config,
+                        matrix_client=matrix_client,
+                    )
+                except (MatrixApiError, MatrixProvisioningError) as exc:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"DM room skipped for {matrix_user_id}: {exc}"
+                        )
+                    )
 
             if global_room:
                 self._invite_to_global(matrix_client, matrix_user_id, global_room)
@@ -110,25 +135,6 @@ class Command(BaseCommand):
         global_room = MatrixGlobalRoom.objects.create(room_id=room_id, name=name)
         self.stdout.write(f"Created global room: {room_id}")
         return global_room
-
-    def _ensure_direct_room(self, matrix_client, user, matrix_user_id):
-        direct_room = MatrixDirectRoom.objects.filter(user=user).first()
-        if direct_room:
-            return direct_room
-
-        payload = {
-            "invite": [matrix_user_id],
-            "is_direct": True,
-            "preset": "private_chat",
-        }
-        response = matrix_client.create_room(payload)
-        room_id = response.get("room_id")
-        if not room_id:
-            raise CommandError(f"Failed to create DM room for {matrix_user_id}")
-
-        direct_room = MatrixDirectRoom.objects.create(user=user, room_id=room_id)
-        self.stdout.write(f"Created DM room for {matrix_user_id}: {room_id}")
-        return direct_room
 
     def _invite_to_global(self, matrix_client, matrix_user_id, global_room):
         try:

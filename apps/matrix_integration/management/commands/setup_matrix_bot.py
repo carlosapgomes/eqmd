@@ -14,7 +14,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--display-name",
-            default="EquipeMed Bot",
+            default=None,
             help="Display name to set for the bot",
         )
         parser.add_argument(
@@ -29,7 +29,7 @@ class Command(BaseCommand):
             raise CommandError("SYNAPSE_ADMIN_TOKEN is required")
 
         user_id = options["user_id"] or config.bot_user_id
-        display_name = options["display_name"]
+        display_name = options["display_name"] or config.bot_display_name
         admin_flag = options["admin"]
 
         admin_client = SynapseAdminClient(config)

@@ -9,6 +9,7 @@ from apps.matrix_integration.services import (
     MatrixConfig,
     MatrixProvisioningError,
     MatrixProvisioningService,
+    MatrixRoomProvisioningService,
 )
 
 
@@ -111,6 +112,7 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         'is_researcher',
     )
     inlines = (UserProfileInline,)
+    actions = ("reprovision_matrix_dm_room",)
 
     def get_inline_instances(self, request, obj=None):
         # Avoid double-creating UserProfile on add; signals already create it.
@@ -143,6 +145,36 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
             )
         
         return form
+
+    @admin.action(description="(Re)provisionar sala privada do bot")
+    def reprovision_matrix_dm_room(self, request, queryset):
+        config = MatrixConfig.from_env()
+        success_count = 0
+        for user in queryset:
+            try:
+                matrix_user_id = MatrixProvisioningService.provision_user(
+                    user,
+                    config,
+                    performed_by=request.user,
+                )
+                MatrixRoomProvisioningService.ensure_direct_room(
+                    user,
+                    matrix_user_id,
+                    config,
+                )
+                success_count += 1
+            except MatrixProvisioningError as exc:
+                self.message_user(
+                    request,
+                    f"{user}: {exc}",
+                    level=messages.ERROR,
+                )
+        if success_count:
+            self.message_user(
+                request,
+                f"Provisioned {success_count} Matrix DM room(s).",
+                level=messages.SUCCESS,
+            )
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
