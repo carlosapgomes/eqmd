@@ -152,9 +152,12 @@ class Command(BaseCommand):
         self.stdout.write("    allow_new_users: false")
         self.stdout.write("    user_mapping_provider:")
         self.stdout.write("      config:")
-        self.stdout.write("        localpart_template: \"u_{{ user.sub }}\"")
-        self.stdout.write("        display_name_template: \"{{ user.name | default(user.preferred_username) }}\"")
+        self.stdout.write("        localpart_template: \"{{ user.matrix_localpart }}\"")
+        self.stdout.write(
+            "        display_name_template: \"{{ user.name | default(user.preferred_username) | default(user.email) }}\""
+        )
         self.stdout.write("        email_template: \"{{ user.email }}\"")
+        self.stdout.write("    user_profile_method: \"userinfo_endpoint\"")
         self.stdout.write("")
         
         # Environment variable suggestions  

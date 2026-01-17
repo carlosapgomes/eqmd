@@ -111,6 +111,12 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         'is_researcher',
     )
     inlines = (UserProfileInline,)
+
+    def get_inline_instances(self, request, obj=None):
+        # Avoid double-creating UserProfile on add; signals already create it.
+        if obj is None:
+            return []
+        return super().get_inline_instances(request, obj)
     
     def save_model(self, request, obj, form, change):
         """

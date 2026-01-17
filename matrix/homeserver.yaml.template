@@ -168,7 +168,7 @@ oidc_providers:
     allow_new_users: false
     user_mapping_provider:
       config:
-        localpart_template: "u_{{ user.sub }}"
+        localpart_template: "{{ user.matrix_localpart }}"
         display_name_template: "{{ user.name | default(user.preferred_username) | default(user.email) }}"
         email_template: "{{ user.email }}"
         

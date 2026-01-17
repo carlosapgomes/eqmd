@@ -52,7 +52,7 @@ class MatrixProvisioningServiceTests(TestCase):
             call_kwargs["external_ids"],
             [
                 {
-                    "auth_provider": "equipemed",
+                    "auth_provider": "oidc-equipemed",
                     "external_id": str(self.user.profile.public_id),
                 }
             ],
