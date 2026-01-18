@@ -5,6 +5,7 @@ from . import test_views
 from . import test_views_role_permissions
 from . import permission_demo
 from .api import procedures as procedures_api
+from .api import icd10_codes as icd10_api
 
 app_name = "apps.core"
 
@@ -160,5 +161,21 @@ urlpatterns = [
         "api/procedures/",
         procedures_api.procedures_list,
         name="procedures_list_api"
+    ),
+    # API endpoints for ICD-10 codes
+    path(
+        "api/icd10/search/",
+        icd10_api.icd10_search,
+        name="icd10_search_api"
+    ),
+    path(
+        "api/icd10/<uuid:code_id>/",
+        icd10_api.icd10_detail,
+        name="icd10_detail_api"
+    ),
+    path(
+        "api/icd10/",
+        icd10_api.icd10_list,
+        name="icd10_list_api"
     ),
 ]

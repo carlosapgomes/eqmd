@@ -4,6 +4,7 @@ from django.utils.html import format_html
 from django.contrib.postgres.search import SearchVector
 from .models.renewal_request import AccountRenewalRequest
 from .models.medical_procedure import MedicalProcedure
+from .models.icd10_code import Icd10Code
 
 @admin.register(AccountRenewalRequest)
 class AccountRenewalRequestAdmin(admin.ModelAdmin):
@@ -191,4 +192,129 @@ class MedicalProcedureAdmin(admin.ModelAdmin):
             )
         except Exception:
             # Silently fail if PostgreSQL extensions not available
+            pass
+
+
+@admin.register(Icd10Code)
+class Icd10CodeAdmin(admin.ModelAdmin):
+    """Admin interface for managing ICD-10 (CID) codes."""
+
+    list_display = (
+        'code',
+        'short_description_display',
+        'is_active',
+        'created_at',
+        'updated_at'
+    )
+
+    list_filter = (
+        'is_active',
+        'created_at',
+        'updated_at'
+    )
+
+    search_fields = (
+        'code',
+        'description'
+    )
+
+    ordering = ('code',)
+
+    readonly_fields = (
+        'id',
+        'created_at',
+        'updated_at',
+        'search_vector'
+    )
+
+    fieldsets = (
+        ('ICD-10 Information', {
+            'fields': ('code', 'description', 'is_active')
+        }),
+        ('System Fields', {
+            'fields': ('id', 'search_vector', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    list_per_page = 50
+
+    actions = ['activate_codes', 'deactivate_codes', 'update_search_vectors']
+
+    def short_description_display(self, obj):
+        if len(obj.description) <= 60:
+            return obj.description
+
+        truncated = obj.description[:57] + "..."
+        return format_html(
+            '<span title="{}">{}</span>',
+            obj.description,
+            truncated
+        )
+    short_description_display.short_description = 'Description'
+
+    def activate_codes(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f"{updated} code(s) activated successfully.")
+    activate_codes.short_description = "Activate selected codes"
+
+    def deactivate_codes(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f"{updated} code(s) deactivated successfully.")
+    deactivate_codes.short_description = "Deactivate selected codes"
+
+    def update_search_vectors(self, request, queryset):
+        from django.db import connection
+
+        if connection.vendor != 'postgresql':
+            self.message_user(
+                request,
+                "Search vector updates require PostgreSQL.",
+                level='WARNING'
+            )
+            return
+
+        try:
+            for code in queryset:
+                Icd10Code.objects.filter(id=code.id).update(
+                    search_vector=SearchVector('code', 'description')
+                )
+
+            count = queryset.count()
+            self.message_user(
+                request,
+                f"Search vectors updated successfully for {count} code(s)."
+            )
+        except Exception as e:
+            self.message_user(
+                request,
+                f"Error updating search vectors: {str(e)}",
+                level='ERROR'
+            )
+    update_search_vectors.short_description = "Update search vectors"
+
+    def get_search_results(self, request, queryset, search_term):
+        if not search_term:
+            return super().get_search_results(request, queryset, search_term)
+
+        try:
+            search_queryset = queryset.search(search_term)
+            use_distinct = False
+            return search_queryset, use_distinct
+        except Exception:
+            return super().get_search_results(request, queryset, search_term)
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+
+        from django.db import connection
+
+        if connection.vendor != 'postgresql':
+            return
+
+        try:
+            Icd10Code.objects.filter(id=obj.id).update(
+                search_vector=SearchVector('code', 'description')
+            )
+        except Exception:
             pass
