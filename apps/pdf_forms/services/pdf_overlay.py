@@ -34,6 +34,17 @@ class PDFFormOverlay:
     Creates precise text overlays using ReportLab and merges them with original PDFs.
     """
 
+    PROCEDURE_DESCRIPTION_FIELDS = {
+        "main_procedure_description",
+        "secondary_procedure_1_description",
+        "secondary_procedure_2_description",
+        "secondary_procedure_3_description",
+        "secondary_procedure_4_description",
+        "secondary_procedure_5_description",
+        "procedure_description",
+    }
+    PROCEDURE_DESCRIPTION_FONT_SIZE = 6
+
     def __init__(self):
         if not PDF_LIBRARY_AVAILABLE:
             raise ImportError("pypdf library is required for PDF form processing")
@@ -41,7 +52,7 @@ class PDFFormOverlay:
             raise ImportError(
                 "reportlab library is required for PDF overlay generation"
             )
-        
+
         # Cache for template information to improve performance
         self._template_cache = {}
 
@@ -60,18 +71,22 @@ class PDFFormOverlay:
         Returns:
             HttpResponse: Filled PDF as streaming HTTP response
         """
-        return self.generate_pdf_response(template_path, form_data, field_config, output_filename)
+        return self.generate_pdf_response(
+            template_path, form_data, field_config, output_filename
+        )
 
-    def generate_pdf_response(self, template_path, form_data, field_config, filename=None):
+    def generate_pdf_response(
+        self, template_path, form_data, field_config, filename=None
+    ):
         """
         Generate PDF and return as HttpResponse for direct download.
-        
+
         Args:
             template_path (str): Path to blank PDF form template
             form_data (dict): Form data to fill
             field_config (dict): Field configuration with coordinates
             filename (str): Optional output filename
-            
+
         Returns:
             HttpResponse: Streaming PDF response with proper headers
         """
@@ -86,8 +101,8 @@ class PDFFormOverlay:
         try:
             # Get cached template information or read from file
             template_info = self._get_template_info(template_path)
-            page_width = template_info['page_width']
-            page_height = template_info['page_height']
+            page_width = template_info["page_width"]
+            page_height = template_info["page_height"]
 
             # Create overlay PDF with form data
             overlay_buffer = self._create_overlay_pdf(
@@ -104,18 +119,17 @@ class PDFFormOverlay:
 
             # Create HTTP response with PDF content
             response = HttpResponse(
-                filled_pdf_buffer.getvalue(),
-                content_type='application/pdf'
+                filled_pdf_buffer.getvalue(), content_type="application/pdf"
             )
-            
+
             # Set proper headers for download
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            response['Content-Length'] = len(filled_pdf_buffer.getvalue())
-            
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            response["Content-Length"] = len(filled_pdf_buffer.getvalue())
+
             # Ensure proper cleanup of buffers
             filled_pdf_buffer.close()
             overlay_buffer.close()
-            
+
             return response
 
         except Exception as e:
@@ -124,20 +138,20 @@ class PDFFormOverlay:
     def _get_template_info(self, template_path):
         """
         Get cached template information or read from file.
-        
+
         Args:
             template_path (str): Path to PDF template
-            
+
         Returns:
             dict: Template information with page dimensions
         """
         # Check cache first
         template_mtime = os.path.getmtime(template_path)
         cache_key = f"{template_path}:{template_mtime}"
-        
+
         if cache_key in self._template_cache:
             return self._template_cache[cache_key]
-        
+
         # Read template and cache information
         reader = PdfReader(template_path)
         if not reader.pages:
@@ -148,27 +162,29 @@ class PDFFormOverlay:
         mediabox = first_page.mediabox
         page_width = float(mediabox.width)
         page_height = float(mediabox.height)
-        
+
         template_info = {
-            'page_width': page_width,
-            'page_height': page_height,
+            "page_width": page_width,
+            "page_height": page_height,
         }
-        
+
         # Cache the information
         self._template_cache[cache_key] = template_info
-        
+
         # Limit cache size to prevent memory issues
         if len(self._template_cache) > 10:
             # Remove oldest entries
             oldest_key = next(iter(self._template_cache))
             del self._template_cache[oldest_key]
-        
+
         return template_info
 
-    def fill_form_legacy(self, template_path, form_data, field_config=None, output_filename=None):
+    def fill_form_legacy(
+        self, template_path, form_data, field_config=None, output_filename=None
+    ):
         """
         Legacy method that returns ContentFile for backward compatibility.
-        
+
         Args:
             template_path (str): Path to blank PDF form template
             form_data (dict): Form data to fill
@@ -189,8 +205,8 @@ class PDFFormOverlay:
         try:
             # Get cached template information or read from file
             template_info = self._get_template_info(template_path)
-            page_width = template_info['page_width']
-            page_height = template_info['page_height']
+            page_width = template_info["page_width"]
+            page_height = template_info["page_height"]
 
             # Create overlay PDF with form data
             overlay_buffer = self._create_overlay_pdf(
@@ -206,12 +222,14 @@ class PDFFormOverlay:
                 output_filename = f"filled_form_{timestamp}.pdf"
 
             # Return as ContentFile for legacy compatibility
-            content_file = ContentFile(filled_pdf_buffer.getvalue(), name=output_filename)
-            
+            content_file = ContentFile(
+                filled_pdf_buffer.getvalue(), name=output_filename
+            )
+
             # Cleanup buffers
             filled_pdf_buffer.close()
             overlay_buffer.close()
-            
+
             return content_file
 
         except Exception as e:
@@ -237,16 +255,16 @@ class PDFFormOverlay:
 
         # Handle both new sectioned format and legacy format
         if isinstance(field_config, dict):
-            if 'sections' in field_config and 'fields' in field_config:
+            if "sections" in field_config and "fields" in field_config:
                 # New sectioned format
-                fields_config = field_config['fields']
+                fields_config = field_config["fields"]
             else:
                 # Legacy format - field_config is directly the fields
                 fields_config = field_config
         else:
             # Fallback to empty dict if field_config is not a dict
             fields_config = {}
-            
+
         for field_name, config in fields_config.items():
             if field_name in form_data:
                 field_value = form_data[field_name]
@@ -279,7 +297,9 @@ class PDFFormOverlay:
         y_cm = config.get("y", 0)
         font_size = config.get("font_size", 12)
         font_family = config.get("font_family", "Helvetica")
-        
+
+        if field_name in self.PROCEDURE_DESCRIPTION_FIELDS:
+            font_size = min(font_size, self.PROCEDURE_DESCRIPTION_FONT_SIZE)
 
         # Convert cm to points (1 cm = 28.35 points)
         # Add horizontal padding from left edge
@@ -289,8 +309,8 @@ class PDFFormOverlay:
         # Convert y coordinate (PDF origin is bottom-left, config uses top-left)
         # fieldConfig.y is the TOP edge of the field box
         # We need to position text baseline within the field box
-        field_height = config.get('height', 0.7) * cm  # Field height in points
-        
+        field_height = config.get("height", 0.7) * cm  # Field height in points
+
         # Position text baseline at approximately 75% down from field top
         # This centers text nicely within the field box
         baseline_offset = field_height * 0.75
@@ -365,68 +385,69 @@ class PDFFormOverlay:
 
         # Set font for the X character
         pdf_canvas.setFont("Helvetica-Bold", font_size)
-        
+
         # Adjust y position to align X properly within the parentheses
         x_y = y_points + (font_size * 0.1)  # Fine-tune vertical alignment
-        
+
         # Draw capital X
         pdf_canvas.drawString(x_points, x_y, "X")
 
     def _format_date_string(self, date_str):
         """
         Format date string from YYYY-MM-DD to DD-MM-YYYY format.
-        
+
         Args:
             date_str (str): Date string potentially in YYYY-MM-DD format
-            
+
         Returns:
             str: Formatted date string in DD-MM-YYYY format
         """
         try:
             # Try to parse YYYY-MM-DD format and convert to DD-MM-YYYY
             from datetime import datetime
-            if len(date_str) == 10 and date_str.count('-') == 2:
-                parsed_date = datetime.strptime(date_str, '%Y-%m-%d')
-                return parsed_date.strftime('%d-%m-%Y')
+
+            if len(date_str) == 10 and date_str.count("-") == 2:
+                parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
+                return parsed_date.strftime("%d-%m-%Y")
         except (ValueError, TypeError):
             pass
-        
+
         # If parsing fails, return original string
         return date_str
 
     def _format_datetime_string(self, datetime_str):
         """
         Format datetime string from ISO format to DD-MM-YYYY HH:MM format.
-        
+
         Args:
             datetime_str (str): Datetime string potentially in ISO format (YYYY-MM-DDTHH:MM)
-            
+
         Returns:
             str: Formatted datetime string in DD-MM-YYYY HH:MM format
         """
         try:
             from datetime import datetime
-            
+
             # Try common datetime formats
             datetime_formats = [
-                '%Y-%m-%dT%H:%M',         # HTML5 datetime-local format: 2023-12-25T14:30
-                '%Y-%m-%d %H:%M:%S',      # Standard format: 2023-12-25 14:30:00
-                '%Y-%m-%d %H:%M',         # Short format: 2023-12-25 14:30
-                '%Y-%m-%dT%H:%M:%S',      # ISO format with seconds: 2023-12-25T14:30:00
-                '%Y-%m-%d %H:%M:%S%z',    # With timezone: 2025-08-09 09:21:00-03:00
-                '%Y-%m-%d %H:%M:%S.%f%z', # With microseconds and timezone: 2025-08-09 09:21:00.123456-03:00
+                "%Y-%m-%dT%H:%M",  # HTML5 datetime-local format: 2023-12-25T14:30
+                "%Y-%m-%d %H:%M:%S",  # Standard format: 2023-12-25 14:30:00
+                "%Y-%m-%d %H:%M",  # Short format: 2023-12-25 14:30
+                "%Y-%m-%dT%H:%M:%S",  # ISO format with seconds: 2023-12-25T14:30:00
+                "%Y-%m-%d %H:%M:%S%z",  # With timezone: 2025-08-09 09:21:00-03:00
+                "%Y-%m-%d %H:%M:%S.%f%z",  # With microseconds and timezone: 2025-08-09 09:21:00.123456-03:00
             ]
-            
+
             for fmt in datetime_formats:
                 try:
                     parsed_datetime = datetime.strptime(datetime_str, fmt)
-                    return parsed_datetime.strftime('%d-%m-%Y %H:%M')
+                    return parsed_datetime.strftime("%d-%m-%Y %H:%M")
                 except ValueError:
                     continue
-                    
+
         except (ValueError, TypeError):
             pass
-        
+
         # If parsing fails, return original string
         return datetime_str
 
@@ -591,4 +612,3 @@ class PDFFormOverlay:
 
         except Exception as e:
             return False, str(e)
-
