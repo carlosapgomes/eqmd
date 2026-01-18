@@ -54,145 +54,334 @@
           <form method="post" id="apac-form">
             {% csrf_token %}
 
-            <!-- Patient Information Section -->
-            <div class="row mb-3">
-              <div class="col-12">
-                <h6 class="border-bottom pb-2 mb-3">
-                  <i class="bi bi-person me-2"></i>
-                  Dados do Paciente
-                </h6>
+            <!-- Identification Section -->
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#section-identification" aria-expanded="false" aria-controls="section-identification">
+                  <i class="bi bi-person-badge me-2"></i>
+                  Identificação
+                </button>
               </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="{{ form.patient_name.id_for_label }}" class="form-label">
-                    {{ form.patient_name.label }}
-                  </label>
-                  {{ form.patient_name }}
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="{{ form.patient_gender.id_for_label }}" class="form-label">
-                    {{ form.patient_gender.label }}
-                  </label>
-                  {{ form.patient_gender }}
-                </div>
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="{{ form.patient_birth_date.id_for_label }}" class="form-label">
-                    {{ form.patient_birth_date.label }}
-                  </label>
-                  {{ form.patient_birth_date }}
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="{{ form.patient_cns.id_for_label }}" class="form-label">
-                    {{ form.patient_cns.label }}
-                  </label>
-                  {{ form.patient_cns }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Procedure Section -->
-            <div class="row mb-3">
-              <div class="col-12">
-                <h6 class="border-bottom pb-2 mb-3">
-                  <i class="bi bi-clipboard2-pulse me-2"></i>
-                  Procedimento Autorizado
-                </h6>
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-12">
-                <div class="mb-3">
-                  <label for="{{ form.procedure.id_for_label }}" class="form-label">
-                    {{ form.procedure.label }}
-                    <span class="text-danger">*</span>
-                  </label>
-                  {{ form.procedure }}
-                  <div class="form-text">
-                    Digite o código ou descrição do procedimento para buscar
+              <div id="section-identification" class="collapse">
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="{{ form.patient_name.id_for_label }}" class="form-label">
+                          {{ form.patient_name.label }}
+                        </label>
+                        {{ form.patient_name }}
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="{{ form.patient_gender.id_for_label }}" class="form-label">
+                          {{ form.patient_gender.label }}
+                        </label>
+                        {{ form.patient_gender }}
+                      </div>
+                    </div>
                   </div>
-                  {% if form.procedure.help_text %}
-                  <div class="form-text">{{ form.procedure.help_text }}</div>
-                  {% endif %}
-                  <div id="procedure-results" class="dropdown-menu w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
+
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="{{ form.patient_birth_date.id_for_label }}" class="form-label">
+                          {{ form.patient_birth_date.label }}
+                        </label>
+                        {{ form.patient_birth_date }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="{{ form.apac_type.id_for_label }}" class="form-label">
-                    {{ form.apac_type.label }}
-                    <span class="text-danger">*</span>
-                  </label>
-                  {{ form.apac_type }}
+            <!-- Requested Procedure Section -->
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#section-requested-procedure" aria-expanded="true" aria-controls="section-requested-procedure">
+                  <i class="bi bi-clipboard2-pulse me-2"></i>
+                  Procedimento Solicitado
+                </button>
+              </div>
+              <div id="section-requested-procedure" class="collapse show">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-9">
+                      <div class="mb-3 procedure-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.main_procedure_display.label }}
+                          <span class="text-danger">*</span>
+                        </label>
+                        {{ form.main_procedure_display }}
+                        {{ form.main_procedure }}
+                        <div class="form-text">
+                          Digite o código ou descrição do procedimento para buscar
+                        </div>
+                        <div id="procedure-results-main" class="dropdown-menu procedure-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-3">
+                        <label for="{{ form.main_procedure_quantity.id_for_label }}" class="form-label">
+                          {{ form.main_procedure_quantity.label }}
+                        </label>
+                        {{ form.main_procedure_quantity }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="{{ form.authorization_date.id_for_label }}" class="form-label">
-                    {{ form.authorization_date.label }}
-                    <span class="text-danger">*</span>
-                  </label>
-                  {{ form.authorization_date }}
+            </div>
+
+            <!-- Secondary Procedures Section -->
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#section-secondary-procedures" aria-expanded="false" aria-controls="section-secondary-procedures">
+                  <i class="bi bi-journal-medical me-2"></i>
+                  Procedimentos Secundários
+                </button>
+              </div>
+              <div id="section-secondary-procedures" class="collapse">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-9">
+                      <div class="mb-3 procedure-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.secondary_procedure_1_display.label }}
+                        </label>
+                        {{ form.secondary_procedure_1_display }}
+                        {{ form.secondary_procedure_1 }}
+                        <div class="form-text">
+                          Digite o código ou descrição do procedimento para buscar
+                        </div>
+                        <div id="procedure-results-secondary-1" class="dropdown-menu procedure-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-3">
+                        <label for="{{ form.secondary_procedure_1_qty.id_for_label }}" class="form-label">
+                          {{ form.secondary_procedure_1_qty.label }}
+                        </label>
+                        {{ form.secondary_procedure_1_qty }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-9">
+                      <div class="mb-3 procedure-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.secondary_procedure_2_display.label }}
+                        </label>
+                        {{ form.secondary_procedure_2_display }}
+                        {{ form.secondary_procedure_2 }}
+                        <div class="form-text">
+                          Digite o código ou descrição do procedimento para buscar
+                        </div>
+                        <div id="procedure-results-secondary-2" class="dropdown-menu procedure-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-3">
+                        <label for="{{ form.secondary_procedure_2_qty.id_for_label }}" class="form-label">
+                          {{ form.secondary_procedure_2_qty.label }}
+                        </label>
+                        {{ form.secondary_procedure_2_qty }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-9">
+                      <div class="mb-3 procedure-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.secondary_procedure_3_display.label }}
+                        </label>
+                        {{ form.secondary_procedure_3_display }}
+                        {{ form.secondary_procedure_3 }}
+                        <div class="form-text">
+                          Digite o código ou descrição do procedimento para buscar
+                        </div>
+                        <div id="procedure-results-secondary-3" class="dropdown-menu procedure-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-3">
+                        <label for="{{ form.secondary_procedure_3_qty.id_for_label }}" class="form-label">
+                          {{ form.secondary_procedure_3_qty.label }}
+                        </label>
+                        {{ form.secondary_procedure_3_qty }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-9">
+                      <div class="mb-3 procedure-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.secondary_procedure_4_display.label }}
+                        </label>
+                        {{ form.secondary_procedure_4_display }}
+                        {{ form.secondary_procedure_4 }}
+                        <div class="form-text">
+                          Digite o código ou descrição do procedimento para buscar
+                        </div>
+                        <div id="procedure-results-secondary-4" class="dropdown-menu procedure-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-3">
+                        <label for="{{ form.secondary_procedure_4_qty.id_for_label }}" class="form-label">
+                          {{ form.secondary_procedure_4_qty.label }}
+                        </label>
+                        {{ form.secondary_procedure_4_qty }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-9">
+                      <div class="mb-3 procedure-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.secondary_procedure_5_display.label }}
+                        </label>
+                        {{ form.secondary_procedure_5_display }}
+                        {{ form.secondary_procedure_5 }}
+                        <div class="form-text">
+                          Digite o código ou descrição do procedimento para buscar
+                        </div>
+                        <div id="procedure-results-secondary-5" class="dropdown-menu procedure-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-3">
+                        <label for="{{ form.secondary_procedure_5_qty.id_for_label }}" class="form-label">
+                          {{ form.secondary_procedure_5_qty.label }}
+                        </label>
+                        {{ form.secondary_procedure_5_qty }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- Diagnosis Section -->
-            <div class="row mb-3">
-              <div class="col-12">
-                <h6 class="border-bottom pb-2 mb-3">
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#section-diagnosis" aria-expanded="true" aria-controls="section-diagnosis">
                   <i class="bi bi-clipboard2-data me-2"></i>
                   Diagnóstico
-                </h6>
+                </button>
+              </div>
+              <div id="section-diagnosis" class="collapse show">
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-12">
+                      <div class="mb-3">
+                        <label for="{{ form.main_diagnosis.id_for_label }}" class="form-label">
+                          {{ form.main_diagnosis.label }}
+                          <span class="text-danger">*</span>
+                        </label>
+                        {{ form.main_diagnosis }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <div class="mb-3">
+                        <label for="{{ form.main_icd.id_for_label }}" class="form-label">
+                          {{ form.main_icd.label }}
+                          <span class="text-danger">*</span>
+                        </label>
+                        {{ form.main_icd }}
+                        {% if form.main_icd.help_text %}
+                        <div class="form-text">{{ form.main_icd.help_text }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="mb-3">
+                        <label for="{{ form.secondary_icd.id_for_label }}" class="form-label">
+                          {{ form.secondary_icd.label }}
+                        </label>
+                        {{ form.secondary_icd }}
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="mb-3">
+                        <label for="{{ form.other_icd.id_for_label }}" class="form-label">
+                          {{ form.other_icd.label }}
+                        </label>
+                        {{ form.other_icd }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row mb-3">
+                    <div class="col-12">
+                      <div class="mb-3">
+                        <label for="{{ form.diagnosis_notes.id_for_label }}" class="form-label">
+                          {{ form.diagnosis_notes.label }}
+                        </label>
+                        {{ form.diagnosis_notes }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="row mb-3">
-              <div class="col-md-4">
-                <div class="mb-3">
-                  <label for="{{ form.cid_code.id_for_label }}" class="form-label">
-                    {{ form.cid_code.label }}
-                    <span class="text-danger">*</span>
-                  </label>
-                  {{ form.cid_code }}
-                  {% if form.cid_code.help_text %}
-                  <div class="form-text">{{ form.cid_code.help_text }}</div>
-                  {% endif %}
-                </div>
+            <!-- Requesting Doctor Section -->
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#section-requesting-doctor" aria-expanded="true" aria-controls="section-requesting-doctor">
+                  <i class="bi bi-person-badge me-2"></i>
+                  Solicitante
+                </button>
               </div>
-              <div class="col-md-8">
-                <div class="mb-3">
-                  <label for="{{ form.main_diagnosis.id_for_label }}" class="form-label">
-                    {{ form.main_diagnosis.label }}
-                    <span class="text-danger">*</span>
-                  </label>
-                  {{ form.main_diagnosis }}
-                </div>
-              </div>
-            </div>
+              <div id="section-requesting-doctor" class="collapse show">
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-8">
+                      <div class="mb-3">
+                        <label for="{{ form.doctor_name.id_for_label }}" class="form-label">
+                          {{ form.doctor_name.label }}
+                        </label>
+                        {{ form.doctor_name }}
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="mb-3">
+                        <label for="{{ form.request_date.id_for_label }}" class="form-label">
+                          {{ form.request_date.label }}
+                        </label>
+                        {{ form.request_date }}
+                      </div>
+                    </div>
+                  </div>
 
-            <div class="row mb-3">
-              <div class="col-12">
-                <div class="mb-3">
-                  <label for="{{ form.additional_info.id_for_label }}" class="form-label">
-                    {{ form.additional_info.label }}
-                  </label>
-                  {{ form.additional_info }}
+                  <div class="row mb-3">
+                    <div class="col-md-2">
+                      <div class="form-check mt-2">
+                        {{ form.doctor_doc_type_fiscal_number }}
+                        <label class="form-check-label" for="{{ form.doctor_doc_type_fiscal_number.id_for_label }}">
+                          {{ form.doctor_doc_type_fiscal_number.label }}
+                        </label>
+                      </div>
+                    </div>
+                    <div class="col-md-10">
+                      <div class="mb-3">
+                        <label for="{{ form.doctor_doc_number_fiscal_number.id_for_label }}" class="form-label">
+                          {{ form.doctor_doc_number_fiscal_number.label }}
+                        </label>
+                        {{ form.doctor_doc_number_fiscal_number }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -221,85 +410,170 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
+{{ block.super }}
 <script>
-$(document).ready(function() {
-    // Procedure search functionality
-    const procedureInput = $('#{{ form.procedure.id_for_label }}');
-    const resultsContainer = $('#procedure-results');
-    let searchTimeout;
+document.addEventListener('DOMContentLoaded', function() {
+    const procedureInputs = Array.from(document.querySelectorAll('.procedure-search-input'));
+    const resultsContainers = Array.from(document.querySelectorAll('.procedure-results'));
+    const hiddenInputs = Array.from(document.querySelectorAll('.procedure-hidden-input'));
+    const timeouts = new Map();
+    const searchUrl = '{% url "apps.core:procedures_search_api" %}';
 
-    procedureInput.on('input', function() {
-        const query = $(this).val().trim();
-        
-        // Clear previous timeout
-        clearTimeout(searchTimeout);
-        
-        if (query.length < 2) {
-            resultsContainer.hide();
-            return;
-        }
-        
-        // Debounce search
-        searchTimeout = setTimeout(function() {
-            $.ajax({
-                url: '{% url "apps.core:procedures_search_api" %}',
-                method: 'GET',
-                data: {
-                    q: query,
-                    limit: 10
-                },
-                success: function(response) {
-                    displayResults(response.results);
-                },
-                error: function() {
-                    console.error('Error searching procedures');
-                }
-            });
-        }, 300);
-    });
-
-    function displayResults(results) {
-        resultsContainer.empty();
-        
-        if (results.length === 0) {
-            resultsContainer.hide();
-            return;
-        }
-        
-        results.forEach(function(procedure) {
-            const item = $('<div class="dropdown-item">')
-                .html(`
-                    <strong>${procedure.code}</strong><br>
-                    <small class="text-muted">${procedure.short_description || procedure.description}</small>
-                `)
-                .css('cursor', 'pointer')
-                .on('click', function() {
-                    procedureInput.val(`${procedure.code} - ${procedure.description}`);
-                    procedureInput.data('procedure-id', procedure.id);
-                    resultsContainer.hide();
-                });
-            
-            resultsContainer.append(item);
-        });
-        
-        resultsContainer.show();
+    function getHiddenInput(input) {
+        const hiddenId = input.dataset.hiddenId;
+        return hiddenId ? document.getElementById(hiddenId) : null;
     }
 
-    // Hide results when clicking outside
-    $(document).on('click', function(e) {
-        if (!procedureInput.is(e.target) && !resultsContainer.is(e.target)) {
-            resultsContainer.hide();
+    function clearSelection(input) {
+        const hiddenInput = getHiddenInput(input);
+        if (hiddenInput) {
+            hiddenInput.value = '';
+        }
+        input.dataset.procedureId = '';
+        input.dataset.procedureCode = '';
+        input.dataset.procedureDescription = '';
+    }
+
+    function getResultsContainer(input) {
+        const resultsId = input.dataset.resultsId;
+        if (resultsId) {
+            const byId = document.getElementById(resultsId);
+            if (byId) {
+                return byId;
+            }
+        }
+        const wrapper = input.closest('.procedure-search-group');
+        return wrapper ? wrapper.querySelector('.procedure-results') : null;
+    }
+
+    function hideAllResults() {
+        resultsContainers.forEach(function(container) {
+            container.classList.remove('show');
+            container.style.display = 'none';
+        });
+    }
+
+    function renderResults(input, results) {
+        const resultsContainer = getResultsContainer(input);
+        const hiddenInput = getHiddenInput(input);
+
+        if (!resultsContainer) {
+            return;
+        }
+
+        resultsContainer.innerHTML = '';
+
+        if (!results.length) {
+            resultsContainer.classList.remove('show');
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        results.forEach(function(procedure) {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+                <strong>${procedure.code}</strong><br>
+                <small class="text-muted">${procedure.short_description || procedure.description}</small>
+            `;
+            item.addEventListener('click', function() {
+                const duplicate = hiddenInputs.some(function(hidden) {
+                    return hidden !== hiddenInput && hidden.value === procedure.id;
+                });
+
+                if (duplicate) {
+                    alert('Este procedimento já foi selecionado. Escolha outro.');
+                    return;
+                }
+
+                input.value = `${procedure.code} - ${procedure.description}`;
+                if (hiddenInput) {
+                    hiddenInput.value = procedure.id;
+                }
+                input.dataset.procedureId = procedure.id;
+                input.dataset.procedureCode = procedure.code;
+                input.dataset.procedureDescription = procedure.description;
+                resultsContainer.classList.remove('show');
+                resultsContainer.style.display = 'none';
+            });
+
+            resultsContainer.appendChild(item);
+        });
+
+        resultsContainer.classList.add('show');
+        resultsContainer.style.display = 'block';
+    }
+
+    procedureInputs.forEach(function(input) {
+        input.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+            }
+        });
+
+        input.addEventListener('input', function() {
+            const query = input.value.trim();
+            const resultsContainer = getResultsContainer(input);
+
+            clearSelection(input);
+
+            if (timeouts.has(input)) {
+                clearTimeout(timeouts.get(input));
+            }
+
+            if (query.length < 2) {
+                if (resultsContainer) {
+                    resultsContainer.classList.remove('show');
+                    resultsContainer.style.display = 'none';
+                }
+                return;
+            }
+
+            const timeoutId = setTimeout(function() {
+                const url = `${searchUrl}?q=${encodeURIComponent(query)}&limit=10`;
+                fetch(url, { credentials: 'same-origin' })
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        renderResults(input, (data && data.results) ? data.results : []);
+                    })
+                    .catch(function() {
+                        console.error('Error searching procedures');
+                    });
+            }, 300);
+
+            timeouts.set(input, timeoutId);
+        });
+    });
+
+    document.addEventListener('click', function(event) {
+        const target = event.target;
+        if (!target.closest('.procedure-search-input') && !target.closest('.procedure-results')) {
+            hideAllResults();
         }
     });
 
-    // Form validation
-    $('#apac-form').on('submit', function(e) {
-        const procedureValue = procedureInput.val().trim();
-        if (!procedureValue || !procedureInput.data('procedure-id')) {
-            e.preventDefault();
-            alert('Por favor, selecione um procedimento válido da lista de sugestões.');
-            procedureInput.focus();
+    document.getElementById('apac-form').addEventListener('submit', function(event) {
+        for (const input of procedureInputs) {
+            const required = input.dataset.required === 'true';
+            const value = input.value.trim();
+            const hiddenInput = getHiddenInput(input);
+            const hiddenId = hiddenInput ? hiddenInput.value : '';
+
+            if (required && !hiddenId) {
+                event.preventDefault();
+                alert('Selecione o procedimento principal a partir da lista.');
+                input.focus();
+                return;
+            }
+
+            if (value && !hiddenId) {
+                event.preventDefault();
+                alert('Selecione um procedimento válido da lista de sugestões.');
+                input.focus();
+                return;
+            }
         }
     });
 });

@@ -61,7 +61,10 @@ The system supports two configuration formats:
       "label": "Nome do Paciente",
       "section": "patient_info",
       "field_order": 1,
-      "x": 4.5, "y": 8.5, "width": 12.0, "height": 0.7,
+      "x": 4.5,
+      "y": 8.5,
+      "width": 12.0,
+      "height": 0.7,
       "font_size": 12,
       "required": true,
       "max_length": 200
@@ -71,7 +74,10 @@ The system supports two configuration formats:
       "label": "Data de Nascimento",
       "section": "patient_info",
       "field_order": 2,
-      "x": 4.5, "y": 10.0, "width": 6.0, "height": 0.7,
+      "x": 4.5,
+      "y": 10.0,
+      "width": 6.0,
+      "height": 0.7,
       "required": true
     },
     "allergies": {
@@ -79,7 +85,10 @@ The system supports two configuration formats:
       "label": "Alergias Conhecidas",
       "section": "medical_history",
       "field_order": 1,
-      "x": 4.5, "y": 12.0, "width": 8.0, "height": 1.5,
+      "x": 4.5,
+      "y": 12.0,
+      "width": 8.0,
+      "height": 1.5,
       "choices": ["Penicilina", "Látex", "Nozes", "Frutos do Mar"],
       "required": false
     },
@@ -88,7 +97,10 @@ The system supports two configuration formats:
       "label": "Tipo Sanguíneo",
       "section": "medical_history",
       "field_order": 2,
-      "x": 4.5, "y": 14.0, "width": 3.0, "height": 0.7,
+      "x": 4.5,
+      "y": 14.0,
+      "width": 3.0,
+      "height": 0.7,
       "choices": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
       "required": true
     },
@@ -97,14 +109,20 @@ The system supports two configuration formats:
       "label": "Nome do Procedimento",
       "section": "procedure_details",
       "field_order": 1,
-      "x": 4.5, "y": 16.0, "width": 10.0, "height": 0.7,
+      "x": 4.5,
+      "y": 16.0,
+      "width": 10.0,
+      "height": 0.7,
       "required": true
     },
     "general_notes": {
       "type": "textarea",
       "label": "Observações Gerais",
       // No section assigned - will appear in "Other Fields" section
-      "x": 4.5, "y": 18.0, "width": 12.0, "height": 3.0,
+      "x": 4.5,
+      "y": 18.0,
+      "width": 12.0,
+      "height": 3.0,
       "required": false
     }
   }
@@ -118,17 +136,17 @@ The system supports two configuration formats:
   "patient_name": {
     "type": "text",
     "label": "Nome do Paciente",
-    "x": 4.5,           // cm from left edge
-    "y": 8.5,           // cm from top edge  
-    "width": 12.0,      // cm width
-    "height": 0.7,      // cm height
+    "x": 4.5, // cm from left edge
+    "y": 8.5, // cm from top edge
+    "width": 12.0, // cm width
+    "height": 0.7, // cm height
     "font_size": 12,
     "required": true,
     "max_length": 200
   },
   "blood_type": {
     "type": "choice",
-    "label": "Tipo Sanguíneo", 
+    "label": "Tipo Sanguíneo",
     "x": 4.5,
     "y": 10.0,
     "width": 3.0,
@@ -154,12 +172,34 @@ uv add reportlab PyPDF2 pdf2image
 
 # System Dependencies (for PDF preview)
 # Ubuntu/Debian: sudo apt install poppler-utils
-# macOS: brew install poppler  
+# macOS: brew install poppler
 # Windows: Download from https://blog.alivate.com.au/poppler-windows/
 
 # Testing
 uv run python manage.py test apps.pdf_forms.tests
 ```
+
+## APAC Procedure Keys (Hardcoded Form)
+
+When mapping the APAC PDF overlay, use these keys from `form_data`:
+
+Main procedure:
+
+- `main_procedure_id`
+- `main_procedure_code`
+- `main_procedure_description`
+
+Secondary procedures (1..5):
+
+- `secondary_procedure_1_id`, `secondary_procedure_1_code`, `secondary_procedure_1_description`
+- `secondary_procedure_2_id`, `secondary_procedure_2_code`, `secondary_procedure_2_description`
+- `secondary_procedure_3_id`, `secondary_procedure_3_code`, `secondary_procedure_3_description`
+- `secondary_procedure_4_id`, `secondary_procedure_4_code`, `secondary_procedure_4_description`
+- `secondary_procedure_5_id`, `secondary_procedure_5_code`, `secondary_procedure_5_description`
+
+Backward-compatible keys:
+
+- `procedure_code`, `procedure_description` (mirrors the main procedure)
 
 ## Section-Based Form Organization
 
@@ -181,11 +221,11 @@ uv run python manage.py test apps.pdf_forms.tests
 ```json
 {
   "section_key": {
-    "label": "Section Display Name",           // Required
+    "label": "Section Display Name", // Required
     "description": "Optional section description",
-    "order": 1,                              // Required - determines display order
-    "collapsed": false,                      // Start expanded (false) or collapsed (true)
-    "icon": "bi-person"                      // Bootstrap icon class (optional)
+    "order": 1, // Required - determines display order
+    "collapsed": false, // Start expanded (false) or collapsed (true)
+    "icon": "bi-person" // Bootstrap icon class (optional)
   }
 }
 ```
@@ -199,9 +239,12 @@ Fields are assigned to sections using the `section` and `field_order` properties
   "field_name": {
     "type": "text",
     "label": "Field Label",
-    "section": "section_key",               // Links to section
-    "field_order": 1,                      // Order within section
-    "x": 4.5, "y": 8.5, "width": 6.0, "height": 0.7,
+    "section": "section_key", // Links to section
+    "field_order": 1, // Order within section
+    "x": 4.5,
+    "y": 8.5,
+    "width": 6.0,
+    "height": 0.7
     // ... other field properties
   }
 }
@@ -341,7 +384,7 @@ sectioned_config = SectionUtils.migrate_unsectioned_form(legacy_config)
 
 - **Storage Efficiency**: 95%+ reduction in storage usage through data-only approach
 - **Reliability**: Works with any PDF format - scanned, image-based, or digitally created
-- **Precision**: Exact positioning using centimeter coordinates for predictable results  
+- **Precision**: Exact positioning using centimeter coordinates for predictable results
 - **Hospital-Friendly**: Perfect for legacy hospital forms that are often scanned documents
 - **User Control**: Complete control over field positioning, formatting, and appearance
 - **No Dependency Issues**: Doesn't rely on PDF form field detection or specific PDF structures
@@ -378,7 +421,7 @@ uv add pdf2image  # For PDF-to-image conversion
 - **Intuitive Interface**: No manual coordinate entry required
 - **Real-time Preview**: See field positioning immediately (requires Poppler)
 - **Fallback JSON Editor**: Manual JSON editor when PDF preview is unavailable
-- **Field Types**: Support for text, textarea, number, date, choice, boolean, email fields  
+- **Field Types**: Support for text, textarea, number, date, choice, boolean, email fields
 - **Validation**: Real-time field validation and conflict detection
 - **Import/Export**: Load and export field configurations as JSON
 - **Responsive Design**: Works on desktop and tablet devices
@@ -457,7 +500,10 @@ PDF_FORMS_CONFIG = {
   "field_name": {
     "type": "text",
     "label": "Field Label",
-    "x": 4.5, "y": 8.5, "width": 12.0, "height": 0.7,
+    "x": 4.5,
+    "y": 8.5,
+    "width": 12.0,
+    "height": 0.7,
     "font_size": 12,
     "required": true,
     "max_length": 200,
@@ -473,7 +519,10 @@ PDF_FORMS_CONFIG = {
   "field_name": {
     "type": "choice",
     "label": "Select Option",
-    "x": 4.5, "y": 8.5, "width": 6.0, "height": 0.7,
+    "x": 4.5,
+    "y": 8.5,
+    "width": 6.0,
+    "height": 0.7,
     "choices": ["Option 1", "Option 2", "Option 3"],
     "required": true
   }
@@ -487,7 +536,10 @@ PDF_FORMS_CONFIG = {
   "field_name": {
     "type": "boolean",
     "label": "Yes/No Question",
-    "x": 4.5, "y": 8.5, "width": 3.0, "height": 0.7,
+    "x": 4.5,
+    "y": 8.5,
+    "width": 3.0,
+    "height": 0.7,
     "required": false
   }
 }
@@ -500,7 +552,10 @@ PDF_FORMS_CONFIG = {
   "field_name": {
     "type": "date",
     "label": "Date Field",
-    "x": 4.5, "y": 8.5, "width": 4.0, "height": 0.7,
+    "x": 4.5,
+    "y": 8.5,
+    "width": 4.0,
+    "height": 0.7,
     "required": true,
     "date_format": "%d/%m/%Y"
   }
@@ -517,7 +572,7 @@ Data Sources enable creation of reusable datasets that automatically populate re
 
 - **Reusable Datasets**: Define data once, use across multiple fields
 - **Automatic Population**: Select one value, related fields auto-fill
-- **Data Integrity**: Ensures consistency across related fields  
+- **Data Integrity**: Ensures consistency across related fields
 - **Read-only Protection**: Auto-filled fields can be locked to prevent manual changes
 - **Multiple Data Sources**: Support multiple independent datasets per form
 - **Section Support**: Works seamlessly with section-based forms
@@ -542,25 +597,25 @@ Each data source contains a list of items with consistent key-value pairs:
 Data Source Name: "procedures"
 
 Item 1: {
-  "name": "Appendectomy", 
-  "code": "AP001", 
-  "duration": "2 hours", 
+  "name": "Appendectomy",
+  "code": "AP001",
+  "duration": "2 hours",
   "room": "OR-1",
   "anesthesia": "General"
 }
 
 Item 2: {
-  "name": "Cholecystectomy", 
-  "code": "CH002", 
-  "duration": "3 hours", 
+  "name": "Cholecystectomy",
+  "code": "CH002",
+  "duration": "3 hours",
   "room": "OR-2",
   "anesthesia": "General"
 }
 
 Item 3: {
-  "name": "Hernia Repair", 
-  "code": "HR003", 
-  "duration": "1 hour", 
+  "name": "Hernia Repair",
+  "code": "HR003",
+  "duration": "1 hour",
   "room": "OR-3",
   "anesthesia": "Local"
 }
@@ -586,7 +641,10 @@ Configure the field users will interact with:
     "label": "Select Procedure",
     "data_source": "procedures",
     "data_source_key": "name",
-    "x": 4.5, "y": 8.5, "width": 8.0, "height": 0.7,
+    "x": 4.5,
+    "y": 8.5,
+    "width": 8.0,
+    "height": 0.7,
     "required": true
   }
 }
@@ -606,23 +664,32 @@ Configure fields that auto-populate based on the selection:
     "data_source": "procedures",
     "data_source_key": "code",
     "linked_readonly": true,
-    "x": 13.0, "y": 8.5, "width": 4.0, "height": 0.7
+    "x": 13.0,
+    "y": 8.5,
+    "width": 4.0,
+    "height": 0.7
   },
   "estimated_duration": {
-    "type": "text", 
+    "type": "text",
     "label": "Duration",
     "data_source": "procedures",
     "data_source_key": "duration",
     "linked_readonly": true,
-    "x": 4.5, "y": 9.5, "width": 4.0, "height": 0.7
+    "x": 4.5,
+    "y": 9.5,
+    "width": 4.0,
+    "height": 0.7
   },
   "operating_room": {
     "type": "text",
-    "label": "Operating Room", 
+    "label": "Operating Room",
     "data_source": "procedures",
     "data_source_key": "room",
     "linked_readonly": true,
-    "x": 9.0, "y": 9.5, "width": 4.0, "height": 0.7
+    "x": 9.0,
+    "y": 9.5,
+    "width": 4.0,
+    "height": 0.7
   }
 }
 ```
@@ -643,7 +710,7 @@ Configure fields that auto-populate based on the selection:
     "procedures": [
       {
         "name": "Appendectomy",
-        "code": "AP001", 
+        "code": "AP001",
         "duration": "2 hours",
         "room": "OR-1",
         "specialist": "Dr. Silva"
@@ -651,7 +718,7 @@ Configure fields that auto-populate based on the selection:
       {
         "name": "Cholecystectomy",
         "code": "CH002",
-        "duration": "3 hours", 
+        "duration": "3 hours",
         "room": "OR-2",
         "specialist": "Dr. Costa"
       }
@@ -664,7 +731,7 @@ Configure fields that auto-populate based on the selection:
         "duration": "7 days"
       },
       {
-        "name": "Ibuprofen", 
+        "name": "Ibuprofen",
         "dosage": "400mg",
         "frequency": "2x daily",
         "duration": "5 days"
@@ -678,7 +745,7 @@ Configure fields that auto-populate based on the selection:
       "collapsed": false
     },
     "medication_info": {
-      "label": "Medication Information", 
+      "label": "Medication Information",
       "order": 2,
       "collapsed": true
     }
@@ -691,38 +758,50 @@ Configure fields that auto-populate based on the selection:
       "field_order": 1,
       "data_source": "procedures",
       "data_source_key": "name",
-      "x": 4.5, "y": 8.5, "width": 8.0, "height": 0.7,
+      "x": 4.5,
+      "y": 8.5,
+      "width": 8.0,
+      "height": 0.7,
       "required": true
     },
     "procedure_code": {
-      "type": "text", 
+      "type": "text",
       "label": "Code",
       "section": "procedure_info",
       "field_order": 2,
       "data_source": "procedures",
       "data_source_key": "code",
       "linked_readonly": true,
-      "x": 13.0, "y": 8.5, "width": 4.0, "height": 0.7
+      "x": 13.0,
+      "y": 8.5,
+      "width": 4.0,
+      "height": 0.7
     },
     "medication_name": {
       "type": "choice",
       "label": "Select Medication",
-      "section": "medication_info", 
+      "section": "medication_info",
       "field_order": 1,
       "data_source": "medications",
       "data_source_key": "name",
-      "x": 4.5, "y": 12.0, "width": 8.0, "height": 0.7,
+      "x": 4.5,
+      "y": 12.0,
+      "width": 8.0,
+      "height": 0.7,
       "required": false
     },
     "medication_dosage": {
       "type": "text",
       "label": "Dosage",
       "section": "medication_info",
-      "field_order": 2, 
+      "field_order": 2,
       "data_source": "medications",
       "data_source_key": "dosage",
       "linked_readonly": true,
-      "x": 13.0, "y": 12.0, "width": 4.0, "height": 0.7
+      "x": 13.0,
+      "y": 12.0,
+      "width": 4.0,
+      "height": 0.7
     }
   }
 }
@@ -733,7 +812,7 @@ Configure fields that auto-populate based on the selection:
 1. **User selects "Appendectomy"** from procedure dropdown
 2. **Auto-filled fields populate**:
    - Procedure Code → "AP001"
-   - Duration → "2 hours" 
+   - Duration → "2 hours"
    - Operating Room → "OR-1"
    - Specialist → "Dr. Silva"
 3. **Read-only fields** cannot be manually edited
@@ -766,6 +845,7 @@ Configure fields that auto-populate based on the selection:
 ### Common Use Cases
 
 #### Medical Procedures
+
 ```json
 "procedures": [
   {"name": "Surgery Name", "code": "Code", "duration": "Time", "room": "Location"}
@@ -773,6 +853,7 @@ Configure fields that auto-populate based on the selection:
 ```
 
 #### Medications
+
 ```json
 "medications": [
   {"name": "Drug Name", "dosage": "Amount", "frequency": "Schedule", "warnings": "Notes"}
@@ -780,6 +861,7 @@ Configure fields that auto-populate based on the selection:
 ```
 
 #### Hospital Departments
+
 ```json
 "departments": [
   {"name": "Dept Name", "head": "Manager", "phone": "Contact", "location": "Building"}
@@ -787,6 +869,7 @@ Configure fields that auto-populate based on the selection:
 ```
 
 #### Insurance Plans
+
 ```json
 "insurance": [
   {"plan": "Plan Name", "provider": "Company", "code": "ID", "copay": "Amount"}
@@ -803,6 +886,7 @@ Configure fields that auto-populate based on the selection:
 ### Implementation Details
 
 Data sources are implemented using:
+
 - `apps.pdf_forms.services.data_source_utils.DataSourceUtils` - Core utilities
 - JavaScript frontend for real-time field linking
 - JSON storage within form template configuration
@@ -815,7 +899,7 @@ Data sources are implemented using:
 **Data Sources Not Appearing**:
 
 - Verify data source has valid name and structure
-- Check all items have identical keys  
+- Check all items have identical keys
 - Ensure data source is saved before linking fields
 
 **Auto-Fill Not Working**:
