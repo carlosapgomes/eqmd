@@ -114,7 +114,12 @@
                           {{ form.main_procedure_display.label }}
                           <span class="text-danger">*</span>
                         </label>
-                        {{ form.main_procedure_display }}
+                        <div class="input-group">
+                          {{ form.main_procedure_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
                         {{ form.main_procedure }}
                         <div class="form-text">
                           Digite o código ou descrição do procedimento para buscar
@@ -151,7 +156,12 @@
                         <label class="form-label">
                           {{ form.secondary_procedure_1_display.label }}
                         </label>
-                        {{ form.secondary_procedure_1_display }}
+                        <div class="input-group">
+                          {{ form.secondary_procedure_1_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
                         {{ form.secondary_procedure_1 }}
                         <div class="form-text">
                           Digite o código ou descrição do procedimento para buscar
@@ -175,7 +185,12 @@
                         <label class="form-label">
                           {{ form.secondary_procedure_2_display.label }}
                         </label>
-                        {{ form.secondary_procedure_2_display }}
+                        <div class="input-group">
+                          {{ form.secondary_procedure_2_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
                         {{ form.secondary_procedure_2 }}
                         <div class="form-text">
                           Digite o código ou descrição do procedimento para buscar
@@ -199,7 +214,12 @@
                         <label class="form-label">
                           {{ form.secondary_procedure_3_display.label }}
                         </label>
-                        {{ form.secondary_procedure_3_display }}
+                        <div class="input-group">
+                          {{ form.secondary_procedure_3_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
                         {{ form.secondary_procedure_3 }}
                         <div class="form-text">
                           Digite o código ou descrição do procedimento para buscar
@@ -223,7 +243,12 @@
                         <label class="form-label">
                           {{ form.secondary_procedure_4_display.label }}
                         </label>
-                        {{ form.secondary_procedure_4_display }}
+                        <div class="input-group">
+                          {{ form.secondary_procedure_4_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
                         {{ form.secondary_procedure_4 }}
                         <div class="form-text">
                           Digite o código ou descrição do procedimento para buscar
@@ -247,7 +272,12 @@
                         <label class="form-label">
                           {{ form.secondary_procedure_5_display.label }}
                         </label>
-                        {{ form.secondary_procedure_5_display }}
+                        <div class="input-group">
+                          {{ form.secondary_procedure_5_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
                         {{ form.secondary_procedure_5 }}
                         <div class="form-text">
                           Digite o código ou descrição do procedimento para buscar
@@ -447,6 +477,25 @@ document.addEventListener('DOMContentLoaded', function() {
         return wrapper ? wrapper.querySelector('.procedure-results') : null;
     }
 
+    function getSpinner(input) {
+        const wrapper = input.closest('.input-group');
+        return wrapper ? wrapper.querySelector('.search-spinner') : null;
+    }
+
+    function showSpinner(input) {
+        const spinner = getSpinner(input);
+        if (spinner) {
+            spinner.style.display = 'block';
+        }
+    }
+
+    function hideSpinner(input) {
+        const spinner = getSpinner(input);
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+    }
+
     function hideAllResults() {
         resultsContainers.forEach(function(container) {
             container.classList.remove('show');
@@ -497,6 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 input.dataset.procedureDescription = procedure.description;
                 resultsContainer.classList.remove('show');
                 resultsContainer.style.display = 'none';
+                hideSpinner(input);
             });
 
             resultsContainer.appendChild(item);
@@ -528,17 +578,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     resultsContainer.classList.remove('show');
                     resultsContainer.style.display = 'none';
                 }
+                hideSpinner(input);
                 return;
             }
 
             const timeoutId = setTimeout(function() {
+                showSpinner(input);
                 const url = `${searchUrl}?q=${encodeURIComponent(query)}&limit=10`;
                 fetch(url, { credentials: 'same-origin' })
                     .then(function(response) { return response.json(); })
                     .then(function(data) {
+                        hideSpinner(input);
                         renderResults(input, (data && data.results) ? data.results : []);
                     })
                     .catch(function() {
+                        hideSpinner(input);
                         console.error('Error searching procedures');
                     });
             }, 300);
