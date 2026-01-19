@@ -262,6 +262,48 @@ uv run python manage.py create_sample_wards
 uv run python manage.py create_sample_content
 uv run python manage.py create_sample_pdf_forms
 
+## Drug Templates and Medication Import
+
+### Import Brazilian Medications Database
+
+```bash
+# Import medications from CSV file (1,070+ medications)
+uv run python manage.py import_medications_csv fixtures/MERGED_medications.csv
+
+# Dry run to preview import without saving data
+uv run python manage.py import_medications_csv fixtures/MERGED_medications.csv --dry-run
+
+# Import with custom source name
+uv run python manage.py import_medications_csv fixtures/MERGED_medications.csv --source "Hospital Database"
+
+# Check imported medication statistics
+uv run python manage.py shell -c "
+from apps.drugtemplates.models import DrugTemplate
+print(f'Total templates: {DrugTemplate.objects.count()}')
+print(f'Imported templates: {DrugTemplate.objects.imported().count()}')
+print(f'User created templates: {DrugTemplate.objects.user_created().count()}')
+"
+```
+
+### Drug Template Management
+
+```bash
+# Test drug template refactoring
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/drugtemplates/tests/ -v
+
+# Drug template model tests
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/drugtemplates/tests/test_model_refactoring.py -v
+
+# Import functionality tests
+DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/drugtemplates/tests/test_medication_import.py -v
+```
+
+**Key Features:**
+- **Separate fields**: concentration and pharmaceutical_form instead of combined presentation
+- **Import tracking**: distinguish between imported reference drugs and user-created templates
+- **Source tracking**: track import source for auditing and management
+- **Backward compatibility**: computed presentation property maintained for legacy code
+
 # Clinical Research and Full-Text Search
 
 ## Full-Text Search Setup

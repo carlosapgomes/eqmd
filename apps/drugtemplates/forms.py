@@ -12,17 +12,22 @@ class DrugTemplateForm(forms.ModelForm):
 
     class Meta:
         model = DrugTemplate
-        fields = ['name', 'presentation', 'usage_instructions', 'is_public']
+        fields = ['name', 'concentration', 'pharmaceutical_form', 'usage_instructions', 'is_public']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Nome do medicamento (ex: Dipirona)',
                 'maxlength': 200
             }),
-            'presentation': forms.TextInput(attrs={
+            'concentration': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Apresentação (ex: 500mg, comprimido)',
-                'maxlength': 300
+                'placeholder': 'Concentração (ex: 500 mg, 40 mg/mL)',
+                'maxlength': 100
+            }),
+            'pharmaceutical_form': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Forma farmacêutica (ex: comprimido, solução injetável)',
+                'maxlength': 100
             }),
             'usage_instructions': forms.Textarea(attrs={
                 'class': 'form-control markdown-editor',
@@ -43,13 +48,15 @@ class DrugTemplateForm(forms.ModelForm):
         
         # Add Bootstrap classes and help text
         self.fields['name'].help_text = 'Nome do medicamento'
-        self.fields['presentation'].help_text = 'Dosagem, forma farmacêutica, etc.'
+        self.fields['concentration'].help_text = 'Concentração do medicamento (ex: 500 mg, 40 mg/mL)'
+        self.fields['pharmaceutical_form'].help_text = 'Forma farmacêutica (ex: comprimido, solução injetável, cápsula)'
         self.fields['usage_instructions'].help_text = 'Instruções detalhadas de uso (suporte a markdown)'
         self.fields['is_public'].help_text = 'Se marcado, outros usuários poderão ver este template'
         
         # Configure field labels
         self.fields['name'].label = 'Nome do Medicamento'
-        self.fields['presentation'].label = 'Apresentação'
+        self.fields['concentration'].label = 'Concentração'
+        self.fields['pharmaceutical_form'].label = 'Forma Farmacêutica'
         self.fields['usage_instructions'].label = 'Instruções de Uso'
         self.fields['is_public'].label = 'Público'
 
@@ -77,23 +84,50 @@ class DrugTemplateForm(forms.ModelForm):
         
         return name
 
-    def clean_presentation(self):
-        """Custom validation for presentation field."""
-        presentation = self.cleaned_data.get('presentation')
-        if not presentation:
-            raise ValidationError('Apresentação é obrigatória.')
+    def clean_concentration(self):
+        """Custom validation for concentration field."""
+        concentration = self.cleaned_data.get('concentration')
+        if not concentration:
+            raise ValidationError('Concentração é obrigatória.')
         
-        presentation = presentation.strip()
-        if not presentation:
-            raise ValidationError('Apresentação não pode estar vazia.')
+        concentration = concentration.strip()
+        if not concentration:
+            raise ValidationError('Concentração não pode estar vazia.')
         
-        return presentation
+        # Normalize decimal separators
+        concentration = concentration.replace(',', '.')
+        
+        return concentration
+
+    def clean_pharmaceutical_form(self):
+        """Custom validation for pharmaceutical form field."""
+        pharmaceutical_form = self.cleaned_data.get('pharmaceutical_form')
+        if not pharmaceutical_form:
+            raise ValidationError('Forma farmacêutica é obrigatória.')
+        
+        pharmaceutical_form = pharmaceutical_form.strip().lower()
+        if not pharmaceutical_form:
+            raise ValidationError('Forma farmacêutica não pode estar vazia.')
+        
+        return pharmaceutical_form
 
     def clean_usage_instructions(self):
         """Custom validation for usage instructions field."""
         usage_instructions = self.cleaned_data.get('usage_instructions')
+        
+        # Check if this is an imported drug (either existing imported instance or editing an imported one)
+        is_imported = (
+            (self.instance and getattr(self.instance, 'is_imported', False)) or
+            self.cleaned_data.get('is_imported', False)
+        )
+        
+        # Usage instructions are optional for imported drugs
+        if is_imported:
+            return usage_instructions.strip() if usage_instructions else ''
+        
+        # Required for user-created drugs
         if not usage_instructions:
-            raise ValidationError('Instruções de uso são obrigatórias.')
+            raise ValidationError('Instruções de uso são obrigatórias para medicamentos criados por usuários.')
         
         usage_instructions = usage_instructions.strip()
         if not usage_instructions:
