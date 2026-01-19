@@ -59,3 +59,4 @@ dev-debug.log
 # tasks/ 
 debug/
 backups/
+.coverage
