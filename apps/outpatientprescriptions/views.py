@@ -342,7 +342,9 @@ def search_drug_templates(request):
         drug_templates = DrugTemplate.objects.filter(
             Q(creator=request.user) | Q(is_public=True)
         ).filter(
-            Q(name__icontains=query) | Q(presentation__icontains=query)
+            Q(name__icontains=query)
+            | Q(concentration__icontains=query)
+            | Q(pharmaceutical_form__icontains=query)
         ).select_related('creator').order_by('name')[:limit]
         
         for template in drug_templates:
