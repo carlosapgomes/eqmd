@@ -484,6 +484,19 @@ class HospitalLetterheadGenerator:
         """
         content = []
 
+        # General instructions (before drug list)
+        if prescription_data.get("instructions"):
+            # Keep general instructions together as a section
+            instructions_content = [
+                Paragraph(
+                    "<b>INSTRUÇÕES GERAIS:</b>", self.styles["MedicalContentBold"]
+                ),
+                Paragraph(
+                    prescription_data["instructions"], self.styles["MedicalContent"]
+                ),
+            ]
+            content.append(KeepTogether(instructions_content))
+
         # Prescription items
         if items:
             # content.append(
@@ -494,16 +507,23 @@ class HospitalLetterheadGenerator:
             content.append(Spacer(1, 6))
 
             for i, item in enumerate(items, 1):
-                item_content = [f"<b>{i}. {item.get('drug_name', '')}</b>"]
+                # First line: drug_name presentation quantity
+                first_line_parts = [
+                    f"<b>{i}. {item.get('drug_name', '').capitalize()}</b>"
+                ]
 
                 if item.get("presentation"):
-                    item_content.append(f"<i>{item['presentation']}</i>")
-
-                if item.get("usage_instructions"):
-                    item_content.append(f"<b>Uso:</b> {item['usage_instructions']}")
+                    first_line_parts.append(f"- <i>{item['presentation']}</i>")
 
                 if item.get("quantity"):
-                    item_content.append(f"<b>Quantidade:</b> {item['quantity']}")
+                    first_line_parts.append(f"- {item['quantity']}")
+
+                first_line = " ".join(first_line_parts)
+
+                # Second line: usage instructions (if present)
+                item_content = [first_line]
+                if item.get("usage_instructions"):
+                    item_content.append(f"<b>Uso:</b> {item['usage_instructions']}")
 
                 # Wrap each drug item in KeepTogether to prevent page splits
                 drug_paragraph = Paragraph(
@@ -513,21 +533,6 @@ class HospitalLetterheadGenerator:
 
                 # Keep drug info together on same page
                 content.append(KeepTogether([drug_paragraph, drug_spacer]))
-
-        # General instructions
-        if prescription_data.get("instructions"):
-            # Keep general instructions together as a section
-            instructions_content = [
-                Spacer(1, 12),
-                Paragraph(
-                    "<b>INSTRUÇÕES GERAIS:</b>", self.styles["MedicalContentBold"]
-                ),
-                Spacer(1, 6),
-                Paragraph(
-                    prescription_data["instructions"], self.styles["MedicalContent"]
-                ),
-            ]
-            content.append(KeepTogether(instructions_content))
 
         return self.generate_pdf(
             content_elements=content,
