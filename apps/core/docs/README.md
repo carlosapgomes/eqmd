@@ -1,6 +1,6 @@
 # Core App Documentation
 
-The Core app provides the main application functionality for EquipeMed, including the landing page and dashboard interface.
+The Core app provides the main application functionality for EquipeMed, including the landing page, dashboard interface, and reference data management.
 
 ## Overview
 
@@ -10,6 +10,8 @@ The Core app serves as the central hub of the EquipeMed application, providing:
 - **Dashboard**: Main authenticated user interface
 - **Base Templates**: Shared template infrastructure
 - **URL Routing**: Core application routing
+- **Reference Data**: ICD-10 codes and medical procedures management
+- **Caching**: Dashboard and ward mapping cache systems
 
 ## App Structure
 
@@ -23,10 +25,19 @@ apps/core/
 ├── templates/core/         # App-specific templates
 │   ├── landing_page.html   # Public landing page
 │   └── dashboard.html      # Authenticated dashboard
-├── admin.py               # Django admin configuration (empty)
+├── models/                  # Data models
+│   ├── cache.py            # Cache models
+│   ├── icd10_code.py       # ICD-10 diagnosis codes
+│   ├── medical_procedure.py # Medical procedures
+│   └── renewal_request.py  # Account renewal requests
+├── api/                     # API endpoints
+├── management/              # Django management commands
+│   ├── import_icd10_codes.py
+│   ├── import_procedures.py
+│   └── populate_sample_data.py
+├── admin.py               # Django admin configuration
 ├── apps.py                # App configuration
-├── models.py              # Data models (empty)
-├── tests.py               # Test cases
+├── tests/                 # Test cases
 ├── urls.py                # URL patterns
 └── views.py               # View functions
 ```
@@ -176,9 +187,36 @@ The app uses a custom medical-themed color scheme:
 - All forms include CSRF tokens
 - Protected by Django's CSRF middleware
 
-## Testing
+## Reference Data
 
-Test files are located in `apps/core/tests.py`. Currently contains placeholder for future tests.
+The Core app manages reference data used throughout the system:
+
+- **ICD-10 Codes**: Diagnosis codes (14,242 codes)
+- **Medical Procedures**: Standardized procedure codes
+- **Import Commands**: CSV/JSON import with batch processing
+- **Search API**: Full-text search for both reference types
+
+For detailed information on importing and managing reference data, see [Reference Data Management](../../docs/reference-data.md).
+
+### Quick Import Commands
+
+```bash
+# Import ICD-10 codes
+uv run python manage.py import_icd10_codes --file=fixtures/cid.csv
+
+# Import medical procedures
+uv run python manage.py import_procedures --file=fixtures/procedimentos.csv
+
+# Preview imports
+uv run python manage.py import_icd10_codes --file=fixtures/cid.csv --dry-run
+```
+
+### Search API Endpoints
+
+- `/api/icd10/search/?q=query` - Search ICD-10 codes
+- `/api/procedures/search/?q=query` - Search medical procedures
+
+## Testing
 
 ## Future Enhancements
 
@@ -202,7 +240,9 @@ Test files are located in `apps/core/tests.py`. Currently contains placeholder f
 - [Views Documentation](views.md)
 - [Templates Documentation](templates.md)
 - [URL Patterns Documentation](urls.md)
+- [API Reference](api-reference.md)
 - [Accounts App Documentation](../../accounts/docs/README.md)
+- [Reference Data Management](../../docs/reference-data.md)
 
 ## Troubleshooting
 

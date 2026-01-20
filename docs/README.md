@@ -47,9 +47,11 @@
 
 ## 📊 Data Management
 
+- **[Reference Data Management](reference-data.md)** - Import ICD-10 codes and medical procedures
 - **[Data Export for Research](data-export.md)** - Export anonymized data for analysis
-- **[Sample Data Population](sample-data-population.md)** - Initial data setup
+- **[Sample Data Population](sample-data-population.md)** - Initial test data setup
 - **[Firebase Import](firebase-import.md)** - Import data from Firebase
+- **[Full-Text Search](fts-vector-indexation.md)** - Search vector management
 
 ## 📋 Maintenance
 

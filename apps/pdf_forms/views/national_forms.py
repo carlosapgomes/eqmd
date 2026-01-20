@@ -253,6 +253,56 @@ class APACForm(forms.Form):
         required=False
     )
 
+    # ICD-10 code selection with search (main + secondary)
+    main_icd_id = forms.UUIDField(
+        required=False,
+        widget=forms.HiddenInput(attrs={'class': 'icd10-hidden-input'})
+    )
+    main_icd_display = forms.CharField(
+        label="CID 10 Principal",
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control icd10-search-input',
+            'placeholder': 'Digite para buscar CID 10 principal...',
+            'autocomplete': 'off',
+            'data-results-id': 'icd10-results-main',
+            'data-hidden-id': 'id_main_icd_id',
+            'data-required': 'true',
+        })
+    )
+
+    secondary_icd_id = forms.UUIDField(
+        required=False,
+        widget=forms.HiddenInput(attrs={'class': 'icd10-hidden-input'})
+    )
+    secondary_icd_display = forms.CharField(
+        label="CID 10 Secundário",
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control icd10-search-input',
+            'placeholder': 'Digite para buscar CID 10 secundário...',
+            'autocomplete': 'off',
+            'data-results-id': 'icd10-results-secondary',
+            'data-hidden-id': 'id_secondary_icd_id',
+        })
+    )
+
+    other_icd_id = forms.UUIDField(
+        required=False,
+        widget=forms.HiddenInput(attrs={'class': 'icd10-hidden-input'})
+    )
+    other_icd_display = forms.CharField(
+        label="CID 10 Causas Associadas",
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control icd10-search-input',
+            'placeholder': 'Digite para buscar CID 10 causas associadas...',
+            'autocomplete': 'off',
+            'data-results-id': 'icd10-results-other',
+            'data-hidden-id': 'id_other_icd_id',
+        })
+    )
+
     diagnosis_notes = forms.CharField(
         label="Observações",
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -287,6 +337,14 @@ class APACForm(forms.Form):
         return [
             (slot['id'], slot['display'], slot['required'])
             for slot in self.PROCEDURE_SLOTS
+        ]
+
+    def _icd10_slots(self):
+        """Return ICD-10 field definitions for validation."""
+        return [
+            ('main_icd_id', 'main_icd_display', True),
+            ('secondary_icd_id', 'secondary_icd_display', False),
+            ('other_icd_id', 'other_icd_display', False),
         ]
 
     def clean(self):
@@ -326,26 +384,38 @@ class APACForm(forms.Form):
                     for field in display_fields:
                         self.add_error(field, "Procedimento inválido ou inativo.")
 
+        # Validate ICD-10 codes
+        selected_icd_ids = {}
+        for id_field, display_field, required in self._icd10_slots():
+            display_value = (cleaned_data.get(display_field) or '').strip()
+            icd_id = cleaned_data.get(id_field)
+
+            if required and not icd_id:
+                self.add_error(display_field, "Selecione um CID 10 válido da lista de sugestões.")
+                continue
+
+            if display_value and not icd_id:
+                self.add_error(display_field, "Selecione um CID 10 válido da lista de sugestões.")
+                continue
+
+            if icd_id:
+                icd_id_str = str(icd_id)
+                selected_icd_ids.setdefault(icd_id_str, []).append(display_field)
+
+        if selected_icd_ids:
+            from apps.core.models import Icd10Code
+            valid_icd_ids = set(
+                str(code_id) for code_id in Icd10Code.objects.filter(
+                    id__in=list(selected_icd_ids.keys()),
+                    is_active=True
+                ).values_list('id', flat=True)
+            )
+            for icd_id, display_fields in selected_icd_ids.items():
+                if icd_id not in valid_icd_ids:
+                    for field in display_fields:
+                        self.add_error(field, "CID 10 inválido ou inativo.")
+
         return cleaned_data
-        
-    def _clean_icd_field(self, field_name, required=False):
-        icd_value = (self.cleaned_data.get(field_name) or '').upper().strip()
-        if not icd_value:
-            if required:
-                raise forms.ValidationError("CID 10 é obrigatório")
-            return ''
-
-        # TODO: Replace with search/select-only validation once ICD lookup is implemented.
-        return icd_value
-
-    def clean_main_icd(self):
-        return self._clean_icd_field('main_icd', required=True)
-
-    def clean_secondary_icd(self):
-        return self._clean_icd_field('secondary_icd', required=False)
-
-    def clean_other_icd(self):
-        return self._clean_icd_field('other_icd', required=False)
     
 
 class APACFormView(LoginRequiredMixin, FormView):
@@ -422,6 +492,16 @@ class APACFormView(LoginRequiredMixin, FormView):
             selected_ids = [proc_id for proc_id in procedure_ids.values() if proc_id]
             procedures = MedicalProcedure.objects.in_bulk(selected_ids)
 
+            # Get ICD-10 codes
+            icd10_ids = {
+                'main_icd_id': form.cleaned_data.get('main_icd_id'),
+                'secondary_icd_id': form.cleaned_data.get('secondary_icd_id'),
+                'other_icd_id': form.cleaned_data.get('other_icd_id'),
+            }
+            selected_icd_ids = [icd_id for icd_id in icd10_ids.values() if icd_id]
+            from apps.core.models import Icd10Code
+            icd10_codes = Icd10Code.objects.in_bulk(selected_icd_ids)
+
             # Prepare form data for storage
             form_data = {
                 'patient_name': form.cleaned_data['patient_name'],
@@ -455,6 +535,16 @@ class APACFormView(LoginRequiredMixin, FormView):
                 'secondary_procedure_3_qty': form.cleaned_data.get('secondary_procedure_3_qty', '') or '',
                 'secondary_procedure_4_qty': form.cleaned_data.get('secondary_procedure_4_qty', '') or '',
                 'secondary_procedure_5_qty': form.cleaned_data.get('secondary_procedure_5_qty', '') or '',
+                # ICD-10 codes
+                'main_icd_id': str(icd10_ids.get('main_icd_id')) if icd10_ids.get('main_icd_id') else '',
+                'main_icd_code': icd10_codes.get(icd10_ids.get('main_icd_id')).code if icd10_codes.get(icd10_ids.get('main_icd_id')) else '',
+                'main_icd_description': icd10_codes.get(icd10_ids.get('main_icd_id')).description if icd10_codes.get(icd10_ids.get('main_icd_id')) else '',
+                'secondary_icd_id': str(icd10_ids.get('secondary_icd_id')) if icd10_ids.get('secondary_icd_id') else '',
+                'secondary_icd_code': icd10_codes.get(icd10_ids.get('secondary_icd_id')).code if icd10_codes.get(icd10_ids.get('secondary_icd_id')) else '',
+                'secondary_icd_description': icd10_codes.get(icd10_ids.get('secondary_icd_id')).description if icd10_codes.get(icd10_ids.get('secondary_icd_id')) else '',
+                'other_icd_id': str(icd10_ids.get('other_icd_id')) if icd10_ids.get('other_icd_id') else '',
+                'other_icd_code': icd10_codes.get(icd10_ids.get('other_icd_id')).code if icd10_codes.get(icd10_ids.get('other_icd_id')) else '',
+                'other_icd_description': icd10_codes.get(icd10_ids.get('other_icd_id')).description if icd10_codes.get(icd10_ids.get('other_icd_id')) else '',
             }
             if self.patient and self.patient.gender:
                 gender_auto_fill = DataFieldMapper.process_gender_auto_fill(
