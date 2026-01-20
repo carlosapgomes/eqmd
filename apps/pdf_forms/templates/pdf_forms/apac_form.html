@@ -322,31 +322,58 @@
 
                   <div class="row mb-3">
                     <div class="col-md-4">
-                      <div class="mb-3">
-                        <label for="{{ form.main_icd.id_for_label }}" class="form-label">
-                          {{ form.main_icd.label }}
+                      <div class="mb-3 icd10-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.main_icd_display.label }}
                           <span class="text-danger">*</span>
                         </label>
-                        {{ form.main_icd }}
-                        {% if form.main_icd.help_text %}
-                        <div class="form-text">{{ form.main_icd.help_text }}</div>
-                        {% endif %}
+                        <div class="input-group">
+                          {{ form.main_icd_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
+                        {{ form.main_icd_id }}
+                        <div class="form-text">
+                          Digite o código ou descrição do CID 10 para buscar
+                        </div>
+                        <div id="icd10-results-main" class="dropdown-menu icd10-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
                       </div>
                     </div>
                     <div class="col-md-4">
-                      <div class="mb-3">
-                        <label for="{{ form.secondary_icd.id_for_label }}" class="form-label">
-                          {{ form.secondary_icd.label }}
+                      <div class="mb-3 icd10-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.secondary_icd_display.label }}
                         </label>
-                        {{ form.secondary_icd }}
+                        <div class="input-group">
+                          {{ form.secondary_icd_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
+                        {{ form.secondary_icd_id }}
+                        <div class="form-text">
+                          Digite o código ou descrição do CID 10 para buscar
+                        </div>
+                        <div id="icd10-results-secondary" class="dropdown-menu icd10-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
                       </div>
                     </div>
                     <div class="col-md-4">
-                      <div class="mb-3">
-                        <label for="{{ form.other_icd.id_for_label }}" class="form-label">
-                          {{ form.other_icd.label }}
+                      <div class="mb-3 icd10-search-group position-relative">
+                        <label class="form-label">
+                          {{ form.other_icd_display.label }}
                         </label>
-                        {{ form.other_icd }}
+                        <div class="input-group">
+                          {{ form.other_icd_display }}
+                          <span class="input-group-text search-spinner" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          </span>
+                        </div>
+                        {{ form.other_icd_id }}
+                        <div class="form-text">
+                          Digite o código ou descrição do CID 10 para buscar
+                        </div>
+                        <div id="icd10-results-other" class="dropdown-menu icd10-results w-100 mt-0" style="max-height: 200px; overflow-y: auto;"></div>
                       </div>
                     </div>
                   </div>
@@ -625,6 +652,186 @@ document.addEventListener('DOMContentLoaded', function() {
             if (value && !hiddenId) {
                 event.preventDefault();
                 alert('Selecione um procedimento válido da lista de sugestões.');
+                input.focus();
+                return;
+            }
+        }
+    });
+
+    // ICD-10 Code Search
+    const icd10Inputs = Array.from(document.querySelectorAll('.icd10-search-input'));
+    const icd10ResultsContainers = Array.from(document.querySelectorAll('.icd10-results'));
+    const icd10HiddenInputs = Array.from(document.querySelectorAll('.icd10-hidden-input'));
+    const icd10Timeouts = new Map();
+    const icd10SearchUrl = '{% url "apps.core:icd10_search_api" %}';
+
+    function getIcd10HiddenInput(input) {
+        const hiddenId = input.dataset.hiddenId;
+        return hiddenId ? document.getElementById(hiddenId) : null;
+    }
+
+    function clearIcd10Selection(input) {
+        const hiddenInput = getIcd10HiddenInput(input);
+        if (hiddenInput) {
+            hiddenInput.value = '';
+        }
+        input.dataset.icd10Id = '';
+        input.dataset.icd10Code = '';
+        input.dataset.icd10Description = '';
+    }
+
+    function getIcd10ResultsContainer(input) {
+        const resultsId = input.dataset.resultsId;
+        if (resultsId) {
+            const byId = document.getElementById(resultsId);
+            if (byId) {
+                return byId;
+            }
+        }
+        const wrapper = input.closest('.icd10-search-group');
+        return wrapper ? wrapper.querySelector('.icd10-results') : null;
+    }
+
+    function getIcd10Spinner(input) {
+        const wrapper = input.closest('.input-group');
+        return wrapper ? wrapper.querySelector('.search-spinner') : null;
+    }
+
+    function showIcd10Spinner(input) {
+        const spinner = getIcd10Spinner(input);
+        if (spinner) {
+            spinner.style.display = 'block';
+        }
+    }
+
+    function hideIcd10Spinner(input) {
+        const spinner = getIcd10Spinner(input);
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+    }
+
+    function hideAllIcd10Results() {
+        icd10ResultsContainers.forEach(function(container) {
+            container.classList.remove('show');
+            container.style.display = 'none';
+        });
+    }
+
+    function renderIcd10Results(input, results) {
+        const resultsContainer = getIcd10ResultsContainer(input);
+        const hiddenInput = getIcd10HiddenInput(input);
+
+        if (!resultsContainer) {
+            return;
+        }
+
+        resultsContainer.innerHTML = '';
+
+        if (!results.length) {
+            resultsContainer.classList.remove('show');
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        results.forEach(function(code) {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+                <strong>${code.code}</strong><br>
+                <small class="text-muted">${code.short_description || code.description}</small>
+            `;
+            item.addEventListener('click', function() {
+                // Display only the code in the input
+                input.value = code.code;
+                if (hiddenInput) {
+                    hiddenInput.value = code.id;
+                }
+                input.dataset.icd10Id = code.id;
+                input.dataset.icd10Code = code.code;
+                input.dataset.icd10Description = code.description;
+                resultsContainer.classList.remove('show');
+                resultsContainer.style.display = 'none';
+                hideIcd10Spinner(input);
+            });
+
+            resultsContainer.appendChild(item);
+        });
+
+        resultsContainer.classList.add('show');
+        resultsContainer.style.display = 'block';
+    }
+
+    icd10Inputs.forEach(function(input) {
+        input.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+            }
+        });
+
+        input.addEventListener('input', function() {
+            const query = input.value.trim();
+            const resultsContainer = getIcd10ResultsContainer(input);
+
+            clearIcd10Selection(input);
+
+            if (icd10Timeouts.has(input)) {
+                clearTimeout(icd10Timeouts.get(input));
+            }
+
+            if (query.length < 2) {
+                if (resultsContainer) {
+                    resultsContainer.classList.remove('show');
+                    resultsContainer.style.display = 'none';
+                }
+                hideIcd10Spinner(input);
+                return;
+            }
+
+            const timeoutId = setTimeout(function() {
+                showIcd10Spinner(input);
+                const url = `${icd10SearchUrl}?q=${encodeURIComponent(query)}&limit=10`;
+                fetch(url, { credentials: 'same-origin' })
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        hideIcd10Spinner(input);
+                        renderIcd10Results(input, (data && data.results) ? data.results : []);
+                    })
+                    .catch(function() {
+                        hideIcd10Spinner(input);
+                        console.error('Error searching ICD-10 codes');
+                    });
+            }, 300);
+
+            icd10Timeouts.set(input, timeoutId);
+        });
+    });
+
+    document.addEventListener('click', function(event) {
+        const target = event.target;
+        if (!target.closest('.icd10-search-input') && !target.closest('.icd10-results')) {
+            hideAllIcd10Results();
+        }
+    });
+
+    document.getElementById('apac-form').addEventListener('submit', function(event) {
+        for (const input of icd10Inputs) {
+            const required = input.dataset.required === 'true';
+            const value = input.value.trim();
+            const hiddenInput = getIcd10HiddenInput(input);
+            const hiddenId = hiddenInput ? hiddenInput.value : '';
+
+            if (required && !hiddenId) {
+                event.preventDefault();
+                alert('Selecione o CID 10 principal a partir da lista.');
+                input.focus();
+                return;
+            }
+
+            if (value && !hiddenId) {
+                event.preventDefault();
+                alert('Selecione um CID 10 válido da lista de sugestões.');
                 input.focus();
                 return;
             }
