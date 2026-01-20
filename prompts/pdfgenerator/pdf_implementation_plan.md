@@ -85,11 +85,13 @@ apps/pdfgenerator/
 Three main endpoints that accept markdown content:
 
 1. **`/pdf/prescription/`** - Generate prescription PDFs
+
    - Replace current HTML print template
    - Include patient info, medication list, instructions
    - Medical signature section
 
 2. **`/pdf/discharge-report/`** - Generate discharge reports
+
    - Patient summary, treatment notes, follow-up instructions
    - Medical signature section
 
@@ -201,7 +203,7 @@ PDF_CONFIG = {
     'orientation': 'portrait',
     'margins': {
         'top': 2.5,    # cm
-        'bottom': 3.0, # cm  
+        'bottom': 3.0, # cm
         'left': 2.0,   # cm
         'right': 2.0   # cm
     },
