@@ -34,6 +34,7 @@ class UserSpecialtyInline(admin.TabularInline):
     """Inline for managing user specialties in user admin."""
     model = UserSpecialty
     extra = 0
+    fk_name = 'user'  # Specify which FK to use (user vs assigned_by)
     readonly_fields = ('assigned_at',)
     fields = ('specialty', 'is_primary', 'assigned_at')
 
