@@ -3,7 +3,7 @@ from django.shortcuts import redirect
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
-from .models import EqmdCustomUser, UserProfile
+from .models import EqmdCustomUser, UserProfile, MedicalSpecialty, UserSpecialty
 from .forms import EqmdCustomUserCreationForm, EqmdCustomUserChangeForm
 from apps.matrix_integration.services import (
     MatrixConfig,
@@ -22,11 +22,34 @@ class UserProfileInline(admin.StackedInline):
         "public_id",
         "display_name",
         "bio",
+        "current_specialty",
         "matrix_localpart",
         "matrix_provisioned_at",
         "matrix_provisioned_by",
     )
     readonly_fields = ("public_id", "matrix_provisioned_at", "matrix_provisioned_by")
+
+
+class UserSpecialtyInline(admin.TabularInline):
+    """Inline for managing user specialties in user admin."""
+    model = UserSpecialty
+    extra = 0
+    readonly_fields = ('assigned_at',)
+    fields = ('specialty', 'is_primary', 'assigned_at')
+
+
+@admin.register(MedicalSpecialty)
+class MedicalSpecialtyAdmin(admin.ModelAdmin):
+    """Admin for managing medical specialties."""
+    list_display = ['name', 'abbreviation', 'is_active', 'created_at']
+    list_filter = ['is_active']
+    search_fields = ['name', 'abbreviation']
+    ordering = ['name']
+
+    fieldsets = (
+        (None, {'fields': ('name', 'abbreviation')}),
+        ('Detalhes', {'fields': ('description', 'is_active')}),
+    )
 
 class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
     add_form = EqmdCustomUserCreationForm
@@ -111,7 +134,7 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         'terms_accepted',
         'is_researcher',
     )
-    inlines = (UserProfileInline,)
+    inlines = (UserProfileInline, UserSpecialtyInline)
     actions = ("reprovision_matrix_dm_room",)
 
     def get_inline_instances(self, request, obj=None):
