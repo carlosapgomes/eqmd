@@ -54,14 +54,14 @@
 
 ## 6. Phase 6: Sample Data and Final Tests (TDD - Tests First)
 
-- [ ] 6.1 Write failing tests for specialty display in various contexts
-- [ ] 6.2 Write failing integration tests for complete user flow
-- [ ] 6.3 Create data migration for initial specialties (Cirurgia Geral, etc.)
-- [ ] 6.4 Run full test suite and fix any issues
-- [ ] 6.5 Verify admin UI allows specialty creation and assignment
-- [ ] 6.6 Verify profile page displays specialties correctly
-- [ ] 6.7 Verify avatar dropdown shows and switches specialty
-- [ ] 6.8 Run final test coverage report (target: 80%+)
+- [x] 6.1 Write failing tests for specialty display in various contexts
+- [x] 6.2 Write failing integration tests for complete user flow
+- [x] 6.3 Create data migration for initial specialties (Cirurgia Geral, etc.)
+- [x] 6.4 Run full test suite and fix any issues
+- [x] 6.5 Verify admin UI allows specialty creation and assignment
+- [x] 6.6 Verify profile page displays specialties correctly
+- [x] 6.7 Verify avatar dropdown shows and switches specialty
+- [x] 6.8 Run final test coverage report (target: 80%+)
 
 ## 7. Documentation and Cleanup
 
