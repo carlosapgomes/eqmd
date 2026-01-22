@@ -23,13 +23,13 @@
 
 ## 3. Phase 3: Admin Configuration (TDD - Tests First)
 
-- [ ] 3.1 Write failing admin tests for MedicalSpecialty CRUD operations
-- [ ] 3.2 Write failing admin tests for UserSpecialtyInline in user admin
-- [ ] 3.3 Write failing admin tests for specialty assignment via user admin
-- [ ] 3.4 Implement MedicalSpecialtyAdmin with list_display and filters
-- [ ] 3.5 Implement UserSpecialtyInline for user admin
-- [ ] 3.6 Register models in admin.py
-- [ ] 3.7 Run admin tests and fix implementation until all pass
+- [x] 3.1 Write failing admin tests for MedicalSpecialty CRUD operations
+- [x] 3.2 Write failing admin tests for UserSpecialtyInline in user admin
+- [x] 3.3 Write failing admin tests for specialty assignment via user admin
+- [x] 3.4 Implement MedicalSpecialtyAdmin with list_display and filters
+- [x] 3.5 Implement UserSpecialtyInline for user admin
+- [x] 3.6 Register models in admin.py
+- [x] 3.7 Run admin tests and fix implementation until all pass
 
 ## 4. Phase 4: Profile Form and Display (TDD - Tests First)
 
