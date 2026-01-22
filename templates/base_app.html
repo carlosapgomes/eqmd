@@ -102,12 +102,9 @@
               class="dropdown-item {% if specialty == user.profile.current_specialty %}active{% endif %}"
               onclick="changeSpecialty('{{ specialty.id }}')"
             >
-              {% if specialty == user.primary_specialty %}<i
-                class="bi bi-star-fill me-2 text-warning"
-              ></i
-              >{% endif %} {{ specialty.name }} {% if specialty ==
-              user.profile.current_specialty %}<i class="bi bi-check float-end"></i>{%
-              endif %}
+              {% if specialty == user.primary_specialty %}<i class="bi bi-star-fill me-2 text-warning"></i>{% endif %}
+              {{ specialty.name }}
+              {% if specialty == user.profile.current_specialty %}<i class="bi bi-check float-end"></i>{% endif %}
             </button>
           </li>
           {% endfor %}
