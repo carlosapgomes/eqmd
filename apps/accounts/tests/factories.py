@@ -88,6 +88,13 @@ class NurseFactory(UserFactory):
 
 class StudentFactory(UserFactory):
     """Factory for creating student users."""
-    
+
     profession_type = 4  # STUDENT
     professional_registration_number = factory.Faker('numerify', text='EST-#####')
+
+
+class ResidentFactory(UserFactory):
+    """Factory for creating resident users."""
+
+    profession_type = 1  # RESIDENT
+    professional_registration_number = factory.Faker('numerify', text='RQE-#####')

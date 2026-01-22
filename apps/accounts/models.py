@@ -190,6 +190,30 @@ class EqmdCustomUser(AbstractUser):
         # Update status if needed
         if self.account_status in ['expired', 'expiring_soon']:
             self.account_status = 'active'
+
+    @property
+    def specialties(self):
+        """Return all specialties assigned to this user."""
+        return [
+            us.specialty
+            for us in self.user_specialties.filter(specialty__is_active=True)
+        ]
+
+    @property
+    def primary_specialty(self):
+        """Return the user's primary specialty."""
+        try:
+            return self.user_specialties.get(is_primary=True).specialty
+        except UserSpecialty.DoesNotExist:
+            # Return first specialty if no primary is set
+            specialties = self.specialties
+            return specialties[0] if specialties else None
+
+    @property
+    def specialty_display(self):
+        """Return display string for current/primary specialty."""
+        specialty = self.primary_specialty
+        return specialty.name if specialty else ""
     
 
 class UserProfile(models.Model):
@@ -217,6 +241,15 @@ class UserProfile(models.Model):
         null=True,
         blank=True,
         related_name="matrix_provisioned_profiles",
+    )
+    current_specialty = models.ForeignKey(
+        'MedicalSpecialty',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='current_users',
+        verbose_name="Especialidade Atual",
+        help_text="Especialidade selecionada pelo usuário para uso atual"
     )
 
     # Read-only properties exposing user fields
@@ -254,6 +287,13 @@ class UserProfile(models.Model):
             return self.user.get_profession_type_display()
         return ""
 
+    @property
+    def current_specialty_display(self):
+        """Return display name of current specialty."""
+        if self.current_specialty:
+            return self.current_specialty.name
+        return self.user.specialty_display
+
     def _normalize_matrix_localpart(self):
         if self.matrix_localpart is None:
             return
@@ -273,3 +313,82 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.display_name or self.full_name
+
+
+class MedicalSpecialty(models.Model):
+    """Registry of medical specialties available in the system."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="Nome da Especialidade",
+        help_text="Ex: Cirurgia Vascular, Cirurgia Geral"
+    )
+    abbreviation = models.CharField(
+        max_length=10,
+        unique=True,
+        verbose_name="Sigla",
+        help_text="Ex: CIRVASC, CIRGER"
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name="Descrição",
+        help_text="Descrição detalhada da especialidade"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Ativa",
+        help_text="Se desmarcado, esta especialidade não estará disponível para seleção"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        verbose_name = "Especialidade Médica"
+        verbose_name_plural = "Especialidades Médicas"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class UserSpecialty(models.Model):
+    """Association between users and their medical specialties."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        EqmdCustomUser,
+        on_delete=models.CASCADE,
+        related_name='user_specialties',
+        verbose_name="Usuário"
+    )
+    specialty = models.ForeignKey(
+        MedicalSpecialty,
+        on_delete=models.PROTECT,  # Prevent deletion if assigned to users
+        related_name='users',
+        verbose_name="Especialidade"
+    )
+    is_primary = models.BooleanField(
+        default=False,
+        verbose_name="Especialidade Principal",
+        help_text="Marque como especialidade principal (ex: do residente)"
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True, verbose_name="Atribuída em")
+    assigned_by = models.ForeignKey(
+        EqmdCustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_specialties',
+        verbose_name="Atribuída por"
+    )
+
+    class Meta:
+        verbose_name = "Especialidade do Usuário"
+        verbose_name_plural = "Especialidades dos Usuários"
+        unique_together = ['user', 'specialty']  # One user can't have same specialty twice
+        ordering = ['-is_primary', 'specialty__name']
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.specialty.name}"
