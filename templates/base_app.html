@@ -64,27 +64,57 @@
           <div class="bg-medical-teal rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
             <i class="bi bi-person-fill text-white"></i>
           </div>
-          <span class="d-none d-md-inline text-medical-dark-gray">
+          <div class="d-none d-md-inline text-medical-dark-gray text-start">
             {% if user.profile.display_name %}
-              {{ user.profile.display_name }}
+              <div>{{ user.profile.display_name }}</div>
             {% else %}
-              {{ user.get_full_name|default:user.username }}
+              <div>{{ user.get_full_name|default:user.username }}</div>
             {% endif %}
-          </span>
+            {% if user.profile.current_specialty_display %}
+              <small class="text-muted d-block">
+                <i class="bi bi-stethoscope me-1"></i>{{ user.profile.current_specialty_display }}
+              </small>
+            {% elif user.profession %}
+              <small class="text-muted d-block">{{ user.profession }}</small>
+            {% endif %}
+          </div>
           <i class="bi bi-chevron-down ms-1"></i>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li><h6 class="dropdown-header">
-              {% if user.profile.display_name %}
-                {{ user.profile.display_name }}
-              {% else %}
-                {{ user.get_full_name|default:user.username }}
+        <ul class="dropdown-menu dropdown-menu-end" style="min-width: 250px;">
+          <li>
+            <div class="px-3 py-2">
+              <strong>{% if user.profile.display_name %}{{ user.profile.display_name }}{% else %}{{ user.get_full_name|default:user.username }}{% endif %}</strong>
+              {% if user.profile.current_specialty_display %}
+                <div class="small text-muted">
+                  <i class="bi bi-stethoscope me-1"></i>{{ user.profile.current_specialty_display }}
+                </div>
               {% endif %}
-            </h6></li>
+            </div>
+          </li>
+          <li><hr class="dropdown-divider" /></li>
           <li><a class="dropdown-item" href="{% url 'apps.accounts:profile_redirect' %}"><i class="bi bi-person me-2"></i>Meu Perfil</a></li>
+          {% if user.specialties|length > 1 %}
+          <li><hr class="dropdown-divider" /></li>
+          <li><h6 class="dropdown-header">Trocar Especialidade</h6></li>
+          {% for specialty in user.specialties %}
+          <li>
+            <button
+              class="dropdown-item {% if specialty == user.profile.current_specialty %}active{% endif %}"
+              onclick="changeSpecialty('{{ specialty.id }}')"
+            >
+              {% if specialty == user.primary_specialty %}<i
+                class="bi bi-star-fill me-2 text-warning"
+              ></i
+              >{% endif %} {{ specialty.name }} {% if specialty ==
+              user.profile.current_specialty %}<i class="bi bi-check float-end"></i>{%
+              endif %}
+            </button>
+          </li>
+          {% endfor %}
+          <li><hr class="dropdown-divider" /></li>
+          {% endif %}
           <!-- <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configurações</a></li> -->
           <!-- <li><a class="dropdown-item" href="#"><i class="bi bi-question-circle me-2"></i>Ajuda</a></li> -->
-          <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item" href="{% url 'account_logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
         </ul>
       </div>
@@ -501,5 +531,36 @@
 <script>
 // Add app-layout class to body
 document.body.classList.add('app-layout');
+
+function changeSpecialty(specialtyId) {
+  fetch('{% url "apps.accounts:change_specialty_api" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: new URLSearchParams({
+      'specialty_id': specialtyId
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Erro ao alterar especialidade: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Erro de conexão. Tente novamente.');
+    console.error('Error:', error);
+  });
+}
+
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
 </script>
 {% endblock %}

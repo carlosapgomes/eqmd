@@ -16,4 +16,9 @@ urlpatterns = [
         name="profile_update",
     ),
     path("redirect/", views.ProfileRedirectView.as_view(), name="profile_redirect"),
+    path(
+        "api/change-specialty/",
+        views.change_specialty_api,
+        name="change_specialty_api",
+    ),
 ]
