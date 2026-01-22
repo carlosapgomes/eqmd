@@ -43,14 +43,14 @@
 
 ## 5. Phase 5: Avatar Dropdown and AJAX (TDD - Tests First)
 
-- [ ] 5.1 Write failing view tests for change_specialty_api endpoint
-- [ ] 5.2 Write failing permission tests for specialty change endpoint
-- [ ] 5.3 Write failing integration tests for specialty switching flow
-- [ ] 5.4 Implement change_specialty_api view with validation
-- [ ] 5.5 Add URL route for specialty change endpoint
-- [ ] 5.6 Update base_app.html avatar dropdown to show specialty
-- [ ] 5.7 Add JavaScript function for specialty switching
-- [ ] 5.8 Run tests and fix implementation until all pass
+- [x] 5.1 Write failing view tests for change_specialty_api endpoint
+- [x] 5.2 Write failing permission tests for specialty change endpoint
+- [x] 5.3 Write failing integration tests for specialty switching flow
+- [x] 5.4 Implement change_specialty_api view with validation
+- [x] 5.5 Add URL route for specialty change endpoint
+- [x] 5.6 Update base_app.html avatar dropdown to show specialty
+- [x] 5.7 Add JavaScript function for specialty switching
+- [x] 5.8 Run tests and fix implementation until all pass
 
 ## 6. Phase 6: Sample Data and Final Tests (TDD - Tests First)
 
