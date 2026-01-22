@@ -33,13 +33,13 @@
 
 ## 4. Phase 4: Profile Form and Display (TDD - Tests First)
 
-- [ ] 4.1 Write failing form tests for current_specialty filtering
-- [ ] 4.2 Write failing view tests for profile display with specialties
-- [ ] 4.3 Write failing template tests for specialty badges in profile
-- [ ] 4.4 Modify UserProfileForm to filter current_specialty queryset
-- [ ] 4.5 Update profile.html template to display specialties
-- [ ] 4.6 Update profile update template to include specialty dropdown
-- [ ] 4.7 Run tests and fix implementation until all pass
+- [x] 4.1 Write failing form tests for current_specialty filtering
+- [x] 4.2 Write failing view tests for profile display with specialties
+- [x] 4.3 Write failing template tests for specialty badges in profile
+- [x] 4.4 Modify UserProfileForm to filter current_specialty queryset
+- [x] 4.5 Update profile.html template to display specialties
+- [x] 4.6 Update profile update template to include specialty dropdown
+- [x] 4.7 Run tests and fix implementation until all pass
 
 ## 5. Phase 5: Avatar Dropdown and AJAX (TDD - Tests First)
 

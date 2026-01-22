@@ -75,6 +75,20 @@
                   {% endif %}
                 </div>
               </div>
+              <div class="row mb-3">
+                <label for="{{ form.current_specialty.id_for_label }}" class="col-lg-3 col-form-label">{{ form.current_specialty.label }}</label>
+                <div class="col-lg-9">
+                  {{ form.current_specialty }}
+                  {% if form.current_specialty.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.current_specialty.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                  <div class="form-text">
+                    Selecione a especialidade que deseja usar atualmente.
+                  </div>
+                </div>
+              </div>
             </fieldset>
             
             <div class="row">
