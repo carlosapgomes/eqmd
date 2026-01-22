@@ -16,21 +16,51 @@
             <div class="col-md-4 fw-bold">Email:</div>
             <div class="col-md-8">{{ profile.email }}</div>
           </div>
-          
+
           {% if profile.profession %}
           <div class="row mb-3">
-            <div class="col-md-4 fw-bold">Profession:</div>
+            <div class="col-md-4 fw-bold">Profissão:</div>
             <div class="col-md-8">{{ profile.profession }}</div>
           </div>
           {% endif %}
-          
+
+          {% if profile.current_specialty_display %}
+          <div class="row mb-3">
+            <div class="col-md-4 fw-bold">Especialidade Atual:</div>
+            <div class="col-md-8">
+              <span class="badge bg-medical-primary">
+                <i class="bi bi-stethoscope me-1"></i>
+                {{ profile.current_specialty_display }}
+              </span>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if user.specialties %}
+          <div class="row mb-3">
+            <div class="col-md-4 fw-bold">Especialidades Registradas:</div>
+            <div class="col-md-8">
+              {% for specialty in user.specialties %}
+              <span
+                class="badge {% if specialty == user.primary_specialty %}bg-success{% else %}bg-secondary{% endif %} me-1"
+              >
+                {% if specialty == user.primary_specialty %}<i
+                  class="bi bi-star-fill me-1"
+                ></i
+                >{% endif %} {{ specialty.name }}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
           {% if profile.bio %}
           <div class="row mb-3">
             <div class="col-md-4 fw-bold">Bio:</div>
             <div class="col-md-8">{{ profile.bio }}</div>
           </div>
           {% endif %}
-          
+
           {% if is_owner %}
           <div class="mt-4">
             <a href="{% url 'apps.accounts:profile_update' public_id=profile.public_id %}" class="btn btn-medical-primary me-2">
