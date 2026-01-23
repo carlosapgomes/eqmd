@@ -1,7 +1,9 @@
+version: "3.8"
+
 services:
   eqmd:
     container_name: ${CONTAINER_PREFIX:-eqmd}_app
-    image: ${EQMD_IMAGE:-eqmd:latest}
+    image: ${EQMD_IMAGE:-ghcr.io/yourorg/eqmd:latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -20,52 +22,37 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
-    profiles:
-      - prod
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/logs
+    init: true
     networks:
       - eqmd_net
 
-  # Static file initialization container
   static-init:
     container_name: ${CONTAINER_PREFIX:-eqmd}_static_init
-    image: ${EQMD_IMAGE:-eqmd:latest}
+    image: ${EQMD_IMAGE:-ghcr.io/yourorg/eqmd:latest}
     volumes:
       - eqmd_static_files:/shared/static
     command: |
       sh -c "
-        echo 'Copying static files to shared volume...' &&
+        echo 'Initializing static files in shared volume...' &&
         cp -r /app/staticfiles/* /shared/static/ 2>/dev/null || true &&
-        echo 'Static files copied successfully'
+        echo 'Static files initialized successfully' &&
+        echo 'Files copied:' && find /shared/static -type f | wc -l
       "
     profiles: ["init"]
-
-  eqmd-dev:
-    container_name: ${CONTAINER_PREFIX:-eqmd}_dev
-    build:
-      context: .
-      args:
-        USER_ID: ${EQMD_UID:-1001}
-        GROUP_ID: ${EQMD_GID:-1001}
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - .:/app
-      - ./media:/app/media
-    ports:
-      - "${DEV_PORT:-8779}:8000"
-    env_file:
-      - .env
-    environment:
-      - DEBUG=True
-    depends_on:
-      - postgres
     networks:
       - eqmd_net
 
@@ -78,7 +65,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-eqmd_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eqmd_dev_password_123}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    # Conservative performance tuning for shared 6GB system (4 containers running)
     command: >
       postgres
       -c shared_buffers=128MB
@@ -104,10 +90,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     networks:
       - eqmd_net
 
-  # Matrix Synapse homeserver
   matrix-synapse:
     build:
       context: .
@@ -123,7 +112,7 @@ services:
     ports:
       - "127.0.0.1:${MATRIX_SYNAPSE_PORT:-8008}:8008"
     volumes:
-      - ./matrix:/data
+      - matrix_data:/data
       - matrix_media_store:/data/media_store
     env_file:
       - .env
@@ -139,10 +128,17 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
     networks:
       - eqmd_net
 
-  # Element Web client
   element-web:
     image: vectorim/element-web:${ELEMENT_VERSION:-v1.11.58}
     container_name: ${CONTAINER_PREFIX:-eqmd}_element_web
@@ -157,6 +153,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
     networks:
       - eqmd_net
 
@@ -175,6 +179,9 @@ volumes:
     driver: local
   matrix_media_store:
     name: ${CONTAINER_PREFIX:-eqmd}_matrix_media_store
+    driver: local
+  matrix_data:
+    name: ${CONTAINER_PREFIX:-eqmd}_matrix_data
     driver: local
 
 networks:

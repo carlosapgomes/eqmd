@@ -10,16 +10,33 @@ RUN apt-get update && apt-get install -y \
 	curl \
 	procps \
 	ca-certificates \
+	gnupg \
 	&& rm -rf /var/lib/apt/lists/*
+
+# Install Docker CLI from Docker's official repository for newer API support
+RUN install -m 0755 -d /etc/apt/keyrings && \
+	curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+	chmod a+r /etc/apt/keyrings/docker.gpg && \
+	echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" \
+		> /etc/apt/sources.list.d/docker.list && \
+	apt-get update && \
+	apt-get install -y docker-ce-cli && \
+	rm -rf /var/lib/apt/lists/*
 
 # Instala o Pi Coding Agent globalmente
 RUN npm install -g @mariozechner/pi-coding-agent
 
-# Prepara o ambiente para o usuário node (UID 1000 padrão da imagem)
+# Prepara o ambiente para o usuário node
 WORKDIR /app
-RUN mkdir -p /home/node/.pi && chown -R node:node /home/node
 
-USER node
+# Copia configuração do Pi do host durante o build
+# --build-arg PI_CONFIG_SOURCE=/home/carlos/.pi
+ARG PI_CONFIG_SOURCE=/tmp/pi-config
+RUN if [ -d "$PI_CONFIG_SOURCE" ]; then \
+        mkdir -p /home/node/.pi && \
+        cp -r "$PI_CONFIG_SOURCE"/* /home/node/.pi/ && \
+        chown -R node:node /home/node/.pi; \
+    fi
 
 # Mantém o container em standby para comandos 'docker exec'
 CMD ["sleep", "infinity"]

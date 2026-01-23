@@ -1,0 +1,62 @@
+  # Security-hardened pi-agent service for coding agents
+  pi-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.pi
+      args:
+        PI_CONFIG_SOURCE: ${HOME}/.pi
+    container_name: ${CONTAINER_PREFIX:-eqmd}_pi_agent
+    user: "${EQMD_UID:-1001}:${EQMD_GID:-1001}"  # Run as host user
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined  # Needed for development tools
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE  # Minimal capability for file operations
+    volumes:
+      # Source code - agents can modify these
+      - ./apps:/app/apps:rw
+      - ./assets:/app/assets:rw
+      - ./templates:/app/templates:rw
+      - ./static:/app/static:rw
+      - ./docs:/app/docs:rw
+      
+      # Python config - read-only to prevent accidents
+      - ./manage.py:/app/manage.py:ro
+      - ./requirements.txt:/app/requirements.txt:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./uv.lock:/app/uv.lock:ro
+      - ./config:/app/config:ro
+      
+      # Critical infrastructure - read-only
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
+      - ./.env:/app/.env:ro
+      - ./Dockerfile:/app/Dockerfile:ro
+      - ./Dockerfile.pi:/app/Dockerfile.pi:ro
+      
+      # Git directory - read-only (agents can read history, can't modify)
+      - ./.git:/app/.git:ro
+      
+      # Frontend build files - allow modifications
+      - ./webpack.config.js:/app/webpack.config.js:rw
+      - ./package.json:/app/package.json:rw
+      - ./package-lock.json:/app/package-lock.json:rw
+      - ./node_modules:/app/node_modules:rw
+      
+    environment:
+      - ZAI_API_KEY=${ZAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HOME=/home/node
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true
+    depends_on:
+      - postgres
+      - eqmd-dev
+    restart: "no"  # Don't auto-restart if agent crashes
