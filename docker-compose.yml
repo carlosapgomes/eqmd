@@ -28,6 +28,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - eqmd_net
 
   # Static file initialization container
   static-init:
@@ -42,39 +44,6 @@ services:
         echo 'Static files copied successfully'
       "
     profiles: ["init"]
-
-  # Development service with hot reload
-  pi-agent:
-    build:
-      context: .
-      dockerfile: Dockerfile.pi
-    container_name: ${CONTAINER_PREFIX:-eqmd}_pi_agent
-    user: "${EQMD_UID:-1001}:${EQMD_GID:-1001}"
-    profiles:
-      - pi
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - .:/app:rw
-      - ${HOME}/.pi:/home/node/.pi:ro
-      # Home temporário para o agente não sujar nada persistentemente
-      - type: tmpfs
-        target: /home/node
-        tmpfs:
-          size: 64M
-    environment:
-      - ZAI_API_KEY=${ZAI_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - HOME=/home/node
-    stdin_open: true
-    tty: true
-    depends_on:
-      - postgres
-      - eqmd-dev
 
   eqmd-dev:
     container_name: ${CONTAINER_PREFIX:-eqmd}_dev
@@ -97,8 +66,8 @@ services:
       - DEBUG=True
     depends_on:
       - postgres
-    profiles:
-      - dev
+    networks:
+      - eqmd_net
 
   postgres:
     image: postgres:15-alpine
@@ -135,6 +104,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - eqmd_net
 
   # Matrix Synapse homeserver
   matrix-synapse:
@@ -168,6 +139,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    networks:
+      - eqmd_net
 
   # Element Web client
   element-web:
@@ -184,6 +157,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - eqmd_net
 
 volumes:
   eqmd_database:
@@ -201,3 +176,7 @@ volumes:
   matrix_media_store:
     name: ${CONTAINER_PREFIX:-eqmd}_matrix_media_store
     driver: local
+
+networks:
+  eqmd_net:
+    name: eqmd_net

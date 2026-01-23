@@ -1,0 +1,49 @@
+services:
+  eqmd:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/logs
+    init: true
+
+  eqmd-dev:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+
+  postgres:
+    security_opt:
+      - no-new-privileges:true
+    # Postgres entrypoint needs to chmod/chown data dirs; dropping all caps breaks it under rootless.
+
+  matrix-synapse:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
+
+  element-web:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    # nginx entrypoint writes to /etc/nginx/conf.d and /var/cache/nginx
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    init: true

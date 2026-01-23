@@ -1,0 +1,189 @@
+version: "3.8"
+
+services:
+  eqmd:
+    container_name: ${CONTAINER_PREFIX:-eqmd}_app
+    image: ${EQMD_IMAGE:-ghcr.io/yourorg/eqmd:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${EQMD_UID:-1001}
+        GROUP_ID: ${EQMD_GID:-1001}
+    user: "${EQMD_UID:-1001}:${EQMD_GID:-1001}"
+    ports:
+      - "${HOST_PORT:-8778}:8000"
+    env_file:
+      - .env
+    volumes:
+      - eqmd_media_files:/app/media
+      - eqmd_database:/app/database
+      - eqmd_static_files:/app/staticfiles
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/logs
+    init: true
+    networks:
+      - eqmd_net
+
+  static-init:
+    container_name: ${CONTAINER_PREFIX:-eqmd}_static_init
+    image: ${EQMD_IMAGE:-ghcr.io/yourorg/eqmd:latest}
+    volumes:
+      - eqmd_static_files:/shared/static
+    command: |
+      sh -c "
+        echo 'Initializing static files in shared volume...' &&
+        cp -r /app/staticfiles/* /shared/static/ 2>/dev/null || true &&
+        echo 'Static files initialized successfully' &&
+        echo 'Files copied:' && find /shared/static -type f | wc -l
+      "
+    profiles: ["init"]
+    networks:
+      - eqmd_net
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: ${CONTAINER_PREFIX:-eqmd}_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-eqmd_db}
+      POSTGRES_USER: ${POSTGRES_USER:-eqmd_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eqmd_dev_password_123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c effective_cache_size=2GB
+      -c maintenance_work_mem=32MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=8MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=2MB
+      -c max_connections=50
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-eqmd_user} -d ${POSTGRES_DB:-eqmd_db}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - eqmd_net
+
+  matrix-synapse:
+    build:
+      context: .
+      dockerfile: Dockerfile.synapse
+      args:
+        USER_ID: ${EQMD_UID:-1001}
+        GROUP_ID: ${EQMD_GID:-1001}
+        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-v1.99.0}
+    image: eqmd-synapse:${SYNAPSE_VERSION:-v1.99.0}
+    container_name: ${CONTAINER_PREFIX:-eqmd}_matrix_synapse
+    restart: unless-stopped
+    user: "${EQMD_UID:-1001}:${EQMD_GID:-1001}"
+    ports:
+      - "127.0.0.1:${MATRIX_SYNAPSE_PORT:-8008}:8008"
+    volumes:
+      - matrix_data:/data
+      - matrix_media_store:/data/media_store
+    env_file:
+      - .env
+    environment:
+      - SYNAPSE_SERVER_NAME=${MATRIX_FQDN:-matrix.yourhospital.com}
+      - SYNAPSE_REPORT_STATS=no
+      - PYTHONPATH=/data/modules
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8008/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
+    networks:
+      - eqmd_net
+
+  element-web:
+    image: vectorim/element-web:${ELEMENT_VERSION:-v1.11.58}
+    container_name: ${CONTAINER_PREFIX:-eqmd}_element_web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MATRIX_ELEMENT_PORT:-8080}:80"
+    volumes:
+      - ./element/config.json:/app/config.json:ro
+      - ./element/custom.css:/app/custom.css:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
+    networks:
+      - eqmd_net
+
+volumes:
+  eqmd_database:
+    name: ${CONTAINER_PREFIX:-eqmd}_database
+    driver: local
+  eqmd_media_files:
+    name: ${CONTAINER_PREFIX:-eqmd}_media_files
+    driver: local
+  eqmd_static_files:
+    name: ${CONTAINER_PREFIX:-eqmd}_static_files
+    driver: local
+  postgres_data:
+    name: ${CONTAINER_PREFIX:-eqmd}_postgres_data
+    driver: local
+  matrix_media_store:
+    name: ${CONTAINER_PREFIX:-eqmd}_matrix_media_store
+    driver: local
+  matrix_data:
+    name: ${CONTAINER_PREFIX:-eqmd}_matrix_data
+    driver: local
+
+networks:
+  eqmd_net:
+    name: eqmd_net

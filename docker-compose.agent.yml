@@ -1,0 +1,70 @@
+services:
+  docker-socket-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:latest
+    container_name: ${CONTAINER_PREFIX:-eqmd}_docker_proxy
+    environment:
+      - CONTAINERS=1
+      - POST=1
+      - EXEC=1
+      - VERSION=1
+      - INFO=1
+      - PING=1
+    volumes:
+      - ${DOCKER_SOCKET_PATH:-/run/user/1001/docker.sock}:/var/run/docker.sock:ro
+    read_only: true
+    tmpfs:
+      - /run
+      - /tmp
+    networks:
+      - eqmd_net
+    restart: "no"
+
+  pi-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.pi
+      args:
+        PI_CONFIG_SOURCE: ${HOME}/.pi
+    container_name: ${CONTAINER_PREFIX:-eqmd}_pi_agent
+    user: "0:0"
+    environment:
+      - ZAI_API_KEY=${ZAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HOME=/home/node
+      - NODE_ENV=development
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1"
+          pids: 256
+    volumes:
+      - .:/app:rw
+      - ./.git:/app/.git:ro
+      - ${HOME}/.pi:/home/node/.pi:ro
+      - pi_agent_sessions:/home/node/.pi/agent:rw
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    depends_on:
+      - docker-socket-proxy
+    networks:
+      - eqmd_net
+    restart: "no"
+
+networks:
+  eqmd_net:
+    external: true
+    name: eqmd_net
+
+volumes:
+  pi_agent_sessions:
+    name: ${CONTAINER_PREFIX:-eqmd}_pi_agent_sessions
