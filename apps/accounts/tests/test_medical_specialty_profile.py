@@ -45,20 +45,17 @@ class UserProfileFormTestCase(TestCase):
         are assigned to the user and active
         """
         # Create specialties
-        specialty_assigned = MedicalSpecialty.objects.create(
+        specialty_assigned, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER',
-            is_active=True
+            defaults={'abbreviation': 'CG', 'is_active': True}
         )
-        specialty_unassigned = MedicalSpecialty.objects.create(
+        specialty_unassigned, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC',
-            is_active=True
+            defaults={'abbreviation': 'CVASC', 'is_active': True}
         )
-        specialty_inactive = MedicalSpecialty.objects.create(
+        specialty_inactive, _ = MedicalSpecialty.objects.get_or_create(
             name='Cardiologia',
-            abbreviation='CARDIO',
-            is_active=False
+            defaults={'abbreviation': 'CARDIO', 'is_active': False}
         )
 
         # Assign only one specialty to user
@@ -86,13 +83,13 @@ class UserProfileFormTestCase(TestCase):
         **WHEN** a user has multiple assigned specialties
         **THEN** the current_specialty dropdown shows all of them
         """
-        specialty1 = MedicalSpecialty.objects.create(
+        specialty1, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CG'}
         )
-        specialty2 = MedicalSpecialty.objects.create(
+        specialty2, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(user=self.user, specialty=specialty1)
@@ -107,17 +104,17 @@ class UserProfileFormTestCase(TestCase):
 
     def test_form_specialties_ordered_by_name(self):
         """Test that specialties are ordered by name in the dropdown."""
-        specialty_b = MedicalSpecialty.objects.create(
+        specialty_b, _ = MedicalSpecialty.objects.get_or_create(
             name='Ortopedia',
-            abbreviation='ORTO'
+            defaults={'abbreviation': 'ORTO'}
         )
-        specialty_a = MedicalSpecialty.objects.create(
+        specialty_a, _ = MedicalSpecialty.objects.get_or_create(
             name='Cardiologia',
-            abbreviation='CARDIO'
+            defaults={'abbreviation': 'CARDIO'}
         )
-        specialty_c = MedicalSpecialty.objects.create(
+        specialty_c, _ = MedicalSpecialty.objects.get_or_create(
             name='Pediatria',
-            abbreviation='PED'
+            defaults={'abbreviation': 'PED'}
         )
 
         UserSpecialty.objects.create(user=self.user, specialty=specialty_b)
@@ -160,9 +157,9 @@ class ProfileViewTestCase(TestCase):
 
     def test_profile_view_includes_specialties_in_context(self):
         """Test that profile view includes user specialties in context."""
-        specialty = MedicalSpecialty.objects.create(
+        specialty, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CG'}
         )
         UserSpecialty.objects.create(
             user=self.user,
@@ -208,9 +205,9 @@ class ProfileTemplateTestCase(TestCase):
         **THEN** the current specialty is displayed with a badge showing
         the specialty name
         """
-        specialty = MedicalSpecialty.objects.create(
+        specialty, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
         self.user.profile.current_specialty = specialty
         self.user.profile.save()
@@ -233,13 +230,13 @@ class ProfileTemplateTestCase(TestCase):
         specialties
         **THEN** the system displays all specialties as badges
         """
-        specialty1 = MedicalSpecialty.objects.create(
+        specialty1, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CG'}
         )
-        specialty2 = MedicalSpecialty.objects.create(
+        specialty2, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(

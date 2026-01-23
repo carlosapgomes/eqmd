@@ -37,12 +37,12 @@ class ChangeSpecialtyApiTestCase(TestCase):
 
         # Create specialties
         self.specialty1 = MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Test Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
         self.specialty2 = MedicalSpecialty.objects.create(
-            name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            name='Test Cirurgia Vascular',
+            abbreviation='TCIRVASC'
         )
 
     def test_valid_specialty_change_request(self):
@@ -154,8 +154,8 @@ class ChangeSpecialtyPermissionTestCase(TestCase):
         )
         self.client = Client()
         self.specialty = MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Test Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
 
     def test_require_authentication(self):
@@ -215,12 +215,12 @@ class SpecialtySwitchingIntegrationTestCase(TestCase):
 
         # Create specialties
         self.specialty1 = MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Test Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
         self.specialty2 = MedicalSpecialty.objects.create(
-            name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            name='Test Cirurgia Vascular',
+            abbreviation='TCIRVASC'
         )
 
         # Assign both to user

@@ -40,14 +40,14 @@ class MedicalSpecialtyModelTestCase(TestCase):
         and generated timestamps
         """
         specialty = MedicalSpecialty.objects.create(
-            name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            name='Teste Cirurgia Vascular',
+            abbreviation='TCIRVASC'
         )
 
         self.assertIsNotNone(specialty.id)
         self.assertIsInstance(specialty.id, uuid.UUID)
-        self.assertEqual(specialty.name, 'Cirurgia Vascular')
-        self.assertEqual(specialty.abbreviation, 'CIRVASC')
+        self.assertEqual(specialty.name, 'Teste Cirurgia Vascular')
+        self.assertEqual(specialty.abbreviation, 'TCIRVASC')
         self.assertEqual(specialty.description, '')
         self.assertTrue(specialty.is_active)
         self.assertIsNotNone(specialty.created_at)
@@ -56,13 +56,13 @@ class MedicalSpecialtyModelTestCase(TestCase):
     def test_create_medical_specialty_with_description(self):
         """Test creating a medical specialty with all fields."""
         specialty = MedicalSpecialty.objects.create(
-            name='Cirurgia Cardíaca',
-            abbreviation='CIRCARD',
+            name='Teste Cirurgia Cardíaca',
+            abbreviation='TCIRCARD',
             description='Especialidade cirúrgica focada no coração e grandes vasos'
         )
 
-        self.assertEqual(specialty.name, 'Cirurgia Cardíaca')
-        self.assertEqual(specialty.abbreviation, 'CIRCARD')
+        self.assertEqual(specialty.name, 'Teste Cirurgia Cardíaca')
+        self.assertEqual(specialty.abbreviation, 'TCIRCARD')
         self.assertEqual(
             specialty.description,
             'Especialidade cirúrgica focada no coração e grandes vasos'
@@ -71,11 +71,11 @@ class MedicalSpecialtyModelTestCase(TestCase):
     def test_medical_specialty_string_representation(self):
         """Test that __str__ returns the specialty name."""
         specialty = MedicalSpecialty.objects.create(
-            name='Cardiologia',
-            abbreviation='CARDIO'
+            name='Teste Cardiologia',
+            abbreviation='TCARDIO'
         )
 
-        self.assertEqual(str(specialty), 'Cardiologia')
+        self.assertEqual(str(specialty), 'Teste Cardiologia')
 
     def test_medical_specialty_name_must_be_unique(self):
         """
@@ -86,50 +86,53 @@ class MedicalSpecialtyModelTestCase(TestCase):
         **THEN** the system rejects the creation with a validation error
         """
         MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Teste Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
 
         # Try to create with duplicate name
         with self.assertRaises(IntegrityError):
             MedicalSpecialty.objects.create(
-                name='Cirurgia Geral',
-                abbreviation='CIRGER2'
+                name='Teste Cirurgia Geral',
+                abbreviation='TCIRGER2'
             )
 
     def test_medical_specialty_abbreviation_must_be_unique(self):
         """Test unique specialty constraint on abbreviation."""
         MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Teste Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
 
         # Try to create with duplicate abbreviation
         with self.assertRaises(IntegrityError):
             MedicalSpecialty.objects.create(
-                name='Cirurgia Geral 2',
-                abbreviation='CIRGER'
+                name='Teste Cirurgia Geral 2',
+                abbreviation='TCIRGER'
             )
 
     def test_medical_specialty_ordering(self):
         """Test that specialties are ordered by name."""
         MedicalSpecialty.objects.create(
-            name='Ortopedia',
-            abbreviation='ORTO'
+            name='ZOrtopedia',
+            abbreviation='ZORTO'
         )
         MedicalSpecialty.objects.create(
-            name='Cardiologia',
-            abbreviation='CARDIO'
+            name='ACardiologia',
+            abbreviation='ACARDIO'
         )
         MedicalSpecialty.objects.create(
-            name='Pediatria',
-            abbreviation='PED'
+            name='MPediatria',
+            abbreviation='MPED'
         )
 
-        specialties = list(MedicalSpecialty.objects.all())
-        self.assertEqual(specialties[0].name, 'Cardiologia')
-        self.assertEqual(specialties[1].name, 'Ortopedia')
-        self.assertEqual(specialties[2].name, 'Pediatria')
+        # Filter only our test specialties
+        specialties = list(MedicalSpecialty.objects.filter(
+            name__in=['ACardiologia', 'MPediatria', 'ZOrtopedia']
+        ))
+        self.assertEqual(specialties[0].name, 'ACardiologia')
+        self.assertEqual(specialties[1].name, 'MPediatria')
+        self.assertEqual(specialties[2].name, 'ZOrtopedia')
 
     def test_medical_specialty_verbose_names(self):
         """Test verbose names for admin display."""
@@ -156,8 +159,8 @@ class MedicalSpecialtyModelTestCase(TestCase):
         existing assignments are preserved
         """
         specialty = MedicalSpecialty.objects.create(
-            name='Cardiologia',
-            abbreviation='CARDIO',
+            name='Teste Cardiologia Soft',
+            abbreviation='TCARDIOS',
             is_active=True
         )
 
@@ -182,7 +185,7 @@ class MedicalSpecialtyModelTestCase(TestCase):
         long_name = 'A' * 100
         specialty = MedicalSpecialty.objects.create(
             name=long_name,
-            abbreviation='TEST'
+            abbreviation='TTEST1'
         )
         self.assertEqual(len(specialty.name), 100)
 
@@ -197,8 +200,8 @@ class MedicalSpecialtyModelTestCase(TestCase):
     def test_medical_specialty_description_can_be_blank(self):
         """Test that description field is optional (blank=True)."""
         specialty = MedicalSpecialty.objects.create(
-            name='Teste',
-            abbreviation='TEST'
+            name='Teste Desc Blank',
+            abbreviation='TDESCBL'
         )
         self.assertEqual(specialty.description, '')
 
@@ -212,9 +215,9 @@ class UserSpecialtyModelTestCase(TestCase):
 
     def setUp(self):
         """Set up test data."""
-        self.specialty = MedicalSpecialty.objects.create(
+        self.specialty, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CIRGER'}
         )
         self.user = DoctorFactory()
 
@@ -286,9 +289,9 @@ class UserSpecialtyModelTestCase(TestCase):
 
     def test_user_can_have_multiple_specialties(self):
         """Test that a user can have multiple different specialties."""
-        specialty2 = MedicalSpecialty.objects.create(
+        specialty2, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(
@@ -306,13 +309,13 @@ class UserSpecialtyModelTestCase(TestCase):
 
     def test_user_specialty_ordering(self):
         """Test that user specialties are ordered by is_primary desc, then name."""
-        specialty2 = MedicalSpecialty.objects.create(
+        specialty2, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
-        specialty3 = MedicalSpecialty.objects.create(
+        specialty3, _ = MedicalSpecialty.objects.get_or_create(
             name='Ortopedia',
-            abbreviation='ORTO'
+            defaults={'abbreviation': 'ORTO'}
         )
 
         # Create specialties in non-ordered way
@@ -388,13 +391,13 @@ class UserProfileCurrentSpecialtyTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         self.user = DoctorFactory()
-        self.specialty1 = MedicalSpecialty.objects.create(
+        self.specialty1, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CG'}
         )
-        self.specialty2 = MedicalSpecialty.objects.create(
+        self.specialty2, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
     def test_profile_current_specialty_can_be_null(self):

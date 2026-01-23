@@ -39,8 +39,8 @@ class MedicalSpecialtyAdminTestCase(TestCase):
     def test_list_displays_correct_fields(self):
         """Test that list_display shows correct fields."""
         specialty = MedicalSpecialty.objects.create(
-            name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            name='Test Cirurgia Vascular',
+            abbreviation='TCIRVASC'
         )
 
         result = self.admin.get_list_display(None)
@@ -134,8 +134,8 @@ class SpecialtyAssignmentTestCase(TestCase):
         """
         user = DoctorFactory()
         specialty = MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Test Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
 
         # Simulate admin inline assignment
@@ -154,12 +154,12 @@ class SpecialtyAssignmentTestCase(TestCase):
         """Test that multiple specialties can be assigned to a user."""
         user = DoctorFactory()
         specialty1 = MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Test Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
         specialty2 = MedicalSpecialty.objects.create(
-            name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            name='Test Cirurgia Vascular',
+            abbreviation='TCIRVASC'
         )
 
         # Assign multiple specialties
@@ -179,8 +179,8 @@ class SpecialtyAssignmentTestCase(TestCase):
         """Test that a specialty can be removed from a user."""
         user = DoctorFactory()
         specialty = MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Test Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
 
         # Create assignment
@@ -204,12 +204,12 @@ class SpecialtyAssignmentTestCase(TestCase):
         """
         user = DoctorFactory()
         specialty1 = MedicalSpecialty.objects.create(
-            name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            name='Test Cirurgia Geral',
+            abbreviation='TCIRGER'
         )
         specialty2 = MedicalSpecialty.objects.create(
-            name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            name='Test Cirurgia Vascular',
+            abbreviation='TCIRVASC'
         )
 
         # Create assignments
@@ -238,14 +238,14 @@ class SpecialtyAssignmentTestCase(TestCase):
         and generated timestamps
         """
         specialty = MedicalSpecialty.objects.create(
-            name='Cardiologia',
-            abbreviation='CARDIO',
+            name='Test Cardiologia',
+            abbreviation='TCARDIO',
             description='Especialidade médica focada no coração'
         )
 
         # Verify specialty was created
-        retrieved = MedicalSpecialty.objects.get(abbreviation='CARDIO')
-        self.assertEqual(retrieved.name, 'Cardiologia')
+        retrieved = MedicalSpecialty.objects.get(abbreviation='TCARDIO')
+        self.assertEqual(retrieved.name, 'Test Cardiologia')
         self.assertEqual(retrieved.description, 'Especialidade médica focada no coração')
         self.assertTrue(retrieved.is_active)
         self.assertIsNotNone(retrieved.created_at)
@@ -260,8 +260,8 @@ class SpecialtyAssignmentTestCase(TestCase):
         existing assignments are preserved
         """
         specialty = MedicalSpecialty.objects.create(
-            name='Cardiologia',
-            abbreviation='CARDIO',
+            name='Test Cardiologia',
+            abbreviation='TCARDIO',
             is_active=True
         )
 

@@ -37,13 +37,13 @@ class EqmdCustomUserSpecialtiesPropertyTestCase(TestCase):
         assignments where specialty.is_active=True
         """
         user = DoctorFactory()
-        specialty1 = MedicalSpecialty.objects.create(
+        specialty1, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CG'}
         )
-        specialty2 = MedicalSpecialty.objects.create(
+        specialty2, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(user=user, specialty=specialty1)
@@ -59,14 +59,13 @@ class EqmdCustomUserSpecialtiesPropertyTestCase(TestCase):
     def test_specialties_property_filters_active_specialties(self):
         """Test that specialties property filters out inactive specialties."""
         user = DoctorFactory()
-        specialty_active = MedicalSpecialty.objects.create(
+        specialty_active, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER',
-            is_active=True
+            defaults={'abbreviation': 'CG', 'is_active': True}
         )
         specialty_inactive = MedicalSpecialty.objects.create(
-            name='Cirurgia Vascular',
-            abbreviation='CIRVASC',
+            name='Test Cirurgia Vascular Inactive',
+            abbreviation='TCIRVASCI',
             is_active=False
         )
 
@@ -114,13 +113,13 @@ class EqmdCustomUserPrimarySpecialtyPropertyTestCase(TestCase):
         **THEN** the system returns that specialty object
         """
         user = DoctorFactory()
-        specialty1 = MedicalSpecialty.objects.create(
+        specialty1, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CG'}
         )
-        specialty2 = MedicalSpecialty.objects.create(
+        specialty2, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(
@@ -148,13 +147,13 @@ class EqmdCustomUserPrimarySpecialtyPropertyTestCase(TestCase):
         **THEN** the system returns the first specialty in the ordered list
         """
         user = DoctorFactory()
-        specialty1 = MedicalSpecialty.objects.create(
+        specialty1, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CG'}
         )
-        specialty2 = MedicalSpecialty.objects.create(
+        specialty2, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(
@@ -205,9 +204,9 @@ class EqmdCustomUserSpecialtyDisplayPropertyTestCase(TestCase):
         **THEN** the system returns the specialty's name as a string
         """
         user = DoctorFactory()
-        specialty = MedicalSpecialty.objects.create(
+        specialty, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(
@@ -246,9 +245,9 @@ class UserProfileCurrentSpecialtyDisplayPropertyTestCase(TestCase):
     def test_current_specialty_display_returns_current_name(self):
         """Test that current_specialty_display returns current specialty name."""
         user = DoctorFactory()
-        specialty = MedicalSpecialty.objects.create(
+        specialty, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         user.profile.current_specialty = specialty
@@ -261,9 +260,9 @@ class UserProfileCurrentSpecialtyDisplayPropertyTestCase(TestCase):
     def test_current_specialty_display_fallback_to_primary(self):
         """Test that current_specialty_display falls back to primary."""
         user = DoctorFactory()
-        specialty = MedicalSpecialty.objects.create(
+        specialty, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(
@@ -290,13 +289,13 @@ class UserProfileCurrentSpecialtyDisplayPropertyTestCase(TestCase):
     def test_current_specialty_display_prefers_current_over_primary(self):
         """Test that current_specialty_display prefers current over primary."""
         user = DoctorFactory()
-        specialty_primary = MedicalSpecialty.objects.create(
+        specialty_primary, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Geral',
-            abbreviation='CIRGER'
+            defaults={'abbreviation': 'CG'}
         )
-        specialty_current = MedicalSpecialty.objects.create(
+        specialty_current, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
-            abbreviation='CIRVASC'
+            defaults={'abbreviation': 'CVASC'}
         )
 
         UserSpecialty.objects.create(
