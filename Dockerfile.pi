@@ -1,0 +1,25 @@
+# Usamos a versão slim do Bookworm para manter o container leve e seguro
+FROM node:24-bookworm-slim
+
+# Instala dependências essenciais
+# procps: necessário para o agente monitorar processos (ps, top)
+# git: para diffs de código
+# curl: para testar seus endpoints eqmd e matrix
+RUN apt-get update && apt-get install -y \
+	git \
+	curl \
+	procps \
+	ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Instala o Pi Coding Agent globalmente
+RUN npm install -g @mariozechner/pi-coding-agent
+
+# Prepara o ambiente para o usuário node (UID 1000 padrão da imagem)
+WORKDIR /app
+RUN mkdir -p /home/node/.pi && chown -R node:node /home/node
+
+USER node
+
+# Mantém o container em standby para comandos 'docker exec'
+CMD ["sleep", "infinity"]

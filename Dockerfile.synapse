@@ -1,0 +1,34 @@
+# Custom Matrix Synapse Dockerfile with configurable user
+# Extends the official Synapse image to support running as non-root user
+ARG SYNAPSE_VERSION=v1.99.0
+FROM matrixdotorg/synapse:${SYNAPSE_VERSION}
+
+# Create app user with configurable UID/GID
+ARG USER_ID=1001
+ARG GROUP_ID=1001
+ARG USER_NAME=synapse
+
+# Install required packages for user management and set up user
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends passwd && \
+    # Create group
+    groupadd -g ${GROUP_ID} ${USER_NAME} && \
+    # Create user with home directory /data
+    useradd -m -u ${USER_ID} -g ${USER_NAME} -d /data -s /usr/sbin/nologin ${USER_NAME} && \
+    # Ensure /data exists and has correct permissions
+    mkdir -p /data/logs /data/media_store && \
+    chown -R ${USER_NAME}:${USER_NAME} /data && \
+    chmod -R 755 /data && \
+    # Clean up apt cache
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Switch to synapse user for runtime
+USER ${USER_NAME}
+WORKDIR /data
+
+# Expose port
+EXPOSE 8008
+
+# Keep the original entrypoint
+ENTRYPOINT ["/start.py"]

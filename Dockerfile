@@ -60,7 +60,8 @@ RUN uv pip install --system gunicorn
 
 # Copy application code
 COPY . .
-RUN chown -R eqmd:eqmd /app
+# Create logs directory for matrix bot audit
+RUN mkdir -p /app/logs && chown -R eqmd:eqmd /app
 
 # Copy static files from build stage and set www-data ownership
 COPY --from=static-builder --chown=33:33 /app/static /app/staticfiles

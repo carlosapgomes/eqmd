@@ -20,6 +20,8 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
+    profiles:
+      - prod
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 30s
@@ -42,6 +44,38 @@ services:
     profiles: ["init"]
 
   # Development service with hot reload
+  pi-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.pi
+    container_name: ${CONTAINER_PREFIX:-eqmd}_pi_agent
+    user: "${EQMD_UID:-1001}:${EQMD_GID:-1001}"
+    profiles:
+      - pi
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - .:/app:rw
+      - ${HOME}/.pi:/home/node/.pi:ro
+      # Home temporário para o agente não sujar nada persistentemente
+      - type: tmpfs
+        target: /home/node
+        tmpfs:
+          size: 64M
+    environment:
+      - ZAI_API_KEY=${ZAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HOME=/home/node
+    stdin_open: true
+    tty: true
+    depends_on:
+      - postgres
+      - eqmd-dev
+
   eqmd-dev:
     container_name: ${CONTAINER_PREFIX:-eqmd}_dev
     build:
@@ -104,7 +138,14 @@ services:
 
   # Matrix Synapse homeserver
   matrix-synapse:
-    image: matrixdotorg/synapse:${SYNAPSE_VERSION:-v1.99.0}
+    build:
+      context: .
+      dockerfile: Dockerfile.synapse
+      args:
+        USER_ID: ${EQMD_UID:-1001}
+        GROUP_ID: ${EQMD_GID:-1001}
+        SYNAPSE_VERSION: ${SYNAPSE_VERSION:-v1.99.0}
+    image: eqmd-synapse:${SYNAPSE_VERSION:-v1.99.0}
     container_name: ${CONTAINER_PREFIX:-eqmd}_matrix_synapse
     restart: unless-stopped
     user: "${EQMD_UID:-1001}:${EQMD_GID:-1001}"
@@ -113,6 +154,8 @@ services:
     volumes:
       - ./matrix:/data
       - matrix_media_store:/data/media_store
+    env_file:
+      - .env
     environment:
       - SYNAPSE_SERVER_NAME=${MATRIX_FQDN:-matrix.yourhospital.com}
       - SYNAPSE_REPORT_STATS=no
