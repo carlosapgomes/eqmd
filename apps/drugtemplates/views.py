@@ -6,11 +6,12 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.db.models import Q
 from django.core.exceptions import PermissionDenied
-from apps.core.permissions.decorators import doctor_required
+from apps.core.permissions.decorators import doctor_or_resident_required
 from .models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 from .forms import DrugTemplateForm, PrescriptionTemplateForm, PrescriptionTemplateItemFormSet
 
 
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class DrugTemplateListView(LoginRequiredMixin, ListView):
     """
     List view for drug templates with filtering and pagination.
@@ -65,26 +66,30 @@ class DrugTemplateListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         """Add filter context for template rendering."""
+        from apps.core.permissions.utils import is_doctor
+
         context = super().get_context_data(**kwargs)
-        
+
         # Get available creators (only those with accessible templates)
         available_creators = DrugTemplate.objects.filter(
             Q(is_public=True) | Q(creator=self.request.user)
         ).select_related('creator').values_list(
             'creator__id', 'creator__first_name', 'creator__last_name'
         ).distinct()
-        
+
         context.update({
             'name_search': self.request.GET.get('name', ''),
             'selected_creator': self.request.GET.get('creator', ''),
             'selected_visibility': self.request.GET.get('visibility', ''),
             'selected_sort': self.request.GET.get('sort', 'name'),
             'available_creators': available_creators,
+            'is_doctor': is_doctor(self.request.user),
         })
-        
+
         return context
 
 
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class DrugTemplateDetailView(LoginRequiredMixin, DetailView):
     """
     Detail view for DrugTemplate with usage statistics and permission checks.
@@ -127,7 +132,7 @@ class DrugTemplateDetailView(LoginRequiredMixin, DetailView):
         return template.creator == self.request.user
 
 
-@method_decorator(doctor_required, name='dispatch')
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class DrugTemplateCreateView(LoginRequiredMixin, CreateView):
     """
     Create view for DrugTemplate with proper form handling.
@@ -158,6 +163,7 @@ class DrugTemplateCreateView(LoginRequiredMixin, CreateView):
         return self.object.get_absolute_url()
 
 
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class DrugTemplateUpdateView(LoginRequiredMixin, UpdateView):
     """
     Update view for DrugTemplate with creator-only permission checks.
@@ -197,6 +203,7 @@ class DrugTemplateUpdateView(LoginRequiredMixin, UpdateView):
         return self.object.get_absolute_url()
 
 
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class DrugTemplateDeleteView(LoginRequiredMixin, DeleteView):
     """
     Delete view for DrugTemplate with creator-only permission checks.
@@ -250,6 +257,7 @@ class DrugTemplateDeleteView(LoginRequiredMixin, DeleteView):
 
 # Prescription Template Views
 
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class PrescriptionTemplateListView(LoginRequiredMixin, ListView):
     """
     List view for prescription templates with filtering and pagination.
@@ -304,26 +312,30 @@ class PrescriptionTemplateListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         """Add filter context for template rendering."""
+        from apps.core.permissions.utils import is_doctor
+
         context = super().get_context_data(**kwargs)
-        
+
         # Get available creators (only those with accessible templates)
         available_creators = PrescriptionTemplate.objects.filter(
             Q(is_public=True) | Q(creator=self.request.user)
         ).select_related('creator').values_list(
             'creator__id', 'creator__first_name', 'creator__last_name'
         ).distinct()
-        
+
         context.update({
             'name_search': self.request.GET.get('name', ''),
             'selected_creator': self.request.GET.get('creator', ''),
             'selected_visibility': self.request.GET.get('visibility', ''),
             'selected_sort': self.request.GET.get('sort', 'name'),
             'available_creators': available_creators,
+            'is_doctor': is_doctor(self.request.user),
         })
-        
+
         return context
 
 
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class PrescriptionTemplateDetailView(LoginRequiredMixin, DetailView):
     """
     Detail view for PrescriptionTemplate with usage statistics and permission checks.
@@ -370,7 +382,7 @@ class PrescriptionTemplateDetailView(LoginRequiredMixin, DetailView):
         return template.creator == self.request.user
 
 
-@method_decorator(doctor_required, name='dispatch')
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class PrescriptionTemplateCreateView(LoginRequiredMixin, CreateView):
     """
     Create view for PrescriptionTemplate with formset handling.
@@ -421,6 +433,7 @@ class PrescriptionTemplateCreateView(LoginRequiredMixin, CreateView):
         return self.object.get_absolute_url()
 
 
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class PrescriptionTemplateUpdateView(LoginRequiredMixin, UpdateView):
     """
     Update view for PrescriptionTemplate with formset handling and creator-only permission checks.
@@ -482,6 +495,7 @@ class PrescriptionTemplateUpdateView(LoginRequiredMixin, UpdateView):
         return self.object.get_absolute_url()
 
 
+@method_decorator(doctor_or_resident_required, name='dispatch')
 class PrescriptionTemplateDeleteView(LoginRequiredMixin, DeleteView):
     """
     Delete view for PrescriptionTemplate with creator-only permission checks.

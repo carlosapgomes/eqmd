@@ -30,11 +30,10 @@ class DrugTemplateForm(forms.ModelForm):
                 'maxlength': 100
             }),
             'usage_instructions': forms.Textarea(attrs={
-                'class': 'form-control markdown-editor',
-                'placeholder': 'Instruções detalhadas de uso (suporte a markdown)...',
-                'rows': 8,
-                'id': 'id_usage_instructions',
-                'data-easymde': 'true'
+                'class': 'form-control',
+                'placeholder': 'Instruções detalhadas de uso...',
+                'rows': 4,
+                'id': 'id_usage_instructions'
             }),
             'is_public': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
@@ -50,7 +49,7 @@ class DrugTemplateForm(forms.ModelForm):
         self.fields['name'].help_text = 'Nome do medicamento'
         self.fields['concentration'].help_text = 'Concentração do medicamento (ex: 500 mg, 40 mg/mL)'
         self.fields['pharmaceutical_form'].help_text = 'Forma farmacêutica (ex: comprimido, solução injetável, cápsula)'
-        self.fields['usage_instructions'].help_text = 'Instruções detalhadas de uso (suporte a markdown)'
+        self.fields['usage_instructions'].help_text = 'Instruções detalhadas de uso'
         self.fields['is_public'].help_text = 'Se marcado, outros usuários poderão ver este template'
         
         # Configure field labels
