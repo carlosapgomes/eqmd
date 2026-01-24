@@ -7,8 +7,16 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="bi bi-capsule drug-template-icon me-2"></i>
-        Templates de Medicamentos
+        Modelos de Medicamentos
     </h1>
+    {% if is_doctor %}
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'drugtemplates:create' %}" class="btn btn-medical-primary">
+            <i class="bi bi-plus-circle me-1"></i>
+            Novo Modelo
+        </a>
+    </div>
+    {% endif %}
 </div>
 
             <!-- Filters -->
