@@ -1,19 +1,19 @@
 {% extends "drugtemplates/base.html" %}
 {% load i18n %}
 
-{% block title %}Templates de Prescrições{% endblock %}
+{% block title %}Modelos de Prescrições{% endblock %}
 
 {% block drug_template_content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="bi bi-file-earmark-medical me-2"></i>
-        Templates de Prescrições
+        Modelos de Prescrições
     </h1>
     {% if is_doctor %}
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <a href="{% url 'drugtemplates:prescription_create' %}" class="btn btn-medical-primary">
-                <i class="bi bi-plus-circle me-1"></i> Novo Template
+                <i class="bi bi-plus-circle me-1"></i> Novo Modelo
             </a>
         </div>
     </div>
