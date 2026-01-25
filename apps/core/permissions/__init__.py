@@ -25,6 +25,7 @@ from .utils import (
 from .decorators import (
     patient_access_required,
     doctor_required,
+    doctor_or_resident_required,
     can_edit_event_required,
     patient_data_change_required,
     can_delete_event_required,
@@ -89,6 +90,7 @@ __all__ = [
     # Permission decorators
     'patient_access_required',
     'doctor_required',
+    'doctor_or_resident_required',
     'can_edit_event_required',
     'patient_data_change_required',
     'can_delete_event_required',

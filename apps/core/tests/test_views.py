@@ -4,7 +4,12 @@ Tests for the core app views.
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from apps.accounts.tests.factories import UserFactory
+from apps.accounts.tests.factories import (
+    UserFactory,
+    DoctorFactory,
+    ResidentFactory,
+    NurseFactory,
+)
 
 User = get_user_model()
 
@@ -205,6 +210,42 @@ class DashboardViewTestCase(TestCase):
         self.assertContains(response, 'dropdown')
         logout_url = reverse('account_logout')
         self.assertContains(response, logout_url)
+
+
+class TemplatesHubViewTestCase(TestCase):
+    """Test cases for the templates hub view."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.client = Client()
+        self.doctor = DoctorFactory(password='testpass123')
+        self.resident = ResidentFactory(password='testpass123')
+        self.nurse = NurseFactory(password='testpass123')
+
+    def test_templates_hub_requires_authentication(self):
+        """Test that templates hub requires authentication."""
+        response = self.client.get(reverse('core:templates_hub'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response.url)
+
+    def test_templates_hub_accessible_to_doctor(self):
+        """Test that templates hub is accessible to doctors."""
+        self.client.login(username=self.doctor.username, password='testpass123')
+        response = self.client.get(reverse('core:templates_hub'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'core/templates_hub.html')
+
+    def test_templates_hub_accessible_to_resident(self):
+        """Test that templates hub is accessible to residents."""
+        self.client.login(username=self.resident.username, password='testpass123')
+        response = self.client.get(reverse('core:templates_hub'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_templates_hub_forbidden_for_non_privileged(self):
+        """Test that templates hub is forbidden for non-privileged users."""
+        self.client.login(username=self.nurse.username, password='testpass123')
+        response = self.client.get(reverse('core:templates_hub'))
+        self.assertEqual(response.status_code, 403)
 
     def test_dashboard_sidebar_navigation(self):
         """Test that dashboard contains sidebar navigation."""

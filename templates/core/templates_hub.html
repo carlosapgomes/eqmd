@@ -1,0 +1,67 @@
+{% extends "base_app.html" %}
+
+{% block title %}Modelos{% endblock %}
+
+{% block app_content %}
+<div class="container-fluid py-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h4 mb-1">Modelos</h1>
+      <p class="text-muted mb-0">Acesse e gerencie seus modelos clínicos</p>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-capsule-pill fs-3 text-medical-teal me-2"></i>
+            <h2 class="h6 mb-0">Templates de Medicamentos</h2>
+          </div>
+          <p class="text-muted flex-grow-1">
+            Cadastre, organize e consulte medicamentos para reutilizar em prescrições.
+          </p>
+          <a href="{% url 'drugtemplates:list' %}" class="btn btn-medical-primary w-100">
+            Acessar
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-prescription2 fs-3 text-medical-teal me-2"></i>
+            <h2 class="h6 mb-0">Templates de Prescrição</h2>
+          </div>
+          <p class="text-muted flex-grow-1">
+            Monte esquemas completos com múltiplos medicamentos e instruções.
+          </p>
+          <a href="{% url 'drugtemplates:prescription_list' %}" class="btn btn-medical-primary w-100">
+            Acessar
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 border-0 bg-light">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-stars fs-3 text-medical-gray me-2"></i>
+            <h2 class="h6 mb-0">Novos modelos</h2>
+          </div>
+          <p class="text-muted flex-grow-1">
+            Em breve: modelos para relatórios, prescrições ambulatoriais e outros documentos.
+          </p>
+          <button class="btn btn-outline-secondary w-100" disabled>
+            Em breve
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

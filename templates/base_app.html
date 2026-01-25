@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% load hospital_tags %}
+{% load permission_tags %}
 {% block extra_head %}
 <style>
   /* Ensure body has proper padding for fixed navbar */
@@ -184,6 +185,18 @@
           {% endif %}
         </ul>
         
+        {% if user|is_profession:"medical_doctor" or user|is_profession:"resident" %}
+        <h6 class="sidebar-heading">Modelos</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:templates_hub' %}">
+              <i class="bi bi-collection"></i>
+              Modelos
+            </a>
+          </li>
+        </ul>
+        {% endif %}
+
         <!-- Clinical Research Section (NEW) -->
         {% if user.is_researcher %}
         <h6 class="sidebar-heading">Pesquisa Clínica</h6>
@@ -376,6 +389,18 @@
           {% endif %}
         </ul>
         
+        {% if user|is_profession:"medical_doctor" or user|is_profession:"resident" %}
+        <h6 class="sidebar-heading">Modelos</h6>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:templates_hub' %}">
+              <i class="bi bi-collection"></i>
+              Modelos
+            </a>
+          </li>
+        </ul>
+        {% endif %}
+
         <!-- Clinical Research Section (Mobile - NEW) -->
         {% if user.is_researcher %}
         <h6 class="sidebar-heading">Pesquisa Clínica</h6>

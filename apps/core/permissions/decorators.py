@@ -15,7 +15,8 @@ from .utils import (
     can_edit_event,
     can_change_patient_personal_data,
     can_delete_event,
-    is_doctor
+    is_doctor,
+    is_doctor_or_resident,
 )
 
 
@@ -62,6 +63,21 @@ def doctor_required(view_func):
         
         return view_func(request, *args, **kwargs)
     
+    return wrapper
+
+
+def doctor_or_resident_required(view_func):
+    """
+    Decorator that requires the user to be a doctor or resident.
+    """
+    @wraps(view_func)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not is_doctor_or_resident(request.user):
+            return HttpResponseForbidden("This action requires doctor or resident privileges")
+
+        return view_func(request, *args, **kwargs)
+
     return wrapper
 
 
