@@ -9,7 +9,7 @@ from django.db.models.functions import Lower
 from django.core.exceptions import PermissionDenied
 from apps.core.permissions.decorators import doctor_or_resident_required
 from .models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
-from .forms import DrugTemplateForm, PrescriptionTemplateForm, PrescriptionTemplateItemFormSet
+from .forms import DrugTemplateForm, PrescriptionTemplateForm, PrescriptionTemplateItemFormSet, PrescriptionTemplateItemFormSetHelper
 
 
 class ImmutableUnaccent(Func):
@@ -438,10 +438,26 @@ class PrescriptionTemplateCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         """Add formset to context."""
         context = super().get_context_data(**kwargs)
+
+        # Initialize formset with user context
         if self.request.POST:
-            context['formset'] = PrescriptionTemplateItemFormSet(self.request.POST)
+            formset = PrescriptionTemplateItemFormSetHelper.get_formset_with_user(
+                self.request.user, self.request.POST
+            )
         else:
-            context['formset'] = PrescriptionTemplateItemFormSet()
+            formset = PrescriptionTemplateItemFormSetHelper.get_formset_with_user(
+                self.request.user
+            )
+
+        # Prepare formset data for template rendering
+        formset_data = PrescriptionTemplateItemFormSetHelper.prepare_formset_data(formset)
+        context.update(formset_data)
+
+        # Add drug templates for autocomplete functionality
+        context['drug_templates'] = DrugTemplate.objects.filter(
+            Q(creator=self.request.user) | Q(is_public=True)
+        ).order_by('name')
+
         return context
 
     def form_valid(self, form):
@@ -500,13 +516,26 @@ class PrescriptionTemplateUpdateView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         """Add formset to context."""
         context = super().get_context_data(**kwargs)
+
+        # Initialize formset with user context
         if self.request.POST:
-            context['formset'] = PrescriptionTemplateItemFormSet(
-                self.request.POST, 
-                instance=self.object
+            formset = PrescriptionTemplateItemFormSetHelper.get_formset_with_user(
+                self.request.user, self.request.POST, instance=self.object
             )
         else:
-            context['formset'] = PrescriptionTemplateItemFormSet(instance=self.object)
+            formset = PrescriptionTemplateItemFormSetHelper.get_formset_with_user(
+                self.request.user, instance=self.object
+            )
+
+        # Prepare formset data for template rendering
+        formset_data = PrescriptionTemplateItemFormSetHelper.prepare_formset_data(formset)
+        context.update(formset_data)
+
+        # Add drug templates for autocomplete functionality
+        context['drug_templates'] = DrugTemplate.objects.filter(
+            Q(creator=self.request.user) | Q(is_public=True)
+        ).order_by('name')
+
         return context
 
     def form_valid(self, form):
