@@ -9,7 +9,8 @@ from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
+from django.db.models import Q, Func, TextField, Value
+from django.db.models.functions import Lower
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -33,6 +34,12 @@ from apps.patients.models import Patient
 from apps.sample_content.models import SampleContent
 from apps.events.models import Event
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
+
+
+class ImmutableUnaccent(Func):
+    """PostgreSQL immutable unaccent wrapper for accent-insensitive searching."""
+    function = "immutable_unaccent"
+    output_field = TextField()
 
 
 class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
@@ -338,14 +345,24 @@ def search_drug_templates(request):
     try:
         results = []
         
-        # Search individual drug templates only
-        drug_templates = DrugTemplate.objects.filter(
-            Q(creator=request.user) | Q(is_public=True)
-        ).filter(
-            Q(name__icontains=query)
-            | Q(concentration__icontains=query)
-            | Q(pharmaceutical_form__icontains=query)
-        ).select_related('creator').order_by('name')[:limit]
+        # Search individual drug templates only (accent- and case-insensitive)
+        # Wrap query as a literal to avoid Django treating it as a field name.
+        normalized_query = ImmutableUnaccent(Lower(Value(query)))
+        drug_templates = (
+            DrugTemplate.objects.filter(Q(creator=request.user) | Q(is_public=True))
+            .annotate(
+                name_normalized=ImmutableUnaccent(Lower("name")),
+                concentration_normalized=ImmutableUnaccent(Lower("concentration")),
+                form_normalized=ImmutableUnaccent(Lower("pharmaceutical_form")),
+            )
+            .filter(
+                Q(name_normalized__icontains=normalized_query)
+                | Q(concentration_normalized__icontains=normalized_query)
+                | Q(form_normalized__icontains=normalized_query)
+            )
+            .select_related("creator")
+            .order_by("name")[:limit]
+        )
         
         for template in drug_templates:
             results.append({
