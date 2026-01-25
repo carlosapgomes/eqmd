@@ -2,6 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 from .models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
+from apps.outpatientprescriptions.widgets import DrugTemplateField, AutoCompleteWidget
 
 
 class DrugTemplateForm(forms.ModelForm):
@@ -223,18 +224,22 @@ class PrescriptionTemplateForm(forms.ModelForm):
 class PrescriptionTemplateItemForm(forms.ModelForm):
     """
     Form for creating and updating PrescriptionTemplateItem instances.
-    Uses Bootstrap 5.3 styling and includes custom validation.
+    Uses Bootstrap 5.3 styling, autocomplete for drug names, and includes custom validation.
     """
+
+    drug_template = DrugTemplateField(
+        label="Template de Medicamento",
+        required=False,
+        help_text="Selecione um template para preencher automaticamente os campos"
+    )
 
     class Meta:
         model = PrescriptionTemplateItem
         fields = ['drug_name', 'presentation', 'usage_instructions', 'quantity', 'order']
         widgets = {
-            'drug_name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Nome do medicamento',
-                'maxlength': 200
-            }),
+            'drug_name': AutoCompleteWidget(
+                attrs={"class": "form-control", "placeholder": "Nome do medicamento"}
+            ),
             'presentation': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Apresentação (ex: 500mg, comprimido)',
@@ -257,7 +262,17 @@ class PrescriptionTemplateItemForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
+        # Update drug_template field with user context if provided
+        if self.user:
+            self.fields['drug_template'] = DrugTemplateField(
+                user=self.user,
+                label="Template de Medicamento",
+                required=False,
+                help_text="Selecione um template para preencher automaticamente os campos",
+            )
         
         # Configure field labels and help text
         self.fields['drug_name'].label = 'Nome do Medicamento'
@@ -330,8 +345,42 @@ PrescriptionTemplateItemFormSet = inlineformset_factory(
     PrescriptionTemplateItem,
     form=PrescriptionTemplateItemForm,
     fields=['drug_name', 'presentation', 'usage_instructions', 'quantity', 'order'],
-    extra=1,
+    extra=0,  # No extra forms - min_num=1 ensures one form
     min_num=1,
     validate_min=True,
     can_delete=True
 )
+
+
+class PrescriptionTemplateItemFormSetHelper:
+    """
+    Helper class to provide additional functionality for prescription template item formset.
+    """
+
+    @staticmethod
+    def get_formset_with_user(user, *args, **kwargs):
+        """
+        Create a formset instance with user context for drug template access.
+        """
+
+        class UserPrescriptionTemplateItemFormSet(PrescriptionTemplateItemFormSet):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                # Pass user to each form in formset
+                for form in self:
+                    form.user = user
+
+        return UserPrescriptionTemplateItemFormSet(*args, **kwargs)
+
+    @staticmethod
+    def prepare_formset_data(formset):
+        """
+        Prepare formset data for template rendering.
+        Returns a dictionary with formset information.
+        """
+        return {
+            "formset": formset,
+            "management_form": formset.management_form,
+            "empty_form": formset.empty_form,
+            "can_delete": formset.can_delete,
+        }
