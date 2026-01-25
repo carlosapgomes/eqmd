@@ -268,7 +268,6 @@ services:
       - .env
     volumes:
       - ./media:/app/media
-      - ./db.sqlite3:/app/db.sqlite3
       - static_files:/app/staticfiles
     restart: unless-stopped
     healthcheck:
@@ -277,6 +276,14 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  eqmd_postgres:
+    image: postgres:15
+    env_file:
+      - .env
+    volumes:
+      - eqmd_database:/var/lib/postgresql/data
+    restart: unless-stopped
 
   # Static file initialization container
   static-init:
@@ -293,6 +300,8 @@ services:
 
 volumes:
   static_files:
+    driver: local
+  eqmd_database:
     driver: local
 ```
 

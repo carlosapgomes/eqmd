@@ -9,7 +9,6 @@ from unittest.mock import patch, Mock
 from apps.patients.models import Patient
 from apps.outpatientprescriptions.models import OutpatientPrescription, PrescriptionItem
 from apps.drugtemplates.models import DrugTemplate
-from apps.core.permissions.constants import MEDICAL_PROFESSIONS
 
 User = get_user_model()
 

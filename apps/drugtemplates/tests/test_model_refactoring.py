@@ -146,10 +146,6 @@ class DrugTemplateRefactoredModelTest(TestCase):
         """Test that model has proper indexes for new fields."""
         from django.db import connection
         
-        # Skip if not PostgreSQL (tests run on SQLite)
-        if connection.vendor != 'postgresql':
-            self.skipTest('PostgreSQL-specific test - skipping on SQLite')
-        
         with connection.cursor() as cursor:
             # Check if indexes exist for new fields in PostgreSQL
             cursor.execute("""
@@ -175,6 +171,24 @@ class DrugTemplateRefactoredModelTest(TestCase):
                            f"No imported+name composite index found in: {indexes}")
             self.assertTrue(any('name_conc' in idx for idx in indexes),
                            f"No name+concentration composite index found in: {indexes}")
+
+    def test_drugtemplate_name_trigram_index_exists(self):
+        """Test that trigram index exists for accent-insensitive name search."""
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT indexname
+                FROM pg_indexes
+                WHERE tablename = 'drugtemplates_drugtemplate'
+            """)
+            indexes = [row[0] for row in cursor.fetchall()]
+
+        self.assertIn(
+            'drugtpl_name_trgm_idx',
+            indexes,
+            f"Trigram index not found in: {indexes}",
+        )
 
     def test_drugtemplate_str_method_unchanged(self):
         """Test that __str__ method still works after refactoring."""

@@ -6,23 +6,23 @@ from .settings import *
 # Override settings for testing
 DEBUG = True
 
-# Use in-memory SQLite database for tests
+# Use PostgreSQL for tests (same engine as development/production)
+_DATABASE_NAME = os.getenv("DATABASE_NAME", "eqmd_dev")
+_TEST_DATABASE_NAME = os.getenv("DATABASE_TEST_NAME", f"test_{_DATABASE_NAME}")
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+    "default": {
+        "ENGINE": os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql"),
+        "NAME": _DATABASE_NAME,
+        "USER": os.getenv("DATABASE_USER", ""),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD", ""),
+        "HOST": os.getenv("DATABASE_HOST", ""),
+        "PORT": os.getenv("DATABASE_PORT", ""),
+        "TEST": {
+            "NAME": _TEST_DATABASE_NAME,
+        },
     }
 }
-
-# Disable migrations for faster tests
-class DisableMigrations:
-    def __contains__(self, item):
-        return True
-    
-    def __getitem__(self, item):
-        return None
-
-MIGRATION_MODULES = DisableMigrations()
 
 # Disable CSRF for tests
 CSRF_TRUSTED_ORIGINS = []
@@ -30,8 +30,6 @@ CSRF_TRUSTED_ORIGINS = []
 # Use console email backend for tests
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Disable password validation for tests
-AUTH_PASSWORD_VALIDATORS = []
 
 # Use simple password hasher for faster tests
 PASSWORD_HASHERS = [

@@ -42,6 +42,19 @@ uv run python manage.py createsuperuser
 
 ## Test Running Options
 
+PostgreSQL is required for tests. Use a dedicated test database via `DATABASE_TEST_NAME`
+(defaults to `test_${DATABASE_NAME}` in `config.test_settings`).
+
+### Docker (recommended in this repo)
+```bash
+./scripts/test.sh                # Django test runner with --keepdb --noinput
+EQMD_TEST_KEEPDB=0 ./scripts/test.sh  # Force a fresh test DB
+
+# Single app / test
+./scripts/test.sh apps.patients
+./scripts/test.sh apps.patients.tests.test_models.PatientModelTests.test_patient_creation
+```
+
 ### Option 1: pytest (Recommended for most cases)
 ```bash
 # All tests with coverage (requires DJANGO_SETTINGS_MODULE)

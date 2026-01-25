@@ -2,7 +2,9 @@
 
 ## Overview
 
-This guide covers migrating EquipeMed from SQLite to PostgreSQL for improved performance, concurrency, and scalability. PostgreSQL is recommended for production medical environments with multiple concurrent users.
+> **Note**: SQLite is no longer supported. This document is retained for legacy reference only. Use PostgreSQL for all environments.
+
+This guide covers migrating EquipeMed from SQLite to PostgreSQL for improved performance, concurrency, and scalability. PostgreSQL is required for development and production.
 
 ## Performance Benefits
 

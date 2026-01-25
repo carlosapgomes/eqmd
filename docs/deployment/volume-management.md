@@ -8,7 +8,7 @@ EquipeMed uses Docker named volumes to securely store persistent data with impro
 
 ### Named Volumes
 
-- **`eqmd_database`**: SQLite database files
+- **`eqmd_database`**: PostgreSQL data volume
 - **`eqmd_media_files`**: Patient photos, videos, and medical images
 - **`eqmd_static_files`**: Compiled CSS, JavaScript, and static assets
 
@@ -194,7 +194,10 @@ If migrating from host-mounted volumes:
 1. **Backup existing data**:
 
    ```bash
-   cp db.sqlite3 migration-backup/
+   # Database backup
+   docker compose exec eqmd_postgres pg_dump -U $DATABASE_USER $DATABASE_NAME > migration-backup/db.sql
+
+   # Media backup
    tar czf migration-backup/media.tar.gz media/
    ```
 
@@ -206,12 +209,11 @@ If migrating from host-mounted volumes:
    # Create volumes
    docker volume create eqmd_database
    docker volume create eqmd_media_files
-   
-   # Copy data to volumes
-   docker run --rm -v ./db.sqlite3:/source \
-     -v eqmd_database:/target \
-     alpine cp /source /target/
-     
+
+   # Restore database
+   cat migration-backup/db.sql | docker compose exec -T eqmd_postgres psql -U $DATABASE_USER $DATABASE_NAME
+
+   # Copy media to volume
    docker run --rm -v ./media:/source \
      -v eqmd_media_files:/target \
      alpine sh -c "cp -r /source/* /target/"

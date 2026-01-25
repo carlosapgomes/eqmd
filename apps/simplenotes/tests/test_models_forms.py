@@ -2,9 +2,8 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from apps.patients.models import Patient
-# Note: Hospital model removed after single-hospital refactor
-from .models import SimpleNote
-from .forms import SimpleNoteForm
+from ..models import SimpleNote
+from ..forms import SimpleNoteForm
 
 User = get_user_model()
 
@@ -14,7 +13,6 @@ class SimpleNoteModelTests(TestCase):
 
     def setUp(self):
         """Set up test data."""
-        self.hospital = Hospital.objects.create(name="Test Hospital")
         self.user = User.objects.create_user(
             email="test@example.com",
             password="testpass123",
@@ -23,17 +21,22 @@ class SimpleNoteModelTests(TestCase):
         )
         self.patient = Patient.objects.create(
             name="Test Patient",
+            birthday="1990-01-01",
+            status=1,
             fiscal_number="12345678901",
-            current_hospital=self.hospital
+            created_by=self.user,
+            updated_by=self.user
         )
 
     def test_create_simple_note(self):
         """Test creating a simple note."""
         simple_note = SimpleNote.objects.create(
             patient=self.patient,
+            description="Nota/Observação",
             content="Test simple note content",
             event_datetime=timezone.now(),
-            created_by=self.user
+            created_by=self.user,
+            updated_by=self.user
         )
         
         self.assertEqual(simple_note.patient, self.patient)
@@ -45,9 +48,11 @@ class SimpleNoteModelTests(TestCase):
         """Test string representation of simple note."""
         simple_note = SimpleNote.objects.create(
             patient=self.patient,
+            description="Nota/Observação",
             content="Test content",
             event_datetime=timezone.now(),
-            created_by=self.user
+            created_by=self.user,
+            updated_by=self.user
         )
         
         expected_str = f"Nota - {self.patient.name} - {simple_note.event_datetime.strftime('%d/%m/%Y %H:%M')}"
@@ -57,15 +62,19 @@ class SimpleNoteModelTests(TestCase):
         """Test that simple notes are ordered by event_datetime descending."""
         note1 = SimpleNote.objects.create(
             patient=self.patient,
+            description="Nota/Observação",
             content="First note",
             event_datetime=timezone.now() - timezone.timedelta(hours=1),
-            created_by=self.user
+            created_by=self.user,
+            updated_by=self.user
         )
         note2 = SimpleNote.objects.create(
             patient=self.patient,
+            description="Nota/Observação",
             content="Second note",
             event_datetime=timezone.now(),
-            created_by=self.user
+            created_by=self.user,
+            updated_by=self.user
         )
         
         notes = list(SimpleNote.objects.all())
@@ -78,7 +87,6 @@ class SimpleNoteFormTests(TestCase):
 
     def setUp(self):
         """Set up test data."""
-        self.hospital = Hospital.objects.create(name="Test Hospital")
         self.user = User.objects.create_user(
             email="test@example.com",
             password="testpass123",
@@ -87,8 +95,11 @@ class SimpleNoteFormTests(TestCase):
         )
         self.patient = Patient.objects.create(
             name="Test Patient",
+            birthday="1990-01-01",
+            status=1,
             fiscal_number="12345678901",
-            current_hospital=self.hospital
+            created_by=self.user,
+            updated_by=self.user
         )
 
     def test_valid_form(self):
@@ -133,6 +144,7 @@ class SimpleNoteFormTests(TestCase):
         # Test creating new instance
         simple_note = form.save(commit=False)
         simple_note.patient = self.patient
+        simple_note.description = "Nota/Observação"
         simple_note.save()
         
         self.assertEqual(simple_note.created_by, self.user)

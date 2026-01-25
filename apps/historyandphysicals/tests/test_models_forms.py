@@ -5,8 +5,8 @@ from django.core.exceptions import ValidationError
 from django import forms
 from apps.patients.models import Patient
 from apps.events.models import Event
-from .models import HistoryAndPhysical
-from .forms import HistoryAndPhysicalForm
+from ..models import HistoryAndPhysical
+from ..forms import HistoryAndPhysicalForm
 
 User = get_user_model()
 

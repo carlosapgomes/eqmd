@@ -339,7 +339,7 @@ Both models support PostgreSQL full-text search:
 ```python
 from apps.core.models import Icd10Code, MedicalProcedure
 
-# Simple search (case-insensitive, works on SQLite too)
+# Simple search (case-insensitive)
 results = Icd10Code.simple_search('diabetes')
 
 # Full-text search (PostgreSQL only, more accurate)

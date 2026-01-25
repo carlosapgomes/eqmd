@@ -155,9 +155,15 @@ uv run python manage.py migrate
 uv run python manage.py makemigrations
 
 # Testing
-uv run pytest                                      # All tests with coverage
-uv run pytest --no-cov                           # Without coverage
-uv run python manage.py test apps.patients.tests # Specific app tests
+./scripts/test.sh                                 # Docker: Django test runner (keeps test DB)
+./scripts/test.sh apps.patients                   # Single app
+./scripts/test.sh apps.patients.tests.test_models # Single test module
+uv run pytest                                     # All tests with coverage
+uv run pytest --no-cov                            # Without coverage
+uv run python manage.py test apps.patients.tests  # Specific app tests
+
+# Test DB name (optional)
+# DATABASE_TEST_NAME defaults to test_${DATABASE_NAME} in config.test_settings
 
 # Frontend
 npm install && npm run build
@@ -187,7 +193,7 @@ uv run python manage.py create_sample_content     # Create sample medical templa
 
 - **Backend**: Django 5, Python 3.11+
 - **Frontend**: Bootstrap 5.3, Webpack, JavaScript ES6+
-- **Database**: SQLite (development), PostgreSQL (production)
+- **Database**: PostgreSQL (development and production)
 - **Authentication**: django-allauth with email-based login
 - **Media Processing**: FilePond for video uploads, custom image processing
 - **Testing**: pytest + Django test runner, factory-boy

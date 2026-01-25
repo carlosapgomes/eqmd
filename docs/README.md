@@ -43,7 +43,7 @@
 ## 🚀 Deployment
 
 - **[Hospital Configuration](deployment/hospital-configuration.md)** - Environment setup
-- **[PostgreSQL Migration](postgresql-migration.md)** - Upgrade from SQLite for better performance
+- **[PostgreSQL Setup](postgresql-migration.md)** - PostgreSQL setup notes (legacy SQLite migration guidance)
 
 ## 📊 Data Management
 

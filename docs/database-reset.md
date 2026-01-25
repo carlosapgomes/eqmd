@@ -33,25 +33,11 @@ find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
 find . -path "*/migrations/*.pyc" -delete
 ```
 
-### Step 3: Delete Database
-
-**For SQLite (default):**
-
-```bash
-rm db.sqlite3
-```
-
-**For PostgreSQL:**
+### Step 3: Delete Database (PostgreSQL)
 
 ```bash
 dropdb your_database_name
 createdb your_database_name
-```
-
-**For MySQL:**
-
-```bash
-mysql -u root -p -e "DROP DATABASE your_database_name; CREATE DATABASE your_database_name;"
 ```
 
 ### Step 4: Create Fresh Migrations
@@ -101,17 +87,10 @@ uv run python manage.py ward_backup backup --output my_wards_backup.json
 
 This keeps your migration files but resets all data.
 
-### Step 1: Delete Database Only
+### Step 1: Delete Database Only (PostgreSQL)
 
 ```bash
-# For SQLite
-rm db.sqlite3
-
-# For PostgreSQL
 dropdb your_database_name && createdb your_database_name
-
-# For MySQL
-mysql -u root -p -e "DROP DATABASE your_database_name; CREATE DATABASE your_database_name;"
 ```
 
 ### Step 2: Apply Existing Migrations

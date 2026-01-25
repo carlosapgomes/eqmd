@@ -27,8 +27,7 @@ docker compose exec eqmd python manage.py sync_firebase_data \
 
 # 2. Clear tables and full re-sync
 
-docker compose exec eqmd cp db.sqlite3 db.sqlite3.backup.$(date
-+%Y%m%d\_%H%M%S)
+docker compose exec eqmd_postgres pg_dump -U $DATABASE_USER $DATABASE_NAME > db.backup.$(date +%Y%m%d_%H%M%S).sql
 
 docker compose exec eqmd python manage.py shell -c "
 from apps.patients.models import Patient

@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
+from django.utils import timezone
 from apps.accounts.tests.factories import UserFactory
 
 User = get_user_model()
@@ -17,6 +18,8 @@ class PasswordChangeRequiredTest(TestCase):
         )
         # Set a known password
         self.user.set_password('temppass123')
+        self.user.terms_accepted = True
+        self.user.terms_accepted_at = timezone.now()
         self.user.save()
 
     def test_middleware_redirects_when_password_change_required(self):
@@ -131,6 +134,8 @@ class PasswordChangeRequiredTest(TestCase):
             password_change_required=False
         )
         user_no_change.set_password('normalpass123')
+        user_no_change.terms_accepted = True
+        user_no_change.terms_accepted_at = timezone.now()
         user_no_change.save()
         
         self.client.login(username='normaluser', password='normalpass123')
@@ -181,6 +186,8 @@ class UserCreationFlowTest(TestCase):
             password_change_required=False
         )
         self.admin_user.set_password('admin123')
+        self.admin_user.terms_accepted = True
+        self.admin_user.terms_accepted_at = timezone.now()
         self.admin_user.save()
 
     def test_complete_user_creation_flow(self):
@@ -193,6 +200,8 @@ class UserCreationFlowTest(TestCase):
             profession_type=User.MEDICAL_DOCTOR
         )
         new_user.set_password('temporary123')
+        new_user.terms_accepted = True
+        new_user.terms_accepted_at = timezone.now()
         new_user.save()
 
         # User logs in
