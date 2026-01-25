@@ -1,0 +1,79 @@
+
+• Here are the exact APAC mapping keys the PDF overlay uses. The rendering phase only draws fields where field name in form_fields matches a key in form_data. These keys are created in
+  APACFormView.form_valid in apps/pdf_forms/views/national_forms.py.
+
+  Core patient + hospital:
+
+  patient_name
+  patient_gender
+  patient_birth_date
+  patient_record_number
+  patient_address
+  patient_city
+  patient_state
+  patient_zip_code
+  patient_sus_card
+  patient_phone
+  hospital_name
+  hospital_cnes
+
+  Diagnosis + doctor:
+
+  main_diagnosis
+  main_icd
+  secondary_icd
+  other_icd
+  diagnosis_notes
+  doctor_name
+  request_date
+  doctor_doc_type_fiscal_number
+  doctor_doc_number_fiscal_number
+
+  Procedure quantities:
+
+  main_procedure_quantity
+  secondary_procedure_1_qty
+  secondary_procedure_2_qty
+  secondary_procedure_3_qty
+  secondary_procedure_4_qty
+  secondary_procedure_5_qty
+
+  Procedure slots (IDs + code + description):
+
+  main_procedure_id
+  main_procedure_code
+  main_procedure_description
+  secondary_procedure_1_id
+  secondary_procedure_1_code
+  secondary_procedure_1_description
+  secondary_procedure_2_id
+  secondary_procedure_2_code
+  secondary_procedure_2_description
+  secondary_procedure_3_id
+  secondary_procedure_3_code
+  secondary_procedure_3_description
+  secondary_procedure_4_id
+  secondary_procedure_4_code
+  secondary_procedure_4_description
+  secondary_procedure_5_id
+  secondary_procedure_5_code
+  secondary_procedure_5_description
+
+  ICD‑10 (IDs + code + description):
+
+  main_icd_id
+  main_icd_code
+  main_icd_description
+  secondary_icd_id
+  secondary_icd_code
+  secondary_icd_description
+  other_icd_id
+  other_icd_code
+  other_icd_description
+
+  Backward‑compat keys still written:
+
+  procedure_code
+  procedure_description
+
+
