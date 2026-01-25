@@ -22,10 +22,6 @@
       </a>
     </div>
     <div class="btn-group" role="group">
-      <a href="{% url 'outpatientprescriptions:outpatientprescription_print' prescription.pk %}" target="_blank" class="btn btn-medical-secondary">
-        <i class="bi bi-printer me-1"></i>
-        Imprimir
-      </a>
       <button type="button" class="btn btn-primary pdf-download-btn" data-pdf-url="{% url 'outpatientprescriptions:outpatientprescription_pdf' prescription.pk %}" data-filename="receita-{{ prescription.patient.name|slugify }}-{{ prescription.prescription_date|date:'d-m-Y' }}.pdf">
         <span class="pdf-btn-content">
           <i class="bi bi-file-earmark-pdf me-1"></i>
