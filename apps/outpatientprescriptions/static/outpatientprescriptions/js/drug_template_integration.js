@@ -461,6 +461,34 @@
     }
 
     /**
+     * Get the spinner element for an input field
+     */
+    function getSpinner(input) {
+        const wrapper = input.closest('.input-group');
+        return wrapper ? wrapper.querySelector('.search-spinner') : null;
+    }
+
+    /**
+     * Show the spinner for an input field
+     */
+    function showSpinner(input) {
+        const spinner = getSpinner(input);
+        if (spinner) {
+            spinner.style.display = 'block';
+        }
+    }
+
+    /**
+     * Hide the spinner for an input field
+     */
+    function hideSpinner(input) {
+        const spinner = getSpinner(input);
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+    }
+
+    /**
      * Handle autocomplete input
      */
     function handleAutocompleteInput(input, suggestionsContainer) {
@@ -658,7 +686,7 @@
     function selectSuggestion(suggestion, input) {
         try {
             input.value = suggestion.name;
-            
+
             // If this is a template suggestion, populate related fields
             if (suggestion.type === 'drug_template') {
                 // Validate and sanitize template data
@@ -668,13 +696,13 @@
                     presentation: suggestion.presentation,
                     usageInstructions: suggestion.usage_instructions
                 });
-                
+
                 // Cache the template data
                 cache.templates.set(suggestion.id, templateData);
-                
+
                 // Populate form fields
                 populateFormFields(input, templateData);
-                
+
                 // Show success notification
                 showTemplateAppliedNotification(`Template individual aplicado: ${suggestion.name}`);
             }
@@ -683,17 +711,18 @@
             if (suggestionContainer) {
                 hideSuggestions(suggestionContainer);
             }
-            
-            // Clear any error states
+
+            // Clear any error states and hide spinner
             clearErrorState(input);
-            
+            hideSpinner(input);
+
             // Trigger change event
             input.dispatchEvent(new Event('change'));
-            
+
         } catch (error) {
             console.error('Error selecting suggestion:', error);
             showErrorState(input, 'Erro ao aplicar template');
-            
+
             // Show error notification
             const errorNotification = document.createElement('div');
             errorNotification.className = 'alert alert-danger alert-dismissible fade show';
@@ -702,11 +731,11 @@
                 Erro ao aplicar template: ${error.message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            
+
             const container = input.closest('.prescription-item-form, form');
             if (container) {
                 container.insertBefore(errorNotification, container.firstChild);
-                
+
                 setTimeout(() => {
                     if (errorNotification.parentElement) {
                         errorNotification.remove();
@@ -734,14 +763,14 @@
      * Show loading state
      */
     function showLoadingState(input) {
-        input.classList.add(CONFIG.loadingClass);
+        showSpinner(input);
     }
 
     /**
      * Hide loading state
      */
     function hideLoadingState(input) {
-        input.classList.remove(CONFIG.loadingClass);
+        hideSpinner(input);
     }
 
     /**

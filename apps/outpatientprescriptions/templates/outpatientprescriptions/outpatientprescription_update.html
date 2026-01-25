@@ -331,12 +331,17 @@
               <div class="row">
                 <div class="col-md-6">
                   {% if can_edit %}
-                    <div class="mb-3">
+                    <div class="mb-3 drug-name-search-group position-relative">
                       <label for="{{ form.drug_name.id_for_label }}" class="form-label required-field">
                         <i class="bi bi-capsule me-1"></i>
                         {{ form.drug_name.label }}
                       </label>
-                      {{ form.drug_name }}
+                      <div class="input-group">
+                        {{ form.drug_name }}
+                        <span class="input-group-text search-spinner" style="display: none;">
+                          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        </span>
+                      </div>
                       {% if form.drug_name.errors %}
                         <div class="invalid-feedback d-block">
                           {% for error in form.drug_name.errors %}
@@ -585,12 +590,17 @@
     <!-- Form Fields -->
     <div class="row">
       <div class="col-md-6">
-        <div class="mb-3">
+        <div class="mb-3 drug-name-search-group position-relative">
           <label for="{{ empty_form.drug_name.id_for_label }}" class="form-label required-field">
             <i class="bi bi-capsule me-1"></i>
             {{ empty_form.drug_name.label }}
           </label>
-          {{ empty_form.drug_name }}
+          <div class="input-group">
+            {{ empty_form.drug_name }}
+            <span class="input-group-text search-spinner" style="display: none;">
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </span>
+          </div>
           {% if empty_form.drug_name.errors %}
             <div class="invalid-feedback d-block">
               {% for error in empty_form.drug_name.errors %}
