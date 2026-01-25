@@ -356,7 +356,7 @@ docker system prune -a
 ### Backup Database
 
 ```bash
-cp db.sqlite3 db.sqlite3.backup.$(date +%Y%m%d)
+docker compose exec eqmd_postgres pg_dump -U $DATABASE_USER $DATABASE_NAME > db.backup.$(date +%Y%m%d).sql
 ```
 
 ### View Logs

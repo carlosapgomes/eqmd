@@ -51,19 +51,23 @@ uv add --dev pytest pytest-django pytest-cov factory-boy faker
 ### pytest.ini
 
 ```ini
-[tool:pytest]
+[pytest]
 DJANGO_SETTINGS_MODULE = config.test_settings
-python_files = tests.py test_*.py *_tests.py
+python_files = test_*.py *_tests.py
 python_classes = Test*
 python_functions = test_*
-addopts = 
+addopts =
     --cov=apps
-    --cov-report=html
+    --cov-report=html:/tmp/htmlcov
     --cov-report=term-missing
     --reuse-db
-    --nomigrations
     --tb=short
     -v
+    --ignore=apps/core/test_views.py
+    --ignore=apps/core/test_views_hospital_context.py
+    --ignore=filepond_uploads
+    --ignore=filepond_tmp
+    --ignore=filepond_stored
 ```
 
 ### .coveragerc
@@ -100,8 +104,8 @@ directory = htmlcov
 
 Optimized settings for fast test execution:
 
-- In-memory SQLite database
-- Disabled migrations
+- PostgreSQL test database (use `DATABASE_TEST_NAME`, defaults to `test_${DATABASE_NAME}`)
+- Migrations enabled
 - Simple password hashing
 - Console email backend
 - Disabled logging
@@ -240,6 +244,28 @@ class UserFactory(factory.django.DjangoModelFactory):
 
 ## Running Tests
 
+### Docker (repo default)
+
+```bash
+# Django test runner inside the eqmd_dev container (keeps test DB)
+./scripts/test.sh
+
+# Force a fresh test DB
+EQMD_TEST_KEEPDB=0 ./scripts/test.sh
+
+# Single app
+./scripts/test.sh apps.patients
+
+# Single test module
+./scripts/test.sh apps.patients.tests.test_models
+
+# Single test class
+./scripts/test.sh apps.patients.tests.test_models.PatientModelTests
+
+# Single test method
+./scripts/test.sh apps.patients.tests.test_models.PatientModelTests.test_patient_creation
+```
+
 ### Using uv (Recommended)
 
 ```bash
@@ -293,8 +319,8 @@ open htmlcov/index.html
 
 ### Database Handling
 
-- Tests use in-memory SQLite for speed
-- Database is recreated for each test run
+- Tests use PostgreSQL
+- Database is recreated for each test run (managed by Django)
 - `--reuse-db` flag can speed up development
 
 ### Fixtures and Factories

@@ -61,18 +61,33 @@ def icd10_search(request):
         from django.db import connection
         if connection.vendor == 'postgresql':
             try:
-                if active_only:
-                    codes = Icd10Code.search(query)[:limit]
+                has_search_vectors = base_qs.filter(search_vector__isnull=False).exists()
+                if has_search_vectors:
+                    if active_only:
+                        codes = Icd10Code.search(query)[:limit]
+                    else:
+                        from django.contrib.postgres.search import SearchQuery, SearchRank
+                        search_query = SearchQuery(query)
+                        codes = (
+                            base_qs
+                            .filter(search_vector=search_query)
+                            .annotate(rank=SearchRank('search_vector', search_query))
+                            .order_by('-rank', 'code')[:limit]
+                        )
+                    search_method = 'fulltext'
                 else:
-                    from django.contrib.postgres.search import SearchQuery, SearchRank
-                    search_query = SearchQuery(query)
-                    codes = (
-                        base_qs
-                        .filter(search_vector=search_query)
-                        .annotate(rank=SearchRank('search_vector', search_query))
-                        .order_by('-rank', 'code')[:limit]
-                    )
-                search_method = 'fulltext'
+                    if active_only:
+                        codes = Icd10Code.simple_search(query)[:limit]
+                    else:
+                        codes = (
+                            base_qs
+                            .filter(
+                                Q(code__icontains=query) |
+                                Q(description__icontains=query)
+                            )
+                            .order_by('code')[:limit]
+                        )
+                    search_method = 'simple'
             except Exception as e:
                 logger.warning(f"Full-text search failed, using simple search: {str(e)}")
                 if active_only:

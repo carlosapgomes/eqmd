@@ -39,9 +39,16 @@ You operate within a restricted Docker Rootless environment on Debian Bookworm.
 3. **VALIDATE** every code change by running the test suite immediately.
 4. If a 'Permission Denied' error occurs, remember you are running with UID 1001.
 5. **No Git commits allowed**. I will handle the version control on the host.
+6. **PostgreSQL only**: assume PostgreSQL for development and testing; SQLite is no longer supported.
 
 ## TEST COMMAND
 To run tests, execute:
 ```bash
-docker exec eqmd_dev python manage.py test
+./scripts/test.sh
+```
+
+You can also target a single app or test module:
+```bash
+./scripts/test.sh apps.patients
+./scripts/test.sh apps.patients.tests.test_models
 ```

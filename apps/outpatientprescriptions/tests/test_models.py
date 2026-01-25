@@ -6,7 +6,7 @@ from datetime import date
 from apps.patients.models import Patient
 from apps.events.models import Event
 from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
-from .models import OutpatientPrescription, PrescriptionItem
+from ..models import OutpatientPrescription, PrescriptionItem
 
 User = get_user_model()
 

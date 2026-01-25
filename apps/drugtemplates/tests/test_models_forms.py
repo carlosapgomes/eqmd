@@ -2,8 +2,8 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.urls import reverse
-from .models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
-from .forms import DrugTemplateForm
+from ..models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
+from ..forms import DrugTemplateForm
 
 User = get_user_model()
 
@@ -27,7 +27,7 @@ class DrugTemplateModelTest(TestCase):
             creator=self.user,
             is_public=True
         )
-        
+
         self.assertEqual(drug_template.name, 'Paracetamol')
         self.assertEqual(drug_template.presentation, '500mg comprimidos')
         self.assertEqual(drug_template.usage_instructions, 'Tomar 1 comprimido de 8 em 8 horas')
@@ -44,7 +44,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido de 8 em 8 horas',
             creator=self.user
         )
-        
+
         self.assertEqual(str(drug_template), 'Ibuprofeno')
 
     def test_drug_template_get_absolute_url(self):
@@ -55,7 +55,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido de 6 em 6 horas',
             creator=self.user
         )
-        
+
         expected_url = reverse('drugtemplates:detail', kwargs={'pk': drug_template.pk})
         self.assertEqual(drug_template.get_absolute_url(), expected_url)
 
@@ -67,7 +67,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido por dia',
             creator=self.user
         )
-        
+
         self.assertFalse(drug_template.is_public)  # Default should be False
 
     def test_drug_template_clean_method_valid(self):
@@ -78,7 +78,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido de 12 em 12 horas',
             creator=self.user
         )
-        
+
         # Should not raise ValidationError
         drug_template.clean()
 
@@ -90,7 +90,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido',
             creator=self.user
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             drug_template.clean()
         self.assertIn('name', cm.exception.message_dict)
@@ -103,7 +103,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido',
             creator=self.user
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             drug_template.clean()
         self.assertIn('name', cm.exception.message_dict)
@@ -116,7 +116,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido',
             creator=self.user
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             drug_template.clean()
         self.assertIn('presentation', cm.exception.message_dict)
@@ -129,7 +129,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido',
             creator=self.user
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             drug_template.clean()
         self.assertIn('presentation', cm.exception.message_dict)
@@ -142,7 +142,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='',
             creator=self.user
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             drug_template.clean()
         self.assertIn('usage_instructions', cm.exception.message_dict)
@@ -155,26 +155,26 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='   ',
             creator=self.user
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             drug_template.clean()
         self.assertIn('usage_instructions', cm.exception.message_dict)
 
     def test_drug_template_meta_options(self):
         """Test Meta class options."""
-        drug_template1 = DrugTemplate.objects.create(
+        DrugTemplate.objects.create(
             name='Zebra Drug',
             presentation='500mg',
             usage_instructions='Test',
             creator=self.user
         )
-        drug_template2 = DrugTemplate.objects.create(
+        DrugTemplate.objects.create(
             name='Alpha Drug',
             presentation='250mg',
             usage_instructions='Test',
             creator=self.user
         )
-        
+
         # Test ordering by name
         templates = list(DrugTemplate.objects.all())
         self.assertEqual(templates[0].name, 'Alpha Drug')
@@ -188,7 +188,7 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Test instructions',
             creator=self.user
         )
-        
+
         # Test that the related_name works
         self.assertIn(drug_template, self.user.drug_templates.all())
 
@@ -200,10 +200,10 @@ class DrugTemplateModelTest(TestCase):
             usage_instructions='Test instructions',
             creator=self.user
         )
-        
+
         template_id = drug_template.id
         self.user.delete()
-        
+
         # Drug template should be deleted when user is deleted
         self.assertFalse(DrugTemplate.objects.filter(id=template_id).exists())
 
@@ -247,7 +247,7 @@ class DrugTemplateFormTest(TestCase):
             usage_instructions='Test',
             creator=self.user
         )
-        
+
         # Try to create another with same name
         form_data = {
             'name': 'Paracetamol',  # Same name
@@ -269,7 +269,7 @@ class DrugTemplateFormTest(TestCase):
             usage_instructions='Test',
             creator=self.user
         )
-        
+
         # Try to create another with same name but different case
         form_data = {
             'name': 'PARACETAMOL',  # Same name, different case
@@ -318,7 +318,7 @@ class DrugTemplateFormTest(TestCase):
         }
         form = DrugTemplateForm(data=form_data, user=self.user)
         self.assertTrue(form.is_valid())
-        
+
         drug_template = form.save()
         self.assertEqual(drug_template.creator, self.user)
         self.assertEqual(drug_template.name, 'Paracetamol')
@@ -326,17 +326,17 @@ class DrugTemplateFormTest(TestCase):
     def test_drug_template_form_widget_classes(self):
         """Test that form widgets have correct CSS classes."""
         form = DrugTemplateForm(user=self.user)
-        
+
         # Check that widgets have Bootstrap classes
         self.assertIn('form-control', form.fields['name'].widget.attrs['class'])
         self.assertIn('form-control', form.fields['presentation'].widget.attrs['class'])
         self.assertIn('form-control', form.fields['usage_instructions'].widget.attrs['class'])
         self.assertIn('markdown-editor', form.fields['usage_instructions'].widget.attrs['class'])
         self.assertIn('form-check-input', form.fields['is_public'].widget.attrs['class'])
-        
+
         # Check markdown editor attributes
         self.assertEqual(
-            form.fields['usage_instructions'].widget.attrs['data-easymde'], 
+            form.fields['usage_instructions'].widget.attrs['data-easymde'],
             'true'
         )
 
@@ -358,7 +358,7 @@ class PrescriptionTemplateModelTest(TestCase):
             creator=self.user,
             is_public=True
         )
-        
+
         self.assertEqual(prescription_template.name, 'Template de Hipertensão')
         self.assertEqual(prescription_template.creator, self.user)
         self.assertTrue(prescription_template.is_public)
@@ -371,7 +371,7 @@ class PrescriptionTemplateModelTest(TestCase):
             name='Template de Diabetes',
             creator=self.user
         )
-        
+
         self.assertEqual(str(prescription_template), 'Template de Diabetes')
 
     def test_prescription_template_get_absolute_url(self):
@@ -390,7 +390,7 @@ class PrescriptionTemplateModelTest(TestCase):
             name='Template Teste',
             creator=self.user
         )
-        
+
         self.assertFalse(prescription_template.is_public)  # Default should be False
 
     def test_prescription_template_clean_method_valid(self):
@@ -399,7 +399,7 @@ class PrescriptionTemplateModelTest(TestCase):
             name='Template Válido',
             creator=self.user
         )
-        
+
         # Should not raise ValidationError
         prescription_template.clean()
 
@@ -409,7 +409,7 @@ class PrescriptionTemplateModelTest(TestCase):
             name='',
             creator=self.user
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             prescription_template.clean()
         self.assertIn('name', cm.exception.message_dict)
@@ -420,22 +420,22 @@ class PrescriptionTemplateModelTest(TestCase):
             name='   ',
             creator=self.user
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             prescription_template.clean()
         self.assertIn('name', cm.exception.message_dict)
 
     def test_prescription_template_meta_options(self):
         """Test Meta class options."""
-        template1 = PrescriptionTemplate.objects.create(
+        PrescriptionTemplate.objects.create(
             name='Zebra Template',
             creator=self.user
         )
-        template2 = PrescriptionTemplate.objects.create(
+        PrescriptionTemplate.objects.create(
             name='Alpha Template',
             creator=self.user
         )
-        
+
         # Test ordering by name
         templates = list(PrescriptionTemplate.objects.all())
         self.assertEqual(templates[0].name, 'Alpha Template')
@@ -447,7 +447,7 @@ class PrescriptionTemplateModelTest(TestCase):
             name='Test Template',
             creator=self.user
         )
-        
+
         # Test that the related_name works
         self.assertIn(prescription_template, self.user.prescription_templates.all())
 
@@ -457,10 +457,10 @@ class PrescriptionTemplateModelTest(TestCase):
             name='Test Template',
             creator=self.user
         )
-        
+
         template_id = prescription_template.id
         self.user.delete()
-        
+
         # Prescription template should be deleted when user is deleted
         self.assertFalse(PrescriptionTemplate.objects.filter(id=template_id).exists())
 
@@ -489,7 +489,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             quantity='30 comprimidos',
             order=1
         )
-        
+
         self.assertEqual(item.template, self.prescription_template)
         self.assertEqual(item.drug_name, 'Losartana')
         self.assertEqual(item.presentation, '50mg comprimidos')
@@ -509,7 +509,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             quantity='30 comprimidos',
             order=1
         )
-        
+
         self.assertEqual(str(item), 'Atenolol - 25mg comprimidos')
 
     def test_prescription_template_item_default_order(self):
@@ -521,7 +521,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido pela manhã',
             quantity='30 comprimidos'
         )
-        
+
         self.assertEqual(item.order, 0)  # Default should be 0
 
     def test_prescription_template_item_clean_method_valid(self):
@@ -534,7 +534,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             quantity='60 comprimidos',
             order=1
         )
-        
+
         # Should not raise ValidationError
         item.clean()
 
@@ -547,7 +547,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido',
             quantity='30 comprimidos'
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             item.clean()
         self.assertIn('drug_name', cm.exception.message_dict)
@@ -561,7 +561,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido',
             quantity='30 comprimidos'
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             item.clean()
         self.assertIn('drug_name', cm.exception.message_dict)
@@ -575,7 +575,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido',
             quantity='30 comprimidos'
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             item.clean()
         self.assertIn('presentation', cm.exception.message_dict)
@@ -589,7 +589,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             usage_instructions='',
             quantity='30 comprimidos'
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             item.clean()
         self.assertIn('usage_instructions', cm.exception.message_dict)
@@ -603,14 +603,14 @@ class PrescriptionTemplateItemModelTest(TestCase):
             usage_instructions='Tomar 1 comprimido pela manhã',
             quantity=''
         )
-        
+
         with self.assertRaises(ValidationError) as cm:
             item.clean()
         self.assertIn('quantity', cm.exception.message_dict)
 
     def test_prescription_template_item_meta_options(self):
         """Test Meta class options."""
-        item1 = PrescriptionTemplateItem.objects.create(
+        PrescriptionTemplateItem.objects.create(
             template=self.prescription_template,
             drug_name='Zebra Drug',
             presentation='10mg',
@@ -618,7 +618,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             quantity='30',
             order=2
         )
-        item2 = PrescriptionTemplateItem.objects.create(
+        PrescriptionTemplateItem.objects.create(
             template=self.prescription_template,
             drug_name='Alpha Drug',
             presentation='20mg',
@@ -626,7 +626,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             quantity='30',
             order=1
         )
-        
+
         # Test ordering by template, order, drug_name
         items = list(PrescriptionTemplateItem.objects.all())
         self.assertEqual(items[0].order, 1)  # Should be ordered by order first
@@ -642,7 +642,7 @@ class PrescriptionTemplateItemModelTest(TestCase):
             quantity='90 comprimidos',
             order=1
         )
-        
+
         # Test that the relationship works
         self.assertIn(item, self.prescription_template.items.all())
 
@@ -656,17 +656,17 @@ class PrescriptionTemplateItemModelTest(TestCase):
             quantity='30 comprimidos',
             order=1
         )
-        
+
         item_id = item.id
         self.prescription_template.delete()
-        
+
         # Item should be deleted when template is deleted
         self.assertFalse(PrescriptionTemplateItem.objects.filter(id=item_id).exists())
 
 
 class PrescriptionTemplateIntegrationTest(TestCase):
     """Integration tests for PrescriptionTemplate and PrescriptionTemplateItem."""
-    
+
     def setUp(self):
         self.user = User.objects.create_user(
             username='testuser',
@@ -683,7 +683,7 @@ class PrescriptionTemplateIntegrationTest(TestCase):
             creator=self.user,
             is_public=True
         )
-        
+
         # Create multiple items
         item1 = PrescriptionTemplateItem.objects.create(
             template=template,
@@ -693,7 +693,7 @@ class PrescriptionTemplateIntegrationTest(TestCase):
             quantity='30 comprimidos',
             order=1
         )
-        
+
         item2 = PrescriptionTemplateItem.objects.create(
             template=template,
             drug_name='Hidroclorotiazida',
@@ -702,12 +702,12 @@ class PrescriptionTemplateIntegrationTest(TestCase):
             quantity='30 comprimidos',
             order=2
         )
-        
+
         # Test that template has all items
         self.assertEqual(template.items.count(), 2)
         self.assertIn(item1, template.items.all())
         self.assertIn(item2, template.items.all())
-        
+
         # Test ordering
         ordered_items = list(template.items.all())
         self.assertEqual(ordered_items[0].order, 1)
@@ -719,7 +719,7 @@ class PrescriptionTemplateIntegrationTest(TestCase):
             name='Template com Ordem',
             creator=self.user
         )
-        
+
         # Create items in reverse order
         item3 = PrescriptionTemplateItem.objects.create(
             template=template,
@@ -729,7 +729,7 @@ class PrescriptionTemplateIntegrationTest(TestCase):
             quantity='30',
             order=3
         )
-        
+
         item1 = PrescriptionTemplateItem.objects.create(
             template=template,
             drug_name='Primeiro',
@@ -738,7 +738,7 @@ class PrescriptionTemplateIntegrationTest(TestCase):
             quantity='30',
             order=1
         )
-        
+
         item2 = PrescriptionTemplateItem.objects.create(
             template=template,
             drug_name='Segundo',
@@ -747,7 +747,7 @@ class PrescriptionTemplateIntegrationTest(TestCase):
             quantity='30',
             order=2
         )
-        
+
         # Test that items are returned in correct order
         ordered_items = list(template.items.all())
         self.assertEqual(len(ordered_items), 3)

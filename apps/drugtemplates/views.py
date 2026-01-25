@@ -4,11 +4,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
-from django.db.models import Q
+from django.db.models import Q, Func, TextField, Value
+from django.db.models.functions import Lower
 from django.core.exceptions import PermissionDenied
 from apps.core.permissions.decorators import doctor_or_resident_required
 from .models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
 from .forms import DrugTemplateForm, PrescriptionTemplateForm, PrescriptionTemplateItemFormSet
+
+
+class ImmutableUnaccent(Func):
+    """PostgreSQL immutable unaccent wrapper for accent-insensitive sorting."""
+    function = 'immutable_unaccent'
+    output_field = TextField()
 
 
 @method_decorator(doctor_or_resident_required, name='dispatch')
@@ -32,10 +39,16 @@ class DrugTemplateListView(LoginRequiredMixin, ListView):
             Q(is_public=True) | Q(creator=self.request.user)
         ).select_related('creator')
         
-        # Name search filter
+        # Name search filter - accent and case insensitive
         name_search = self.request.GET.get('name', '').strip()
         if name_search:
-            queryset = queryset.filter(name__icontains=name_search)
+            # Remove accents from search term and lowercase for comparison
+            # We use Value to treat the search term as a literal, not a field
+            queryset = queryset.annotate(
+                name_normalized=ImmutableUnaccent(Lower('name'))
+            ).filter(
+                name_normalized__icontains=ImmutableUnaccent(Lower(Value(name_search)))
+            )
         
         # Creator filter
         creator_filter = self.request.GET.get('creator')
@@ -51,16 +64,21 @@ class DrugTemplateListView(LoginRequiredMixin, ListView):
         elif visibility_filter == 'mine':
             queryset = queryset.filter(creator=self.request.user)
         
-        # Sorting
+        # Sorting - use Unaccent for accent-insensitive alphabetical sorting
+        # This handles accented characters (á, é, ó, etc.) properly
         sort_by = self.request.GET.get('sort', 'name')
         if sort_by == 'created_at':
             queryset = queryset.order_by('-created_at')
         elif sort_by == 'created_at_asc':
             queryset = queryset.order_by('created_at')
         elif sort_by == 'name_desc':
-            queryset = queryset.order_by('-name')
+            queryset = queryset.annotate(
+                name_normalized=ImmutableUnaccent(Lower('name'))
+            ).order_by('-name_normalized')
         else:  # default: name ascending
-            queryset = queryset.order_by('name')
+            queryset = queryset.annotate(
+                name_normalized=ImmutableUnaccent(Lower('name'))
+            ).order_by('name_normalized')
         
         return queryset
 
@@ -71,11 +89,15 @@ class DrugTemplateListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         # Get available creators (only those with accessible templates)
+        # Using distinct('creator') ensures each creator appears only once
+        # Note: PostgreSQL requires ORDER BY to start with the DISTINCT ON expression
         available_creators = DrugTemplate.objects.filter(
             Q(is_public=True) | Q(creator=self.request.user)
-        ).select_related('creator').values_list(
+        ).select_related('creator').order_by(
+            'creator', 'creator__last_name', 'creator__first_name'
+        ).distinct('creator').values_list(
             'creator__id', 'creator__first_name', 'creator__last_name'
-        ).distinct()
+        )
 
         context.update({
             'name_search': self.request.GET.get('name', ''),
@@ -278,10 +300,16 @@ class PrescriptionTemplateListView(LoginRequiredMixin, ListView):
             Q(is_public=True) | Q(creator=self.request.user)
         ).select_related('creator').prefetch_related('items')
         
-        # Name search filter
+        # Name search filter - accent and case insensitive
         name_search = self.request.GET.get('name', '').strip()
         if name_search:
-            queryset = queryset.filter(name__icontains=name_search)
+            # Remove accents from search term and lowercase for comparison
+            # We use Value to treat the search term as a literal, not a field
+            queryset = queryset.annotate(
+                name_normalized=ImmutableUnaccent(Lower('name'))
+            ).filter(
+                name_normalized__icontains=ImmutableUnaccent(Lower(Value(name_search)))
+            )
         
         # Creator filter
         creator_filter = self.request.GET.get('creator')
@@ -297,16 +325,21 @@ class PrescriptionTemplateListView(LoginRequiredMixin, ListView):
         elif visibility_filter == 'mine':
             queryset = queryset.filter(creator=self.request.user)
         
-        # Sorting
+        # Sorting - use Unaccent for accent-insensitive alphabetical sorting
+        # This handles accented characters (á, é, ó, etc.) properly
         sort_by = self.request.GET.get('sort', 'name')
         if sort_by == 'created_at':
             queryset = queryset.order_by('-created_at')
         elif sort_by == 'created_at_asc':
             queryset = queryset.order_by('created_at')
         elif sort_by == 'name_desc':
-            queryset = queryset.order_by('-name')
+            queryset = queryset.annotate(
+                name_normalized=ImmutableUnaccent(Lower('name'))
+            ).order_by('-name_normalized')
         else:  # default: name ascending
-            queryset = queryset.order_by('name')
+            queryset = queryset.annotate(
+                name_normalized=ImmutableUnaccent(Lower('name'))
+            ).order_by('name_normalized')
         
         return queryset
 
@@ -317,11 +350,15 @@ class PrescriptionTemplateListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         # Get available creators (only those with accessible templates)
+        # Using distinct('creator') ensures each creator appears only once
+        # Note: PostgreSQL requires ORDER BY to start with the DISTINCT ON expression
         available_creators = PrescriptionTemplate.objects.filter(
             Q(is_public=True) | Q(creator=self.request.user)
-        ).select_related('creator').values_list(
+        ).select_related('creator').order_by(
+            'creator', 'creator__last_name', 'creator__first_name'
+        ).distinct('creator').values_list(
             'creator__id', 'creator__first_name', 'creator__last_name'
-        ).distinct()
+        )
 
         context.update({
             'name_search': self.request.GET.get('name', ''),

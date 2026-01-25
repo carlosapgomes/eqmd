@@ -10,7 +10,7 @@ class TestUserAccountHistory(TestCase):
         self.admin_user = User.objects.create_user(
             username='admin',
             email='admin@example.com',
-            profession_type='doctor',
+            profession_type=User.MEDICAL_DOCTOR,
             is_staff=True,
             is_superuser=True
         )
@@ -20,7 +20,7 @@ class TestUserAccountHistory(TestCase):
         user = User.objects.create_user(
             username='newuser',
             email='newuser@example.com',
-            profession_type='nurse',
+            profession_type=User.NURSE,
             first_name='New',
             last_name='User'
         )
@@ -29,7 +29,7 @@ class TestUserAccountHistory(TestCase):
         history = user.history.first()
         self.assertEqual(history.history_type, '+')
         self.assertEqual(history.username, 'newuser')
-        self.assertEqual(history.profession_type, 'nurse')
+        self.assertEqual(history.profession_type, User.NURSE)
         self.assertEqual(history.first_name, 'New')
         self.assertEqual(history.last_name, 'User')
         
@@ -38,11 +38,11 @@ class TestUserAccountHistory(TestCase):
         user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            profession_type='student'
+            profession_type=User.STUDENT
         )
         
         # Change profession type (critical security change)
-        user.profession_type = 'doctor'
+        user.profession_type = User.MEDICAL_DOCTOR
         user._change_reason = 'Promoted from student to doctor'
         user.save()
         
@@ -53,19 +53,19 @@ class TestUserAccountHistory(TestCase):
         # Latest change
         latest = history_records[0]
         self.assertEqual(latest.history_type, '~')
-        self.assertEqual(latest.profession_type, 'doctor')
+        self.assertEqual(latest.profession_type, User.MEDICAL_DOCTOR)
         self.assertEqual(latest.history_change_reason, 'Promoted from student to doctor')
         
         # Original record
         original = history_records[1]
-        self.assertEqual(original.profession_type, 'student')
+        self.assertEqual(original.profession_type, User.STUDENT)
         
     def test_staff_status_change_tracking(self):
         """Test that staff status changes are tracked."""
         user = User.objects.create_user(
             username='normaluser',
             email='normal@example.com',
-            profession_type='nurse'
+            profession_type=User.NURSE
         )
         
         # Grant staff access
@@ -97,7 +97,7 @@ class TestUserAccountHistory(TestCase):
         user = User.objects.create_user(
             username='staffuser',
             email='staff@example.com',
-            profession_type='doctor',
+            profession_type=User.MEDICAL_DOCTOR,
             is_staff=True
         )
         
@@ -118,7 +118,7 @@ class TestUserAccountHistory(TestCase):
         user = User.objects.create_user(
             username='activeuser',
             email='active@example.com',
-            profession_type='nurse',
+            profession_type=User.NURSE,
             is_active=True
         )
         
@@ -151,7 +151,7 @@ class TestUserAccountHistory(TestCase):
         user = User.objects.create_user(
             username='emailuser',
             email='original@example.com',
-            profession_type='doctor'
+            profession_type=User.MEDICAL_DOCTOR
         )
         
         # Change email
@@ -171,7 +171,7 @@ class TestUserAccountHistory(TestCase):
         user = User.objects.create_user(
             username='professional',
             email='prof@example.com',
-            profession_type='doctor'
+            profession_type=User.MEDICAL_DOCTOR
         )
         
         # Add professional registration
@@ -207,10 +207,10 @@ class TestUserAccountHistory(TestCase):
             user = User.objects.create_user(
                 username=f'bulkuser{i}',
                 email=f'bulk{i}@example.com',
-                profession_type='student'
+                profession_type=User.STUDENT
             )
             # Modify each user
-            user.profession_type = 'nurse'
+            user.profession_type = User.NURSE
             user._change_reason = f'Bulk promotion {i}'
             user.save()
             users.append(user)
@@ -258,7 +258,7 @@ class TestUserAccountHistory(TestCase):
         user = User.objects.create_user(
             username='deletableuser',
             email='deletable@example.com',
-            profession_type='student'
+            profession_type=User.STUDENT
         )
         
         user_id = user.id
@@ -284,7 +284,7 @@ class TestUserHistoryQueries(TestCase):
         self.admin = User.objects.create_user(
             username='admin',
             email='admin@example.com',
-            profession_type='doctor',
+            profession_type=User.MEDICAL_DOCTOR,
             is_staff=True
         )
         
@@ -293,14 +293,14 @@ class TestUserHistoryQueries(TestCase):
         user = User.objects.create_user(
             username='escalationtest',
             email='escalation@example.com',
-            profession_type='student'
+            profession_type=User.STUDENT
         )
         
         # Simulate privilege escalation pattern
         escalation_steps = [
-            ('nurse', 'Promoted to nurse'),
-            ('doctor', 'Promoted to doctor'),  
-            ('doctor', 'Granted staff access'),  # is_staff=True
+            (User.NURSE, 'Promoted to nurse'),
+            (User.MEDICAL_DOCTOR, 'Promoted to doctor'),
+            (User.MEDICAL_DOCTOR, 'Granted staff access'),  # is_staff=True
         ]
         
         for i, (profession, reason) in enumerate(escalation_steps):
@@ -324,7 +324,7 @@ class TestUserHistoryQueries(TestCase):
         user = User.objects.create_user(
             username='statustest',
             email='status@example.com',
-            profession_type='nurse'
+            profession_type=User.NURSE
         )
         
         # Rapid activation/deactivation pattern
@@ -349,13 +349,13 @@ class TestUserHistoryQueries(TestCase):
             user = User.objects.create_user(
                 username=f'massuser{i}',
                 email=f'mass{i}@example.com',
-                profession_type='student'
+                profession_type=User.STUDENT
             )
             users.append(user)
             
         # Simulate mass modification by admin
         for user in users:
-            user.profession_type = 'nurse'
+            user.profession_type = User.NURSE
             user._change_reason = 'Mass promotion event'
             user.save()
             

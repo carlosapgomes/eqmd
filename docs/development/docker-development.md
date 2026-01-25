@@ -118,7 +118,7 @@ docker compose --profile dev up -d eqmd-dev
 # Edit files in your IDE
 
 # 3. Run tests
-docker compose exec eqmd-dev python manage.py test
+./scripts/test.sh
 
 # 4. Check migrations
 docker compose exec eqmd-dev python manage.py makemigrations
@@ -202,33 +202,26 @@ docker compose exec eqmd-dev python manage.py loaddata dev_backup.json
 
 ```bash
 # All tests
-docker compose exec eqmd-dev python manage.py test
+./scripts/test.sh
 
 # Specific app tests
-docker compose exec eqmd-dev python manage.py test apps.patients
+./scripts/test.sh apps.patients
 
 # With coverage
-docker compose exec eqmd-dev coverage run --source='.' manage.py test
-docker compose exec eqmd-dev coverage html
+docker exec eqmd_dev env DJANGO_SETTINGS_MODULE=config.test_settings pytest --cov=apps --cov-report=html:/tmp/htmlcov
 
 # Using pytest
-docker compose exec eqmd-dev pytest apps/patients/tests/
+docker exec eqmd_dev env DJANGO_SETTINGS_MODULE=config.test_settings pytest apps/patients/tests/
 ```
 
 ### Test Database
 
-Development uses a separate test database:
+Development uses PostgreSQL for both runtime and tests. Use a dedicated test DB name
+(defaults to `test_${DATABASE_NAME}` via `config.test_settings`):
 
-```python
-# settings/dev.py
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db_dev.sqlite3',
-    }
-}
-
-# Test database is automatically created/destroyed
+```bash
+# Example environment variable
+DATABASE_TEST_NAME=test_eqmd_dev
 ```
 
 ## Registry Integration for Development
@@ -310,7 +303,7 @@ curl http://localhost:8778/health/
         {
             "label": "Django: Run Tests",
             "type": "shell",
-            "command": "docker compose exec eqmd-dev python manage.py test",
+            "command": "./scripts/test.sh",
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -411,8 +404,13 @@ docker compose exec eqmd-dev python manage.py shell
 DEBUG=True
 SECRET_KEY=dev-secret-key-not-for-production
 
-# Database (use local SQLite for development)
-# No DATABASE_* variables needed - SQLite is default
+# Database (PostgreSQL for development)
+DATABASE_ENGINE=django.db.backends.postgresql
+DATABASE_NAME=eqmd_dev
+DATABASE_USER=eqmd_user
+DATABASE_PASSWORD=eqmd_dev_password_123
+DATABASE_HOST=postgres
+DATABASE_PORT=5432
 
 # Registry settings (for testing)
 REGISTRY=ghcr.io
@@ -435,8 +433,13 @@ HOSPITAL_EMAIL=dev@localhost
 # Test-specific settings
 DEBUG=False
 SECRET_KEY=test-secret-key
-# Database (use test SQLite database)
-DATABASE_NAME=test_db.sqlite3
+# Database (use test PostgreSQL database)
+DATABASE_ENGINE=django.db.backends.postgresql
+DATABASE_NAME=eqmd_test
+DATABASE_USER=eqmd_user
+DATABASE_PASSWORD=eqmd_dev_password_123
+DATABASE_HOST=postgres
+DATABASE_PORT=5432
 
 # Disable external services in tests
 REGISTRY=
@@ -488,10 +491,8 @@ docker compose exec eqmd-dev ls -la /app/staticfiles/
 # Stop all containers
 docker compose down
 
-# Remove database file
-rm db_dev.sqlite3
-
-# Restart and migrate
+# Reset postgres volume (development only)
+docker compose down --volumes
 docker compose --profile dev up -d eqmd-dev
 docker compose exec eqmd-dev python manage.py migrate
 ```

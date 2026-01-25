@@ -138,13 +138,7 @@ echo "🎉 Rollback to $TARGET_VERSION completed successfully"
 BACKUP_DIR="./backups/$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$BACKUP_DIR"
 
-# SQLite backup (default)
-if [ -f "db.sqlite3" ]; then
-    cp db.sqlite3 "$BACKUP_DIR/db.sqlite3"
-    echo "✅ SQLite database backed up to $BACKUP_DIR/db.sqlite3"
-fi
-
-# PostgreSQL backup (if using PostgreSQL)
+# PostgreSQL backup
 if [ "$DATABASE_ENGINE" = "django.db.backends.postgresql" ] && [ -n "$DATABASE_HOST" ]; then
     PGPASSWORD="$DATABASE_PASSWORD" pg_dump -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" > "$BACKUP_DIR/database.sql"
     echo "✅ PostgreSQL database backed up to $BACKUP_DIR/database.sql"
@@ -153,7 +147,7 @@ fi
 # Create backup manifest
 cat > "$BACKUP_DIR/manifest.txt" << EOF
 Backup created: $(date)
-Database type: $(if [ -f "db.sqlite3" ]; then echo "SQLite"; else echo "PostgreSQL"; fi)
+Database type: PostgreSQL
 Application version: $(docker inspect eqmd-eqmd-1 --format='{{.Config.Image}}' 2>/dev/null || echo "unknown")
 Git commit: $(git rev-parse HEAD 2>/dev/null || echo "unknown")
 EOF
@@ -179,12 +173,6 @@ echo "🔄 Restoring database from $BACKUP_PATH"
 
 # Stop application
 docker compose stop eqmd
-
-# SQLite restore
-if [ -f "$BACKUP_PATH/db.sqlite3" ]; then
-    cp "$BACKUP_PATH/db.sqlite3" ./db.sqlite3
-    echo "✅ SQLite database restored"
-fi
 
 # PostgreSQL restore
 if [ -f "$BACKUP_PATH/database.sql" ]; then

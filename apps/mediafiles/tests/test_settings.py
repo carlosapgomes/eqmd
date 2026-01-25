@@ -3,6 +3,7 @@ Test-specific settings for the mediafiles app.
 These settings override the main settings for testing purposes.
 """
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -28,23 +29,19 @@ TEST_MEDIA_ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
 TEST_MEDIA_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 TEST_MEDIA_ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov']
 
-# Test database settings
+# Test database settings (PostgreSQL)
 TEST_DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+    "default": {
+        "ENGINE": os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql"),
+        "NAME": os.getenv("DATABASE_TEST_NAME", os.getenv("DATABASE_NAME", "eqmd_test")),
+        "USER": os.getenv("DATABASE_USER", ""),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD", ""),
+        "HOST": os.getenv("DATABASE_HOST", ""),
+        "PORT": os.getenv("DATABASE_PORT", ""),
     }
 }
 
-# Disable migrations for faster testing
-TEST_MIGRATION_MODULES = {
-    'mediafiles': None,
-    'events': None,
-    'patients': None,
-    'hospitals': None,
-    'auth': None,
-    'contenttypes': None,
-}
+TEST_MIGRATION_MODULES = None
 
 # Test logging configuration
 TEST_LOGGING = {
@@ -138,7 +135,6 @@ def get_test_settings():
         'MEDIA_ALLOWED_IMAGE_EXTENSIONS': TEST_MEDIA_ALLOWED_IMAGE_EXTENSIONS,
         'MEDIA_ALLOWED_VIDEO_EXTENSIONS': TEST_MEDIA_ALLOWED_VIDEO_EXTENSIONS,
         'DATABASES': TEST_DATABASES,
-        'MIGRATION_MODULES': TEST_MIGRATION_MODULES,
         'LOGGING': TEST_LOGGING,
         'PASSWORD_HASHERS': TEST_PASSWORD_HASHERS,
         'EMAIL_BACKEND': TEST_EMAIL_BACKEND,
