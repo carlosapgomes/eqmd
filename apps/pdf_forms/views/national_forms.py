@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
@@ -15,6 +17,8 @@ from ..permissions import check_pdf_form_access, check_pdf_form_creation
 from ..security import PDFFormSecurity
 from ..services.field_mapping import DataFieldMapper
 from apps.core.models import MedicalProcedure
+
+logger = logging.getLogger(__name__)
 
 
 class APACForm(forms.Form):
@@ -235,7 +239,7 @@ class APACForm(forms.Form):
         label="CID 10 Principal",
         max_length=10,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: A00.0'}),
-        required=True,
+        required=False,
         help_text="Código da Classificação Internacional de Doenças"
     )
 
@@ -503,6 +507,16 @@ class APACFormView(LoginRequiredMixin, FormView):
             icd10_codes = Icd10Code.objects.in_bulk(selected_icd_ids)
 
             # Prepare form data for storage
+            def resolve_icd_code(fallback_key, display_key, icd_id):
+                value = (form.cleaned_data.get(fallback_key) or '').strip()
+                if value:
+                    return value
+                display_value = (form.cleaned_data.get(display_key) or '').strip()
+                if display_value:
+                    return display_value
+                icd_obj = icd10_codes.get(icd_id)
+                return icd_obj.code if icd_obj else ''
+
             form_data = {
                 'patient_name': form.cleaned_data['patient_name'],
                 'patient_gender': form.cleaned_data['patient_gender'],
@@ -521,9 +535,9 @@ class APACFormView(LoginRequiredMixin, FormView):
                 'hospital_name': getattr(settings, 'HOSPITAL_CONFIG', {}).get('name', ''),
                 'hospital_cnes': getattr(settings, 'HOSPITAL_CONFIG', {}).get('cnes', ''),
                 'main_diagnosis': form.cleaned_data['main_diagnosis'],
-                'main_icd': form.cleaned_data['main_icd'],
-                'secondary_icd': form.cleaned_data.get('secondary_icd', ''),
-                'other_icd': form.cleaned_data.get('other_icd', ''),
+                'main_icd': resolve_icd_code('main_icd', 'main_icd_display', icd10_ids.get('main_icd_id')),
+                'secondary_icd': resolve_icd_code('secondary_icd', 'secondary_icd_display', icd10_ids.get('secondary_icd_id')),
+                'other_icd': resolve_icd_code('other_icd', 'other_icd_display', icd10_ids.get('other_icd_id')),
                 'diagnosis_notes': form.cleaned_data.get('diagnosis_notes', ''),
                 'doctor_name': form.cleaned_data.get('doctor_name', ''),
                 'request_date': form.cleaned_data['request_date'].isoformat() if form.cleaned_data.get('request_date') else '',
@@ -587,6 +601,11 @@ class APACFormView(LoginRequiredMixin, FormView):
             return redirect('pdf_forms:submission_detail', pk=submission.pk)
             
         except Exception as e:
+            logger.exception(
+                "APAC form submission failed (user_id=%s, patient_id=%s)",
+                getattr(self.request.user, "id", None),
+                getattr(self.patient, "id", None),
+            )
             messages.error(
                 self.request,
                 f"Erro ao processar formulário APAC: {str(e)}"
@@ -595,6 +614,13 @@ class APACFormView(LoginRequiredMixin, FormView):
     
     def form_invalid(self, form):
         """Handle form validation errors."""
+        error_fields = list(form.errors.keys())
+        logger.warning(
+            "APAC form validation failed (user_id=%s, patient_id=%s, fields=%s)",
+            getattr(self.request.user, "id", None),
+            getattr(self.patient, "id", None),
+            error_fields,
+        )
         messages.error(
             self.request,
             "Por favor, corrija os erros no formulário."
