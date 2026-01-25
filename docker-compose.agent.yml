@@ -1,3 +1,10 @@
+#
+# Hardened coding-agent stack (optional tooling)
+#
+# - Not required for app runtime
+# - Keep secrets in environment variables or local .env files
+# - Uses bind-mounts and socket proxy for controlled access to Docker
+#
 services:
   docker-socket-proxy:
     image: ghcr.io/tecnativa/docker-socket-proxy:latest

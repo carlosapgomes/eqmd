@@ -14,7 +14,7 @@ The current DrugTemplate model combines concentration and pharmaceutical form in
 ## Impact
 
 - Affected specs: drugtemplates (medication template management)
-- Affected code: 
+- Affected code:
   - `apps/drugtemplates/models.py` - model refactoring
   - `apps/drugtemplates/admin.py` - admin interface updates
   - `apps/drugtemplates/forms.py` - form field changes
@@ -22,3 +22,4 @@ The current DrugTemplate model combines concentration and pharmaceutical form in
   - `apps/drugtemplates/management/commands/` - new import command
   - Templates in `templates/drugtemplates/` - display updates
   - Database migration for field changes
+
