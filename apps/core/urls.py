@@ -17,6 +17,7 @@ urlpatterns = [
     path("terms-of-use/", views.terms_of_use, name="terms_of_use"),
     path("accept-terms/", views.accept_terms, name="accept_terms"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
+    path("templates/", views.templates_hub, name="templates_hub"),
     path(
         "password-change-required/", 
         views.PasswordChangeRequiredView.as_view(), 

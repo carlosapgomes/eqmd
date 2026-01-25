@@ -18,6 +18,7 @@ from apps.patients.models import Patient
 from allauth.account.views import PasswordChangeView
 from django.contrib.auth import logout
 from .services.simple_notifications import send_simple_renewal_notification
+from apps.core.permissions.decorators import doctor_or_resident_required
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +292,17 @@ def dashboard_view(request):
             )
 
     return render(request, "core/dashboard.html", context)
+
+
+@doctor_or_resident_required
+def templates_hub(request):
+    """
+    Renders the templates hub page for doctors and residents.
+    """
+    context = {
+        "page_title": "Modelos",
+    }
+    return render(request, "core/templates_hub.html", context)
 
 
 @login_required
