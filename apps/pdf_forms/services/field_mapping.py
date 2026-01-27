@@ -59,6 +59,17 @@ class DataFieldMapper:
         'cnpj': {'type': 'text', 'label': 'CNPJ do Hospital'},
     }
 
+    # Available current user fields with their types and labels
+    USER_FIELD_MAPPINGS = {
+        'full_name': {'type': 'text', 'label': 'Nome Completo do Usuário'},
+        'first_name': {'type': 'text', 'label': 'Primeiro Nome do Usuário'},
+        'last_name': {'type': 'text', 'label': 'Sobrenome do Usuário'},
+        'email': {'type': 'text', 'label': 'Email do Usuário'},
+        'profession': {'type': 'text', 'label': 'Profissão do Usuário'},
+        'specialty': {'type': 'text', 'label': 'Especialidade do Usuário'},
+        'professional_registration_number': {'type': 'text', 'label': 'Número de Registro Profissional'},
+    }
+
     # Combined mappings for dropdown choices
     @classmethod
     def get_auto_fill_choices(cls):
@@ -88,6 +99,15 @@ class DataFieldMapper:
                 'label': mapping['label'], 
                 'type': mapping['type'],
                 'optgroup': 'Dados do Hospital'
+            })
+        
+        # Add current user data options
+        for key, mapping in cls.USER_FIELD_MAPPINGS.items():
+            choices.append({
+                'value': f'user.{key}',
+                'label': mapping['label'],
+                'type': mapping['type'],
+                'optgroup': 'Dados do Usuário'
             })
         
         return choices
@@ -131,8 +151,12 @@ class DataFieldMapper:
             if field_key not in cls.HOSPITAL_FIELD_MAPPINGS:
                 available_fields = ', '.join(cls.HOSPITAL_FIELD_MAPPINGS.keys())
                 return False, f"Invalid hospital field '{field_key}'. Available fields: {available_fields}"
+        elif source == 'user':
+            if field_key not in cls.USER_FIELD_MAPPINGS:
+                available_fields = ', '.join(cls.USER_FIELD_MAPPINGS.keys())
+                return False, f"Invalid user field '{field_key}'. Available fields: {available_fields}"
         else:
-            return False, f"Invalid auto-fill source '{source}'. Must be 'patient' or 'hospital'"
+            return False, f"Invalid auto-fill source '{source}'. Must be 'patient', 'hospital', or 'user'"
             
         return True, None
 
@@ -158,13 +182,14 @@ class DataFieldMapper:
         return True, None
 
     @classmethod
-    def get_auto_fill_value(cls, auto_fill_path, patient=None):
+    def get_auto_fill_value(cls, auto_fill_path, patient=None, user=None):
         """
-        Get value from auto-fill path (patient or hospital data).
+        Get value from auto-fill path (patient, hospital, or user data).
         
         Args:
-            auto_fill_path (str): Path like 'patient.name' or 'hospital.cnes'
+            auto_fill_path (str): Path like 'patient.name', 'hospital.cnes', or 'user.specialty'
             patient: Patient object (required for patient data)
+            user: User object (required for user data)
             
         Returns:
             Any: Field value or None if not found
@@ -182,6 +207,8 @@ class DataFieldMapper:
             return cls.get_patient_field_value(patient, field_key)
         elif source == 'hospital':
             return cls.get_hospital_field_value(field_key)
+        elif source == 'user':
+            return cls.get_user_field_value(user, field_key)
         else:
             return None
 
@@ -237,6 +264,52 @@ class DataFieldMapper:
         return hospital_config.get(field_key, None)
 
     @classmethod
+    def get_user_field_value(cls, user, field_key):
+        """
+        Get value from user object.
+        
+        Args:
+            user: User object
+            field_key (str): User field key (e.g., 'full_name', 'specialty')
+            
+        Returns:
+            Any: Field value or None if not found
+        """
+        if not user or not field_key:
+            return None
+            
+        try:
+            if field_key == 'full_name':
+                return user.get_full_name() or user.username
+            elif field_key == 'first_name':
+                return user.first_name
+            elif field_key == 'last_name':
+                return user.last_name
+            elif field_key == 'email':
+                return user.email
+            elif field_key == 'profession':
+                if hasattr(user, 'profession_type') and user.profession_type is not None:
+                    return user.get_profession_type_display()
+                return ""
+            elif field_key == 'specialty':
+                # Try to get specialty from user profile's current_specialty first
+                if hasattr(user, 'profile') and user.profile.current_specialty:
+                    return user.profile.current_specialty.name
+                # Fallback to primary specialty from user model
+                elif hasattr(user, 'primary_specialty') and user.primary_specialty:
+                    return user.primary_specialty.name
+                # Fallback to specialty_display property
+                elif hasattr(user, 'specialty_display'):
+                    return user.specialty_display
+                return ""
+            elif field_key == 'professional_registration_number':
+                return getattr(user, 'professional_registration_number', '')
+            else:
+                return None
+        except (AttributeError, TypeError):
+            return None
+
+    @classmethod
     def get_field_type_compatibility(cls, form_field_type, auto_fill_path):
         """
         Check if form field type is compatible with auto-fill field type.
@@ -263,6 +336,8 @@ class DataFieldMapper:
             data_field_type = cls.PATIENT_FIELD_MAPPINGS[field_key]['type']
         elif source == 'hospital' and field_key in cls.HOSPITAL_FIELD_MAPPINGS:
             data_field_type = cls.HOSPITAL_FIELD_MAPPINGS[field_key]['type']
+        elif source == 'user' and field_key in cls.USER_FIELD_MAPPINGS:
+            data_field_type = cls.USER_FIELD_MAPPINGS[field_key]['type']
         
         if not data_field_type:
             return True  # Invalid mapping is always "compatible"
@@ -583,6 +658,8 @@ class FieldMappingUtils:
                             data_type = DataFieldMapper.PATIENT_FIELD_MAPPINGS[field_key]['type']
                         elif source == 'hospital' and field_key in DataFieldMapper.HOSPITAL_FIELD_MAPPINGS:
                             data_type = DataFieldMapper.HOSPITAL_FIELD_MAPPINGS[field_key]['type']
+                        elif source == 'user' and field_key in DataFieldMapper.USER_FIELD_MAPPINGS:
+                            data_type = DataFieldMapper.USER_FIELD_MAPPINGS[field_key]['type']
                         else:
                             data_type = 'unknown'
                         errors.append(f"Field '{field_name}' type '{field_type}' is not compatible with {source} field type '{data_type}'")

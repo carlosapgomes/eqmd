@@ -24,7 +24,7 @@ class DynamicFormGenerator:
         'multiple_choice': forms.MultipleChoiceField,
     }
 
-    def generate_form_class(self, pdf_template, patient=None):
+    def generate_form_class(self, pdf_template, patient=None, user=None):
         """
         Create Django form class from PDF template field configuration.
         Enhanced to handle sectioned field organization.
@@ -32,6 +32,7 @@ class DynamicFormGenerator:
         Args:
             pdf_template (PDFFormTemplate): Template with field configuration
             patient: Patient object for field auto-population (optional)
+            user: User object for field auto-population (optional)
 
         Returns:
             type: Django form class with section metadata
@@ -96,7 +97,7 @@ class DynamicFormGenerator:
                 
                 field_value = None
                 if auto_fill_path:
-                    field_value = DataFieldMapper.get_auto_fill_value(auto_fill_path, patient)
+                    field_value = DataFieldMapper.get_auto_fill_value(auto_fill_path, patient, user)
                 elif patient_field_path:
                     field_value = DataFieldMapper.get_patient_field_value(patient, patient_field_path)
                     
