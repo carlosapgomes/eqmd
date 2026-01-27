@@ -351,6 +351,7 @@ class DataFieldMapper:
             'decimal': ['number', 'text'],
             'date': ['date', 'text'],
             'datetime': ['date', 'text'],
+            'time': ['text'],
             'boolean': ['text', 'choice'],
             'choice': ['text', 'choice', 'number'],
             'multiple_choice': ['text', 'choice'],
@@ -593,7 +594,7 @@ class FieldMappingUtils:
                     errors.append(f"Field '{field_name}' missing required '{required_field}'")
 
             # Validate field type
-            valid_types = ['text', 'textarea', 'email', 'number', 'decimal', 'date', 'datetime', 'boolean', 'choice', 'multiple_choice']
+            valid_types = ['text', 'textarea', 'email', 'number', 'decimal', 'date', 'datetime', 'time', 'boolean', 'choice', 'multiple_choice']
             field_type = config.get('type')
             if field_type not in valid_types:
                 errors.append(f"Field '{field_name}' has invalid type '{field_type}'. Valid types: {valid_types}")

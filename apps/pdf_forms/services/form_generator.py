@@ -19,6 +19,7 @@ class DynamicFormGenerator:
         'decimal': forms.DecimalField,
         'date': forms.DateField,
         'datetime': forms.DateTimeField,
+        'time': forms.TimeField,
         'boolean': forms.BooleanField,
         'choice': forms.ChoiceField,
         'multiple_choice': forms.MultipleChoiceField,
@@ -214,6 +215,11 @@ class DynamicFormGenerator:
                 'type': 'datetime-local',
                 'class': 'form-control'
             })
+        elif field_type == 'time':
+            field_kwargs['widget'] = forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            })
         elif field_type == 'email':
             field_kwargs['widget'] = forms.EmailInput(attrs={'class': 'form-control'})
         elif field_type in ['number', 'decimal']:
@@ -267,6 +273,11 @@ class DynamicFormGenerator:
                 # Handle datetime fields
                 if hasattr(value, 'strftime'):
                     return value.strftime('%Y-%m-%dT%H:%M')
+                return str(value)
+            elif field_type == 'time':
+                # Handle time fields - convert to string format expected by HTML time input
+                if hasattr(value, 'strftime'):
+                    return value.strftime('%H:%M')
                 return str(value)
             elif field_type in ['number', 'decimal']:
                 # Convert to number if possible

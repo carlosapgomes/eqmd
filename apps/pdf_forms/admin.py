@@ -97,6 +97,7 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
                 {'value': 'number', 'label': 'Number'},
                 {'value': 'date', 'label': 'Date'},
                 {'value': 'datetime', 'label': 'Date & Time'},
+                {'value': 'time', 'label': 'Time'},
                 {'value': 'choice', 'label': 'Choice (Dropdown)'},
                 {'value': 'boolean', 'label': 'Checkbox'},
                 {'value': 'email', 'label': 'Email'},

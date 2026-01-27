@@ -517,7 +517,7 @@ class PDFFormModelIntegrationTests(TestCase):
         template.full_clean()  # Should not raise
         
         # Test with valid field types
-        valid_types = ['text', 'textarea', 'choice', 'boolean', 'date', 'number', 'email']
+        valid_types = ['text', 'textarea', 'choice', 'boolean', 'date', 'datetime', 'time', 'number', 'email']
         for field_type in valid_types:
             template.form_fields = {'test_field': {'type': field_type, 'label': 'Test'}}
             template.full_clean()  # Should not raise
