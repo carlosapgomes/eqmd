@@ -102,6 +102,11 @@ module.exports = {
           from: "assets/js/pdf_forms_linked_fields.js",
           to: "js/pdf_forms_linked_fields.js",
         },
+        // PDF Forms procedure search functionality
+        {
+          from: "assets/js/pdf_forms_procedure_search.js",
+          to: "js/pdf_forms_procedure_search.js",
+        },
         // Add these new patterns to copy your assets
         {
           from: "assets/images",

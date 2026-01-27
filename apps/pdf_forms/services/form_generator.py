@@ -11,6 +11,10 @@ class DynamicFormGenerator:
     Creates form classes dynamically from PDF field mappings.
     """
 
+    PROCEDURE_CODE_FIELD = "procedure_code"
+    PROCEDURE_DESCRIPTION_FIELD = "procedure_description"
+    PROCEDURE_DISPLAY_FIELD = "procedure_display"
+
     FIELD_TYPE_MAPPING = {
         'text': forms.CharField,
         'textarea': forms.CharField,
@@ -58,6 +62,8 @@ class DynamicFormGenerator:
 
         # Handle both new sectioned format and legacy format
         sections_config, fields_config = self._extract_sections_and_fields(field_config)
+
+        procedure_search_config = self._get_procedure_search_config(fields_config)
         
         # Handle case where fields_config is empty but we have sections
         if not fields_config:
@@ -87,7 +93,40 @@ class DynamicFormGenerator:
             )
 
         # Create Django form fields
+        display_field_added = False
+
         for field_name, config in fields_config.items():
+            if (
+                procedure_search_config
+                and field_name in [
+                    procedure_search_config['code_field'],
+                    procedure_search_config['description_field'],
+                ]
+            ):
+                if not display_field_added:
+                    display_label = procedure_search_config['label']
+                    display_help_text = procedure_search_config['help_text']
+                    display_required = procedure_search_config['required']
+                    form_fields[procedure_search_config['display_field']] = forms.CharField(
+                        required=display_required,
+                        label=display_label,
+                        help_text=display_help_text,
+                        widget=forms.TextInput(attrs={
+                            'class': 'form-control procedure-search-input',
+                            'autocomplete': 'off',
+                            'placeholder': display_help_text,
+                            'data-procedure-code-field': procedure_search_config['code_field'],
+                            'data-procedure-description-field': procedure_search_config['description_field'],
+                            'data-procedure-required': 'true' if display_required else 'false',
+                        })
+                    )
+                    display_field_added = True
+                form_fields[field_name] = forms.CharField(
+                    required=False,
+                    label=config.get('label', field_name.replace('_', ' ').title()),
+                    widget=forms.HiddenInput()
+                )
+                continue
             django_field = self._create_django_field(field_name, config, field_config)
             if django_field:
                 form_fields[field_name] = django_field
@@ -112,6 +151,24 @@ class DynamicFormGenerator:
                 if field_name in gender_auto_fill:
                     initial_values[field_name] = gender_auto_fill[field_name]
 
+        if procedure_search_config and not display_field_added:
+            display_label = procedure_search_config['label']
+            display_help_text = procedure_search_config['help_text']
+            display_required = procedure_search_config['required']
+            form_fields[procedure_search_config['display_field']] = forms.CharField(
+                required=display_required,
+                label=display_label,
+                help_text=display_help_text,
+                widget=forms.TextInput(attrs={
+                    'class': 'form-control procedure-search-input',
+                    'autocomplete': 'off',
+                    'placeholder': display_help_text,
+                    'data-procedure-code-field': procedure_search_config['code_field'],
+                    'data-procedure-description-field': procedure_search_config['description_field'],
+                    'data-procedure-required': 'true' if display_required else 'false',
+                })
+            )
+
         # Create form class dynamically
         form_class_name = f"{pdf_template.name.replace(' ', '')}Form"
 
@@ -122,6 +179,33 @@ class DynamicFormGenerator:
         def clean(self):
             cleaned_data = super(forms.Form, self).clean()
             # Add custom validation logic here
+            procedure_config = getattr(self.__class__, '_procedure_search_config', None)
+            if procedure_config:
+                display_field = procedure_config['display_field']
+                code_field = procedure_config['code_field']
+                description_field = procedure_config['description_field']
+                required = procedure_config['required']
+
+                display_value = (cleaned_data.get(display_field) or '').strip()
+                code_value = (cleaned_data.get(code_field) or '').strip()
+                description_value = (cleaned_data.get(description_field) or '').strip()
+
+                if required and not code_value and not description_value:
+                    self.add_error(display_field, "Selecione um procedimento da lista.")
+                elif display_value or code_value or description_value:
+                    if not code_value or not description_value:
+                        self.add_error(display_field, "Selecione um procedimento válido da lista.")
+                    else:
+                        from apps.core.models import MedicalProcedure
+                        try:
+                            procedure = MedicalProcedure.active().get(code__iexact=code_value)
+                        except MedicalProcedure.DoesNotExist:
+                            self.add_error(display_field, "Selecione um procedimento válido da lista.")
+                        else:
+                            if procedure.description.strip() != description_value:
+                                self.add_error(display_field, "Selecione um procedimento válido da lista.")
+
+                cleaned_data.pop(display_field, None)
             return cleaned_data
 
         # Bind the clean method to the form class
@@ -138,6 +222,9 @@ class DynamicFormGenerator:
 
         # Add section metadata to form class
         sections_metadata = self._organize_sections(sections_config, fields_config)
+        sections_metadata = self._apply_procedure_search_metadata(
+            sections_metadata, procedure_search_config
+        )
         form_class._sections_metadata = sections_metadata
         form_class._has_sections = bool(sections_config)
         form_class._unsectioned_fields = sections_metadata.get('unsectioned_fields', [])
@@ -149,6 +236,9 @@ class DynamicFormGenerator:
             )
         else:
             form_class._linked_fields_map = {}
+
+        form_class._procedure_search_config = procedure_search_config
+        form_class.procedure_search_config = procedure_search_config
 
         return form_class
 
@@ -344,6 +434,91 @@ class DynamicFormGenerator:
             ]
         
         return organized
+
+    def _get_procedure_search_config(self, fields_config):
+        """Detect procedure search naming convention and return config."""
+        if not isinstance(fields_config, dict):
+            return None
+
+        if (
+            self.PROCEDURE_CODE_FIELD not in fields_config
+            or self.PROCEDURE_DESCRIPTION_FIELD not in fields_config
+        ):
+            return None
+
+        if self.PROCEDURE_DISPLAY_FIELD in fields_config:
+            return None
+
+        code_config = fields_config.get(self.PROCEDURE_CODE_FIELD, {})
+        description_config = fields_config.get(self.PROCEDURE_DESCRIPTION_FIELD, {})
+
+        if not isinstance(code_config, dict) or not isinstance(description_config, dict):
+            return None
+
+        required = bool(code_config.get('required') or description_config.get('required'))
+        label = description_config.get('label') or "Procedimento"
+        help_text = description_config.get('help_text') or "Digite o código ou descrição do procedimento para buscar"
+
+        return {
+            'display_field': self.PROCEDURE_DISPLAY_FIELD,
+            'code_field': self.PROCEDURE_CODE_FIELD,
+            'description_field': self.PROCEDURE_DESCRIPTION_FIELD,
+            'required': required,
+            'label': label,
+            'help_text': help_text,
+        }
+
+    def _apply_procedure_search_metadata(self, sections_metadata, procedure_config):
+        """Replace procedure code/description fields with display field in metadata."""
+        if not procedure_config or not sections_metadata:
+            return sections_metadata
+
+        code_field = procedure_config['code_field']
+        description_field = procedure_config['description_field']
+        display_field = procedure_config['display_field']
+
+        inserted = False
+        for section_key in sections_metadata.get('sections', {}):
+            field_names = sections_metadata['sections'][section_key]['fields']
+            if not isinstance(field_names, list):
+                continue
+
+            indexes = [
+                idx for idx, name in enumerate(field_names)
+                if name in [code_field, description_field]
+            ]
+            if indexes:
+                insert_at = min(indexes)
+                new_fields = [
+                    name for name in field_names
+                    if name not in [code_field, description_field]
+                ]
+                if not inserted:
+                    new_fields.insert(insert_at, display_field)
+                    inserted = True
+                sections_metadata['sections'][section_key]['fields'] = new_fields
+
+        unsectioned = sections_metadata.get('unsectioned_fields', [])
+        if isinstance(unsectioned, list):
+            indexes = [
+                idx for idx, name in enumerate(unsectioned)
+                if name in [code_field, description_field]
+            ]
+            if indexes:
+                insert_at = min(indexes)
+                unsectioned = [
+                    name for name in unsectioned
+                    if name not in [code_field, description_field]
+                ]
+                if not inserted:
+                    unsectioned.insert(insert_at, display_field)
+                    inserted = True
+                sections_metadata['unsectioned_fields'] = unsectioned
+
+        if not inserted:
+            sections_metadata.setdefault('unsectioned_fields', []).append(display_field)
+
+        return sections_metadata
 
     def _sort_sections_by_order(self, sections):
         """
