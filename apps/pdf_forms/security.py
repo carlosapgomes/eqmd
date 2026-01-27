@@ -128,7 +128,7 @@ class PDFFormSecurity:
                     raise ValidationError(f"Field '{field_name}' missing required property: {required_field}")
 
             # Validate field type
-            allowed_types = ['text', 'textarea', 'email', 'number', 'decimal', 'date', 'datetime', 'boolean', 'choice', 'multiple_choice']
+            allowed_types = ['text', 'textarea', 'email', 'number', 'decimal', 'date', 'datetime', 'time', 'boolean', 'choice', 'multiple_choice']
             if config['type'] not in allowed_types:
                 raise ValidationError(f"Invalid field type '{config['type']}' for field '{field_name}'")
 

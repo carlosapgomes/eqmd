@@ -1921,7 +1921,7 @@ function updateSelectedField() {
     }
     
     // Auto-adjust height based on font size for text fields
-    if (['text', 'number', 'date', 'datetime', 'email'].includes(type)) {
+    if (['text', 'number', 'date', 'datetime', 'time', 'email'].includes(type)) {
         const fontSizeNum = parseInt(fontSize) || 12;
         const autoHeight = Math.max(0.3, (fontSizeNum * 0.06) + 0.2); // Font size in cm + padding
         if (!height || Math.abs(fieldConfig.height - autoHeight) > 0.1) {
