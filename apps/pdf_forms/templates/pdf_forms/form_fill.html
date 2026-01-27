@@ -140,4 +140,12 @@
 {{ linked_fields_map|json_script:"linked-fields-data" }}
 <script src="{% static 'js/pdf_forms_linked_fields.js' %}"></script>
 {% endif %}
+{% if form.procedure_search_config %}
+<script>
+  window.pdfFormsProcedureSearch = {
+    searchUrl: "{% url 'apps.core:procedures_search_api' %}"
+  };
+</script>
+<script src="{% static 'js/pdf_forms_procedure_search.js' %}"></script>
+{% endif %}
 {% endblock %}

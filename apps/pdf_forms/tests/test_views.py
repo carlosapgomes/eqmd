@@ -175,6 +175,35 @@ class PDFFormFillViewTests(TestCase):
         self.assertContains(response, self.template.name)
         self.assertContains(response, self.patient.name)
 
+    def test_form_fill_view_includes_procedure_search(self):
+        """Test procedure search assets render when naming convention is used."""
+        template = PDFFormTemplateFactory(
+            created_by=self.user,
+            form_fields={
+                'procedure_code': {
+                    'type': 'text',
+                    'required': True,
+                    'label': 'Procedure Code'
+                },
+                'procedure_description': {
+                    'type': 'text',
+                    'required': True,
+                    'label': 'Procedure Description'
+                }
+            }
+        )
+
+        url = reverse('pdf_forms:form_fill', kwargs={
+            'template_id': template.id,
+            'patient_id': self.patient.id
+        })
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "pdf_forms_procedure_search.js")
+        self.assertContains(response, "/api/procedures/search/")
+        self.assertContains(response, "procedure-search-input")
+
     def test_form_fill_view_invalid_template(self):
         """Test form fill view with invalid template ID."""
         import uuid

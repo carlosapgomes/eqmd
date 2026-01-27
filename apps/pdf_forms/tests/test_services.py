@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django import forms
 from unittest.mock import patch, MagicMock, mock_open
+from apps.core.models import MedicalProcedure
 from apps.pdf_forms.services.form_generator import DynamicFormGenerator
 from apps.pdf_forms.services.pdf_overlay import PDFFormOverlay, REPORTLAB_AVAILABLE, PDF_LIBRARY_AVAILABLE
 from apps.pdf_forms.tests.factories import PDFFormTemplateFactory, UserFactory
@@ -65,6 +66,75 @@ class FormGeneratorTests(TestCase):
         self.assertEqual(field.label, 'Blood Type')
         self.assertFalse(field.required)
         self.assertEqual(len(field.choices), 4)
+
+    def test_procedure_search_display_field_added(self):
+        """Test procedure search naming convention adds display field and hides raw fields."""
+        template = PDFFormTemplateFactory(
+            form_fields={
+                'procedure_code': {
+                    'type': 'text',
+                    'required': True,
+                    'label': 'Procedure Code'
+                },
+                'procedure_description': {
+                    'type': 'text',
+                    'required': True,
+                    'label': 'Procedure Description'
+                }
+            }
+        )
+
+        form_class = self.generator.generate_form_class(template)
+        form_instance = form_class()
+
+        self.assertIn('procedure_display', form_instance.fields)
+        self.assertIn('procedure_code', form_instance.fields)
+        self.assertIn('procedure_description', form_instance.fields)
+        self.assertIsInstance(form_instance.fields['procedure_code'].widget, forms.HiddenInput)
+        self.assertIsInstance(form_instance.fields['procedure_description'].widget, forms.HiddenInput)
+        self.assertEqual(form_class._procedure_search_config['display_field'], 'procedure_display')
+        self.assertIn('procedure_display', form_class._unsectioned_fields)
+        self.assertNotIn('procedure_code', form_class._unsectioned_fields)
+        self.assertNotIn('procedure_description', form_class._unsectioned_fields)
+
+    def test_procedure_search_validation(self):
+        """Test procedure search validation for required selection."""
+        MedicalProcedure.objects.create(code='PROC001', description='Test procedure')
+
+        template = PDFFormTemplateFactory(
+            form_fields={
+                'procedure_code': {
+                    'type': 'text',
+                    'required': True,
+                    'label': 'Procedure Code'
+                },
+                'procedure_description': {
+                    'type': 'text',
+                    'required': True,
+                    'label': 'Procedure Description'
+                }
+            }
+        )
+
+        form_class = self.generator.generate_form_class(template)
+
+        valid_form = form_class(data={
+            'procedure_display': 'PROC001 - Test procedure',
+            'procedure_code': 'PROC001',
+            'procedure_description': 'Test procedure'
+        })
+        self.assertTrue(valid_form.is_valid())
+        self.assertNotIn('procedure_display', valid_form.cleaned_data)
+        self.assertEqual(valid_form.cleaned_data['procedure_code'], 'PROC001')
+        self.assertEqual(valid_form.cleaned_data['procedure_description'], 'Test procedure')
+
+        invalid_form = form_class(data={
+            'procedure_display': 'PROC999 - Fake',
+            'procedure_code': 'PROC999',
+            'procedure_description': 'Fake'
+        })
+        self.assertFalse(invalid_form.is_valid())
+        self.assertIn('procedure_display', invalid_form.errors)
 
 
 class PDFFormOverlayTests(TestCase):
