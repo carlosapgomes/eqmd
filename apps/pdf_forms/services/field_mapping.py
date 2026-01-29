@@ -5,6 +5,7 @@ Provides helpers for converting between different field representations and pati
 
 from django.core.exceptions import ValidationError
 from django.apps import apps
+from django.utils import timezone
 
 
 class DataFieldMapper:
@@ -70,6 +71,13 @@ class DataFieldMapper:
         'professional_registration_number': {'type': 'text', 'label': 'Número de Registro Profissional'},
     }
 
+    # Available system fields with their types and labels
+    SYSTEM_FIELD_MAPPINGS = {
+        'today_date': {'type': 'date', 'label': 'Data de Hoje'},
+        'now_datetime': {'type': 'datetime', 'label': 'Data e Hora Atual'},
+        'now_time': {'type': 'time', 'label': 'Hora Atual'},
+    }
+
     # Combined mappings for dropdown choices
     @classmethod
     def get_auto_fill_choices(cls):
@@ -108,6 +116,15 @@ class DataFieldMapper:
                 'label': mapping['label'],
                 'type': mapping['type'],
                 'optgroup': 'Dados do Usuário'
+            })
+
+        # Add system data options
+        for key, mapping in cls.SYSTEM_FIELD_MAPPINGS.items():
+            choices.append({
+                'value': f'system.{key}',
+                'label': mapping['label'],
+                'type': mapping['type'],
+                'optgroup': 'Data/Hora Atual'
             })
         
         return choices
@@ -155,8 +172,12 @@ class DataFieldMapper:
             if field_key not in cls.USER_FIELD_MAPPINGS:
                 available_fields = ', '.join(cls.USER_FIELD_MAPPINGS.keys())
                 return False, f"Invalid user field '{field_key}'. Available fields: {available_fields}"
+        elif source == 'system':
+            if field_key not in cls.SYSTEM_FIELD_MAPPINGS:
+                available_fields = ', '.join(cls.SYSTEM_FIELD_MAPPINGS.keys())
+                return False, f"Invalid system field '{field_key}'. Available fields: {available_fields}"
         else:
-            return False, f"Invalid auto-fill source '{source}'. Must be 'patient', 'hospital', or 'user'"
+            return False, f"Invalid auto-fill source '{source}'. Must be 'patient', 'hospital', 'user', or 'system'"
             
         return True, None
 
@@ -209,6 +230,8 @@ class DataFieldMapper:
             return cls.get_hospital_field_value(field_key)
         elif source == 'user':
             return cls.get_user_field_value(user, field_key)
+        elif source == 'system':
+            return cls.get_system_field_value(field_key)
         else:
             return None
 
@@ -310,6 +333,29 @@ class DataFieldMapper:
             return None
 
     @classmethod
+    def get_system_field_value(cls, field_key):
+        """
+        Get value for system auto-fill fields.
+
+        Args:
+            field_key (str): System field key (e.g., 'today_date', 'now_datetime', 'now_time')
+
+        Returns:
+            Any: Current date/time value or None if not found
+        """
+        if not field_key:
+            return None
+
+        now = timezone.localtime()
+        if field_key == 'today_date':
+            return now.date()
+        if field_key == 'now_datetime':
+            return now
+        if field_key == 'now_time':
+            return now.time()
+        return None
+
+    @classmethod
     def get_field_type_compatibility(cls, form_field_type, auto_fill_path):
         """
         Check if form field type is compatible with auto-fill field type.
@@ -338,6 +384,8 @@ class DataFieldMapper:
             data_field_type = cls.HOSPITAL_FIELD_MAPPINGS[field_key]['type']
         elif source == 'user' and field_key in cls.USER_FIELD_MAPPINGS:
             data_field_type = cls.USER_FIELD_MAPPINGS[field_key]['type']
+        elif source == 'system' and field_key in cls.SYSTEM_FIELD_MAPPINGS:
+            data_field_type = cls.SYSTEM_FIELD_MAPPINGS[field_key]['type']
         
         if not data_field_type:
             return True  # Invalid mapping is always "compatible"
@@ -350,8 +398,8 @@ class DataFieldMapper:
             'number': ['number', 'text'],
             'decimal': ['number', 'text'],
             'date': ['date', 'text'],
-            'datetime': ['date', 'text'],
-            'time': ['text'],
+            'datetime': ['date', 'datetime', 'text'],
+            'time': ['time', 'text'],
             'boolean': ['text', 'choice'],
             'choice': ['text', 'choice', 'number'],
             'multiple_choice': ['text', 'choice'],

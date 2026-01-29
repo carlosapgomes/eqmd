@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from apps.pdf_forms.services.field_mapping import DataFieldMapper, FieldMappingUtils
 from apps.pdf_forms.tests.factories import PatientFactory, WardFactory
 from unittest.mock import Mock
@@ -37,6 +38,41 @@ class DataFieldMapperTests(TestCase):
         ward_field = fields['ward.name']
         self.assertEqual(ward_field['type'], 'text')
         self.assertEqual(ward_field['label'], 'Nome da Ala')
+
+    def test_get_auto_fill_choices_includes_system_fields(self):
+        """Test auto-fill choices include system date/time options."""
+        choices = DataFieldMapper.get_auto_fill_choices()
+        values = {choice['value'] for choice in choices}
+
+        self.assertIn('system.today_date', values)
+        self.assertIn('system.now_datetime', values)
+        self.assertIn('system.now_time', values)
+
+    def test_validate_auto_fill_mapping_system_fields(self):
+        """Test validation of system auto-fill mappings."""
+        for field_key in ['today_date', 'now_datetime', 'now_time']:
+            is_valid, error = DataFieldMapper.validate_auto_fill_mapping(
+                'test_field', f'system.{field_key}'
+            )
+            self.assertTrue(is_valid)
+            self.assertIsNone(error)
+
+        is_valid, error = DataFieldMapper.validate_auto_fill_mapping(
+            'test_field', 'system.invalid_field'
+        )
+        self.assertFalse(is_valid)
+        self.assertIn('Invalid system field', error)
+
+    def test_get_auto_fill_value_system_fields(self):
+        """Test resolving system auto-fill values."""
+        value = DataFieldMapper.get_auto_fill_value('system.today_date')
+        self.assertEqual(value, timezone.localdate())
+
+        value = DataFieldMapper.get_auto_fill_value('system.now_datetime')
+        self.assertTrue(hasattr(value, 'strftime'))
+
+        value = DataFieldMapper.get_auto_fill_value('system.now_time')
+        self.assertTrue(hasattr(value, 'strftime'))
 
     def test_validate_patient_field_mapping_valid(self):
         """Test validation of valid patient field mappings."""
