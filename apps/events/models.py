@@ -66,6 +66,7 @@ class Event(SoftDeleteModel):
     TAG_ADDED_EVENT = 20              # NEW
     TAG_REMOVED_EVENT = 21            # NEW
     TAG_BULK_REMOVE_EVENT = 22        # NEW
+    CONSENT_FORM_EVENT = 23           # NEW
 
     EVENT_TYPE_CHOICES = (
         (HISTORY_AND_PHYSICAL_EVENT, "Anamnese e Exame Físico"),
@@ -91,6 +92,7 @@ class Event(SoftDeleteModel):
         (TAG_ADDED_EVENT, "Tag Adicionada"),                      # NEW
         (TAG_REMOVED_EVENT, "Tag Removida"),                      # NEW
         (TAG_BULK_REMOVE_EVENT, "Tags Removidas em Lote"),        # NEW
+        (CONSENT_FORM_EVENT, "Termo de Consentimento"),           # NEW
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -212,6 +214,7 @@ class Event(SoftDeleteModel):
             20: "bg-success",  # Tag Added
             21: "bg-warning",  # Tag Removed
             22: "bg-danger",  # Tag Bulk Remove
+            23: "bg-medical-primary",  # Consent Form
         }
         return badge_classes.get(self.event_type, "bg-secondary")
 
@@ -241,6 +244,7 @@ class Event(SoftDeleteModel):
             20: "bi-tag-fill",  # Tag Added
             21: "bi-tag",  # Tag Removed
             22: "bi-tags",  # Tag Bulk Remove
+            23: "bi-pen",  # Consent Form
         }
         return icon_classes.get(self.event_type, "bi-file-text")
 
@@ -270,6 +274,7 @@ class Event(SoftDeleteModel):
             20: "Tag +",  # Tag Adicionada
             21: "Tag -",  # Tag Removida
             22: "Tags --",  # Tags Removidas em Lote
+            23: "Consent.",  # Termo de Consentimento
         }
         return short_display_map.get(self.event_type, self.get_event_type_display())
 

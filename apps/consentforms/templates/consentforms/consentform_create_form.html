@@ -1,0 +1,118 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Novo Termo de Consentimento - {{ patient.name }}{% endblock %}
+
+{% block app_content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}">
+        {{ patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Novo Consentimento</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-pen text-medical-primary me-2"></i>
+    Novo Termo de Consentimento
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-file-earmark-text me-2"></i>
+      Termo de Consentimento
+    </h5>
+  </div>
+  <div class="card-body">
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+      {% for error in form.non_field_errors %}
+        <p class="mb-0">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not active_templates %}
+      <div class="alert alert-warning" role="alert">
+        Nenhum template ativo disponível. Solicite ao administrador que crie um template.
+      </div>
+    {% endif %}
+
+    <form method="post" class="needs-validation" novalidate>
+      {% csrf_token %}
+
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Paciente</label>
+          <input type="text" class="form-control" value="{{ patient.name }}" readonly>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Prontuário</label>
+          <input type="text" class="form-control" value="{{ patient_record_number }}" readonly>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label for="{{ form.template.id_for_label }}" class="form-label">{{ form.template.label }}</label>
+          {{ form.template }}
+          {% if form.template.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in form.template.errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label for="{{ form.document_date.id_for_label }}" class="form-label">{{ form.document_date.label }}</label>
+          {{ form.document_date }}
+          {% if form.document_date.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in form.document_date.errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="{{ form.procedure_description.id_for_label }}" class="form-label">{{ form.procedure_description.label }}</label>
+        {{ form.procedure_description }}
+        {% if form.procedure_description.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in form.procedure_description.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <button type="submit" class="btn btn-medical-primary" {% if not active_templates %}disabled{% endif %}>
+            <i class="bi bi-check-circle me-1"></i>
+            Salvar Consentimento
+          </button>
+          <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

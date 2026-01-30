@@ -1,0 +1,131 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Editar Anexos - {{ consentform.patient.name }}{% endblock %}
+
+{% block app_content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=consentform.patient.pk %}">
+        {{ consentform.patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'consentforms:consentform_detail' consentform.pk %}">Consentimento</a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Anexos</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-paperclip text-medical-primary me-2"></i>
+    Editar Anexos
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'consentforms:consentform_detail' consentform.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-header bg-medical-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-info-circle me-2"></i>
+      Regras de Anexos
+    </h6>
+  </div>
+  <div class="card-body">
+    <p class="mb-0">Você pode enviar <strong>1 a 3 imagens</strong> ou <strong>um único PDF</strong>. Não é permitido misturar tipos.</p>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header bg-medical-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-upload me-2"></i>
+      Enviar Anexos
+    </h6>
+  </div>
+  <div class="card-body">
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger" role="alert">
+        {% for error in form.non_field_errors %}
+          <p class="mb-0">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="{{ form.attachments.id_for_label }}" class="form-label">{{ form.attachments.label }}</label>
+        {{ form.attachments }}
+        {% if form.attachments.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in form.attachments.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      <button type="submit" class="btn btn-medical-primary">
+        <i class="bi bi-check-circle me-1"></i>
+        Salvar Anexos
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+  <div class="card-header bg-medical-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-paperclip me-2"></i>
+      Anexos Existentes
+    </h6>
+  </div>
+  <div class="card-body">
+    {% if attachments %}
+      <div class="row g-3">
+        {% for attachment in attachments %}
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <p class="mb-1">
+                    {% if attachment.file_type == 'pdf' %}
+                      <i class="bi bi-file-earmark-pdf text-danger me-1"></i>
+                    {% else %}
+                      <i class="bi bi-image text-primary me-1"></i>
+                    {% endif %}
+                    <a href="{{ attachment.file.url }}" target="_blank" rel="noopener">
+                      {{ attachment.original_filename }}
+                    </a>
+                  </p>
+                  {% if attachment.file_type == 'image' %}
+                    <img src="{{ attachment.file.url }}" alt="{{ attachment.original_filename }}" class="img-fluid rounded" style="max-height: 200px;">
+                  {% endif %}
+                </div>
+                <form method="post" action="{% url 'consentforms:consentattachment_delete' attachment.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Remover anexo">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted mb-0">Nenhum anexo enviado.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

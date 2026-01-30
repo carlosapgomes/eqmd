@@ -1,0 +1,110 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Termo de Consentimento - {{ consentform.patient.name }}{% endblock %}
+
+{% block app_content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=consentform.patient.pk %}">
+        {{ consentform.patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Consentimento</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-pen text-medical-primary me-2"></i>
+    Termo de Consentimento
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0 gap-2">
+    <a href="{% url 'consentforms:consentform_pdf' consentform.pk %}" class="btn btn-outline-danger">
+      <i class="bi bi-file-earmark-pdf me-1"></i>
+      PDF
+    </a>
+    {% if can_edit_consentform %}
+      <a href="{% url 'consentforms:consentform_update' consentform.pk %}" class="btn btn-outline-warning">
+        <i class="bi bi-paperclip me-1"></i>
+        Editar Anexos
+      </a>
+    {% endif %}
+    <a href="{% url 'patients:patient_events_timeline' patient_id=consentform.patient.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-medical-light">
+        <h6 class="card-title mb-0">
+          <i class="bi bi-info-circle me-2"></i>
+          Informações
+        </h6>
+      </div>
+      <div class="card-body">
+        <p class="mb-2"><strong>Paciente:</strong> {{ consentform.patient.name }}</p>
+        <p class="mb-2"><strong>Prontuário:</strong> {{ consentform.patient.get_current_record_number|default:"—" }}</p>
+        <p class="mb-2"><strong>Template:</strong> {{ consentform.template.name }}</p>
+        <p class="mb-2"><strong>Data do Documento:</strong> {{ consentform.document_date|date:"d/m/Y" }}</p>
+        <p class="mb-0"><strong>Criado por:</strong> {{ consentform.created_by.get_full_name }}</p>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-header bg-medical-light">
+        <h6 class="card-title mb-0">
+          <i class="bi bi-paperclip me-2"></i>
+          Anexos
+        </h6>
+      </div>
+      <div class="card-body">
+        {% if attachments %}
+          <ul class="list-unstyled mb-0">
+            {% for attachment in attachments %}
+              <li class="mb-2">
+                {% if attachment.file_type == 'pdf' %}
+                  <i class="bi bi-file-earmark-pdf me-1 text-danger"></i>
+                {% else %}
+                  <i class="bi bi-image me-1 text-primary"></i>
+                {% endif %}
+                <a href="{{ attachment.file.url }}" target="_blank" rel="noopener">
+                  {{ attachment.original_filename }}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted mb-0">Nenhum anexo enviado.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-medical-light">
+        <h6 class="card-title mb-0">
+          <i class="bi bi-file-text me-2"></i>
+          Conteúdo do Consentimento
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="markdown-content">
+          {{ consentform.rendered_markdown|linebreaks }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

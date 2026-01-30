@@ -26,6 +26,7 @@ from allauth.account.views import (
     EmailView, ConfirmEmailView
 )
 from apps.core.views import SignupBlockedView
+from apps.consentforms.views import ConsentTemplateListAPIView
 
 urlpatterns = [
     path(
@@ -55,6 +56,7 @@ urlpatterns = [
     path("events/", include("apps.events.urls", namespace="events")),
     path("dailynotes/", include("apps.dailynotes.urls", namespace="dailynotes")),
     path("simplenotes/", include("apps.simplenotes.urls", namespace="simplenotes")),
+    path("consentforms/", include("apps.consentforms.urls", namespace="consentforms")),
     path("mediafiles/", include("apps.mediafiles.urls", namespace="mediafiles")),
     path(
         "historyandphysicals/",
@@ -77,6 +79,7 @@ urlpatterns = [
     path("dischargereports/", include("apps.dischargereports.urls")),
     path("research/", include("apps.research.urls", namespace="apps.research")),
     path("auth/", include("apps.botauth.urls", namespace="botauth")),
+    path("api/consent-templates/", ConsentTemplateListAPIView.as_view(), name="consenttemplate_list_api"),
     # OIDC Provider endpoints (minimal exposure)
     # We only need the token endpoint for client_credentials
     path("o/", include("oidc_provider.urls", namespace="oidc_provider")),

@@ -408,6 +408,12 @@
                                         Formulário PDF
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'consentforms:consentform_create' patient.pk %}">
+                                        <i class="bi bi-pen me-2 text-medical-primary" aria-hidden="true"></i>
+                                        Termo de Consentimento
+                                    </a>
+                                </li>
                             {% endif %}
                             
                             <li><hr class="dropdown-divider"></li>
@@ -571,6 +577,12 @@
                                     <a class="dropdown-item" href="{% url 'pdf_forms:form_select' patient.pk %}">
                                         <i class="bi bi-file-earmark-pdf me-2 text-danger" aria-hidden="true"></i>
                                         Formulário PDF
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'consentforms:consentform_create' patient.pk %}">
+                                        <i class="bi bi-pen me-2 text-medical-primary" aria-hidden="true"></i>
+                                        Termo de Consentimento
                                     </a>
                                 </li>
                             {% endif %}
@@ -896,6 +908,7 @@
                                 Admission events (event_type=13) get the specialized template with admission details
                                 Discharge events (event_type=14) get the specialized template with discharge details
                                 Transfer events (event_type=17) get the specialized template for internal transfers
+                                ConsentForm events (event_type=23) get the specialized template with PDF action
                                 All other events use the default template
                                 {% endcomment %}
                                 {% if event.event_type == 0 %}
@@ -922,6 +935,8 @@
                                     {% include "events/partials/event_card_discharge.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 17 %}
                                     {% include "events/partials/event_card_transfer.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 23 %}
+                                    {% include "events/partials/event_card_consentform.html" with event=event event_data=event_data %}
                                 {% else %}
                                     {% include "events/partials/event_card_default.html" with event=event event_data=event_data %}
                                 {% endif %}
