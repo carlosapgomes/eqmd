@@ -125,12 +125,57 @@ class ConsentFormViewTests(TestCase):
             SimpleUploadedFile(
                 f"page{i}.jpg", b"\xff\xd8\xff\xe0" + bytes([i]) * 200, content_type="image/jpeg"
             )
-            for i in range(4)
+            for i in range(9)
         ]
         data = {"attachments": images}
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(ConsentAttachment.objects.filter(consent_form=consent).count(), 0)
+
+    def test_attachment_zip_download(self):
+        consent = ConsentForm.objects.create(
+            template=self.template,
+            patient=self.patient,
+            document_date=date(2026, 1, 1),
+            procedure_description="Procedimento",
+            rendered_markdown="Conteúdo",
+            rendered_at=timezone.now(),
+            created_by=self.user,
+            updated_by=self.user,
+            event_datetime=timezone.now(),
+            description="Termo de Consentimento - Template",
+            event_type=Event.CONSENT_FORM_EVENT,
+        )
+        image1 = SimpleUploadedFile(
+            "page1.jpg", b"\xff\xd8\xff\xe0" + b"0" * 200, content_type="image/jpeg"
+        )
+        image2 = SimpleUploadedFile(
+            "page2.jpg", b"\xff\xd8\xff\xe0" + b"1" * 200, content_type="image/jpeg"
+        )
+        ConsentAttachment.objects.create(
+            consent_form=consent,
+            file=image1,
+            original_filename="page1.jpg",
+            file_size=image1.size,
+            mime_type="image/jpeg",
+            file_type=ConsentAttachment.FILE_TYPE_IMAGE,
+            order=1,
+        )
+        ConsentAttachment.objects.create(
+            consent_form=consent,
+            file=image2,
+            original_filename="page2.jpg",
+            file_size=image2.size,
+            mime_type="image/jpeg",
+            file_type=ConsentAttachment.FILE_TYPE_IMAGE,
+            order=2,
+        )
+
+        url = reverse("consentforms:consentform_attachments_zip", kwargs={"pk": consent.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/zip")
+        self.assertTrue(response.content.startswith(b"PK"))
 
     def test_non_creator_cannot_edit_attachments(self):
         creator = create_user("creator")

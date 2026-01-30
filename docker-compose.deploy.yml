@@ -21,7 +21,10 @@ services:
       - eqmd_static_files:/app/staticfiles
     restart: unless-stopped
     depends_on:
-      - postgres
+      media-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 30s
@@ -53,6 +56,18 @@ services:
         echo 'Files copied:' && find /shared/static -type f | wc -l
       "
     profiles: ["init"]
+    networks:
+      - eqmd_net
+
+  media-init:
+    container_name: ${CONTAINER_PREFIX:-eqmd}_media_init
+    image: ${EQMD_IMAGE:-ghcr.io/yourorg/eqmd:latest}
+    user: "0:0"
+    volumes:
+      - eqmd_media_files:/app/media
+    command: >
+      sh -c "chown -R ${EQMD_UID:-1001}:${EQMD_GID:-1001} /app/media"
+    restart: "no"
     networks:
       - eqmd_net
 

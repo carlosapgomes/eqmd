@@ -274,7 +274,7 @@ class Event(SoftDeleteModel):
             20: "Tag +",  # Tag Adicionada
             21: "Tag -",  # Tag Removida
             22: "Tags --",  # Tags Removidas em Lote
-            23: "Consent.",  # Termo de Consentimento
+            23: "Termo",  # Termo de Consentimento
         }
         return short_display_map.get(self.event_type, self.get_event_type_display())
 

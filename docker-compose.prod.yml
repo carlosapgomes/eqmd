@@ -34,6 +34,9 @@ services:
       - static_files:/app/staticfiles
     
     restart: unless-stopped
+    depends_on:
+      media-init:
+        condition: service_completed_successfully
     
     # Health check configuration
     healthcheck:
@@ -71,6 +74,15 @@ services:
     
     # Only run when explicitly requested
     profiles: ["init"]
+
+  media-init:
+    image: ${EQMD_IMAGE:-ghcr.io/yourorg/eqmd:latest}
+    user: "0:0"
+    volumes:
+      - ./media:/app/media
+    command: >
+      sh -c "chown -R ${EQMD_UID:-1001}:${EQMD_GID:-1001} /app/media"
+    restart: "no"
 
 # Named volumes for persistent data
 volumes:

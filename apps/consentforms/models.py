@@ -96,6 +96,10 @@ class ConsentForm(Event):
         from django.urls import reverse
         return reverse("consentforms:consentform_update", kwargs={"pk": self.pk})
 
+    def get_delete_url(self):
+        from django.urls import reverse
+        return reverse("consentforms:consentform_delete", kwargs={"pk": self.pk})
+
     @property
     def content(self):
         return self.rendered_markdown

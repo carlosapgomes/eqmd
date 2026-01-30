@@ -1,4 +1,6 @@
+import io
 import logging
+import zipfile
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
@@ -8,14 +10,14 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import View
-from django.views.generic import DetailView, CreateView, FormView
+from django.views.generic import DetailView, CreateView, FormView, DeleteView
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
+from django.utils.text import slugify
 
-from apps.core.permissions.utils import can_access_patient, can_edit_event
+from apps.core.permissions.utils import can_access_patient, can_edit_event, can_delete_event
 from apps.patients.models import Patient
-from apps.pdfgenerator.services.pdf_generator import HospitalLetterheadGenerator
-from apps.pdfgenerator.services.markdown_parser import MarkdownToPDFParser
+from .services.pdf_generator import ConsentFormPDFGenerator
 
 from .models import ConsentForm, ConsentTemplate, ConsentAttachment
 from .forms import ConsentFormCreateForm, ConsentAttachmentUploadForm
@@ -98,6 +100,7 @@ class ConsentFormDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["can_edit_consentform"] = can_edit_event(self.request.user, self.object)
+        context["can_delete_consentform"] = can_delete_event(self.request.user, self.object)
         context["attachments"] = self.object.attachments.all()
         return context
 
@@ -151,6 +154,68 @@ class ConsentFormUpdateView(LoginRequiredMixin, PermissionRequiredMixin, FormVie
         return redirect("consentforms:consentform_update", pk=self.consent_form.pk)
 
 
+class ConsentFormDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = ConsentForm
+    template_name = "consentforms/consentform_confirm_delete.html"
+    context_object_name = "consentform"
+    permission_required = "events.delete_event"
+
+    def get_success_url(self):
+        return reverse_lazy(
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.pk},
+        )
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        if not can_access_patient(self.request.user, obj.patient):
+            raise PermissionDenied("You don't have permission to access this patient")
+        if not can_delete_event(self.request.user, obj):
+            raise PermissionDenied("You don't have permission to delete this consent form")
+        return obj
+
+    def get_queryset(self):
+        return ConsentForm.objects.select_related("patient", "created_by")
+
+    def delete(self, request, *args, **kwargs):
+        consent_form = self.get_object()
+        patient_name = consent_form.patient.name
+        messages.success(request, f"Termo de consentimento de {patient_name} excluído com sucesso.")
+        return super().delete(request, *args, **kwargs)
+
+
+class ConsentFormAttachmentsZipView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "events.view_event"
+
+    def get(self, request, *args, **kwargs):
+        consent_form = get_object_or_404(ConsentForm, pk=kwargs["pk"])
+        if not can_access_patient(request.user, consent_form.patient):
+            raise PermissionDenied("You don't have permission to access this patient")
+
+        attachments = consent_form.attachments.order_by("order", "created_at", "original_filename")
+        if not attachments.exists():
+            messages.info(request, "Nenhum anexo disponível para download.")
+            return redirect("consentforms:consentform_detail", pk=consent_form.pk)
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
+            for index, attachment in enumerate(attachments, start=1):
+                filename = attachment.original_filename or f"anexo-{index}.jpg"
+                safe_name = normalize_filename(filename)
+                entry_name = f"{index:02d}-{safe_name}" if safe_name else f"{index:02d}-anexo.jpg"
+                with attachment.file.open("rb") as file_obj:
+                    zip_file.writestr(entry_name, file_obj.read())
+
+        buffer.seek(0)
+        safe_patient = slugify(consent_form.patient.name) or "paciente"
+        date_str = consent_form.document_date.strftime("%Y%m%d")
+        response = HttpResponse(buffer.getvalue(), content_type="application/zip")
+        response["Content-Disposition"] = (
+            f'attachment; filename="termo-assinado-{safe_patient}-{date_str}.zip"'
+        )
+        return response
+
+
 @method_decorator(require_POST, name="dispatch")
 class ConsentAttachmentDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = "events.change_event"
@@ -179,31 +244,8 @@ class ConsentFormPDFView(LoginRequiredMixin, View):
             if not can_access_patient(request.user, consent_form.patient):
                 raise PermissionDenied("You don't have permission to access this patient")
 
-            pdf_generator = HospitalLetterheadGenerator()
-            markdown_parser = MarkdownToPDFParser(pdf_generator.styles)
-
-            content_elements = markdown_parser.parse(consent_form.rendered_markdown)
-
-            patient_data = {
-                "name": consent_form.patient.name,
-                "fiscal_number": consent_form.patient.fiscal_number or "—",
-                "birth_date": consent_form.patient.birthday.strftime("%d/%m/%Y") if consent_form.patient.birthday else "—",
-                "health_card_number": consent_form.patient.healthcard_number or "—",
-            }
-
-            doctor = consent_form.created_by
-            doctor_info = {
-                "name": doctor.get_full_name() or doctor.username,
-                "profession": getattr(doctor, "profession", "Médico"),
-                "registration_number": getattr(doctor, "professional_registration_number", ""),
-            }
-
-            pdf_buffer = pdf_generator.generate_pdf(
-                content_elements=content_elements,
-                document_title=consent_form.template.name,
-                patient_data=patient_data,
-                doctor_info=doctor_info,
-            )
+            pdf_generator = ConsentFormPDFGenerator()
+            pdf_buffer = pdf_generator.generate_from_consent(consent_form)
 
             response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
             safe_name = "".join(
