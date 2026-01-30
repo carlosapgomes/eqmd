@@ -44,7 +44,13 @@
     </h6>
   </div>
   <div class="card-body">
-    <p class="mb-0">Você pode enviar <strong>1 a 3 imagens</strong> ou <strong>um único PDF</strong>. Não é permitido misturar tipos.</p>
+    <p class="mb-1">
+      Você pode enviar <strong>até 8 fotos</strong> do termo assinado.
+      A ordem seguirá o upload.
+    </p>
+    <p class="mb-0 text-muted">
+      As imagens são redimensionadas automaticamente (largura máxima 1600px, qualidade 0.75).
+    </p>
   </div>
 </div>
 
@@ -66,7 +72,7 @@
 
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
-      <div class="mb-3">
+      <div class="mb-3" id="attachmentUploadConfig" data-existing-count="{{ attachments|length }}">
         <label for="{{ form.attachments.id_for_label }}" class="form-label">{{ form.attachments.label }}</label>
         {{ form.attachments }}
         {% if form.attachments.errors %}
@@ -74,6 +80,7 @@
             {% for error in form.attachments.errors %}{{ error }}{% endfor %}
           </div>
         {% endif %}
+        <small id="attachmentsHelp" class="form-text text-muted d-block mt-1"></small>
       </div>
       <button type="submit" class="btn btn-medical-primary">
         <i class="bi bi-check-circle me-1"></i>
@@ -128,4 +135,108 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("{{ form.attachments.id_for_label }}");
+    const config = document.getElementById("attachmentUploadConfig");
+    const helpText = document.getElementById("attachmentsHelp");
+    if (!input || !config) {
+      return;
+    }
+
+    const existingCount = parseInt(config.dataset.existingCount || "0", 10);
+    const maxImages = 8;
+    const maxWidth = 1600;
+    const jpegQuality = 0.75;
+
+    const updateHelp = (message, isError = false) => {
+      if (!helpText) {
+        return;
+      }
+      helpText.textContent = message;
+      helpText.classList.toggle("text-danger", isError);
+      helpText.classList.toggle("text-muted", !isError);
+    };
+
+    const resizeImage = (file) => new Promise((resolve) => {
+      if (!file.type.startsWith("image/")) {
+        resolve(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onerror = () => resolve(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onerror = () => resolve(file);
+        img.onload = () => {
+          const scale = Math.min(1, maxWidth / img.width);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                resolve(file);
+                return;
+              }
+              const baseName = file.name.replace(/\.[^.]+$/, "");
+              const resizedFile = new File(
+                [blob],
+                `${baseName}.jpg`,
+                { type: "image/jpeg", lastModified: file.lastModified }
+              );
+              resolve(resizedFile);
+            },
+            "image/jpeg",
+            jpegQuality
+          );
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    input.addEventListener("change", async function () {
+      const files = Array.from(input.files || []);
+      if (!files.length) {
+        updateHelp("");
+        return;
+      }
+
+      const allowedSlots = Math.max(0, maxImages - existingCount);
+      if (files.length > allowedSlots) {
+        updateHelp(
+          `Você pode enviar no máximo ${allowedSlots} foto${allowedSlots === 1 ? "" : "s"} agora.`,
+          true
+        );
+        input.value = "";
+        return;
+      }
+
+      updateHelp("Processando imagens, aguarde...");
+      input.disabled = true;
+
+      const processed = [];
+      for (const file of files) {
+        processed.push(await resizeImage(file));
+      }
+
+      const dataTransfer = new DataTransfer();
+      processed.forEach((file) => dataTransfer.items.add(file));
+      input.files = dataTransfer.files;
+
+      input.disabled = false;
+      updateHelp(
+        `Pronto! ${processed.length} foto${processed.length === 1 ? "" : "s"} pronta${processed.length === 1 ? "" : "s"} para envio.`
+      );
+    });
+  });
+</script>
 {% endblock %}

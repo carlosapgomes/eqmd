@@ -374,6 +374,8 @@ DJANGO_DRF_FILEPOND_FIELD_NAME = 'file'
 HOSPITAL_CONFIG = {
     'name': os.getenv('HOSPITAL_NAME', 'Medical Center'),
     'address': os.getenv('HOSPITAL_ADDRESS', '123 Medical Street, Medical City'),
+    'city': os.getenv('HOSPITAL_CITY', ''),
+    'state_full': os.getenv('HOSPITAL_STATE_FULL', ''),
     'phone': os.getenv('HOSPITAL_PHONE', '+1 (555) 123-4567'),
     'email': os.getenv('HOSPITAL_EMAIL', 'info@medicalcenter.com'),
     'website': os.getenv('HOSPITAL_WEBSITE', ''),

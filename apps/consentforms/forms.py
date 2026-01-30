@@ -15,7 +15,10 @@ class ConsentFormCreateForm(forms.ModelForm):
     )
     document_date = forms.DateField(
         label="Data do Documento",
-        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control"},
+            format="%Y-%m-%d",
+        ),
     )
     procedure_description = forms.CharField(
         label="Descrição do Procedimento",
@@ -38,7 +41,14 @@ class ConsentFormCreateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if not self.instance.pk:
-            self.fields["document_date"].initial = timezone.localdate()
+            self.fields["document_date"].initial = timezone.localdate().strftime(
+                "%Y-%m-%d"
+            )
+
+        self.fields["document_date"].input_formats = [
+            "%Y-%m-%d",
+            "%d/%m/%Y",
+        ]
 
     def clean_template(self):
         template = self.cleaned_data.get("template")
@@ -139,9 +149,11 @@ class MultiFileField(forms.FileField):
 
 class ConsentAttachmentUploadForm(forms.Form):
     attachments = MultiFileField(
-        label="Anexos",
+        label="Fotos do Termo Assinado",
         required=False,
-        widget=MultiFileInput(attrs={"multiple": True, "class": "form-control"}),
+        widget=MultiFileInput(
+            attrs={"multiple": True, "class": "form-control", "accept": "image/*"}
+        ),
     )
 
     def __init__(self, *args, **kwargs):
@@ -152,7 +164,7 @@ class ConsentAttachmentUploadForm(forms.Form):
         cleaned_data = super().clean()
         files = self.files.getlist("attachments")
         if not files:
-            raise ValidationError("Selecione pelo menos um arquivo")
+            raise ValidationError("Selecione pelo menos uma foto")
 
         file_type = validate_consent_attachment_files(
             files, existing_attachments=self.existing_attachments

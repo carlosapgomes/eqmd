@@ -9,13 +9,15 @@ ALLOWED_PLACEHOLDERS = {
     "patient_record_number",
     "document_date",
     "procedure_description",
+    "page_break",
 }
 
 REQUIRED_PLACEHOLDERS = {
     "patient_name",
     "patient_record_number",
-    "document_date",
 }
+
+PAGE_BREAK_TOKEN = "<<PAGE_BREAK>>"
 
 
 def extract_placeholders(markdown_text):
@@ -61,6 +63,8 @@ def render_template(markdown_text, context):
         key for key in placeholders
         if key not in context or context.get(key) in (None, "")
     ]
+    if "page_break" in missing_values:
+        missing_values.remove("page_break")
     if missing_values:
         raise ValidationError(
             f"Missing values for placeholders: {', '.join(sorted(missing_values))}"
@@ -68,6 +72,8 @@ def render_template(markdown_text, context):
 
     def replace(match):
         key = match.group(1)
+        if key == "page_break":
+            return PAGE_BREAK_TOKEN
         value = context.get(key)
         if value in (None, ""):
             raise ValidationError(f"Missing value for placeholder: {key}")

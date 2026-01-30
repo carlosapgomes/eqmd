@@ -19,7 +19,7 @@ class ConsentTemplateRendererTests(TestCase):
             validate_template_placeholders(template)
 
     def test_validate_template_missing_required(self):
-        template = "Consentimento {{ patient_name }}"
+        template = "Consentimento {{ patient_name }} {{ document_date }}"
         with self.assertRaises(ValidationError):
             validate_template_placeholders(template)
 
@@ -39,3 +39,11 @@ class ConsentTemplateRendererTests(TestCase):
         template = "{{ patient_name }} {{ document_date }} {{ patient_record_number }}"
         with self.assertRaises(ValidationError):
             render_template(template, {"patient_name": "Ana"})
+
+    def test_page_break_placeholder(self):
+        template = "{{ patient_name }}{{ page_break }}{{ patient_record_number }}"
+        rendered = render_template(
+            template,
+            {"patient_name": "Ana", "patient_record_number": "123"},
+        )
+        self.assertIn("<<PAGE_BREAK>>", rendered)

@@ -167,16 +167,17 @@ class NumberedCanvas(canvas.Canvas):
         # y_pos = 1.8 * cm  # Just above page number
         y_pos = 2.5 * cm  # Just above page number
 
-        # Signature text inside box
+        # Signature text inside box (right-aligned)
         self.setFont("Times-Roman", 8)
         self.setFillColor(black)
-        self.drawString(x_pos + 2.5 * cm, y_pos + 0.5 * cm, f"{doctor_name}")
-        self.drawString(x_pos + 2.0 * cm, y_pos + 0.2 * cm, f"CRM: {crm_field}")
+        right_x = x_pos + 4.8 * cm
+        self.drawRightString(right_x, y_pos + 0.5 * cm, f"{doctor_name}")
+        self.drawRightString(right_x, y_pos + 0.2 * cm, f"CRM: {crm_field}")
 
         # Signature line
         self.setLineWidth(0.3)
         self.line(
-            x_pos + 1.8 * cm, y_pos + 0.8 * cm, x_pos + 4.8 * cm, y_pos + 0.8 * cm
+            x_pos + 1.8 * cm, y_pos + 0.8 * cm, right_x, y_pos + 0.8 * cm
         )
 
     def _get_logo_path(self):
