@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     "apps.events",  # Events management app
     "apps.dailynotes",  # Daily notes app
     "apps.simplenotes",  # Simple notes app
+    "apps.consentforms",  # Consent forms app
     "apps.mediafiles",  # Media files app
     "apps.pdf_forms",  # PDF forms app
     "apps.historyandphysicals",  # History and Physical examination app
