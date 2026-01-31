@@ -1,13 +1,13 @@
 /**
- * PDF Download functionality with spinner and new tab opening
+ * PDF Download functionality with spinner
  * 
  * Features:
  * - Fetch-based download (no page reload)
  * - Loading spinner during generation
  * - Automatic file download
- * - Opens PDF in new tab for viewing
  * - Error handling with user feedback
  * - Proper cleanup of object URLs
+ * - Opens PDF in a new tab (no forced download)
  */
 
 class PDFDownloader {
@@ -34,9 +34,13 @@ class PDFDownloader {
     const filename = button.dataset.filename || 'document.pdf';
     const contentSpan = button.querySelector('.pdf-btn-content');
     const spinnerSpan = button.querySelector('.pdf-btn-spinner');
+    const newTab = this.openPlaceholderTab();
     
     if (!pdfUrl) {
       console.error('PDF URL not found');
+      if (newTab) {
+        newTab.close();
+      }
       return;
     }
     
@@ -66,22 +70,22 @@ class PDFDownloader {
       
       // Create object URL
       const pdfObjectUrl = URL.createObjectURL(blob);
-      
-      // Trigger download
-      this.downloadFile(pdfObjectUrl, filename);
-      
-      // Open in new tab
-      this.openInNewTab(pdfObjectUrl);
-      
+
+      // Open in new tab (for printing/viewing)
+      this.openInNewTab(newTab, pdfObjectUrl, filename);
+
       // Clean up object URL after delay
       this.scheduleCleanup(pdfObjectUrl);
-      
+
       // Show success feedback
       this.showSuccessMessage('PDF gerado com sucesso!');
       
     } catch (error) {
       console.error('Error downloading PDF:', error);
       this.showErrorMessage(this.getErrorMessage(error));
+      if (newTab) {
+        newTab.close();
+      }
     } finally {
       // Hide loading state
       this.setLoadingState(button, contentSpan, spinnerSpan, false);
@@ -122,21 +126,24 @@ class PDFDownloader {
     }
   }
 
-  downloadFile(objectUrl, filename) {
-    const downloadLink = document.createElement('a');
-    downloadLink.href = objectUrl;
-    downloadLink.download = filename;
-    downloadLink.style.display = 'none';
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
+  openPlaceholderTab() {
+    try {
+      return window.open('', '_blank');
+    } catch (error) {
+      return null;
+    }
   }
 
-  openInNewTab(objectUrl) {
-    // Small delay to ensure download starts first
-    setTimeout(() => {
-      window.open(objectUrl, '_blank');
-    }, 100);
+  openInNewTab(newTab, objectUrl, filename) {
+    if (newTab) {
+      newTab.document.title = filename;
+      newTab.location = objectUrl;
+      newTab.focus();
+      return;
+    }
+
+    // Fallback if popup was blocked
+    window.open(objectUrl, '_blank');
   }
 
   scheduleCleanup(objectUrl) {

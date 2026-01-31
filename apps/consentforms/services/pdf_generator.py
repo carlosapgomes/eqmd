@@ -49,7 +49,8 @@ class ConsentFormPDFGenerator(HospitalLetterheadGenerator):
         if document_date is None:
             from django.utils import timezone
             document_date = timezone.localdate()
-        content = [Spacer(1, 24)]
+        # content = [Spacer(1, 24)]
+        content = [Spacer(1, 12)]
         location_line = self._build_location_line(document_date)
 
         date_style = ParagraphStyle(
@@ -60,7 +61,8 @@ class ConsentFormPDFGenerator(HospitalLetterheadGenerator):
             spaceAfter=12,
         )
         content.append(Paragraph(location_line, date_style))
-        content.append(Spacer(1, 24))
+        content.append(Spacer(1, 12))
+        # content.append(Spacer(1, 24))
         content.append(Paragraph("_" * 60, self.styles["Signature"]))
 
         doctor_name = (

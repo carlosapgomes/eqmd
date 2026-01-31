@@ -59,5 +59,16 @@
             <i class="bi bi-paperclip" aria-hidden="true"></i>
         </a>
     {% endif %}
+
+    {% if perms.events.delete_event and event_data.can_delete %}
+        <a href="{% url 'consentforms:consentform_delete' event.pk %}"
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir termo de consentimento"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="Excluir">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+        </a>
+    {% endif %}
 </div>
 {% endblock event_actions %}

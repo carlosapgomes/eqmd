@@ -335,7 +335,8 @@ class HospitalLetterheadGenerator:
     def _create_signature_section(self, doctor_info):
         """Create medical signature section"""
         content = []
-        content.append(Spacer(1, 24))
+        # content.append(Spacer(1, 24))
+        content.append(Spacer(1, 12))
 
         # Date and location line with auto-filled current date
         from datetime import datetime
@@ -347,7 +348,7 @@ class HospitalLetterheadGenerator:
                 self.styles["PatientInfo"],
             )
         )
-        content.append(Spacer(1, 12))
+        # content.append(Spacer(1, 12))
 
         # Signature line
         content.append(Paragraph("_" * 60, self.styles["Signature"]))
