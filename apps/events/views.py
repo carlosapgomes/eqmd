@@ -20,6 +20,7 @@ from apps.patients.models import Patient
 from apps.core.permissions.utils import (
     can_access_patient, 
     can_edit_event,
+    can_delete_event,
     can_edit_admission_data,
     can_edit_discharge_data,
     can_cancel_discharge,
@@ -197,14 +198,16 @@ class PatientEventsTimelineView(ListView):
         
         # Pre-calculate edit permissions for all events
         edit_permissions = {}
+        delete_permissions = {}
         for event in events:
             edit_permissions[event.pk] = can_edit_event(self.request.user, event)
+            delete_permissions[event.pk] = can_delete_event(self.request.user, event)
         
         for event in events:
             event_data = {
                 'event': event,
                 'can_edit': edit_permissions.get(event.pk, False),
-                'can_delete': edit_permissions.get(event.pk, False),
+                'can_delete': delete_permissions.get(event.pk, False),
                 'excerpt': event.get_excerpt(150)
             }
             
@@ -293,7 +296,7 @@ def event_api_detail(request, pk):
         'created_by_name': event.created_by.get_full_name(),
         'created_by_profession': getattr(event.created_by, 'profession', ''),
         'can_edit': can_edit_event(request.user, event),
-        'can_delete': can_edit_event(request.user, event),
+        'can_delete': can_delete_event(request.user, event),
         'detail_url': reverse('events:event_detail', args=[event.pk]),
         'edit_url': reverse('events:event_edit', args=[event.pk]) if can_edit_event(request.user, event) else None,
     }
