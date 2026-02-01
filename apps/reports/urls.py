@@ -10,6 +10,7 @@ from .views.report_views import (
     ReportUpdateView,
     ReportDeleteView,
 )
+from .views.pdf_views import ReportPDFView
 
 app_name = 'reports'
 
@@ -24,4 +25,5 @@ urlpatterns = [
     path('<uuid:pk>/', ReportDetailView.as_view(), name='report_detail'),
     path('<uuid:pk>/update/', ReportUpdateView.as_view(), name='report_update'),
     path('<uuid:pk>/delete/', ReportDeleteView.as_view(), name='report_delete'),
+    path('<uuid:pk>/pdf/', ReportPDFView.as_view(), name='report_pdf'),
 ]

@@ -150,8 +150,12 @@
   <div class="card-body">
     <div class="d-flex justify-content-between flex-wrap gap-2">
       <div>
+        <a href="{% url 'reports:report_pdf' pk=report.pk %}" class="btn btn-medical-primary">
+          <i class="bi bi-file-earmark-pdf me-1"></i>
+          Baixar PDF
+        </a>
         {% if report.created_by == user and report.can_be_edited %}
-          <a href="{% url 'reports:report_update' pk=report.pk %}" class="btn btn-medical-primary">
+          <a href="{% url 'reports:report_update' pk=report.pk %}" class="btn btn-outline-secondary">
             <i class="bi bi-pencil me-1"></i>
             Editar Relatório
           </a>
