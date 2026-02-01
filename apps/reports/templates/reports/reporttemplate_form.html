@@ -1,0 +1,150 @@
+{% extends 'base_app.html' %}
+
+{% block title %}{% if object %}Editar{% else %}Novo{% endif %} Template de Relatório{% endblock %}
+
+{% block app_content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'core:landing_page' %}">
+        <i class="bi bi-house me-1"></i>
+        Início
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'reports:template_list' %}">
+        Templates de Relatório
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      {% if object %}Editar{% else %}Novo{% endif %} Template
+    </li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-file-earmark-text text-medical-primary me-2"></i>
+    {% if object %}Editar{% else %}Novo{% endif %} Template
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'reports:template_list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-pencil-square me-2"></i>
+      {% if object %}Editar{% else %}Criar{% endif %} Template de Relatório
+    </h5>
+  </div>
+  <div class="card-body">
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+      {% for error in form.non_field_errors %}
+        <p class="mb-0">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" class="needs-validation" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label for="{{ form.name.id_for_label }}" class="form-label">
+          {{ form.name.label }} <span class="text-danger">*</span>
+        </label>
+        {{ form.name }}
+        {% if form.name.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in form.name.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+        <div class="form-text">
+          Um nome descritivo para identificar este template.
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="{{ form.markdown_body.id_for_label }}" class="form-label">
+          {{ form.markdown_body.label }} <span class="text-danger">*</span>
+        </label>
+        {{ form.markdown_body }}
+        {% if form.markdown_body.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in form.markdown_body.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+        <div class="form-text">
+          Use os placeholders disponíveis: <code>{{patient_name}}</code>, <code>{{patient_record_number}}</code>.
+          Opcionalmente, você pode usar <code>{{page_break}}</code> para quebras de página.
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <div class="form-check form-switch">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+              {{ form.is_active.label }}
+            </label>
+          </div>
+          <div class="form-text">
+            Templates inativos não podem ser usados para criar relatórios.
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-check form-switch">
+            {{ form.is_public }}
+            <label class="form-check-label" for="{{ form.is_public.id_for_label }}">
+              {{ form.is_public.label }}
+            </label>
+          </div>
+          <div class="form-text">
+            Templates públicos são visíveis para todos os usuários autenticados.
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <button type="submit" class="btn btn-medical-primary">
+            <i class="bi bi-check-circle me-1"></i>
+            {% if object %}Salvar{% else %}Criar{% endif %} Template
+          </button>
+          <a href="{% url 'reports:template_list' %}" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mt-3 shadow-sm">
+  <div class="card-header bg-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-info-circle me-2"></i>
+      Sobre Placeholders
+    </h6>
+  </div>
+  <div class="card-body">
+    <p class="mb-2">
+      Os placeholders são substituídos automaticamente quando um relatório é criado a partir deste template.
+    </p>
+    <ul class="mb-0">
+      <li><code>{{patient_name}}</code> - Nome completo do paciente</li>
+      <li><code>{{patient_record_number}}</code> - Número do prontuário do paciente</li>
+      <li><code>{{page_break}}</code> - Força uma quebra de página no PDF (opcional)</li>
+    </ul>
+    <p class="mb-0 mt-2 text-muted small">
+      Todos os templates devem incluir os placeholders <code>{{patient_name}}</code> e <code>{{patient_record_number}}</code>.
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'base_app.html' %}
+{% load reports_extras %}
+
+{% block title %}Templates de Relatório{% endblock %}
+
+{% block app_content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'core:landing_page' %}">
+        <i class="bi bi-house me-1"></i>
+        Início
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Templates de Relatório</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-file-earmark-text text-medical-primary me-2"></i>
+    Templates de Relatório
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    {% if user|can_manage_report_templates %}
+      <a href="{% url 'reports:template_create' %}" class="btn btn-medical-primary">
+        <i class="bi bi-plus-circle me-1"></i>
+        Novo Template
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-list-ul me-2"></i>
+      Lista de Templates
+    </h5>
+  </div>
+  <div class="card-body">
+    {% if templates %}
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Criado por</th>
+              <th>Criado em</th>
+              <th>Status</th>
+              <th>Visibilidade</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for template in templates %}
+            <tr>
+              <td>
+                <strong>{{ template.name }}</strong>
+              </td>
+              <td>{{ template.created_by.get_full_name|default:template.created_by.username }}</td>
+              <td>{{ template.created_at|date:"d/m/Y H:i" }}</td>
+              <td>
+                {% if template.is_active %}
+                  <span class="badge bg-success">Ativo</span>
+                {% else %}
+                  <span class="badge bg-secondary">Inativo</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if template.is_public %}
+                  <span class="badge bg-info">Público</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Privado</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user|can_manage_report_templates %}
+                  <a href="{% url 'reports:template_update' pk=template.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i>
+                    Editar
+                  </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if is_paginated %}
+      <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page=1">Primeira</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Primeira</span></li>
+            <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+          {% endif %}
+
+          <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Próxima</span></li>
+            <li class="page-item disabled"><span class="page-link">Última</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    {% else %}
+      <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        Nenhum template encontrado.
+        {% if user|can_manage_report_templates %}
+          <a href="{% url 'reports:template_create' %}" class="alert-link">Crie o primeiro template</a>.
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if messages %}
+<div class="mt-3">
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
