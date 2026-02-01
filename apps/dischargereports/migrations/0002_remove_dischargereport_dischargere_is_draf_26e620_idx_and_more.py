@@ -10,12 +10,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveIndex(
-            model_name='dischargereport',
-            name='dischargere_is_draf_26e620_idx',
-        ),
-        migrations.RemoveField(
-            model_name='dischargereport',
-            name='is_draft',
+        migrations.RunSQL(
+            sql=(
+                "DROP INDEX IF EXISTS dischargere_is_draf_26e620_idx;"
+                "ALTER TABLE dischargereports_dischargereport DROP COLUMN IF EXISTS is_draft;"
+            ),
+            reverse_sql=migrations.RunSQL.noop,
         ),
     ]
