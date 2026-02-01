@@ -62,15 +62,26 @@ class DischargeReport(Event):
             models.Index(fields=['medical_specialty']),
         ]
 
+    def __init__(self, *args, **kwargs):
+        is_draft_provided = 'is_draft' in kwargs
+        if not is_draft_provided:
+            try:
+                field_names = [field.attname for field in self._meta.concrete_fields]
+                is_draft_index = field_names.index('is_draft')
+                is_draft_provided = len(args) > is_draft_index
+            except ValueError:
+                is_draft_provided = False
+
+        super().__init__(*args, **kwargs)
+
+        if not is_draft_provided and self._state.adding:
+            self.is_draft = True
+
     def save(self, *args, **kwargs):
         """Override save to set the correct event type and clean text fields."""
         from .utils import clean_discharge_report_text_fields
         
         self.event_type = Event.DISCHARGE_REPORT_EVENT
-        
-        # Set default draft status for new discharge reports
-        if not self.pk and not hasattr(self, 'is_draft'):
-            self.is_draft = True
         
         # Clean text fields before saving
         clean_discharge_report_text_fields(self)
