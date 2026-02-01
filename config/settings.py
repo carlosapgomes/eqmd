@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     "apps.outpatientprescriptions",  # Outpatient prescriptions app
     "apps.pdfgenerator",  # PDF generator app
     "apps.dischargereports",  # Discharge reports app
+    "apps.reports",  # Reports app
     "apps.research",  # Clinical research app
     # Bot Authentication (OIDC-based delegation)
     "apps.botauth.apps.BotauthConfig",  # Bot authentication app
