@@ -104,6 +104,22 @@ class Report(Event):
         history_change_reason_field=models.TextField(null=True),
     )
 
+    @property
+    def can_be_edited(self):
+        """
+        Check if report is within edit window (24 hours).
+
+        Override Event's can_be_edited to use event_datetime instead of created_at,
+        since event_datetime is what we control for Reports.
+        """
+        if not self.event_datetime:
+            return False
+        from datetime import timedelta
+        from django.utils import timezone
+
+        edit_deadline = self.event_datetime + timedelta(hours=24)
+        return timezone.now() <= edit_deadline
+
     def save(self, *args, **kwargs):
         """Override save to set event_type to REPORT_EVENT."""
         if not self.event_type:
