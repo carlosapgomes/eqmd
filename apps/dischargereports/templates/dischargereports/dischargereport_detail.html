@@ -46,14 +46,21 @@
             </div>
           </div>
           <div class="btn-group">
-            <!-- Print Button -->
-            <a
-              href="{% url 'apps.dischargereports:dischargereport_print' pk=report.pk %}"
-              class="btn btn-outline-secondary"
-              target="_blank"
+            <button
+              type="button"
+              class="btn btn-outline-danger pdf-download-btn"
+              data-pdf-url="{% url 'apps.dischargereports:dischargereport_pdf' pk=report.pk %}"
+              data-filename="relatorio-alta-{{ report.patient.name|slugify }}-{{ report.discharge_date|date:'d-m-Y' }}.pdf"
             >
-              <i class="bi bi-printer"></i> Imprimir
-            </a>
+              <span class="pdf-btn-content">
+                <i class="bi bi-file-earmark-pdf me-1"></i>
+                PDF
+              </span>
+              <span class="pdf-btn-spinner d-none">
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Gerando...
+              </span>
+            </button>
 
             <!-- Edit Button -->
             {% if can_edit_report %}
@@ -72,7 +79,7 @@
               href="{% url 'apps.dischargereports:dischargereport_delete' pk=report.pk %}"
               class="btn btn-outline-danger"
             >
-              <i class="bi bi-trash"></i> Excluir Rascunho
+              <i class="bi bi-trash"></i> Excluir
             </a>
             {% endif %}
 
@@ -191,3 +198,7 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/pdf-download.js' %}"></script>
+{% endblock extra_scripts %}

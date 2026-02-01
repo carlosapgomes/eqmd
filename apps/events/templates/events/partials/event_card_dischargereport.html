@@ -20,19 +20,23 @@ Extends the base event card for discharge report events
     <span class="visually-hidden">Visualizar</span>
   </a>
 
-  <!-- Print Button -->
-  <a
-    href="{% url 'apps.dischargereports:dischargereport_print' pk=event.pk %}"
-    class="btn btn-outline-secondary btn-sm"
-    target="_blank"
-    aria-label="Imprimir relatório"
+  <button
+    type="button"
+    class="btn btn-outline-danger btn-sm pdf-download-btn"
+    data-pdf-url="{% url 'apps.dischargereports:dischargereport_pdf' pk=event.pk %}"
+    data-filename="relatorio-alta-{{ event.patient.name|slugify }}-{{ event.discharge_date|date:'d-m-Y' }}.pdf"
+    aria-label="Gerar PDF do relatório de alta"
     data-bs-toggle="tooltip"
     data-bs-placement="top"
-    title="Imprimir relatório"
+    title="Gerar PDF"
   >
-    <i class="bi bi-printer" aria-hidden="true"></i>
-    <span class="visually-hidden">Imprimir</span>
-  </a>
+    <span class="pdf-btn-content">
+      <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+    </span>
+    <span class="pdf-btn-spinner d-none">
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    </span>
+  </button>
 
   <!-- Edit Button -->
   {% if event_data.can_edit %}
@@ -45,15 +49,15 @@ Extends the base event card for discharge report events
   </a>
   {% endif %}
 
-  <!-- Delete Button - Only for drafts -->
-  {% if event.is_draft and perms.events.delete_event %}
+  <!-- Delete Button -->
+  {% if event_data.can_delete or perms.events.delete_event %}
   <a
     href="{% url 'apps.dischargereports:dischargereport_delete' pk=event.pk %}"
     class="btn btn-outline-danger btn-sm"
-    aria-label="Excluir rascunho"
+    aria-label="Excluir relatório"
     data-bs-toggle="tooltip"
     data-bs-placement="top"
-    title="Excluir rascunho"
+    title="Excluir relatório"
   >
     <i class="bi bi-trash" aria-hidden="true"></i>
     <span class="visually-hidden">Excluir</span>

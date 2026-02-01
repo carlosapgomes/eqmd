@@ -90,8 +90,8 @@ class DischargeReportModelTests(TestCase):
         )
         self.assertTrue(report.can_be_edited_by_user(self.user))
 
-    def test_can_be_deleted_by_user_draft_only(self):
-        """Test that only drafts can be deleted"""
+    def test_can_be_deleted_by_user_rules(self):
+        """Test delete permissions for draft and final reports"""
         draft_report = DischargeReport.objects.create(
             patient=self.patient,
             event_datetime=timezone.now(),
@@ -117,7 +117,23 @@ class DischargeReportModelTests(TestCase):
         )
 
         self.assertTrue(draft_report.can_be_deleted_by_user(self.user))
-        self.assertFalse(final_report.can_be_deleted_by_user(self.user))
+        self.assertTrue(final_report.can_be_deleted_by_user(self.user))
+
+        old_datetime = timezone.now() - timedelta(hours=25)
+        old_final_report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=old_datetime,
+            description='Old final report',
+            admission_date=date(2024, 2, 1),
+            discharge_date=date(2024, 2, 5),
+            medical_specialty='Test Specialty',
+            is_draft=False,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        DischargeReport.objects.filter(pk=old_final_report.pk).update(created_at=old_datetime)
+        old_final_report.refresh_from_db()
+        self.assertFalse(old_final_report.can_be_deleted_by_user(self.user))
 
     def test_status_display_properties(self):
         """Test status display properties"""

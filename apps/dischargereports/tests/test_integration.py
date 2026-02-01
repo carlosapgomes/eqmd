@@ -17,7 +17,9 @@ class DischargeReportIntegrationTests(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True
         )
         self.patient = Patient.objects.create(
             name='Integration Test Patient',
@@ -32,10 +34,13 @@ class DischargeReportIntegrationTests(TestCase):
         self.client.login(username='testuser', password='testpass123')
 
         # Create draft
-        create_url = reverse('apps.dischargereports:dischargereport_create')
+        create_url = reverse(
+            'apps.dischargereports:patient_dischargereport_create',
+            kwargs={'patient_id': self.patient.pk}
+        )
         create_data = {
             'patient': self.patient.pk,
-            'event_datetime': timezone.now(),
+            'event_datetime': timezone.now().strftime("%Y-%m-%dT%H:%M"),
             'description': 'Test workflow report',
             'admission_date': date(2024, 1, 1),
             'discharge_date': date(2024, 1, 5),
@@ -53,12 +58,13 @@ class DischargeReportIntegrationTests(TestCase):
         response = self.client.post(create_url, create_data)
         self.assertEqual(response.status_code, 302)
 
-        report = DischargeReport.objects.get(patient=self.patient)
+        report = DischargeReport.all_objects.get(patient=self.patient)
         self.assertTrue(report.is_draft)
 
         # Edit draft
         update_url = reverse('apps.dischargereports:dischargereport_update', kwargs={'pk': report.pk})
         update_data = create_data.copy()
+        update_data.pop('save_draft', None)
         update_data.update({
             'problems_and_diagnosis': 'Updated diagnosis',
             'save_final': 'Save Final'  # Finalize this time
@@ -71,10 +77,10 @@ class DischargeReportIntegrationTests(TestCase):
         self.assertFalse(report.is_draft)
         self.assertEqual(report.problems_and_diagnosis, 'Updated diagnosis')
 
-        # Verify can't delete finalized report
+        # Verify can delete finalized report within window
         delete_url = reverse('apps.dischargereports:dischargereport_delete', kwargs={'pk': report.pk})
         response = self.client.get(delete_url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
 
     def test_draft_cannot_be_edited_after_24h_when_finalized(self):
         """Test that finalized draft cannot be edited after 24 hours"""
@@ -108,7 +114,7 @@ class DischargeReportIntegrationTests(TestCase):
         # Create first report
         first_report_data = {
             'patient': self.patient.pk,
-            'event_datetime': timezone.now(),
+            'event_datetime': timezone.now().strftime("%Y-%m-%dT%H:%M"),
             'description': 'First report',
             'admission_date': date(2024, 1, 1),
             'discharge_date': date(2024, 1, 5),
@@ -123,13 +129,19 @@ class DischargeReportIntegrationTests(TestCase):
             'save_final': 'Save Final'
         }
 
-        response = self.client.post(reverse('apps.dischargereports:dischargereport_create'), first_report_data)
+        response = self.client.post(
+            reverse(
+                'apps.dischargereports:patient_dischargereport_create',
+                kwargs={'patient_id': self.patient.pk}
+            ),
+            first_report_data
+        )
         self.assertEqual(response.status_code, 302)
 
         # Create second report
         second_report_data = {
             'patient': self.patient.pk,
-            'event_datetime': timezone.now(),
+            'event_datetime': timezone.now().strftime("%Y-%m-%dT%H:%M"),
             'description': 'Second report',
             'admission_date': date(2024, 2, 1),
             'discharge_date': date(2024, 2, 10),
@@ -144,7 +156,13 @@ class DischargeReportIntegrationTests(TestCase):
             'save_final': 'Save Final'
         }
 
-        response = self.client.post(reverse('apps.dischargereports:dischargereport_create'), second_report_data)
+        response = self.client.post(
+            reverse(
+                'apps.dischargereports:patient_dischargereport_create',
+                kwargs={'patient_id': self.patient.pk}
+            ),
+            second_report_data
+        )
         self.assertEqual(response.status_code, 302)
 
         # Verify both reports exist
@@ -153,8 +171,8 @@ class DischargeReportIntegrationTests(TestCase):
         # Verify list view shows both reports
         response = self.client.get(reverse('apps.dischargereports:dischargereport_list'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'First report')
-        self.assertContains(response, 'Second report')
+        self.assertContains(response, 'Cardiology')
+        self.assertContains(response, 'Neurology')
 
     def test_draft_deletion_workflow(self):
         """Test complete draft deletion workflow"""
@@ -174,7 +192,7 @@ class DischargeReportIntegrationTests(TestCase):
         )
 
         # Verify draft exists
-        self.assertTrue(DischargeReport.objects.filter(pk=report.pk).exists())
+        self.assertTrue(DischargeReport.all_objects.filter(pk=report.pk).exists())
 
         # Delete draft
         delete_url = reverse('apps.dischargereports:dischargereport_delete', kwargs={'pk': report.pk})
@@ -182,7 +200,7 @@ class DischargeReportIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
         # Verify draft is deleted
-        self.assertFalse(DischargeReport.objects.filter(pk=report.pk).exists())
+        self.assertFalse(DischargeReport.all_objects.filter(pk=report.pk).exists())
 
     def test_unauthorized_user_cannot_edit(self):
         """Test that unauthorized users cannot edit reports"""
@@ -190,7 +208,9 @@ class DischargeReportIntegrationTests(TestCase):
         other_user = User.objects.create_user(
             username='otheruser',
             email='other@example.com',
-            password='otherpass123'
+            password='otherpass123',
+            password_change_required=False,
+            terms_accepted=True
         )
 
         # Create report as original user
@@ -218,7 +238,7 @@ class DischargeReportIntegrationTests(TestCase):
         # Try to create report with invalid data (discharge before admission)
         invalid_data = {
             'patient': self.patient.pk,
-            'event_datetime': timezone.now(),
+            'event_datetime': timezone.now().strftime("%Y-%m-%dT%H:%M"),
             'description': 'Invalid report',
             'admission_date': date(2024, 1, 5),
             'discharge_date': date(2024, 1, 1),  # Before admission date
@@ -233,7 +253,13 @@ class DischargeReportIntegrationTests(TestCase):
             'save_draft': 'Save Draft'
         }
 
-        response = self.client.post(reverse('apps.dischargereports:dischargereport_create'), invalid_data)
+        response = self.client.post(
+            reverse(
+                'apps.dischargereports:patient_dischargereport_create',
+                kwargs={'patient_id': self.patient.pk}
+            ),
+            invalid_data
+        )
         self.assertEqual(response.status_code, 200)  # Form should be redisplayed with errors
         self.assertContains(response, 'discharge_date')  # Error message should be present
 
@@ -249,13 +275,17 @@ class DischargeReportIntegrationTests(TestCase):
             admission_date=date(2024, 1, 1),
             discharge_date=date(2024, 1, 5),
             medical_specialty='Test Specialty',
+            is_draft=False,
             created_by=self.user,
             updated_by=self.user
         )
 
         # Check patient timeline
-        timeline_url = reverse('apps:patients:patient_timeline', kwargs={'pk': self.patient.pk})
+        timeline_url = reverse(
+            'apps.patients:patient_events_timeline',
+            kwargs={'patient_id': self.patient.pk}
+        )
         response = self.client.get(timeline_url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Timeline test report')
+        self.assertContains(response, 'Test Specialty')
         self.assertContains(response, 'Relatório de Alta')

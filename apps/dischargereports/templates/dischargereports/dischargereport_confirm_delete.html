@@ -290,8 +290,8 @@
         Informação sobre Rascunhos
       </h6>
       <p class="mb-0">
-        Este é um <strong>rascunho</strong> e pode ser excluído a qualquer momento por médicos/residentes. 
-        Rascunhos não fazem parte do prontuário oficial do paciente até serem finalizados.
+        Este é um <strong>rascunho</strong> e pode ser excluído a qualquer momento pelo criador ou por usuários
+        com permissão de exclusão. Rascunhos não fazem parte do prontuário oficial do paciente até serem finalizados.
       </p>
     </div>
     {% else %}
@@ -302,7 +302,8 @@
       </h6>
       <p class="mb-0">
         Este relatório foi <strong>finalizado</strong> e faz parte do prontuário oficial. 
-        Relatórios finais só podem ser excluídos dentro de 24 horas pelo criador, conforme as normas do sistema.
+        Relatórios finais só podem ser excluídos dentro de 24 horas pelo criador ou por usuários com permissão
+        de exclusão, conforme as normas do sistema.
       </p>
     </div>
     {% endif %}

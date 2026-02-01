@@ -9,5 +9,5 @@ urlpatterns = [
     path('<uuid:pk>/', views.DischargeReportDetailView.as_view(), name='dischargereport_detail'),
     path('<uuid:pk>/update/', views.DischargeReportUpdateView.as_view(), name='dischargereport_update'),
     path('<uuid:pk>/delete/', views.DischargeReportDeleteView.as_view(), name='dischargereport_delete'),
-    path('<uuid:pk>/print/', views.DischargeReportPrintView.as_view(), name='dischargereport_print'),
+    path('<uuid:pk>/pdf/', views.DischargeReportPDFView.as_view(), name='dischargereport_pdf'),
 ]

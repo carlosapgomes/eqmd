@@ -109,8 +109,12 @@ class DischargeReport(Event):
 
     def can_be_deleted_by_user(self, user):
         """Check if report can be deleted by specific user"""
-        # Only drafts can be deleted
-        return self.is_draft and (self.created_by == user or user.has_perm('events.delete_event'))
+        from apps.core.permissions import can_delete_event
+
+        if self.is_draft:
+            return self.created_by == user or user.has_perm('events.delete_event')
+
+        return can_delete_event(user, self) or user.has_perm('events.delete_event')
 
     @property
     def status_display(self):
