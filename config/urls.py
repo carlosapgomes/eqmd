@@ -76,6 +76,7 @@ urlpatterns = [
     ),
     path("pdf/", include("apps.pdfgenerator.urls", namespace="pdfgenerator")),
     path("pdf-forms/", include("apps.pdf_forms.urls", namespace="pdf_forms")),
+    path("reports/", include("apps.reports.urls", namespace="reports")),
     path("dischargereports/", include("apps.dischargereports.urls")),
     path("research/", include("apps.research.urls", namespace="apps.research")),
     path("auth/", include("apps.botauth.urls", namespace="botauth")),
