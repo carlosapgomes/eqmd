@@ -7,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 
 from .models import ReportTemplate, Report
+from .services.report_service import can_user_use_template
 
 
 class ReportTemplateForm(forms.ModelForm):
@@ -100,12 +101,10 @@ class ReportCreateForm(forms.ModelForm):
     def clean_template(self):
         """Validate that selected template is accessible."""
         template = self.cleaned_data.get('template')
-        if template:
-            # Check if template is accessible (public or owned by user)
-            if not template.is_public and template.created_by != self.user:
-                raise forms.ValidationError(
-                    "You cannot use this template (private template from another user)"
-                )
+        if template and not can_user_use_template(self.user, template):
+            raise forms.ValidationError(
+                "You cannot use this template (private template from another user)"
+            )
         return template
 
     def save(self, commit=True):
