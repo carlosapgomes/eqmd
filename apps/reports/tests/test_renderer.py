@@ -4,6 +4,7 @@ from apps.reports.services.renderer import (
     validate_template_placeholders,
     render_template,
     PAGE_BREAK_TOKEN,
+    ALLOWED_PLACEHOLDERS,
 )
 
 
@@ -41,11 +42,11 @@ class TestTemplateValidation(TestCase):
         assert len(errors) > 0
         assert any("unknown_placeholder" in str(error) for error in errors)
 
-    def test_validate_requires_patient_name_and_record(self):
+    def test_validate_requires_patient_name(self):
         template = "Some text without required placeholders"
         errors = validate_template_placeholders(template)
         assert len(errors) > 0
-        assert any("patient_name" in str(error) or "patient_record_number" in str(error) for error in errors)
+        assert any("patient_name" in str(error) for error in errors)
 
     def test_validate_accepts_valid_template(self):
         template = "Patient: {{patient_name}}, Record: {{patient_record_number}}"
@@ -58,7 +59,7 @@ class TestTemplateValidation(TestCase):
         assert len(errors) == 0
 
     def test_validate_accepts_all_known_placeholders(self):
-        template = "{{patient_name}} {{patient_record_number}} {{page_break}}"
+        template = " ".join(f"{{{{{name}}}}}" for name in sorted(ALLOWED_PLACEHOLDERS))
         errors = validate_template_placeholders(template)
         assert len(errors) == 0
 

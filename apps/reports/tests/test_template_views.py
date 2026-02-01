@@ -258,12 +258,12 @@ class TemplateViewTests(TestCase):
         """Template creation missing required placeholders shows validation error."""
         self.client.login(username='doctor', password='testpass123')
 
-        # Missing patient_record_number
+        # Missing patient_name
         response = self.client.post(
             reverse('reports:template_create'),
             {
                 'name': 'Incomplete Template',
-                'markdown_body': 'Only name: {{patient_name}}',
+                'markdown_body': 'Only record: {{patient_record_number}}',
                 'is_active': True,
                 'is_public': False,
             }
@@ -274,5 +274,5 @@ class TemplateViewTests(TestCase):
         self.assertFormError(
             response.context['form'],
             'markdown_body',
-            'Missing required placeholders: patient_record_number'
+            'Missing required placeholders: patient_name'
         )

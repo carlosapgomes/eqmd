@@ -900,6 +900,7 @@
                                 SimpleNote events (event_type=2) get the specialized template with duplicate button
                                 Photo events (event_type=3) get the specialized template with photo display and modal
                                 Prescription events (event_type=7) get the specialized template with medication summary
+                                Report events (event_type=8) get the specialized template with PDF action
                                 PhotoSeries events (event_type=9) get the specialized template with photo series display
                                 VideoClip events (event_type=10) get the specialized template with video player
                                 RecordNumberChange events (event_type=12) get the specialized template with record number display
@@ -921,6 +922,8 @@
                                     {% include "events/partials/event_card_dischargereport.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 7 %}
                                     {% include "events/partials/event_card_prescription.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 8 %}
+                                    {% include "events/partials/event_card_report.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 9 %}
                                     {% include "events/partials/event_card_photoseries.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 10 %}

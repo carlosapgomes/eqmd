@@ -1,31 +1,31 @@
 {% extends 'base_app.html' %}
 {% load reports_extras %}
 
-{% block title %}Templates de Relatório{% endblock %}
+{% block title %}Modelos de Relatório{% endblock %}
 
 {% block app_content %}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb">
     <li class="breadcrumb-item">
-      <a href="{% url 'core:landing_page' %}">
+      <a href="{% url 'apps.core:dashboard' %}">
         <i class="bi bi-house me-1"></i>
         Início
       </a>
     </li>
-    <li class="breadcrumb-item active" aria-current="page">Templates de Relatório</li>
+    <li class="breadcrumb-item active" aria-current="page">Modelos de Relatório</li>
   </ol>
 </nav>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">
     <i class="bi bi-file-earmark-text text-medical-primary me-2"></i>
-    Templates de Relatório
+    Modelos de Relatório
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
     {% if user|can_manage_report_templates %}
       <a href="{% url 'reports:template_create' %}" class="btn btn-medical-primary">
         <i class="bi bi-plus-circle me-1"></i>
-        Novo Template
+        Novo Modelo
       </a>
     {% endif %}
   </div>
@@ -75,12 +75,51 @@
                 {% endif %}
               </td>
               <td>
-                {% if user|can_manage_report_templates %}
-                  <a href="{% url 'reports:template_update' pk=template.pk %}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-pencil"></i>
-                    Editar
-                  </a>
-                {% endif %}
+                <div class="btn-group btn-group-sm" role="group">
+                  {% if user|can_manage_report_templates and template.created_by == user %}
+                    <a href="{% url 'reports:template_update' pk=template.pk %}" class="btn btn-outline-primary">
+                      <i class="bi bi-pencil"></i>
+                      Editar
+                    </a>
+                    <a href="{% url 'reports:template_delete' pk=template.pk %}" class="btn btn-outline-danger">
+                      <i class="bi bi-trash"></i>
+                      Excluir
+                    </a>
+                  {% else %}
+                    <button
+                      type="button"
+                      class="btn btn-outline-info"
+                      data-bs-toggle="modal"
+                      data-bs-target="#templateContentModal-{{ template.pk }}"
+                    >
+                      <i class="bi bi-eye"></i>
+                      Ver
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary copy-content-btn"
+                      data-content="{{ template.markdown_body|escape }}"
+                    >
+                      <i class="bi bi-clipboard"></i>
+                      Copiar
+                    </button>
+                    <div class="modal fade" id="templateContentModal-{{ template.pk }}" tabindex="-1" aria-labelledby="templateContentLabel-{{ template.pk }}" aria-hidden="true">
+                      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="templateContentLabel-{{ template.pk }}">
+                              {{ template.name }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <pre class="mb-0" style="white-space: pre-wrap;">{{ template.markdown_body }}</pre>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -141,4 +180,54 @@
   {% endfor %}
 </div>
 {% endif %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const copyButtons = document.querySelectorAll('.copy-content-btn');
+
+    copyButtons.forEach(function(button) {
+      button.addEventListener('click', function() {
+        const content = this.getAttribute('data-content');
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(content).then(function() {
+            showToast('Conteúdo copiado para a área de transferência!', 'success');
+          }).catch(function() {
+            showToast('Erro ao copiar conteúdo.', 'error');
+          });
+        } else {
+          const textArea = document.createElement('textarea');
+          textArea.value = content;
+          document.body.appendChild(textArea);
+          textArea.select();
+          try {
+            document.execCommand('copy');
+            showToast('Conteúdo copiado para a área de transferência!', 'success');
+          } catch (err) {
+            showToast('Erro ao copiar conteúdo.', 'error');
+          }
+          document.body.removeChild(textArea);
+        }
+      });
+    });
+
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+      toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+      toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 4000);
+    }
+  });
+</script>
 {% endblock %}

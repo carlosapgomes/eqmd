@@ -37,7 +37,7 @@
             <h2 class="h6 mb-0">Modelos de Receita</h2>
           </div>
           <p class="text-muted flex-grow-1">
-            Monte esquemas completos com múltiplos medicamentos e instruções.
+            Monte receitas completas com múltiplos medicamentos e instruções.
           </p>
           <a href="{% url 'drugtemplates:prescription_list' %}" class="btn btn-medical-primary w-100">
             Acessar
@@ -47,21 +47,38 @@
     </div>
 
     <div class="col-md-6 col-xl-4">
-      <div class="card h-100 border-0 bg-light">
+      <div class="card h-100 shadow-sm">
         <div class="card-body d-flex flex-column">
           <div class="d-flex align-items-center mb-3">
-            <i class="bi bi-stars fs-3 text-medical-gray me-2"></i>
-            <h2 class="h6 mb-0">Novos modelos</h2>
+            <i class="bi bi-prescription2 fs-3 text-medical-teal me-2"></i>
+            <h2 class="h6 mb-0">Modelos de Relatório</h2>
           </div>
           <p class="text-muted flex-grow-1">
-            Em breve: modelos para relatórios, prescrições ambulatoriais e outros documentos.
+            Crie modelos customizados de relatórios.
           </p>
-          <button class="btn btn-outline-secondary w-100" disabled>
-            Em breve
-          </button>
+          <a href="{% url 'reports:template_list' %}" class="btn btn-medical-primary w-100">
+            Acessar
+          </a>
         </div>
       </div>
     </div>
+
+    <!-- <div class="col-md-6 col-xl-4"> -->
+    <!--   <div class="card h-100 border-0 bg-light"> -->
+    <!--     <div class="card-body d-flex flex-column"> -->
+    <!--       <div class="d-flex align-items-center mb-3"> -->
+    <!--         <i class="bi bi-stars fs-3 text-medical-gray me-2"></i> -->
+    <!--         <h2 class="h6 mb-0">Novos modelos</h2> -->
+    <!--       </div> -->
+    <!--       <p class="text-muted flex-grow-1"> -->
+    <!--         Em breve: modelos para relatórios, prescrições ambulatoriais e outros documentos. -->
+    <!--       </p> -->
+    <!--       <button class="btn btn-outline-secondary w-100" disabled> -->
+    <!--         Em breve -->
+    <!--       </button> -->
+    <!--     </div> -->
+    <!--   </div> -->
+    <!-- </div> -->
   </div>
 </div>
 {% endblock %}

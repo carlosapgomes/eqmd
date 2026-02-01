@@ -179,7 +179,7 @@ class ReportUpdateViewTests(TestCase):
             url,
             {
                 'title': 'Updated Report',
-                'document_date': '2024-01-16',
+                'document_date': '01-16-2024',
                 'content': 'Updated content',
             }
         )
@@ -206,7 +206,7 @@ class ReportUpdateViewTests(TestCase):
             url,
             {
                 'title': 'Hacked Update',
-                'document_date': '2024-01-16',
+                'document_date': '01-16-2024',
                 'content': 'Hacked content',
             }
         )
@@ -232,7 +232,7 @@ class ReportUpdateViewTests(TestCase):
             url,
             {
                 'title': 'Hacked by other',
-                'document_date': '2024-01-16',
+                'document_date': '01-16-2024',
                 'content': 'Hacked content',
             }
         )

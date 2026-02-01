@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
-from django.views.generic import ListView, CreateView, UpdateView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
 from apps.reports.models import ReportTemplate
 from apps.reports.forms import ReportTemplateForm
@@ -85,3 +85,29 @@ class TemplateUpdateView(LoginRequiredMixin, UpdateView):
         """Add success message on valid form."""
         messages.success(self.request, f'Template "{form.instance.name}" updated successfully.')
         return super().form_valid(form)
+
+
+class TemplateDeleteView(LoginRequiredMixin, DeleteView):
+    """Delete view for report templates."""
+
+    model = ReportTemplate
+    template_name = 'reports/reporttemplate_confirm_delete.html'
+    context_object_name = 'template'
+    success_url = reverse_lazy('reports:template_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        """Check if user can manage templates and is creator."""
+        if not can_manage_report_templates(request.user):
+            raise PermissionDenied("You don't have permission to manage report templates")
+
+        obj = self.get_object()
+        if obj.created_by != request.user:
+            raise PermissionDenied("You can only delete your own templates")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """Add success message on delete."""
+        template = self.get_object()
+        messages.success(self.request, f'Template "{template.name}" deleted successfully.')
+        return super().delete(request, *args, **kwargs)
