@@ -1,15 +1,21 @@
+import logging
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse
-from django.template.loader import render_to_string
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.views import View
 from django.views.generic import CreateView, UpdateView, DetailView, ListView, DeleteView
 from .models import DischargeReport
+from .services.pdf_generator import DischargeReportPDFGenerator
 from .forms import DischargeReportCreateForm, DischargeReportUpdateForm
 from apps.core.permissions import can_edit_event, can_delete_event, can_access_patient
 from apps.core.permissions.constants import MEDICAL_DOCTOR, RESIDENT
+
+logger = logging.getLogger(__name__)
 
 
 def can_edit_discharge_report(user, report):
@@ -33,19 +39,18 @@ def can_edit_discharge_report(user, report):
 def can_delete_discharge_report(user, report):
     """
     Check if user can delete discharge report based on business logic:
-    - Drafts: Any doctor/resident can delete anytime
-    - Final reports: Follow system standards (24h window, creator-only)
+    - Drafts: Creator or users with delete permission
+    - Final reports: Follow system standards or delete permission override
     """
     if not can_access_patient(user, report.patient):
         return False
     
-    # If it's a draft, any doctor/resident can delete
+    # If it's a draft, allow creator or delete permission
     if report.is_draft:
-        user_profession = getattr(user, 'profession', None)
-        return user_profession in [MEDICAL_DOCTOR, RESIDENT]
-    
-    # If it's final, follow system standards
-    return can_delete_event(user, report)
+        return report.created_by == user or user.has_perm('events.delete_event')
+
+    # If it's final, follow system standards or delete permission override
+    return can_delete_event(user, report) or user.has_perm('events.delete_event')
 
 
 class DischargeReportListView(LoginRequiredMixin, ListView):
@@ -56,7 +61,7 @@ class DischargeReportListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return DischargeReport.objects.select_related('patient').order_by('-created_at')
+        return DischargeReport.all_objects.select_related('patient').order_by('-created_at')
 
 
 class DischargeReportDetailView(LoginRequiredMixin, DetailView):
@@ -64,6 +69,9 @@ class DischargeReportDetailView(LoginRequiredMixin, DetailView):
     model = DischargeReport
     template_name = 'dischargereports/dischargereport_detail.html'
     context_object_name = 'report'
+
+    def get_queryset(self):
+        return DischargeReport.all_objects.select_related('patient', 'created_by', 'updated_by')
 
     def get_context_data(self, **kwargs):
         """Add additional context data including permission checks."""
@@ -118,20 +126,23 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """Handle successful form submission."""
-        form.instance.patient = self.patient
-        form.instance.created_by = self.request.user
-        form.instance.updated_by = self.request.user
-        form.instance.event_datetime = form.instance.event_datetime or timezone.now()
+        is_draft = 'save_final' not in self.request.POST
 
         # Handle draft vs final save
-        if 'save_final' in self.request.POST:
-            form.instance.is_draft = False
-            messages.success(self.request, f'Relatório de alta para {self.patient.name} salvo definitivamente.')
-        else:
-            form.instance.is_draft = True
+        if is_draft:
             messages.success(self.request, f'Relatório de alta para {self.patient.name} salvo como rascunho.')
+        else:
+            messages.success(self.request, f'Relatório de alta para {self.patient.name} salvo definitivamente.')
 
-        return super().form_valid(form)
+        self.object = form.save(commit=False)
+        self.object.patient = self.patient
+        self.object.created_by = self.request.user
+        self.object.updated_by = self.request.user
+        self.object.event_datetime = self.object.event_datetime or timezone.now()
+        self.object.is_draft = is_draft
+        self.object.save()
+
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
@@ -140,6 +151,9 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
     form_class = DischargeReportUpdateForm
     template_name = 'dischargereports/dischargereport_update.html'
     context_object_name = 'report'
+
+    def get_queryset(self):
+        return DischargeReport.all_objects.select_related('patient', 'created_by', 'updated_by')
 
     def get_object(self):
         obj = super().get_object()
@@ -164,26 +178,34 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
         )
 
     def form_valid(self, form):
-        form.instance.updated_by = self.request.user
+        is_draft = self.object.is_draft
 
         # Handle draft vs final save
         if 'save_final' in self.request.POST and self.object.is_draft:
-            form.instance.is_draft = False
+            is_draft = False
             messages.success(self.request, 'Relatório de alta finalizado com sucesso.')
         elif 'save_draft' in self.request.POST:
-            form.instance.is_draft = True
+            is_draft = True
             messages.success(self.request, 'Rascunho do relatório atualizado.')
         else:
             messages.success(self.request, 'Relatório de alta atualizado.')
 
-        return super().form_valid(form)
+        self.object = form.save(commit=False)
+        self.object.updated_by = self.request.user
+        self.object.is_draft = is_draft
+        self.object.save()
+
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
-    """Delete discharge report (drafts only)"""
+    """Delete discharge report when permitted."""
     model = DischargeReport
     template_name = 'dischargereports/dischargereport_confirm_delete.html'
     context_object_name = 'report'
+
+    def get_queryset(self):
+        return DischargeReport.all_objects.select_related('patient', 'created_by', 'updated_by')
 
     def get_object(self):
         obj = super().get_object()
@@ -199,18 +221,33 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
         )
 
     def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Rascunho do relatório de alta excluído com sucesso.')
+        messages.success(request, 'Relatório de alta excluído com sucesso.')
         return super().delete(request, *args, **kwargs)
 
 
-class DischargeReportPrintView(LoginRequiredMixin, DetailView):
-    """Print-friendly view for discharge reports"""
-    model = DischargeReport
-    template_name = 'dischargereports/dischargereport_print.html'
-    context_object_name = 'report'
+class DischargeReportPDFView(LoginRequiredMixin, View):
+    """Generate and return PDF for discharge reports."""
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['now'] = timezone.now()
-        context['user'] = self.request.user
-        return context
+    def get(self, request, *args, **kwargs):
+        try:
+            report = get_object_or_404(DischargeReport.all_objects, pk=kwargs["pk"])
+
+            if not can_access_patient(request.user, report.patient):
+                raise PermissionDenied("You don't have permission to access this patient")
+
+            pdf_generator = DischargeReportPDFGenerator()
+            pdf_buffer = pdf_generator.generate_from_report(report)
+
+            response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
+            safe_name = "".join(
+                c for c in report.patient.name if c.isalnum() or c in (" ", "-", "_")
+            ).rstrip()
+            date_str = report.discharge_date.strftime("%Y%m%d")
+            filename = f"Relatorio_Alta_{safe_name}_{date_str}.pdf"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+        except PermissionDenied:
+            raise
+        except Exception as exc:
+            logger.error("Discharge report PDF generation error: %s", str(exc), exc_info=True)
+            return HttpResponse(f"Erro ao gerar PDF: {str(exc)}", status=500)
