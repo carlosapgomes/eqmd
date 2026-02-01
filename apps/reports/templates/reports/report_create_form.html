@@ -1,0 +1,308 @@
+{% extends 'base_app.html' %}
+{% load static %}
+
+{% block title %}Novo Relatório - {{ patient.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/easymde.min.css' %}">
+<style>
+  .form-section {
+    background: #f8f9fa;
+    border-left: 4px solid #2c5aa0;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.375rem;
+  }
+  
+  .form-section h6 {
+    color: #2c5aa0;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  
+  .editor-container {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+  
+  .CodeMirror {
+    border: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  
+  .editor-toolbar {
+    border-bottom: 1px solid #dee2e6;
+  }
+  
+  .editor-preview {
+    background: white;
+    border-left: 1px solid #dee2e6;
+  }
+  
+  .required-field::after {
+    content: " *";
+    color: #dc3545;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block app_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}">
+        {{ patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Novo Relatório</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-file-text text-medical-primary me-2"></i>
+    Novo Relatório
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar
+    </a>
+  </div>
+</div>
+
+<!-- Form Card -->
+<div class="card shadow-sm">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-file-earmark-plus me-2"></i>
+      Novo Relatório
+    </h5>
+  </div>
+  <div class="card-body">
+    <!-- Form Errors -->
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+      <h6 class="alert-heading">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Erro no formulário
+      </h6>
+      {% for error in form.non_field_errors %}
+        <p class="mb-0">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" class="needs-validation" novalidate>
+      {% csrf_token %}
+      
+      <!-- Template Selection Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-file-earmark-text me-2"></i>
+          Template (opcional)
+        </h6>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="{{ form.template.id_for_label }}" class="form-label">
+                <i class="bi bi-collection me-1"></i>
+                {{ form.template.label }}
+              </label>
+              {{ form.template }}
+              {% if form.template.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.template.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+              {% if form.template.help_text %}
+                <div class="form-text">{{ form.template.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Basic Information Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-info-circle me-2"></i>
+          Informações Básicas
+        </h6>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="{{ form.title.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-type me-1"></i>
+                {{ form.title.label }}
+              </label>
+              {{ form.title }}
+              {% if form.title.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.title.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="{{ form.document_date.id_for_label }}" class="form-label required-field">
+                <i class="bi bi-calendar-event me-1"></i>
+                {{ form.document_date.label }}
+              </label>
+              {{ form.document_date }}
+              {% if form.document_date.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.document_date.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Section -->
+      <div class="form-section">
+        <h6>
+          <i class="bi bi-file-earmark-text me-2"></i>
+          Conteúdo do Relatório
+        </h6>
+        <div class="mb-3">
+          <label for="{{ form.content.id_for_label }}" class="form-label required-field">
+            <i class="bi bi-markdown me-1"></i>
+            {{ form.content.label }}
+          </label>
+          <div class="editor-container">
+            {{ form.content }}
+          </div>
+          {% if form.content.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in form.content.errors %}
+                {{ error }}
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if form.content.help_text %}
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>
+              {{ form.content.help_text }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <button type="submit" class="btn btn-medical-primary">
+            <i class="bi bi-check-circle me-1"></i>
+            Salvar Relatório
+          </button>
+          <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Help Section -->
+<div class="card shadow-sm mt-4">
+  <div class="card-header bg-light">
+    <h6 class="card-title mb-0">
+      <i class="bi bi-question-circle me-2"></i>
+      Ajuda com Markdown
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <h6>Formatação Básica:</h6>
+        <ul class="list-unstyled">
+          <li><code>**texto**</code> - <strong>negrito</strong></li>
+          <li><code>*texto*</code> - <em>itálico</em></li>
+          <li><code># Título</code> - Título principal</li>
+          <li><code>## Subtítulo</code> - Subtítulo</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h6>Listas e Outros:</h6>
+        <ul class="list-unstyled">
+          <li><code>- item</code> - Lista com marcadores</li>
+          <li><code>1. item</code> - Lista numerada</li>
+          <li><code>> texto</code> - Citação</li>
+          <li><code>`código`</code> - Código inline</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/easymde.min.js' %}"></script>
+<script>
+  let easyMDE;
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize EasyMDE editor
+    easyMDE = new EasyMDE({
+      element: document.getElementById("id_content"),
+      spellChecker: false,
+      placeholder: "Digite o conteúdo do relatório...",
+      hideIcons: ["link", "image", "side-by-side", "fullscreen"],
+      status: false,
+      toolbar: [
+        "bold", "italic", "heading", "|",
+        "unordered-list", "ordered-list", "|",
+        "quote", "code", "|",
+        "preview", "guide"
+      ],
+      previewClass: ["editor-preview", "p-3"],
+      renderingConfig: {
+        singleLineBreaks: false,
+        codeSyntaxHighlighting: false,
+      },
+    });
+    
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    });
+    
+    // Template selection change handler
+    const templateSelect = document.getElementById("id_template");
+    if (templateSelect) {
+      templateSelect.addEventListener("change", function() {
+        const templateId = this.value;
+        if (templateId) {
+          // Reload page with template parameter to pre-fill content
+          const url = new URL(window.location.href);
+          url.searchParams.set('template', templateId);
+          window.location.href = url.toString();
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}
