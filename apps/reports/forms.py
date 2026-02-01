@@ -19,7 +19,12 @@ class ReportUpdateForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'document_date': forms.DateInput(
-                attrs={'class': 'form-control', 'type': 'date'}
+                attrs={
+                    'class': 'form-control',
+                    'type': 'text',
+                    'placeholder': 'MM-DD-YYYY',
+                },
+                format='%m-%d-%Y',
             ),
             'content': forms.Textarea(
                 attrs={
@@ -33,6 +38,8 @@ class ReportUpdateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         """Initialize form."""
         super().__init__(*args, **kwargs)
+
+        self.fields['document_date'].input_formats = ['%m-%d-%Y']
 
         # Configure content field
         self.fields['content'].required = True
@@ -94,7 +101,12 @@ class ReportCreateForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'document_date': forms.DateInput(
-                attrs={'class': 'form-control', 'type': 'date'}
+                attrs={
+                    'class': 'form-control',
+                    'type': 'text',
+                    'placeholder': 'MM-DD-YYYY',
+                },
+                format='%m-%d-%Y',
             ),
             'content': forms.Textarea(
                 attrs={
@@ -111,9 +123,13 @@ class ReportCreateForm(forms.ModelForm):
         self.patient = kwargs.pop('patient', None)
         super().__init__(*args, **kwargs)
 
+        self.fields['document_date'].input_formats = ['%m-%d-%Y']
+
         # Set default document_date to today
-        if not self.instance.pk:
-            self.fields['document_date'].initial = timezone.now().date()
+        if not self.instance.pk and not self.initial.get('document_date'):
+            self.fields['document_date'].initial = timezone.localdate().strftime(
+                '%m-%d-%Y'
+            )
 
         # Configure content field
         self.fields['content'].required = True
@@ -136,6 +152,18 @@ class ReportCreateForm(forms.ModelForm):
                 "You cannot use this template (private template from another user)"
             )
         return template
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.errors:
+            return cleaned_data
+
+        template = cleaned_data.get('template')
+        title = (cleaned_data.get('title') or '').strip()
+        if template and not title:
+            cleaned_data['title'] = template.name
+
+        return cleaned_data
 
     def save(self, commit=True):
         """Save report with patient, creator, and other required fields."""

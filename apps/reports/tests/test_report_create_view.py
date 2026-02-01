@@ -99,7 +99,7 @@ class ReportCreateViewTests(TestCase):
             {
                 'template': str(self.public_template.pk),
                 'title': 'Test Report',
-                'document_date': '2024-01-15',
+                'document_date': '01-15-2024',
                 'content': 'Rendered content for Test Patient',
             }
         )
@@ -124,7 +124,7 @@ class ReportCreateViewTests(TestCase):
             {
                 'template': '',
                 'title': 'Manual Report',
-                'document_date': '2024-01-15',
+                'document_date': '01-15-2024',
                 'content': 'Manual content without template',
             }
         )
@@ -164,7 +164,7 @@ class ReportCreateViewTests(TestCase):
             {
                 'template': str(other_private_template.pk),
                 'title': 'Hacked Report',
-                'document_date': '2024-01-15',
+                'document_date': '01-15-2024',
                 'content': 'Content',
             }
         )
@@ -176,3 +176,14 @@ class ReportCreateViewTests(TestCase):
 
         # Verify report was not created
         self.assertFalse(Report.objects.filter(title='Hacked Report').exists())
+
+    def test_report_create_prefills_title_from_template(self):
+        """Selecting a template should prefill the report title."""
+        self.client.login(username='doctor', password='testpass123')
+        url = reverse('reports:report_create', kwargs={'patient_id': self.patient.pk})
+
+        response = self.client.get(url, {'template': str(self.public_template.pk)})
+        self.assertEqual(response.status_code, 200)
+
+        form = response.context['form']
+        self.assertEqual(form.initial.get('title'), self.public_template.name)

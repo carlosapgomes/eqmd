@@ -3,8 +3,30 @@ from typing import Set, List, Dict
 
 
 PLACEHOLDER_PATTERN = re.compile(r"{{(\w+)}}")
-ALLOWED_PLACEHOLDERS = {"patient_name", "patient_record_number", "page_break"}
-REQUIRED_PLACEHOLDERS = {"patient_name", "patient_record_number"}
+ALLOWED_PLACEHOLDERS = {
+    "patient_name",
+    "patient_record_number",
+    "patient_birth_date",
+    "patient_age",
+    "patient_gender",
+    "patient_fiscal_number",
+    "patient_healthcard_number",
+    "patient_ward",
+    "patient_bed",
+    "patient_status",
+    "doctor_name",
+    "doctor_profession",
+    "doctor_registration_number",
+    "doctor_specialty",
+    "document_date",
+    "document_datetime",
+    "hospital_name",
+    "hospital_city",
+    "hospital_state",
+    "hospital_address",
+    "page_break",
+}
+REQUIRED_PLACEHOLDERS = {"patient_name"}
 PAGE_BREAK_TOKEN = "<div style='page-break-after: always'></div>"
 
 

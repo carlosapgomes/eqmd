@@ -1,9 +1,12 @@
 """Tests for the context builder service."""
-from datetime import date
-from django.test import TestCase
+from datetime import date, datetime
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from unittest.mock import patch
 
 from apps.patients.models import Patient, Ward
+from apps.accounts.models import MedicalSpecialty
 from apps.reports.models import ReportTemplate
 from apps.reports.services.context_builder import build_report_context
 
@@ -21,9 +24,17 @@ class TestContextBuilder(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="Doctor",
+            profession_type=User.MEDICAL_DOCTOR,
+            professional_registration_number="CRM-12345",
         )
         # Create user profile for full_name access
         self.user.profile.display_name = "Dr. Test Doctor"
+        specialty = MedicalSpecialty.objects.create(
+            name="Cardiology",
+            abbreviation="CARD",
+            is_active=True,
+        )
+        self.user.profile.current_specialty = specialty
         self.user.profile.save()
 
         self.ward = Ward.objects.create(
@@ -37,6 +48,11 @@ class TestContextBuilder(TestCase):
             birthday=date(1990, 1, 1),
             created_by=self.user,
             updated_by=self.user,
+            fiscal_number="FISC123",
+            healthcard_number="HC123",
+            bed="B12",
+            status=Patient.Status.INPATIENT,
+            ward=self.ward,
         )
         # Create record number
         self.patient.update_current_record_number(
@@ -50,28 +66,56 @@ class TestContextBuilder(TestCase):
             updated_by=self.user,
         )
 
+    @override_settings(
+        HOSPITAL_CONFIG={
+            "name": "Test Hospital",
+            "city": "Test City",
+            "state_full": "Test State",
+            "address": "123 Test Street",
+        }
+    )
     def test_context_builder_includes_patient_doctor_document_hospital_fields(self):
         """Test that context builder includes all required fields."""
         document_date = date(2026, 1, 15)
-        context = build_report_context(
-            patient=self.patient,
-            doctor=self.user,
-            document_date=document_date,
-        )
+        fixed_now = timezone.make_aware(datetime(2026, 1, 15, 10, 30))
+        with patch("django.utils.timezone.localtime", return_value=fixed_now):
+            context = build_report_context(
+                patient=self.patient,
+                doctor=self.user,
+                document_date=document_date,
+            )
 
         # Patient fields
         self.assertIn("patient_name", context)
         self.assertEqual(context["patient_name"], "John Doe")
         self.assertIn("patient_record_number", context)
         self.assertEqual(context["patient_record_number"], "REC12345")
+        self.assertEqual(context["patient_birth_date"], "01/01/1990")
+        self.assertEqual(context["patient_age"], str(self.patient.age))
+        self.assertEqual(context["patient_gender"], self.patient.get_gender_display())
+        self.assertEqual(context["patient_fiscal_number"], "FISC123")
+        self.assertEqual(context["patient_healthcard_number"], "HC123")
+        self.assertEqual(context["patient_ward"], "TW")
+        self.assertEqual(context["patient_bed"], "B12")
+        self.assertEqual(context["patient_status"], self.patient.get_status_display())
 
         # Doctor fields
         self.assertIn("doctor_name", context)
         self.assertEqual(context["doctor_name"], "Dr. Test Doctor")
+        self.assertEqual(context["doctor_profession"], self.user.get_profession_type_display())
+        self.assertEqual(context["doctor_registration_number"], "CRM-12345")
+        self.assertEqual(context["doctor_specialty"], "Cardiology")
 
         # Document fields
         self.assertIn("document_date", context)
         self.assertEqual(context["document_date"], "15/01/2026")
+        self.assertEqual(context["document_datetime"], "15/01/2026 10:30")
+
+        # Hospital fields
+        self.assertEqual(context["hospital_name"], "Test Hospital")
+        self.assertEqual(context["hospital_city"], "Test City")
+        self.assertEqual(context["hospital_state"], "Test State")
+        self.assertEqual(context["hospital_address"], "123 Test Street")
 
     def test_context_builder_patient_without_record_number(self):
         """Test context builder handles patient without record number."""

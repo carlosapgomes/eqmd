@@ -28,14 +28,14 @@ The system SHALL show public templates to all authenticated users and private te
 - **THEN** the system excludes private templates created by other users
 
 ### Requirement: Strict placeholder validation
-The system SHALL validate template placeholders against an allowlist and require patient_name and patient_record_number placeholders.
+The system SHALL validate template placeholders against an allowlist and require the patient_name placeholder.
 
 #### Scenario: Unknown placeholder rejected
 - **WHEN** a template contains a placeholder not in the allowlist
 - **THEN** the system rejects the template with a validation error
 
 #### Scenario: Missing required placeholders rejected
-- **WHEN** a template omits patient_name or patient_record_number
+- **WHEN** a template omits patient_name
 - **THEN** the system rejects the template with a validation error
 
 ### Requirement: Create reports from templates

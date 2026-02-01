@@ -1,23 +1,23 @@
 {% extends 'base_app.html' %}
 
-{% block title %}{% if object %}Editar{% else %}Novo{% endif %} Template de Relatório{% endblock %}
+{% block title %}{% if object %}Editar{% else %}Novo{% endif %} Modelos de Relatório{% endblock %}
 
 {% block app_content %}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb">
     <li class="breadcrumb-item">
-      <a href="{% url 'core:landing_page' %}">
+      <a href="{% url 'reports:template_list' %}">
         <i class="bi bi-house me-1"></i>
         Início
       </a>
     </li>
     <li class="breadcrumb-item">
       <a href="{% url 'reports:template_list' %}">
-        Templates de Relatório
+        Modelos de Relatório
       </a>
     </li>
     <li class="breadcrumb-item active" aria-current="page">
-      {% if object %}Editar{% else %}Novo{% endif %} Template
+      {% if object %}Editar{% else %}Novo{% endif %} Modelo
     </li>
   </ol>
 </nav>
@@ -25,7 +25,7 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
   <h1 class="h2">
     <i class="bi bi-file-earmark-text text-medical-primary me-2"></i>
-    {% if object %}Editar{% else %}Novo{% endif %} Template
+    {% if object %}Editar{% else %}Novo{% endif %} Modelo
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
     <a href="{% url 'reports:template_list' %}" class="btn btn-outline-secondary">
@@ -39,7 +39,7 @@
   <div class="card-header bg-medical-light">
     <h5 class="card-title mb-0">
       <i class="bi bi-pencil-square me-2"></i>
-      {% if object %}Editar{% else %}Criar{% endif %} Template de Relatório
+      {% if object %}Editar{% else %}Criar{% endif %} Modelo de Relatório
     </h5>
   </div>
   <div class="card-body">
@@ -80,8 +80,9 @@
           </div>
         {% endif %}
         <div class="form-text">
-          Use os placeholders disponíveis: <code>{{patient_name}}</code>, <code>{{patient_record_number}}</code>.
-          Opcionalmente, você pode usar <code>{{page_break}}</code> para quebras de página.
+          Use os placeholders disponíveis (veja a lista completa abaixo).
+          Obrigatório: <code>{% templatetag openvariable %}patient_name{% templatetag closevariable %}</code>.
+          Opcionalmente, você pode usar <code>{% templatetag openvariable %}page_break{% templatetag closevariable %}</code> para quebras de página.
         </div>
       </div>
 
@@ -94,7 +95,7 @@
             </label>
           </div>
           <div class="form-text">
-            Templates inativos não podem ser usados para criar relatórios.
+            Modelos inativos não podem ser usados para criar relatórios.
           </div>
         </div>
         <div class="col-md-6">
@@ -105,7 +106,7 @@
             </label>
           </div>
           <div class="form-text">
-            Templates públicos são visíveis para todos os usuários autenticados.
+            Modelos públicos são visíveis para todos os usuários autenticados.
           </div>
         </div>
       </div>
@@ -114,7 +115,7 @@
         <div>
           <button type="submit" class="btn btn-medical-primary">
             <i class="bi bi-check-circle me-1"></i>
-            {% if object %}Salvar{% else %}Criar{% endif %} Template
+            {% if object %}Salvar{% else %}Criar{% endif %} Modelo
           </button>
           <a href="{% url 'reports:template_list' %}" class="btn btn-outline-secondary ms-2">
             <i class="bi bi-x-circle me-1"></i>
@@ -134,17 +135,60 @@
     </h6>
   </div>
   <div class="card-body">
-    <p class="mb-2">
-      Os placeholders são substituídos automaticamente quando um relatório é criado a partir deste template.
-    </p>
-    <ul class="mb-0">
-      <li><code>{{patient_name}}</code> - Nome completo do paciente</li>
-      <li><code>{{patient_record_number}}</code> - Número do prontuário do paciente</li>
-      <li><code>{{page_break}}</code> - Força uma quebra de página no PDF (opcional)</li>
-    </ul>
-    <p class="mb-0 mt-2 text-muted small">
-      Todos os templates devem incluir os placeholders <code>{{patient_name}}</code> e <code>{{patient_record_number}}</code>.
-    </p>
+    <details>
+      <summary class="fw-semibold">Ver lista completa de placeholders e como usar</summary>
+      <div class="mt-3">
+        <p class="mb-2">
+          Placeholders são marcadores entre chaves duplas, por exemplo
+          <code>{% templatetag openvariable %}patient_name{% templatetag closevariable %}</code>.
+          Eles são substituídos automaticamente quando um relatório é criado a partir deste template.
+        </p>
+        <p class="mb-3">
+          Exemplo: <code>Paciente: {% templatetag openvariable %}patient_name{% templatetag closevariable %}
+          (Prontuário: {% templatetag openvariable %}patient_record_number{% templatetag closevariable %})</code>
+        </p>
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Dados do paciente</h6>
+            <ul class="list-unstyled mb-3">
+              <li><code>{% templatetag openvariable %}patient_name{% templatetag closevariable %}</code> - Nome do paciente (obrigatório)</li>
+              <li><code>{% templatetag openvariable %}patient_record_number{% templatetag closevariable %}</code> - Número do prontuário</li>
+              <li><code>{% templatetag openvariable %}patient_birth_date{% templatetag closevariable %}</code> - Data de nascimento</li>
+              <li><code>{% templatetag openvariable %}patient_age{% templatetag closevariable %}</code> - Idade</li>
+              <li><code>{% templatetag openvariable %}patient_gender{% templatetag closevariable %}</code> - Sexo</li>
+              <li><code>{% templatetag openvariable %}patient_fiscal_number{% templatetag closevariable %}</code> - CPF</li>
+              <li><code>{% templatetag openvariable %}patient_healthcard_number{% templatetag closevariable %}</code> - Cartão de saúde</li>
+              <li><code>{% templatetag openvariable %}patient_ward{% templatetag closevariable %}</code> - Enfermaria</li>
+              <li><code>{% templatetag openvariable %}patient_bed{% templatetag closevariable %}</code> - Leito</li>
+              <li><code>{% templatetag openvariable %}patient_status{% templatetag closevariable %}</code> - Status do paciente</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h6>Dados do profissional</h6>
+            <ul class="list-unstyled mb-3">
+              <li><code>{% templatetag openvariable %}doctor_name{% templatetag closevariable %}</code> - Nome do profissional</li>
+              <li><code>{% templatetag openvariable %}doctor_profession{% templatetag closevariable %}</code> - Profissão</li>
+              <li><code>{% templatetag openvariable %}doctor_registration_number{% templatetag closevariable %}</code> - Número de registro</li>
+              <li><code>{% templatetag openvariable %}doctor_specialty{% templatetag closevariable %}</code> - Especialidade</li>
+            </ul>
+            <h6>Documento e hospital</h6>
+            <ul class="list-unstyled mb-0">
+              <li><code>{% templatetag openvariable %}document_date{% templatetag closevariable %}</code> - Data do documento</li>
+              <li><code>{% templatetag openvariable %}document_datetime{% templatetag closevariable %}</code> - Data e hora do documento</li>
+              <li><code>{% templatetag openvariable %}hospital_name{% templatetag closevariable %}</code> - Nome do hospital</li>
+              <li><code>{% templatetag openvariable %}hospital_city{% templatetag closevariable %}</code> - Cidade</li>
+              <li><code>{% templatetag openvariable %}hospital_state{% templatetag closevariable %}</code> - Estado</li>
+              <li><code>{% templatetag openvariable %}hospital_address{% templatetag closevariable %}</code> - Endereço</li>
+              <li><code>{% templatetag openvariable %}page_break{% templatetag closevariable %}</code> - Quebra de página (útil em PDFs)</li>
+            </ul>
+          </div>
+        </div>
+        <p class="mb-0 mt-2 text-muted small">
+          Obrigatório: <code>{% templatetag openvariable %}patient_name{% templatetag closevariable %}</code>.
+          Recomendado: <code>{% templatetag openvariable %}patient_record_number{% templatetag closevariable %}</code>.
+        </p>
+      </div>
+    </details>
   </div>
 </div>
 {% endblock %}

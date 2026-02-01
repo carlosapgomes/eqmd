@@ -1,0 +1,74 @@
+{% extends "events/partials/event_card_base.html" %}
+
+{% block event_content %}
+<div class="report-summary">
+    <div class="small text-muted mb-1">
+        <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
+        {{ event.title|default:"Relatório" }}
+    </div>
+    <div class="small mb-1">
+        <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>
+        {{ event.document_date|date:"d/m/Y" }}
+    </div>
+    {% if event.template %}
+        <div class="small text-muted mb-1">
+            <i class="bi bi-collection me-1" aria-hidden="true"></i>
+            {{ event.template.name }}
+        </div>
+    {% endif %}
+    <div class="small text-muted">
+        {{ event_data.excerpt }}
+    </div>
+</div>
+{% endblock event_content %}
+
+{% block event_actions %}
+<div class="btn-group btn-group-sm">
+    <a href="{{ event.get_absolute_url }}" 
+       class="btn btn-outline-primary btn-sm"
+       aria-label="Visualizar relatório"
+       data-bs-toggle="tooltip" 
+       data-bs-placement="top" 
+       title="Ver detalhes">
+        <i class="bi bi-eye" aria-hidden="true"></i>
+    </a>
+
+    <button type="button"
+            class="btn btn-outline-danger btn-sm pdf-download-btn"
+            data-pdf-url="{% url 'reports:report_pdf' event.pk %}"
+            data-filename="relatorio-{{ event.patient.name|slugify }}-{{ event.document_date|date:'d-m-Y' }}.pdf"
+            aria-label="Gerar PDF do relatório"
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Gerar PDF">
+        <span class="pdf-btn-content">
+            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+        </span>
+        <span class="pdf-btn-spinner d-none">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </span>
+    </button>
+
+    {% if event_data.can_edit %}
+        <a href="{{ event.get_edit_url }}" 
+           class="btn btn-outline-warning btn-sm"
+           aria-label="Editar relatório"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Editar">
+            <i class="bi bi-pencil" aria-hidden="true"></i>
+        </a>
+    {% endif %}
+
+    {% if perms.events.delete_event and event_data.can_delete %}
+        <a href="{% url 'reports:report_delete' event.pk %}"
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir relatório"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="Excluir">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+        </a>
+    {% endif %}
+</div>
+{% endblock event_actions %}

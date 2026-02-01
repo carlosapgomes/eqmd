@@ -22,7 +22,7 @@ class TestReportTemplateModel(TestCase):
 
         template = ReportTemplate(
             name="Valid Template",
-            markdown_body="Patient: {{patient_name}}, Record: {{patient_record_number}}",
+            markdown_body="Patient: {{patient_name}}, Doctor: {{doctor_name}}",
             created_by=self.user,
             updated_by=self.user,
         )
@@ -33,7 +33,7 @@ class TestReportTemplateModel(TestCase):
         self.assertEqual(saved_template.name, "Valid Template")
         self.assertEqual(
             saved_template.markdown_body,
-            "Patient: {{patient_name}}, Record: {{patient_record_number}}"
+            "Patient: {{patient_name}}, Doctor: {{doctor_name}}"
         )
         self.assertTrue(saved_template.is_active)
 
@@ -56,8 +56,8 @@ class TestReportTemplateModel(TestCase):
         self.assertIn("Unknown placeholders", error_message)
         self.assertIn("unknown_placeholder", error_message)
 
-    def test_reporttemplate_requires_patient_placeholders(self):
-        """Test that templates missing required placeholders are rejected."""
+    def test_reporttemplate_requires_patient_name(self):
+        """Test that templates missing patient_name are rejected."""
         from apps.reports.models import ReportTemplate
 
         # Missing patient_name
@@ -74,21 +74,6 @@ class TestReportTemplateModel(TestCase):
         error_message = str(context.exception)
         self.assertIn("Missing required placeholders", error_message)
         self.assertIn("patient_name", error_message)
-
-        # Missing patient_record_number
-        template2 = ReportTemplate(
-            name="Missing Record Template",
-            markdown_body="Patient: {{patient_name}}",
-            created_by=self.user,
-            updated_by=self.user,
-        )
-
-        with self.assertRaises(ValidationError) as context:
-            template2.full_clean()
-
-        error_message = str(context.exception)
-        self.assertIn("Missing required placeholders", error_message)
-        self.assertIn("patient_record_number", error_message)
 
         # Missing both
         template3 = ReportTemplate(
@@ -110,7 +95,7 @@ class TestReportTemplateModel(TestCase):
 
         template = ReportTemplate(
             name="Default Active Template",
-            markdown_body="Patient: {{patient_name}}, Record: {{patient_record_number}}",
+            markdown_body="Patient: {{patient_name}}",
             created_by=self.user,
             updated_by=self.user,
         )
@@ -126,7 +111,7 @@ class TestReportTemplateModel(TestCase):
 
         template = ReportTemplate(
             name="Test Template Name",
-            markdown_body="Patient: {{patient_name}}, Record: {{patient_record_number}}",
+            markdown_body="Patient: {{patient_name}}",
             created_by=self.user,
             updated_by=self.user,
         )
@@ -161,7 +146,7 @@ class TestReportTemplateModel(TestCase):
 
         template = ReportTemplate(
             name="Inactive Template",
-            markdown_body="Patient: {{patient_name}}, Record: {{patient_record_number}}",
+            markdown_body="Patient: {{patient_name}}",
             is_active=False,
             created_by=self.user,
             updated_by=self.user,
@@ -178,7 +163,7 @@ class TestReportTemplateModel(TestCase):
 
         template = ReportTemplate(
             name="Private Template",
-            markdown_body="Patient: {{patient_name}}, Record: {{patient_record_number}}",
+            markdown_body="Patient: {{patient_name}}",
             created_by=self.user,
             updated_by=self.user,
         )
@@ -194,7 +179,7 @@ class TestReportTemplateModel(TestCase):
 
         template = ReportTemplate(
             name="Public Template",
-            markdown_body="Patient: {{patient_name}}, Record: {{patient_record_number}}",
+            markdown_body="Patient: {{patient_name}}",
             is_public=True,
             created_by=self.user,
             updated_by=self.user,
@@ -211,7 +196,7 @@ class TestReportTemplateModel(TestCase):
 
         template = ReportTemplate(
             name="Timestamp Template",
-            markdown_body="Patient: {{patient_name}}, Record: {{patient_record_number}}",
+            markdown_body="Patient: {{patient_name}}",
             created_by=self.user,
             updated_by=self.user,
         )
@@ -229,7 +214,7 @@ class TestReportTemplateModel(TestCase):
 
         template = ReportTemplate(
             name="UUID Template",
-            markdown_body="Patient: {{patient_name}}, Record: {{patient_record_number}}",
+            markdown_body="Patient: {{patient_name}}",
             created_by=self.user,
             updated_by=self.user,
         )
