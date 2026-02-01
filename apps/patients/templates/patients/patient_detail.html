@@ -29,6 +29,12 @@
           <i class="bi bi-clock-history me-2"></i>
           Timeline
         </a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'reports:report_create' patient_id=patient.pk %}" class="btn btn-medical-outline-primary">
+            <i class="bi bi-file-earmark-medical me-2"></i>
+            Relatório
+          </a>
+        {% endif %}
         <a href="{% url 'apps.patients:patient_update' patient.pk %}" class="btn btn-medical-outline-primary">
           <i class="bi bi-pencil me-2"></i>
           Editar
