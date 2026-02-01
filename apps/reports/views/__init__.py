@@ -1,0 +1,3 @@
+"""
+Views for reports app.
+"""

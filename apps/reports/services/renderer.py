@@ -70,12 +70,17 @@ def _check_missing_placeholders(placeholders: Set[str]) -> List[str]:
     return []
 
 
-def validate_template_placeholders(template: str) -> List[str]:
+def validate_template_placeholders(
+    template: str,
+    require_required: bool = True,
+) -> List[str]:
     """
-    Validate that a template only contains allowed placeholders and has required ones.
+    Validate that a template only contains allowed placeholders and, optionally,
+    includes required ones.
 
     Args:
         template: The template string to validate
+        require_required: When True, enforce required placeholders.
 
     Returns:
         List of error messages (empty if validation passes)
@@ -84,7 +89,11 @@ def validate_template_placeholders(template: str) -> List[str]:
     errors = []
 
     errors.extend(_check_unknown_placeholders(placeholders))
-    errors.extend(_check_missing_placeholders(placeholders))
+    if errors:
+        return errors
+
+    if require_required:
+        errors.extend(_check_missing_placeholders(placeholders))
 
     return errors
 

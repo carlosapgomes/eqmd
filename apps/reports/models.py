@@ -45,7 +45,10 @@ class ReportTemplate(models.Model):
     def clean(self):
         """Validate template placeholders."""
         super().clean()
-        errors = validate_template_placeholders(self.markdown_body)
+        errors = validate_template_placeholders(
+            self.markdown_body,
+            require_required=self._state.adding,
+        )
         if errors:
             raise ValidationError({"markdown_body": errors})
 
