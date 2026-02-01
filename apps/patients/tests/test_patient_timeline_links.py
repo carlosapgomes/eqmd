@@ -1,5 +1,5 @@
 """
-Tests for patient detail page links.
+Tests for patient timeline page links.
 """
 
 from datetime import date
@@ -13,8 +13,8 @@ from apps.accounts.models import EqmdCustomUser
 from apps.patients.models import Patient
 
 
-class PatientDetailLinksTests(TestCase):
-    """Tests for links on the patient detail page."""
+class PatientTimelineLinksTests(TestCase):
+    """Tests for links on the patient timeline page."""
 
     @classmethod
     def setUpTestData(cls):
@@ -36,6 +36,15 @@ class PatientDetailLinksTests(TestCase):
         )
         cls.user.user_permissions.add(view_permission)
 
+        # Add add_event permission (required for the dropdown to show)
+        from apps.events.models import Event
+        event_content_type = ContentType.objects.get_for_model(Event)
+        add_event_permission = Permission.objects.get(
+            content_type=event_content_type,
+            codename='add_event'
+        )
+        cls.user.user_permissions.add(add_event_permission)
+
         # Create test patient
         cls.patient = Patient.objects.create(
             name='Test Patient',
@@ -49,29 +58,18 @@ class PatientDetailLinksTests(TestCase):
         """Log in the test user."""
         self.client.login(username='testuser', password='testpassword')
 
-    def test_patient_detail_does_not_show_report_button(self):
-        """Test that patient detail page does NOT show report create button (moved to timeline dropdown)."""
+    def test_patient_timeline_dropdown_includes_report_link(self):
+        """Test that patient timeline page includes report create link in the dropdown."""
         response = self.client.get(
-            reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+            reverse('apps.patients:patient_events_timeline', kwargs={'patient_id': self.patient.pk})
         )
         self.assertEqual(response.status_code, 200)
 
-        # Check that the report create button is NOT present
+        # Check that the report create link is present in the timeline dropdown
         report_create_url = reverse('reports:report_create', kwargs={'patient_id': self.patient.pk})
-        self.assertNotContains(response, report_create_url)
-
-    def test_patient_detail_report_create_link_requires_authentication(self):
-        """Test that report create link is not shown to unauthenticated users."""
-        # Logout the user
-        self.client.logout()
-
-        response = self.client.get(
-            reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
-        )
-
-        # The page should redirect or not contain the link
-        # Typically unauthenticated users are redirected to login
-        # If they can access the page, the link should not be present
-        if response.status_code == 200:
-            report_create_url = reverse('reports:report_create', kwargs={'patient_id': self.patient.pk})
-            self.assertNotContains(response, report_create_url)
+        self.assertContains(response, report_create_url)
+        # Also check that the link is not disabled
+        # The report link should have the correct icon and not be marked as disabled
+        self.assertContains(response, 'bi-file-earmark-medical')
+        # Check that there's no disabled report link
+        self.assertNotRegex(response.content.decode(), r'disabled[^>]*>.*Relatório.*Em breve')
