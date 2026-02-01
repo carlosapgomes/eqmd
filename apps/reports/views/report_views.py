@@ -1,6 +1,8 @@
 """
 Views for report CRUD.
 """
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
@@ -8,11 +10,9 @@ from django.urls import reverse
 from django.views.generic import CreateView
 
 from apps.patients.models import Patient
-from apps.reports.models import Report, ReportTemplate
+from apps.reports.models import Report
 from apps.reports.forms import ReportCreateForm
-from apps.reports.services.report_service import create_report_from_template
-from apps.reports.services.context_builder import build_report_context
-from apps.reports.services.renderer import render_template
+from apps.reports.services.report_service import get_template_for_initial_content
 
 
 class ReportCreateView(LoginRequiredMixin, CreateView):
@@ -48,22 +48,13 @@ class ReportCreateView(LoginRequiredMixin, CreateView):
         template_id = self.request.GET.get('template')
 
         if template_id:
-            try:
-                template = ReportTemplate.objects.get(pk=template_id)
-                # Check access
-                if template.is_public or template.created_by == self.request.user:
-                    # Render template content
-                    context = build_report_context(
-                        patient=self.patient,
-                        doctor=self.request.user,
-                        document_date=initial.get('document_date') or __import__('datetime').date.today(),
-                    )
-                    initial['content'] = render_template(
-                        template.markdown_body, context
-                    )
-                    initial['template'] = template
-            except ReportTemplate.DoesNotExist:
-                pass
+            doc_date = initial.get('document_date') or date.today()
+            template, content = get_template_for_initial_content(
+                template_id, self.request.user, self.patient, doc_date
+            )
+            if template:
+                initial['content'] = content
+                initial['template'] = template
 
         return initial
 
