@@ -49,16 +49,16 @@ class PatientDetailLinksTests(TestCase):
         """Log in the test user."""
         self.client.login(username='testuser', password='testpassword')
 
-    def test_patient_detail_contains_report_create_link_for_authorized_user(self):
-        """Test that patient detail page contains report create link for authenticated user."""
+    def test_patient_detail_does_not_show_report_button(self):
+        """Test that patient detail page does NOT show report create button (moved to timeline dropdown)."""
         response = self.client.get(
             reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
         )
         self.assertEqual(response.status_code, 200)
 
-        # Check that the report create link is present
+        # Check that the report create button is NOT present
         report_create_url = reverse('reports:report_create', kwargs={'patient_id': self.patient.pk})
-        self.assertContains(response, report_create_url)
+        self.assertNotContains(response, report_create_url)
 
     def test_patient_detail_report_create_link_requires_authentication(self):
         """Test that report create link is not shown to unauthenticated users."""
