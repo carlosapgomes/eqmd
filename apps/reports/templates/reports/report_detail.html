@@ -1,0 +1,173 @@
+{% extends 'base_app.html' %}
+{% load static %}
+{% load reports_extras %}
+
+{% block title %}Relatório - {{ report.title }} - {{ patient.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/markdown.css' %}">
+<style>
+  .report-content {
+    line-height: 1.6;
+  }
+
+  .report-content h1,
+  .report-content h2,
+  .report-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .report-content p {
+    margin-bottom: 1rem;
+  }
+
+  .report-content ul,
+  .report-content ol {
+    margin-bottom: 1rem;
+  }
+
+  .report-content strong {
+    font-weight: 600;
+  }
+
+  .info-section {
+    background: #f8f9fa;
+    border-left: 4px solid #2c5aa0;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.375rem;
+  }
+
+  .info-item {
+    margin-bottom: 0.5rem;
+  }
+
+  .info-label {
+    font-weight: 600;
+    color: #495057;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block app_content %}
+<!-- Header with breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_list' %}">
+        <i class="bi bi-people me-1"></i>
+        Pacientes
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}">
+        {{ patient.name }} - Timeline
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Relatório</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">
+    <i class="bi bi-file-text text-medical-primary me-2"></i>
+    {{ report.title }}
+  </h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>
+      Voltar à Timeline
+    </a>
+  </div>
+</div>
+
+<!-- Report Info Card -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-info-circle me-2"></i>
+      Informações do Relatório
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="info-item">
+          <span class="info-label"><i class="bi bi-person me-1"></i>Paciente:</span>
+          {{ patient.name }}
+        </div>
+        <div class="info-item">
+          <span class="info-label"><i class="bi bi-hash me-1"></i>Prontuário:</span>
+          {{ patient.current_record_number }}
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="info-item">
+          <span class="info-label"><i class="bi bi-calendar-event me-1"></i>Data do Documento:</span>
+          {{ report.document_date|date:"d/m/Y" }}
+        </div>
+        <div class="info-item">
+          <span class="info-label"><i class="bi bi-clock me-1"></i>Criado em:</span>
+          {{ report.created_at|date:"d/m/Y H:i" }}
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div class="info-item">
+          <span class="info-label"><i class="bi bi-person-badge me-1"></i>Criado por:</span>
+          {{ report.created_by.get_full_name|default:report.created_by.username }}
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="info-item">
+          <span class="info-label"><i class="bi bi-pencil me-1"></i>Atualizado por:</span>
+          {{ report.updated_by.get_full_name|default:report.updated_by.username }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Report Content Card -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-medical-light">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-file-earmark-text me-2"></i>
+      Conteúdo
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="report-content">
+      {{ report.content|markdown_filter }}
+    </div>
+  </div>
+</div>
+
+<!-- Actions Card -->
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex justify-content-between flex-wrap gap-2">
+      <div>
+        {% if report.created_by == user and report.can_be_edited %}
+          <a href="{% url 'reports:report_update' pk=report.pk %}" class="btn btn-medical-primary">
+            <i class="bi bi-pencil me-1"></i>
+            Editar Relatório
+          </a>
+          <a href="{% url 'reports:report_delete' pk=report.pk %}" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>
+            Excluir Relatório
+          </a>
+        {% endif %}
+      </div>
+      <div>
+        <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-circle me-1"></i>
+          Fechar
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
