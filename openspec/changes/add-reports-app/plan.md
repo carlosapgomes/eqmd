@@ -26,6 +26,7 @@
 7. Report detail/update/delete with 24h rules
 8. PDF generator + download view
 9. Navigation/timeline integration
+10. Move report link to timeline dropdown
 
 ## Notes on verification
 - Use `./scripts/test.sh <test_target>` for each slice.
