@@ -10,6 +10,36 @@ from .models import ReportTemplate, Report
 from .services.report_service import can_user_use_template
 
 
+class ReportUpdateForm(forms.ModelForm):
+    """Form for updating an existing report."""
+
+    class Meta:
+        model = Report
+        fields = ['title', 'document_date', 'content']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'document_date': forms.DateInput(
+                attrs={'class': 'form-control', 'type': 'date'}
+            ),
+            'content': forms.Textarea(
+                attrs={
+                    'id': 'id_content',
+                    'class': 'form-control',
+                    'rows': 15,
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        """Initialize form."""
+        super().__init__(*args, **kwargs)
+
+        # Configure content field
+        self.fields['content'].required = True
+        self.fields['content'].label = "Conteúdo"
+        self.fields['content'].help_text = "Conteúdo do relatório (suporte a Markdown)"
+
+
 class ReportTemplateForm(forms.ModelForm):
     """Form for creating and updating report templates."""
 

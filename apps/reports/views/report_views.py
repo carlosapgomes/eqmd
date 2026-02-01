@@ -4,15 +4,105 @@ Views for report CRUD.
 from datetime import date
 
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.views.generic import CreateView
+from django.views.generic import CreateView, DetailView, UpdateView, DeleteView
 
 from apps.patients.models import Patient
 from apps.reports.models import Report
-from apps.reports.forms import ReportCreateForm
+from apps.reports.forms import ReportCreateForm, ReportUpdateForm
 from apps.reports.services.report_service import get_template_for_initial_content
+
+
+class ReportDetailView(LoginRequiredMixin, DetailView):
+    """Detail view for reports."""
+
+    model = Report
+    template_name = 'reports/report_detail.html'
+    context_object_name = 'report'
+
+    def get_context_data(self, **kwargs):
+        """Add markdown rendering context."""
+        context = super().get_context_data(**kwargs)
+        context['patient'] = self.object.patient
+        return context
+
+
+class ReportUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """Update view for reports."""
+
+    model = Report
+    form_class = ReportUpdateForm
+    template_name = 'reports/report_update_form.html'
+    context_object_name = 'report'
+
+    def test_func(self):
+        """Check if user can edit report (creator and within 24h)."""
+        report = self.get_object()
+        return (
+            report.created_by == self.request.user
+            and report.can_be_edited
+        )
+
+    def get_context_data(self, **kwargs):
+        """Add patient to context."""
+        context = super().get_context_data(**kwargs)
+        context['patient'] = self.object.patient
+        return context
+
+    def form_valid(self, form):
+        """Add success message on valid form."""
+        messages.success(
+            self.request,
+            f'Report "{form.instance.title}" updated successfully.'
+        )
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        """Redirect to patient timeline after update."""
+        return reverse(
+            'patients:patient_events_timeline',
+            kwargs={'patient_id': self.object.patient.pk}
+        )
+
+
+class ReportDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    """Delete view for reports."""
+
+    model = Report
+    template_name = 'reports/report_confirm_delete.html'
+    context_object_name = 'report'
+
+    def test_func(self):
+        """Check if user can delete report (creator and within 24h)."""
+        report = self.get_object()
+        return (
+            report.created_by == self.request.user
+            and report.can_be_edited
+        )
+
+    def get_context_data(self, **kwargs):
+        """Add patient to context."""
+        context = super().get_context_data(**kwargs)
+        context['patient'] = self.object.patient
+        return context
+
+    def delete(self, request, *args, **kwargs):
+        """Add success message on delete."""
+        messages.success(
+            self.request,
+            f'Report "{self.get_object().title}" deleted successfully.'
+        )
+        return super().delete(request, *args, **kwargs)
+
+    def get_success_url(self):
+        """Redirect to patient timeline after deletion."""
+        return reverse(
+            'patients:patient_events_timeline',
+            kwargs={'patient_id': self.object.patient.pk}
+        )
 
 
 class ReportCreateView(LoginRequiredMixin, CreateView):
