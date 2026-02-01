@@ -2,7 +2,10 @@ import uuid
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from simple_history.models import HistoricalRecords
+
+from apps.events.models import Event
 
 from .services.renderer import validate_template_placeholders
 
@@ -69,3 +72,63 @@ class ReportTemplate(models.Model):
             models.Index(fields=["is_active"], name="report_template_active_idx"),
             models.Index(fields=["is_public"], name="report_template_public_idx"),
         ]
+
+
+class Report(Event):
+    """
+    Report model extending Event for storing generated reports.
+
+    Reports are created from templates with rendered placeholders and
+    can be edited within a 24-hour window.
+    """
+
+    content = models.TextField(verbose_name="Content")
+    document_date = models.DateField(verbose_name="Document Date")
+    title = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Title",
+        help_text="Optional title for the report",
+    )
+    template = models.ForeignKey(
+        ReportTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reports",
+        verbose_name="Template",
+        help_text="Template used to create this report (null if manual creation)",
+    )
+
+    history = HistoricalRecords(
+        history_change_reason_field=models.TextField(null=True),
+    )
+
+    def save(self, *args, **kwargs):
+        """Override save to set event_type to REPORT_EVENT."""
+        if not self.event_type:
+            self.event_type = Event.REPORT_EVENT
+        if not self.event_datetime:
+            self.event_datetime = timezone.now()
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        """Return the absolute URL for this report."""
+        from django.urls import reverse
+
+        return reverse("reports:report_detail", kwargs={"pk": self.pk})
+
+    def get_edit_url(self):
+        """Return the URL for editing this report."""
+        from django.urls import reverse
+
+        return reverse("reports:report_update", kwargs={"pk": self.pk})
+
+    def __str__(self):
+        """Return description as string representation."""
+        return str(self.description)
+
+    class Meta:
+        verbose_name = "Report"
+        verbose_name_plural = "Reports"
+        ordering = ["-event_datetime"]
