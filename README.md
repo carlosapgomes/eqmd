@@ -255,8 +255,9 @@ For setup assistance or feature requests, please check the project documentation
 ## Development Acknowledgments
 
 This project was developed with the assistance of Large Language Model (LLM) coding assistants,
-including Gemini by Google and Claude by Anthropic. LLM tools were used to help with code
-generation, architecture design, documentation, and problem-solving throughout the development process.
+including Gemini by Google, Claude by Anthropic, Codex by OpenAI, and GLM-4.7 by Z.ai. LLM tools
+were used to help with code generation, architecture design, documentation, and problem-solving
+throughout the development process.
 
 ## License
 
