@@ -437,10 +437,9 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
-                                        <i class="bi bi-file-text me-2 text-muted" aria-hidden="true"></i>
+                                    <a class="dropdown-item" href="{% url 'reports:report_create' patient_id=patient.pk %}">
+                                        <i class="bi bi-file-earmark-medical me-2 text-medical-primary" aria-hidden="true"></i>
                                         Relatório
-                                        <small class="text-muted ms-auto">Em breve</small>
                                     </a>
                                 </li>
                             {% endif %}
@@ -448,7 +447,7 @@
                     </div>
                     {% endif %}
                     
-                    <a href="{% url 'apps.patients:patient_detail' patient.pk %}" 
+                    <a href="{% url 'apps.patients:patient_detail' patient.pk %}"
                        class="btn btn-outline-secondary btn-sm w-100"
                        aria-label="Ver perfil do paciente {{ patient.name }}">
                         <i class="bi bi-person-vcard me-1" aria-hidden="true"></i>
@@ -456,7 +455,7 @@
                     </a>
                 </div>
             </div>
-            
+
             <!-- Desktop Header Layout -->
             <div class="d-none d-md-flex align-items-center justify-content-between">
                 <div>
@@ -608,10 +607,9 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item disabled" href="#" aria-disabled="true">
-                                        <i class="bi bi-file-text me-2 text-muted" aria-hidden="true"></i>
+                                    <a class="dropdown-item" href="{% url 'reports:report_create' patient_id=patient.pk %}">
+                                        <i class="bi bi-file-earmark-medical me-2 text-medical-primary" aria-hidden="true"></i>
                                         Relatório
-                                        <small class="text-muted ms-auto">Em breve</small>
                                     </a>
                                 </li>
                             {% endif %}
