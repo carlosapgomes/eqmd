@@ -2,6 +2,7 @@ import json
 import sys
 from datetime import datetime, timezone, date
 from django.core.management.base import BaseCommand, CommandError
+from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.utils import timezone as django_timezone
 from django.db import transaction
@@ -140,6 +141,8 @@ class Command(BaseCommand):
             imported_count = 0
             error_count = 0
             skipped_count = 0
+            self.admissions_closed_count = 0
+            self.patients_reconciled_count = 0
 
             # Get all discharge reports
             ref = db.reference(reports_reference)
@@ -177,6 +180,10 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 f"Discharge Reports: {imported_count} imported, {skipped_count} skipped, {error_count} errors"
+            )
+            self.stdout.write(
+                f"Admissions closed: {self.admissions_closed_count}, "
+                f"Patients reconciled: {self.patients_reconciled_count}"
             )
             return imported_count
 
@@ -240,11 +247,24 @@ class Command(BaseCommand):
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid datetime format: {e}")
 
+        active_admission = patient.get_current_admission()
+        discharge_status_text = (content.get("patientDischargeStatus") or "").lower()
+        discharge_indicates_death = any(
+            keyword in discharge_status_text
+            for keyword in ["óbito", "obito", "falecido", "morte"]
+        )
+
         if self.dry_run:
             self.stdout.write(
                 f"  Would import discharge report for: {patient.name} "
                 f"({admission_date_str} -> {discharge_date_str})"
             )
+            if active_admission:
+                self.admissions_closed_count += 1
+                self.patients_reconciled_count += 1
+                self.stdout.write(
+                    f"  Would close active admission for: {patient.name}"
+                )
             return "imported"
 
         # Create discharge report and admission record
@@ -303,6 +323,45 @@ class Command(BaseCommand):
                 updated_by=self.import_user,
             )
 
+            if active_admission:
+                discharge_type = PatientAdmission.DischargeType.MEDICAL
+                should_mark_deceased = (
+                    discharge_indicates_death
+                    or patient.status == Patient.Status.DECEASED
+                )
+                if should_mark_deceased:
+                    discharge_type = PatientAdmission.DischargeType.DEATH
+
+                close_datetime = discharge_datetime
+                if close_datetime <= active_admission.admission_datetime:
+                    close_datetime = django_timezone.now()
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"  Discharge date before admission for {patient.name}; "
+                            f"using current time to close active admission."
+                        )
+                    )
+
+                try:
+                    patient.discharge_patient(
+                        close_datetime,
+                        discharge_type,
+                        self.import_user,
+                    )
+                    if should_mark_deceased and patient.status != Patient.Status.DECEASED:
+                        patient.status = Patient.Status.DECEASED
+                        patient.updated_by = self.import_user
+                        patient.save(update_fields=["status", "updated_by", "updated_at"])
+
+                    self.admissions_closed_count += 1
+                    self.patients_reconciled_count += 1
+                except ValidationError as e:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"  Could not close active admission for {patient.name}: {e}"
+                        )
+                    )
+
         self.stdout.write(
             f"  ✓ Imported discharge report: {patient.name} "
             f"({admission_date_str} -> {discharge_date_str})"
@@ -325,6 +384,14 @@ class Command(BaseCommand):
         self.stdout.write("")
         self.stdout.write("Summary:")
         self.stdout.write(f"  Discharge reports imported: {imported_count}")
+        if hasattr(self, "admissions_closed_count"):
+            self.stdout.write(
+                f"  Admissions closed: {self.admissions_closed_count}"
+            )
+        if hasattr(self, "patients_reconciled_count"):
+            self.stdout.write(
+                f"  Patients reconciled: {self.patients_reconciled_count}"
+            )
 
         if self.limit:
             self.stdout.write(f"  Limited to: {self.limit} records")

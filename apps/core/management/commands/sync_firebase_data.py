@@ -223,7 +223,11 @@ class Command(BaseCommand):
             imported_count = 0
             error_count = 0
             skipped_count = 0
+            reconciled_count = 0
             total_processed = 0
+            self.reconciled_patients_count = 0
+            self.admissions_closed_count = 0
+            self.admissions_created_count = 0
 
             # Use chunked querying to avoid payload limits
             ref = db.reference(patients_reference)
@@ -281,6 +285,8 @@ class Command(BaseCommand):
                         )
                         if result == "imported":
                             imported_count += 1
+                        elif result == "reconciled":
+                            reconciled_count += 1
                         elif result == "skipped":
                             skipped_count += 1
 
@@ -318,12 +324,154 @@ class Command(BaseCommand):
                     )
 
             self.stdout.write(
-                f"Patients: {imported_count} imported, {skipped_count} skipped, {error_count} errors"
+                f"Patients: {imported_count} imported, {reconciled_count} reconciled, "
+                f"{skipped_count} skipped, {error_count} errors"
             )
+            if reconciled_count:
+                self.stdout.write(
+                    f"Admissions closed: {self.admissions_closed_count}, "
+                    f"Admissions created: {self.admissions_created_count}"
+                )
             return imported_count
 
         except Exception as e:
             raise Exception(f"Failed to sync patients: {e}")
+
+    def _parse_firebase_status(self, patient_data):
+        raw_status = (patient_data.get("status") or "").strip().lower()
+        status_mapping = {
+            "inpatient": Patient.Status.INPATIENT,
+            "outpatient": Patient.Status.OUTPATIENT,
+            "deceased": Patient.Status.DECEASED,
+            "emergency": Patient.Status.EMERGENCY,
+        }
+        return raw_status, status_mapping.get(raw_status)
+
+    def _parse_last_admission_date(self, patient_data):
+        last_admission_timestamp = patient_data.get("lastAdmissionDate")
+        if last_admission_timestamp:
+            try:
+                return datetime.fromtimestamp(
+                    int(last_admission_timestamp) / 1000
+                ).date()
+            except (ValueError, TypeError):
+                return None
+        return None
+
+    def _reconcile_existing_patient(self, patient, patient_data, last_admission_date):
+        raw_status, desired_status = self._parse_firebase_status(patient_data)
+        if not raw_status or desired_status is None:
+            return "skipped"
+
+        current_admission = patient.get_current_admission()
+        changes_made = False
+
+        if desired_status in [Patient.Status.OUTPATIENT, Patient.Status.DECEASED]:
+            if current_admission:
+                discharge_type = (
+                    PatientAdmission.DischargeType.DEATH
+                    if desired_status == Patient.Status.DECEASED
+                    else PatientAdmission.DischargeType.MEDICAL
+                )
+                close_datetime = django_timezone.now()
+                if self.dry_run:
+                    self.stdout.write(
+                        f"  Would close active admission for: {patient.name}"
+                    )
+                else:
+                    patient.discharge_patient(
+                        close_datetime,
+                        discharge_type,
+                        self.import_user,
+                    )
+                    if desired_status == Patient.Status.DECEASED and patient.status != Patient.Status.DECEASED:
+                        patient.status = Patient.Status.DECEASED
+                        patient.updated_by = self.import_user
+                        patient.save(
+                            update_fields=["status", "updated_by", "updated_at"]
+                        )
+                self.admissions_closed_count += 1
+                changes_made = True
+
+            if patient.status != desired_status:
+                if self.dry_run:
+                    self.stdout.write(
+                        f"  Would update status for: {patient.name} -> {raw_status}"
+                    )
+                else:
+                    patient.status = desired_status
+                    patient.current_admission_id = None
+                    patient.bed = ""
+                    patient.ward = None
+                    patient.updated_by = self.import_user
+                    patient.save(
+                        update_fields=[
+                            "status",
+                            "current_admission_id",
+                            "bed",
+                            "ward",
+                            "updated_by",
+                            "updated_at",
+                        ]
+                    )
+                changes_made = True
+
+        elif desired_status in [Patient.Status.INPATIENT, Patient.Status.EMERGENCY]:
+            if not current_admission:
+                admission_datetime = django_timezone.now()
+                if last_admission_date:
+                    admission_datetime = django_timezone.datetime.combine(
+                        last_admission_date,
+                        django_timezone.datetime.min.time(),
+                    ).replace(tzinfo=django_timezone.get_current_timezone())
+
+                admission_type = (
+                    PatientAdmission.AdmissionType.EMERGENCY
+                    if desired_status == Patient.Status.EMERGENCY
+                    else PatientAdmission.AdmissionType.SCHEDULED
+                )
+
+                if self.dry_run:
+                    self.stdout.write(
+                        f"  Would create active admission for: {patient.name}"
+                    )
+                else:
+                    patient.admit_patient(
+                        admission_datetime,
+                        admission_type,
+                        self.import_user,
+                        initial_bed="",
+                        ward=None,
+                        admission_diagnosis="Admissão importada do sistema antigo",
+                    )
+                    if desired_status == Patient.Status.EMERGENCY and patient.status != Patient.Status.EMERGENCY:
+                        patient.status = Patient.Status.EMERGENCY
+                        patient.updated_by = self.import_user
+                        patient.save(
+                            update_fields=["status", "updated_by", "updated_at"]
+                        )
+
+                self.admissions_created_count += 1
+                changes_made = True
+
+            elif patient.status != desired_status:
+                if self.dry_run:
+                    self.stdout.write(
+                        f"  Would update status for: {patient.name} -> {raw_status}"
+                    )
+                else:
+                    patient.status = desired_status
+                    patient.updated_by = self.import_user
+                    patient.save(
+                        update_fields=["status", "updated_by", "updated_at"]
+                    )
+                changes_made = True
+
+        if changes_made:
+            self.reconciled_patients_count += 1
+            return "reconciled"
+
+        return "skipped"
 
     def process_firebase_patient(self, firebase_key, patient_data):
         """Process a single Firebase patient"""
@@ -343,6 +491,8 @@ class Command(BaseCommand):
         if "teste" in name.lower() or "paciente" in name.lower():
             return "skipped"
 
+        last_admission_date = self._parse_last_admission_date(patient_data)
+
         # Check if patient already exists by either firebase key or ptRecN
         existing_firebase_record = PatientRecordNumber.objects.filter(
             record_number=firebase_key
@@ -352,8 +502,26 @@ class Command(BaseCommand):
             record_number=pt_rec_n
         ).first()
 
+        if existing_firebase_record and existing_ptrecn_record:
+            if existing_firebase_record.patient_id != existing_ptrecn_record.patient_id:
+                self.stdout.write(
+                    self.style.WARNING(
+                        "Patient record mismatch between firebase key and ptRecN; skipping reconcile."
+                    )
+                )
+                return "skipped"
+
         if existing_firebase_record or existing_ptrecn_record:
-            return "skipped"
+            existing_patient = (
+                existing_firebase_record.patient
+                if existing_firebase_record
+                else existing_ptrecn_record.patient
+            )
+            return self._reconcile_existing_patient(
+                existing_patient,
+                patient_data,
+                last_admission_date,
+            )
 
         # Parse birthday from timestamp
         try:
@@ -373,14 +541,8 @@ class Command(BaseCommand):
         )
 
         # Parse status with two-step logic for proper timeline event creation
-        status_mapping = {
-            "inpatient": Patient.Status.INPATIENT,
-            "outpatient": Patient.Status.OUTPATIENT,
-            "deceased": Patient.Status.DECEASED,
-        }
-        original_status = status_mapping.get(
-            patient_data.get("status"), Patient.Status.OUTPATIENT
-        )
+        raw_status, mapped_status = self._parse_firebase_status(patient_data)
+        original_status = mapped_status or Patient.Status.OUTPATIENT
         
         # Determine creation approach based on original status
         if original_status in [Patient.Status.INPATIENT, Patient.Status.EMERGENCY]:
@@ -409,17 +571,6 @@ class Command(BaseCommand):
                 )
             except (ValueError, TypeError):
                 pass  # Use default created_at
-
-        # Parse last admission date
-        last_admission_date = None
-        last_admission_timestamp = patient_data.get("lastAdmissionDate")
-        if last_admission_timestamp:
-            try:
-                last_admission_date = datetime.fromtimestamp(
-                    int(last_admission_timestamp) / 1000
-                ).date()
-            except (ValueError, TypeError):
-                pass
 
         if self.dry_run:
             self.stdout.write(
@@ -745,6 +896,9 @@ class Command(BaseCommand):
         try:
             # Calculate total records
             total_synced = patients_synced + dailynotes_synced
+            reconciled_patients = getattr(self, "reconciled_patients_count", 0)
+            admissions_closed = getattr(self, "admissions_closed_count", 0)
+            admissions_created = getattr(self, "admissions_created_count", 0)
             
             # Generate email subject
             subject = f"Firebase Sync Report - {sync_date.strftime('%d/%m/%Y')} - {patients_synced} patients, {dailynotes_synced} dailynotes"
@@ -755,6 +909,9 @@ class Command(BaseCommand):
 📊 **Resumo da Sincronização:**
 - **Data:** {sync_date.strftime('%d/%m/%Y às %H:%M:%S')}
 - **Pacientes sincronizados:** {patients_synced}
+- **Pacientes reconciliados:** {reconciled_patients}
+- **Internações encerradas:** {admissions_closed}
+- **Internações criadas:** {admissions_created}
 - **Evoluções sincronizadas:** {dailynotes_synced}
 - **Total de registros:** {total_synced}
 
@@ -814,6 +971,18 @@ Sistema EquipeMed - Sincronização Automática Firebase"""
         self.stdout.write("")
         self.stdout.write("Summary:")
         self.stdout.write(f"  Patients synced: {patients_synced}")
+        if hasattr(self, "reconciled_patients_count"):
+            self.stdout.write(
+                f"  Patients reconciled: {self.reconciled_patients_count}"
+            )
+        if hasattr(self, "admissions_closed_count"):
+            self.stdout.write(
+                f"  Admissions closed: {self.admissions_closed_count}"
+            )
+        if hasattr(self, "admissions_created_count"):
+            self.stdout.write(
+                f"  Admissions created: {self.admissions_created_count}"
+            )
         self.stdout.write(f"  Dailynotes synced: {dailynotes_synced}")
         self.stdout.write(
             f"  Total records synced: {patients_synced + dailynotes_synced}"
