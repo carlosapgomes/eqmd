@@ -192,25 +192,15 @@
     <div class="card-body">
         <form method="post" class="mb-0 no-loading">
             {% csrf_token %}
-            <div class="row align-items-end">
+            <div class="row g-2 align-items-end">
                 <div class="col-md-10">
                     <label for="{{ form.query.id_for_label }}" class="form-label fw-bold">
                         {{ form.query.label }}
                     </label>
                     {{ form.query }}
-                    {% if form.query.help_text %}
-                        <div class="form-text">{{ form.query.help_text }}</div>
-                    {% endif %}
-                    {% if form.query.errors %}
-                        <div class="text-danger">
-                            {% for error in form.query.errors %}
-                                <small>{{ error }}</small>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
                 </div>
                 <div class="col-md-2">
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 align-items-end h-100">
                         <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#searchHelpModal" title="Ajuda de Busca">
                             <i class="bi bi-question-circle"></i>
                         </button>
@@ -219,12 +209,28 @@
                                 <i class="bi bi-search me-1"></i>Buscar
                             </span>
                             <span class="search-loading d-none">
-                                <i class="bi bi-arrow-clockwise spin me-1"></i>Buscando...
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Buscando...
                             </span>
                         </button>
                     </div>
                 </div>
             </div>
+            {% if form.query.help_text or form.query.errors %}
+                <div class="row">
+                    <div class="col-12 col-md-10 mt-1">
+                        {% if form.query.help_text %}
+                            <div class="form-text">{{ form.query.help_text }}</div>
+                        {% endif %}
+                        {% if form.query.errors %}
+                            <div class="text-danger">
+                                {% for error in form.query.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
         </form>
     </div>
 </div>
@@ -367,6 +373,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (searchForm && searchButton) {
         searchForm.addEventListener('submit', function() {
+            if (searchForm.dataset.submitting === 'true') {
+                return;
+            }
+            searchForm.dataset.submitting = 'true';
+
             // Disable button to prevent double submission
             searchButton.disabled = true;
             
@@ -379,10 +390,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadingState.classList.remove('d-none');
             }
             
-            // Re-enable button if form submission fails (shouldn't happen normally)
+            // Re-enable button if navigation fails (shouldn't happen normally)
             setTimeout(function() {
                 if (searchButton.disabled) {
                     searchButton.disabled = false;
+                    searchForm.dataset.submitting = 'false';
                     if (normalState && loadingState) {
                         normalState.classList.remove('d-none');
                         loadingState.classList.add('d-none');
