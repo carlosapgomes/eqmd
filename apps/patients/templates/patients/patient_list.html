@@ -48,6 +48,7 @@
               <option value="3" {% if request.GET.status == "3" %}selected{% endif %}>Emergência</option>
               <option value="4" {% if request.GET.status == "4" %}selected{% endif %}>Alta</option>
               <option value="5" {% if request.GET.status == "5" %}selected{% endif %}>Transferido</option>
+              <option value="6" {% if request.GET.status == "6" %}selected{% endif %}>Óbito</option>
             </select>
           </div>
 
@@ -95,7 +96,7 @@
             {% endif %}
             {% if request.GET.status %}
               <span class="badge bg-medical-teal">
-                Status: {% if request.GET.status == "1" %}Ambulatorial{% elif request.GET.status == "2" %}Internado{% elif request.GET.status == "3" %}Emergência{% elif request.GET.status == "4" %}Alta{% elif request.GET.status == "5" %}Transferido{% endif %}
+                Status: {% if request.GET.status == "1" %}Ambulatorial{% elif request.GET.status == "2" %}Internado{% elif request.GET.status == "3" %}Emergência{% elif request.GET.status == "4" %}Alta{% elif request.GET.status == "5" %}Transferido{% elif request.GET.status == "6" %}Óbito{% endif %}
                 <a href="?{% if request.GET.q %}q={{ request.GET.q }}{% endif %}{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}" 
                    class="text-white text-decoration-none ms-1">×</a>
               </span>
