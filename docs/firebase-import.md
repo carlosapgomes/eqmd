@@ -356,6 +356,7 @@ docker compose run --rm \
     --database-url https://your-project.firebaseio.com \
     --project-name your-project \
     --since-date $(date -d "yesterday" +%Y-%m-%d) \
+    --ward-map-file fixtures/firebase-ward-map.json \
     --chunk-size 500
 
 # With email reporting for adoption tracking
@@ -366,6 +367,7 @@ docker compose run --rm \
     --database-url https://your-project.firebaseio.com \
     --project-name your-project \
     --since-date $(date -d "yesterday" +%Y-%m-%d) \
+    --ward-map-file fixtures/firebase-ward-map.json \
     --chunk-size 500 \
     --email admin@yourcompany.com
 ```
@@ -376,14 +378,14 @@ docker compose run --rm \
 
 ```bash
 # Add to crontab - MUST be single line in crontab
-0 2 * * * cd /path/to/your/project && docker compose run --rm -v ./firebase-key.json:/app/firebase-key.json:ro eqmd python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --chunk-size 500 --email admin@yourcompany.com >> /var/log/firebase-sync.log 2>&1
+0 2 * * * cd /path/to/your/project && docker compose run --rm -v ./firebase-key.json:/app/firebase-key.json:ro eqmd python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --ward-map-file fixtures/firebase-ward-map.json --chunk-size 500 --email admin@yourcompany.com >> /var/log/firebase-sync.log 2>&1
 ```
 
 **Advanced Cron with Error Handling**
 
 ```bash
 # Cron with email alerts on failure - MUST be single line in crontab
-0 2 * * * cd /path/to/your/project && (docker compose run --rm -v ./firebase-key.json:/app/firebase-key.json:ro eqmd python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --chunk-size 500 --email admin@yourcompany.com || echo "Firebase sync failed at $(date)" | mail -s "Firebase Sync Error" admin@yourcompany.com) >> /var/log/firebase-sync.log 2>&1
+0 2 * * * cd /path/to/your/project && (docker compose run --rm -v ./firebase-key.json:/app/firebase-key.json:ro eqmd python manage.py sync_firebase_data --credentials-file firebase-key.json --database-url https://your-project.firebaseio.com --project-name your-project --since-date $(date -d "yesterday" +\%Y-\%m-\%d) --ward-map-file fixtures/firebase-ward-map.json --chunk-size 500 --email admin@yourcompany.com || echo "Firebase sync failed at $(date)" | mail -s "Firebase Sync Error" admin@yourcompany.com) >> /var/log/firebase-sync.log 2>&1
 ```
 
 ### Security Best Practices
