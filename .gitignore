@@ -60,3 +60,4 @@ dev-debug.log
 debug/
 backups/
 .coverage
+firebase-key.json
