@@ -611,6 +611,22 @@ class Command(BaseCommand):
                 return None
         return None
 
+    def _resolve_bed_from_patient_data(self, patient_data):
+        """Resolve Firebase bed value into a normalized string."""
+        if "bed" not in patient_data:
+            return "", False
+
+        raw_bed = patient_data.get("bed")
+        if raw_bed is None:
+            return "", True
+
+        if isinstance(raw_bed, str):
+            normalized_bed = raw_bed.strip()
+        else:
+            normalized_bed = str(raw_bed).strip()
+
+        return normalized_bed[:20], True
+
     def _reconcile_existing_patient(
         self,
         patient,
@@ -618,6 +634,8 @@ class Command(BaseCommand):
         last_admission_date,
         resolved_ward,
         ward_resolution_status,
+        resolved_bed,
+        has_explicit_bed,
     ):
         raw_status, desired_status = self._parse_firebase_status(patient_data)
         if not raw_status or desired_status is None:
@@ -704,7 +722,7 @@ class Command(BaseCommand):
                         admission_datetime,
                         admission_type,
                         self.import_user,
-                        initial_bed="",
+                        initial_bed=resolved_bed if has_explicit_bed else "",
                         ward=resolved_ward,
                         admission_diagnosis="Admissão importada do sistema antigo",
                     )
@@ -740,6 +758,24 @@ class Command(BaseCommand):
                             update_fields=["ward", "updated_by", "updated_at"]
                         )
                     self.ward_updated_count += 1
+                    changes_made = True
+
+                if has_explicit_bed and current_admission.initial_bed != resolved_bed:
+                    if self.dry_run:
+                        self.stdout.write(
+                            f"  Would update bed for active admission: {patient.name}"
+                        )
+                    else:
+                        current_admission.initial_bed = resolved_bed
+                        current_admission.updated_by = self.import_user
+                        current_admission.save(
+                            update_fields=["initial_bed", "updated_by", "updated_at"]
+                        )
+                        patient.bed = resolved_bed
+                        patient.updated_by = self.import_user
+                        patient.save(
+                            update_fields=["bed", "updated_by", "updated_at"]
+                        )
                     changes_made = True
 
                 if patient.status != desired_status:
@@ -786,6 +822,7 @@ class Command(BaseCommand):
             firebase_key,
             name,
         )
+        resolved_bed, has_explicit_bed = self._resolve_bed_from_patient_data(patient_data)
 
         # Check if patient already exists by either firebase key or ptRecN
         existing_firebase_record = PatientRecordNumber.objects.filter(
@@ -817,6 +854,8 @@ class Command(BaseCommand):
                 last_admission_date,
                 resolved_ward,
                 ward_resolution_status,
+                resolved_bed,
+                has_explicit_bed,
             )
 
         # Parse birthday from timestamp
@@ -929,7 +968,7 @@ class Command(BaseCommand):
                     patient=patient,
                     admission_datetime=admission_datetime,
                     admission_type=PatientAdmission.AdmissionType.EMERGENCY,
-                    initial_bed="",  # Empty bed
+                    initial_bed=resolved_bed if has_explicit_bed else "",
                     ward=resolved_ward,
                     admission_diagnosis="Admissão importada do sistema antigo",
                     created_by=self.import_user,

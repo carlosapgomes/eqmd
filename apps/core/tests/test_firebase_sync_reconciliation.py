@@ -176,14 +176,17 @@ class FirebaseSyncReconciliationTests(TestCase):
         command = self._build_command()
         patient_data = self._build_patient_data("inpatient", pt_rec_n="pt-789")
         patient_data["lastAdmissionDate"] = int(datetime(2024, 1, 10).timestamp() * 1000)
+        patient_data["bed"] = "B12"
 
         result = command.process_firebase_patient("firebase-key-3", patient_data)
 
         self.assertEqual(result, "reconciled")
         admission = PatientAdmission.objects.filter(patient=patient, is_active=True).first()
         self.assertIsNotNone(admission)
+        self.assertEqual(admission.initial_bed, "B12")
         patient.refresh_from_db()
         self.assertEqual(patient.status, Patient.Status.INPATIENT)
+        self.assertEqual(patient.bed, "B12")
         self.assertEqual(command.admissions_created_count, 1)
 
     def test_new_import_inpatient_assigns_mapped_ward(self):
@@ -196,6 +199,7 @@ class FirebaseSyncReconciliationTests(TestCase):
         patient_data = self._build_patient_data("inpatient", pt_rec_n="pt-import-ward")
         patient_data["ward"] = "-KkXn7i8rYfm-nQlPriE"
         patient_data["lastAdmissionDate"] = int(datetime(2024, 1, 11).timestamp() * 1000)
+        patient_data["bed"] = "A03"
 
         result = command.process_firebase_patient("firebase-new-ward", patient_data)
 
@@ -204,9 +208,62 @@ class FirebaseSyncReconciliationTests(TestCase):
         admission = PatientAdmission.objects.filter(patient=patient, is_active=True).first()
         self.assertIsNotNone(admission)
         self.assertEqual(admission.ward_id, mapped_ward.id)
+        self.assertEqual(admission.initial_bed, "A03")
         patient.refresh_from_db()
         self.assertEqual(patient.ward_id, mapped_ward.id)
+        self.assertEqual(patient.bed, "A03")
         self.assertEqual(command.ward_mapped_count, 1)
+
+    def test_reconcile_inpatient_updates_active_admission_bed_when_changed(self):
+        patient = Patient.objects.create(
+            name="Bed Update Patient",
+            birthday=date(1990, 1, 1),
+            gender=Patient.GenderChoices.MALE,
+            status=Patient.Status.INPATIENT,
+            bed="A1",
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        PatientRecordNumber.objects.create(
+            patient=patient,
+            record_number="firebase-key-bed-update",
+            is_current=False,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        PatientRecordNumber.objects.create(
+            patient=patient,
+            record_number="pt-bed-update",
+            is_current=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        admission = PatientAdmission.objects.create(
+            patient=patient,
+            admission_datetime=timezone.now() - timezone.timedelta(days=1),
+            admission_type=PatientAdmission.AdmissionType.SCHEDULED,
+            initial_bed="A1",
+            ward=None,
+            admission_diagnosis="Admissão de teste",
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        patient.current_admission_id = admission.id
+        patient.bed = "A1"
+        patient.updated_by = self.user
+        patient.save(update_fields=["current_admission_id", "bed", "updated_by", "updated_at"])
+
+        command = self._build_command()
+        patient_data = self._build_patient_data("inpatient", pt_rec_n="pt-bed-update")
+        patient_data["bed"] = "B4"
+
+        result = command.process_firebase_patient("firebase-key-bed-update", patient_data)
+
+        self.assertEqual(result, "reconciled")
+        admission.refresh_from_db()
+        self.assertEqual(admission.initial_bed, "B4")
+        patient.refresh_from_db()
+        self.assertEqual(patient.bed, "B4")
 
     def test_reconcile_inpatient_intermediario_maps_to_intermediario_b(self):
         inter_b = self._create_ward(

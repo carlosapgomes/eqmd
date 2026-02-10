@@ -292,6 +292,7 @@ The `sync_firebase_data` command automatically syncs in the correct order:
 | `lastAdmissionDate`             | Patient.last_admission_date   | Epoch milliseconds → date                                     |
 | `status`                        | Patient.status                | inpatient→INPATIENT, outpatient→OUTPATIENT, deceased→DECEASED |
 | `ward`                          | PatientAdmission.ward / Patient.ward | Translated using ward map; retired wards map to empty (`None`) |
+| `bed`                           | PatientAdmission.initial_bed / Patient.bed | Trimmed and synced for active admissions |
 
 ### Security Best Practices
 
