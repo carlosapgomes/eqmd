@@ -2,6 +2,7 @@ import json
 import sys
 from datetime import datetime, timezone, date
 from pathlib import Path
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 from django.utils import timezone as django_timezone
@@ -373,16 +374,32 @@ class Command(BaseCommand):
             raise Exception(f"Failed to sync patients: {e}")
 
     def _resolve_file_path(self, raw_path):
-        path = Path(raw_path)
+        path = Path(raw_path).expanduser()
         if path.is_absolute():
             return path
-        return Path.cwd() / path
+
+        cwd = Path.cwd()
+        base_dir = Path(getattr(settings, "BASE_DIR", cwd))
+        candidates = [cwd / path]
+        if base_dir != cwd:
+            candidates.append(base_dir / path)
+
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+
+        # Prefer BASE_DIR fallback for clearer deployment error messages.
+        return candidates[-1]
 
     def load_ward_mapping(self):
         """Load and validate Firebase ward to EQMD ward mapping."""
         map_path = self._resolve_file_path(self.ward_map_file)
         if not map_path.exists():
-            raise CommandError(f"Ward map file not found: {map_path}")
+            raise CommandError(
+                "Ward map file not found: "
+                f"{map_path} (raw='{self.ward_map_file}', cwd='{Path.cwd()}', "
+                f"base_dir='{getattr(settings, 'BASE_DIR', Path.cwd())}')"
+            )
 
         try:
             with map_path.open("r", encoding="utf-8") as handle:
