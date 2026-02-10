@@ -447,7 +447,7 @@ LOGGING = {
         },
         'matrix_bot_audit': {
             'level': 'INFO',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            '()': 'config.logging_handlers.safe_timed_rotating_file_handler',
             'filename': os.path.join(BASE_DIR, 'logs', 'matrix_bot_audit.log'),
             'when': 'D',
             'interval': 1,
