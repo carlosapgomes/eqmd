@@ -1,5 +1,7 @@
 import json
+import re
 import sys
+import unicodedata
 from datetime import datetime, timezone, date
 from pathlib import Path
 from django.conf import settings
@@ -33,6 +35,7 @@ class Command(BaseCommand):
         self.ward_mapping_loaded = False
         self.firebase_ward_to_eqmd_ward_id = {}
         self.firebase_ward_name_to_key = {}
+        self.firebase_ward_normalized_reference_to_key = {}
         self.ward_mapped_count = 0
         self.ward_mapped_to_none_count = 0
         self.ward_unresolved_count = 0
@@ -423,6 +426,11 @@ class Command(BaseCommand):
         # Optional validation against canonical Firebase ward export fixture.
         source_path = self._resolve_file_path(self.ward_source_file)
         name_to_key = {}
+        normalized_reference_to_key = {}
+        for firebase_ward_key in normalized_map.keys():
+            normalized_key = self._normalize_ward_reference(firebase_ward_key)
+            if normalized_key:
+                normalized_reference_to_key[normalized_key] = firebase_ward_key
         if source_path.exists():
             try:
                 with source_path.open("r", encoding="utf-8") as handle:
@@ -448,9 +456,13 @@ class Command(BaseCommand):
                 ward_name = (ward_data.get("name") or "").strip()
                 if ward_name:
                     name_to_key[ward_name] = firebase_ward_key
+                    normalized_name = self._normalize_ward_reference(ward_name)
+                    if normalized_name:
+                        normalized_reference_to_key[normalized_name] = firebase_ward_key
 
         self.firebase_ward_to_eqmd_ward_id = normalized_map
         self.firebase_ward_name_to_key = name_to_key
+        self.firebase_ward_normalized_reference_to_key = normalized_reference_to_key
         self.ward_mapping_loaded = True
         self.stdout.write(
             f"Loaded ward map: {len(normalized_map)} entries from {map_path}"
@@ -459,6 +471,39 @@ class Command(BaseCommand):
     def _ensure_ward_mapping_loaded(self):
         if not self.ward_mapping_loaded:
             self.load_ward_mapping()
+
+    def _normalize_ward_reference(self, value):
+        if value is None:
+            return ""
+        normalized = str(value).replace("\u00a0", " ").strip()
+        normalized = re.sub(r"\s+", " ", normalized)
+        normalized = normalized.strip("\"'")
+        normalized = unicodedata.normalize("NFKD", normalized)
+        normalized = "".join(
+            char for char in normalized if not unicodedata.combining(char)
+        )
+        return normalized.lower()
+
+    def _iter_reference_candidates(self, raw_reference):
+        candidates = []
+        if raw_reference:
+            candidates.append(raw_reference)
+
+            if "/" in raw_reference:
+                tail = raw_reference.rsplit("/", 1)[-1].strip()
+                if tail:
+                    candidates.append(tail)
+
+            for key_match in re.findall(r"-[A-Za-z0-9_-]{8,}", raw_reference):
+                candidates.append(key_match)
+
+        deduped = []
+        seen = set()
+        for candidate in candidates:
+            if candidate and candidate not in seen:
+                seen.add(candidate)
+                deduped.append(candidate)
+        return deduped
 
     def _extract_firebase_ward_reference(self, patient_data):
         """Extract a ward reference from known Firebase payload shapes."""
@@ -501,12 +546,21 @@ class Command(BaseCommand):
         if not raw_reference:
             return None, "no_reference"
 
-        mapping_key = raw_reference
-        if (
-            mapping_key not in self.firebase_ward_to_eqmd_ward_id
-            and raw_reference in self.firebase_ward_name_to_key
-        ):
-            mapping_key = self.firebase_ward_name_to_key[raw_reference]
+        mapping_key = None
+        for candidate in self._iter_reference_candidates(raw_reference):
+            if candidate in self.firebase_ward_to_eqmd_ward_id:
+                mapping_key = candidate
+                break
+            if candidate in self.firebase_ward_name_to_key:
+                mapping_key = self.firebase_ward_name_to_key[candidate]
+                break
+            normalized_candidate = self._normalize_ward_reference(candidate)
+            normalized_mapped_key = self.firebase_ward_normalized_reference_to_key.get(
+                normalized_candidate
+            )
+            if normalized_mapped_key:
+                mapping_key = normalized_mapped_key
+                break
 
         if mapping_key not in self.firebase_ward_to_eqmd_ward_id:
             self.ward_unresolved_count += 1
