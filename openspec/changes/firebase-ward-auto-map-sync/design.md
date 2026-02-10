@@ -65,5 +65,5 @@ No schema migration is required.
 
 ## Open Questions
 
-- Which exact Firebase patient field carries ward reference in production payload (`ward`, `ptWard`, etc.)?  
+- Which exact Firebase patient field carries ward reference in production payload (`ward`, `ptWard`, etc.)? Answer: 'ward'
   Implementation should support configured/known variants and log raw value for unresolved entries.

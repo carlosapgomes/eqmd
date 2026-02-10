@@ -1,6 +1,7 @@
 import json
 import sys
 from datetime import datetime, timezone, date
+from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 from django.utils import timezone as django_timezone
@@ -15,7 +16,7 @@ try:
 except ImportError:
     firebase_admin = None
 
-from apps.patients.models import Patient, PatientRecordNumber, PatientAdmission
+from apps.patients.models import Patient, PatientRecordNumber, PatientAdmission, Ward
 from apps.dailynotes.models import DailyNote
 
 User = get_user_model()
@@ -23,6 +24,18 @@ User = get_user_model()
 
 class Command(BaseCommand):
     help = "Incrementally sync patients and dailynotes from Firebase Realtime Database"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ward_map_file = "fixtures/firebase-ward-map.json"
+        self.ward_source_file = "fixtures/sisphgrs-wards-export.json"
+        self.ward_mapping_loaded = False
+        self.firebase_ward_to_eqmd_ward_id = {}
+        self.firebase_ward_name_to_key = {}
+        self.ward_mapped_count = 0
+        self.ward_mapped_to_none_count = 0
+        self.ward_unresolved_count = 0
+        self.ward_updated_count = 0
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -97,6 +110,15 @@ class Command(BaseCommand):
             type=str,
             help="Send sync report via email to this address",
         )
+        parser.add_argument(
+            "--ward-map-file",
+            type=str,
+            default="fixtures/firebase-ward-map.json",
+            help=(
+                "Path to Firebase ward mapping JSON "
+                "(Firebase ward key -> EQMD Ward UUID or null)"
+            ),
+        )
 
     def handle(self, *args, **options):
         if firebase_admin is None:
@@ -115,6 +137,7 @@ class Command(BaseCommand):
         self.limit = options.get("limit")
         self.chunk_size = options.get("chunk_size", 1000)
         self.email = options.get("email")
+        self.ward_map_file = options.get("ward_map_file") or self.ward_map_file
 
         if self.dry_run:
             self.stdout.write(
@@ -155,6 +178,7 @@ class Command(BaseCommand):
         # Sync patients first (so they exist for dailynotes)
         patients_synced = 0
         if not options.get("no_sync_patients", False):
+            self.load_ward_mapping()
             try:
                 patients_synced = self.sync_patients(options["patients_reference"])
             except Exception as e:
@@ -220,6 +244,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Using chunk size: {self.chunk_size}")
 
         try:
+            self._ensure_ward_mapping_loaded()
             imported_count = 0
             error_count = 0
             skipped_count = 0
@@ -228,6 +253,10 @@ class Command(BaseCommand):
             self.reconciled_patients_count = 0
             self.admissions_closed_count = 0
             self.admissions_created_count = 0
+            self.ward_mapped_count = 0
+            self.ward_mapped_to_none_count = 0
+            self.ward_unresolved_count = 0
+            self.ward_updated_count = 0
 
             # Use chunked querying to avoid payload limits
             ref = db.reference(patients_reference)
@@ -332,10 +361,163 @@ class Command(BaseCommand):
                     f"Admissions closed: {self.admissions_closed_count}, "
                     f"Admissions created: {self.admissions_created_count}"
                 )
+            self.stdout.write(
+                f"Ward mapping: {self.ward_mapped_count} mapped, "
+                f"{self.ward_mapped_to_none_count} mapped-to-none, "
+                f"{self.ward_unresolved_count} unresolved, "
+                f"{self.ward_updated_count} updated on active admissions"
+            )
             return imported_count
 
         except Exception as e:
             raise Exception(f"Failed to sync patients: {e}")
+
+    def _resolve_file_path(self, raw_path):
+        path = Path(raw_path)
+        if path.is_absolute():
+            return path
+        return Path.cwd() / path
+
+    def load_ward_mapping(self):
+        """Load and validate Firebase ward to EQMD ward mapping."""
+        map_path = self._resolve_file_path(self.ward_map_file)
+        if not map_path.exists():
+            raise CommandError(f"Ward map file not found: {map_path}")
+
+        try:
+            with map_path.open("r", encoding="utf-8") as handle:
+                raw_map = json.load(handle)
+        except json.JSONDecodeError as exc:
+            raise CommandError(f"Invalid ward map JSON ({map_path}): {exc}")
+
+        if not isinstance(raw_map, dict):
+            raise CommandError("Ward map JSON must be an object/dictionary")
+
+        normalized_map = {}
+        for firebase_ward_key, eqmd_ward_id in raw_map.items():
+            if not isinstance(firebase_ward_key, str) or not firebase_ward_key.strip():
+                raise CommandError("Ward map keys must be non-empty strings")
+            if eqmd_ward_id is not None and not isinstance(eqmd_ward_id, str):
+                raise CommandError(
+                    f"Ward map value for '{firebase_ward_key}' must be string UUID or null"
+                )
+            normalized_map[firebase_ward_key] = eqmd_ward_id
+
+        # Optional validation against canonical Firebase ward export fixture.
+        source_path = self._resolve_file_path(self.ward_source_file)
+        name_to_key = {}
+        if source_path.exists():
+            try:
+                with source_path.open("r", encoding="utf-8") as handle:
+                    source_data = json.load(handle)
+            except json.JSONDecodeError as exc:
+                raise CommandError(f"Invalid Firebase ward source JSON ({source_path}): {exc}")
+
+            if not isinstance(source_data, dict):
+                raise CommandError("Firebase ward source JSON must be an object/dictionary")
+
+            missing_keys = sorted(set(source_data.keys()) - set(normalized_map.keys()))
+            if missing_keys:
+                missing_preview = ", ".join(missing_keys[:5])
+                suffix = "" if len(missing_keys) <= 5 else ", ..."
+                raise CommandError(
+                    f"Ward map is missing {len(missing_keys)} Firebase ward keys: "
+                    f"{missing_preview}{suffix}"
+                )
+
+            for firebase_ward_key, ward_data in source_data.items():
+                if not isinstance(ward_data, dict):
+                    continue
+                ward_name = (ward_data.get("name") or "").strip()
+                if ward_name:
+                    name_to_key[ward_name] = firebase_ward_key
+
+        self.firebase_ward_to_eqmd_ward_id = normalized_map
+        self.firebase_ward_name_to_key = name_to_key
+        self.ward_mapping_loaded = True
+        self.stdout.write(
+            f"Loaded ward map: {len(normalized_map)} entries from {map_path}"
+        )
+
+    def _ensure_ward_mapping_loaded(self):
+        if not self.ward_mapping_loaded:
+            self.load_ward_mapping()
+
+    def _extract_firebase_ward_reference(self, patient_data):
+        """Extract a ward reference from known Firebase payload shapes."""
+        for field_name in ("ward", "ptWard", "wardKey", "wardId"):
+            raw_value = patient_data.get(field_name)
+            if raw_value in (None, ""):
+                continue
+            if isinstance(raw_value, str):
+                value = raw_value.strip()
+                if value:
+                    return value
+                continue
+            if isinstance(raw_value, dict):
+                for nested_key in (
+                    "key",
+                    "id",
+                    "ward",
+                    "wardKey",
+                    "wardId",
+                    "firebaseKey",
+                    "name",
+                ):
+                    nested_value = raw_value.get(nested_key)
+                    if isinstance(nested_value, str) and nested_value.strip():
+                        return nested_value.strip()
+            value = str(raw_value).strip()
+            if value:
+                return value
+        return None
+
+    def _resolve_ward_from_patient_data(self, patient_data, firebase_key, patient_name):
+        """
+        Resolve Firebase ward reference into Ward instance.
+
+        Returns (ward_instance_or_none, status) where status is one of:
+        no_reference | mapped | mapped_to_none | unresolved
+        """
+        self._ensure_ward_mapping_loaded()
+        raw_reference = self._extract_firebase_ward_reference(patient_data)
+        if not raw_reference:
+            return None, "no_reference"
+
+        mapping_key = raw_reference
+        if (
+            mapping_key not in self.firebase_ward_to_eqmd_ward_id
+            and raw_reference in self.firebase_ward_name_to_key
+        ):
+            mapping_key = self.firebase_ward_name_to_key[raw_reference]
+
+        if mapping_key not in self.firebase_ward_to_eqmd_ward_id:
+            self.ward_unresolved_count += 1
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  ! Unresolved ward for patient {patient_name} ({firebase_key}): '{raw_reference}'"
+                )
+            )
+            return None, "unresolved"
+
+        mapped_ward_id = self.firebase_ward_to_eqmd_ward_id[mapping_key]
+        if mapped_ward_id is None:
+            self.ward_mapped_to_none_count += 1
+            return None, "mapped_to_none"
+
+        ward = Ward.objects.filter(pk=mapped_ward_id).first()
+        if ward is None:
+            self.ward_unresolved_count += 1
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  ! Ward id '{mapped_ward_id}' not found in DB for patient "
+                    f"{patient_name} ({firebase_key}); source '{raw_reference}'"
+                )
+            )
+            return None, "unresolved"
+
+        self.ward_mapped_count += 1
+        return ward, "mapped"
 
     def _parse_firebase_status(self, patient_data):
         raw_status = (patient_data.get("status") or "").strip().lower()
@@ -358,13 +540,24 @@ class Command(BaseCommand):
                 return None
         return None
 
-    def _reconcile_existing_patient(self, patient, patient_data, last_admission_date):
+    def _reconcile_existing_patient(
+        self,
+        patient,
+        patient_data,
+        last_admission_date,
+        resolved_ward,
+        ward_resolution_status,
+    ):
         raw_status, desired_status = self._parse_firebase_status(patient_data)
         if not raw_status or desired_status is None:
             return "skipped"
 
         current_admission = patient.get_current_admission()
         changes_made = False
+        has_explicit_ward_resolution = ward_resolution_status in {
+            "mapped",
+            "mapped_to_none",
+        }
 
         if desired_status in [Patient.Status.OUTPATIENT, Patient.Status.DECEASED]:
             if current_admission:
@@ -441,7 +634,7 @@ class Command(BaseCommand):
                         admission_type,
                         self.import_user,
                         initial_bed="",
-                        ward=None,
+                        ward=resolved_ward,
                         admission_diagnosis="Admissão importada do sistema antigo",
                     )
                     if desired_status == Patient.Status.EMERGENCY and patient.status != Patient.Status.EMERGENCY:
@@ -454,18 +647,42 @@ class Command(BaseCommand):
                 self.admissions_created_count += 1
                 changes_made = True
 
-            elif patient.status != desired_status:
-                if self.dry_run:
-                    self.stdout.write(
-                        f"  Would update status for: {patient.name} -> {raw_status}"
-                    )
-                else:
-                    patient.status = desired_status
-                    patient.updated_by = self.import_user
-                    patient.save(
-                        update_fields=["status", "updated_by", "updated_at"]
-                    )
-                changes_made = True
+            else:
+                if (
+                    has_explicit_ward_resolution
+                    and current_admission.ward_id
+                    != (resolved_ward.id if resolved_ward else None)
+                ):
+                    if self.dry_run:
+                        self.stdout.write(
+                            f"  Would update ward for active admission: {patient.name}"
+                        )
+                    else:
+                        current_admission.ward = resolved_ward
+                        current_admission.updated_by = self.import_user
+                        current_admission.save(
+                            update_fields=["ward", "updated_by", "updated_at"]
+                        )
+                        patient.ward = resolved_ward
+                        patient.updated_by = self.import_user
+                        patient.save(
+                            update_fields=["ward", "updated_by", "updated_at"]
+                        )
+                    self.ward_updated_count += 1
+                    changes_made = True
+
+                if patient.status != desired_status:
+                    if self.dry_run:
+                        self.stdout.write(
+                            f"  Would update status for: {patient.name} -> {raw_status}"
+                        )
+                    else:
+                        patient.status = desired_status
+                        patient.updated_by = self.import_user
+                        patient.save(
+                            update_fields=["status", "updated_by", "updated_at"]
+                        )
+                    changes_made = True
 
         if changes_made:
             self.reconciled_patients_count += 1
@@ -475,6 +692,7 @@ class Command(BaseCommand):
 
     def process_firebase_patient(self, firebase_key, patient_data):
         """Process a single Firebase patient"""
+        self._ensure_ward_mapping_loaded()
         # Extract required fields
         name = patient_data.get("name", "").strip()
         pt_rec_n = patient_data.get("ptRecN", "").strip()
@@ -492,6 +710,11 @@ class Command(BaseCommand):
             return "skipped"
 
         last_admission_date = self._parse_last_admission_date(patient_data)
+        resolved_ward, ward_resolution_status = self._resolve_ward_from_patient_data(
+            patient_data,
+            firebase_key,
+            name,
+        )
 
         # Check if patient already exists by either firebase key or ptRecN
         existing_firebase_record = PatientRecordNumber.objects.filter(
@@ -521,6 +744,8 @@ class Command(BaseCommand):
                 existing_patient,
                 patient_data,
                 last_admission_date,
+                resolved_ward,
+                ward_resolution_status,
             )
 
         # Parse birthday from timestamp
@@ -629,16 +854,20 @@ class Command(BaseCommand):
                     django_timezone.datetime.min.time()
                 ).replace(tzinfo=django_timezone.get_current_timezone())
                 
-                PatientAdmission.objects.create(
+                admission = PatientAdmission.objects.create(
                     patient=patient,
                     admission_datetime=admission_datetime,
                     admission_type=PatientAdmission.AdmissionType.EMERGENCY,
                     initial_bed="",  # Empty bed
-                    ward=None,  # Empty ward
+                    ward=resolved_ward,
                     admission_diagnosis="Admissão importada do sistema antigo",
                     created_by=self.import_user,
                     updated_by=self.import_user,
                 )
+                if patient.ward_id != admission.ward_id:
+                    patient.ward = admission.ward
+                    patient.updated_by = self.import_user
+                    patient.save(update_fields=["ward", "updated_by", "updated_at"])
 
             self.stdout.write(
                 f"  ✓ Imported patient: {name} (ptRecN: {pt_rec_n}, firebase: {firebase_key})"
@@ -899,6 +1128,10 @@ class Command(BaseCommand):
             reconciled_patients = getattr(self, "reconciled_patients_count", 0)
             admissions_closed = getattr(self, "admissions_closed_count", 0)
             admissions_created = getattr(self, "admissions_created_count", 0)
+            ward_mapped = getattr(self, "ward_mapped_count", 0)
+            ward_mapped_to_none = getattr(self, "ward_mapped_to_none_count", 0)
+            ward_unresolved = getattr(self, "ward_unresolved_count", 0)
+            ward_updated = getattr(self, "ward_updated_count", 0)
             
             # Generate email subject
             subject = f"Firebase Sync Report - {sync_date.strftime('%d/%m/%Y')} - {patients_synced} patients, {dailynotes_synced} dailynotes"
@@ -912,6 +1145,10 @@ class Command(BaseCommand):
 - **Pacientes reconciliados:** {reconciled_patients}
 - **Internações encerradas:** {admissions_closed}
 - **Internações criadas:** {admissions_created}
+- **Alas mapeadas:** {ward_mapped}
+- **Alas aposentadas (mapa -> vazio):** {ward_mapped_to_none}
+- **Alas não resolvidas:** {ward_unresolved}
+- **Alas atualizadas em internações ativas:** {ward_updated}
 - **Evoluções sincronizadas:** {dailynotes_synced}
 - **Total de registros:** {total_synced}
 
@@ -982,6 +1219,18 @@ Sistema EquipeMed - Sincronização Automática Firebase"""
         if hasattr(self, "admissions_created_count"):
             self.stdout.write(
                 f"  Admissions created: {self.admissions_created_count}"
+            )
+        if hasattr(self, "ward_mapped_count"):
+            self.stdout.write(f"  Wards mapped: {self.ward_mapped_count}")
+        if hasattr(self, "ward_mapped_to_none_count"):
+            self.stdout.write(
+                f"  Wards mapped-to-none: {self.ward_mapped_to_none_count}"
+            )
+        if hasattr(self, "ward_unresolved_count"):
+            self.stdout.write(f"  Wards unresolved: {self.ward_unresolved_count}")
+        if hasattr(self, "ward_updated_count"):
+            self.stdout.write(
+                f"  Active-admission ward updates: {self.ward_updated_count}"
             )
         self.stdout.write(f"  Dailynotes synced: {dailynotes_synced}")
         self.stdout.write(
