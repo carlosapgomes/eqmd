@@ -238,6 +238,7 @@ kubectl delete secret firebase-creds
 - `--limit`: Import only N records per type (useful for testing)
 - `--no-sync-patients`: Skip patient sync (default: sync both patients and dailynotes)
 - `--no-sync-dailynotes`: Skip dailynotes sync (default: sync both patients and dailynotes)
+- `--ward-map-file`: Path to ward translation map JSON (default: `fixtures/firebase-ward-map.json`)
 
 ### Sync Process (Automatic Ordering)
 
@@ -248,6 +249,11 @@ The `sync_firebase_data` command automatically syncs in the correct order:
    - Creates dual PatientRecordNumbers (Firebase key + ptRecN)
    - Skips test patients containing "teste" or "paciente" (case-insensitive)
    - Skips existing patients (by either Firebase key or ptRecN)
+   - Translates legacy Firebase `ward` values using `fixtures/firebase-ward-map.json`
+   - Applies approved ward policies:
+     - `Intermediário` -> `Intermediário B`
+     - `Hosp. Dia` -> `None` (retired ward)
+     - `Anexo` -> `None` (retired ward)
    - Maps Firebase fields to EQMD Patient model with proper admission handling
 
 2. **Dailynote Sync Second**:
@@ -258,6 +264,7 @@ The `sync_firebase_data` command automatically syncs in the correct order:
    - Formats content with Firebase ID reference for traceability
 
 3. **Output**: Displays next cutoff date for subsequent sync runs
+   - Includes ward mapping counters: mapped, mapped-to-none, unresolved, and active-admission ward updates
 
 **Key Benefits:**
 
@@ -284,6 +291,7 @@ The `sync_firebase_data` command automatically syncs in the correct order:
 | `unifiedHealthCareSystemNumber` | Patient.healthcard_number     |                                                               |
 | `lastAdmissionDate`             | Patient.last_admission_date   | Epoch milliseconds → date                                     |
 | `status`                        | Patient.status                | inpatient→INPATIENT, outpatient→OUTPATIENT, deceased→DECEASED |
+| `ward`                          | PatientAdmission.ward / Patient.ward | Translated using ward map; retired wards map to empty (`None`) |
 
 ### Security Best Practices
 
@@ -308,6 +316,11 @@ The `sync_firebase_data` command automatically syncs in the correct order:
 - Verify patient names don't contain test data keywords ("teste", "paciente")
 - Test patients are automatically skipped
 - Use `--dry-run` to preview what will be synced
+- Confirm `--ward-map-file` exists and contains all keys from `fixtures/sisphgrs-wards-export.json`
+- Monitor ward summary counters:
+  - `mapped`: successfully resolved to active EQMD wards
+  - `mapped-to-none`: intentional retired-ward mapping (for example `Hosp. Dia`, `Anexo`)
+  - `unresolved`: unknown/missing mappings requiring map update
 
 **Dailynote Import Issues:**
 
