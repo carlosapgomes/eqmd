@@ -1,7 +1,11 @@
 from datetime import datetime, date
 from io import StringIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 from uuid import UUID
 
+from django.conf import settings
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -389,3 +393,33 @@ class FirebaseSyncReconciliationTests(TestCase):
         patient.refresh_from_db()
         self.assertEqual(patient.ward_id, ward_1b.id)
         self.assertEqual(command.ward_updated_count, 1)
+
+    def test_resolve_file_path_falls_back_to_base_dir_when_cwd_differs(self):
+        command = self._build_command()
+        expected = Path(settings.BASE_DIR) / "fixtures/firebase-ward-map.json"
+
+        with TemporaryDirectory() as temp_dir:
+            with patch(
+                "apps.core.management.commands.sync_firebase_data.Path.cwd",
+                return_value=Path(temp_dir),
+            ):
+                resolved = command._resolve_file_path("fixtures/firebase-ward-map.json")
+
+        self.assertEqual(resolved, expected)
+        self.assertTrue(resolved.exists())
+
+    def test_load_ward_mapping_works_when_cwd_differs_from_project_root(self):
+        command = self._build_command()
+
+        with TemporaryDirectory() as temp_dir:
+            with patch(
+                "apps.core.management.commands.sync_firebase_data.Path.cwd",
+                return_value=Path(temp_dir),
+            ):
+                command.load_ward_mapping()
+
+        self.assertTrue(command.ward_mapping_loaded)
+        self.assertIn(
+            "-KkXn7i8rYfm-nQlPriE",
+            command.firebase_ward_to_eqmd_ward_id,
+        )
