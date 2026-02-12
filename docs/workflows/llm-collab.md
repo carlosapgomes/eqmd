@@ -43,6 +43,8 @@ Trivial fixes: skip OpenSpec and write a small slice plan only.
 
 ## Clean Code Baseline (Implementer)
 
+Canonical standards source: `docs/workflows/coding-standards.md`.
+
 Hard constraints (keep small and enforceable):
 - Single responsibility per function/class
 - Functions ≤ 25 lines

@@ -206,40 +206,11 @@ npm run build    # Compiles and copies all assets
 - **✅ ALWAYS run `npm run build` after changes**
 - **📝 COMMIT both `assets/` and `static/` to git**
 
-## Frontend Styling Guidelines
+## Coding Standards
 
-`<!-- markdownlint-disable MD036 -->`
-**IMPORTANT: Bootstrap vs Django Admin Styling**
+Canonical source: `docs/workflows/coding-standards.md`
 
-### ✅ Use Bootstrap 5.3 for
-
-- **User-facing templates** (`templates/` directories in apps)
-- **Main application interface** (patient management, forms, dashboards)
-- **Public pages** (login, landing pages, user workflows)
-- **Custom views and templates** accessed by medical staff
-
-### ❌ Keep Django Admin styling for
-
-- **Admin interface templates** (`templates/admin/` directories)
-- **Django admin customizations**
-- **Administrative backend interfaces**
-- **Staff-only management interfaces**
-
-### Key Rules
-
-- **NEVER** add Bootstrap CSS/JS to admin templates - use vanilla JavaScript instead
-- **ALWAYS** use Bootstrap for main application templates and user-facing interfaces
-- **MAINTAIN** Django's default admin styling for consistency and functionality
-- **PREFER** vanilla JavaScript over Bootstrap JS in admin contexts when needed
-
-### Examples
-
-```
-✅ templates/patients/patient_list.html - Use Bootstrap
-✅ templates/pdf_forms/form_fill.html - Use Bootstrap
-❌ templates/admin/pdf_forms/configure_fields.html - NO Bootstrap, use vanilla JS
-❌ templates/admin/patients/change_form.html - Keep Django admin styling
-```
+Use this file for command and environment guidance only. Do not duplicate full coding standards here.
 
 # Python environment
 
