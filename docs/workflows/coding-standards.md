@@ -20,6 +20,7 @@ When guidance conflicts, apply rules in this order:
 - Type checking target: `mypy` with `django-stubs` (single checker; phased rollout)
 - Django mypy plugin: enable after compatibility validation in rollout phases
 - Test verification command: `./scripts/test.sh`
+- Type-check command (scoped paths): `./scripts/typecheck.sh <python-path...>`
 - Type checker rollout plan: `docs/workflows/typing-rollout-plan.md`
 
 ## Rule Levels
@@ -106,7 +107,7 @@ When guidance conflicts, apply rules in this order:
 | Standard | Level | Enforcement |
 | --- | --- | --- |
 | Lint and formatting via `ruff` | Mandatory | Local command + CI |
-| Type checks via `mypy` + `django-stubs` | Mandatory (after phased rollout) | Local command + CI (phased gate) |
+| Type checks via `mypy` + `django-stubs` | Mandatory (after phased rollout) | `./scripts/typecheck.sh` + CI (phased gate) |
 | File/function size thresholds | Mandatory/Recommended | Code review checklist |
 | Service layer boundaries | Mandatory | Code review checklist + tests |
 | Template component extraction rules | Recommended | Code review checklist |
