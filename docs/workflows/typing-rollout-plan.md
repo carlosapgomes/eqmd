@@ -24,7 +24,7 @@ Deliverables:
 - Add dev dependencies for `mypy` and `django-stubs`
 - Add minimal `mypy` configuration in `pyproject.toml` or `mypy.ini`
 - Add Django plugin settings for future activation
-- Add a documented local command for type checks
+- Add a documented local command for type checks (`./scripts/typecheck.sh`)
 
 Exit criteria:
 - Type checker runs successfully on a small scoped path (for example one app or one module set)
@@ -106,13 +106,13 @@ Exit criteria:
 Use one command shape in docs and CI:
 
 ```bash
-docker exec eqmd_dev mypy apps/
+./scripts/typecheck.sh apps/core/permissions
 ```
 
 For incremental rollout, run scoped paths first:
 
 ```bash
-docker exec eqmd_dev mypy apps/core/permissions apps/<target_app>/services
+./scripts/typecheck.sh apps/core/permissions apps/<target_app>/services
 ```
 
 ## Exception Process
