@@ -1095,8 +1095,9 @@ class TransferPatientView(PatientStatusChangeView):
                 old_location = f"{old_ward} - {old_bed}"
                 
                 new_ward = form.cleaned_data['ward']
-                new_bed = form.cleaned_data['bed'] or "Sem leito"
-                new_location = f"{new_ward.name} - {new_bed}"
+                new_bed = (form.cleaned_data.get('bed') or '').strip()
+                new_bed_display = new_bed or "Sem leito"
+                new_location = f"{new_ward.name} - {new_bed_display}"
                 
                 # Update patient location (keep status as INPATIENT)
                 patient.ward = new_ward
@@ -1125,7 +1126,7 @@ class TransferPatientView(PatientStatusChangeView):
                 
                 messages.success(
                     request,
-                    f'Paciente {patient.name} foi transferido para {new_ward.abbreviation} - {new_bed}.'
+                    f'Paciente {patient.name} foi transferido para {new_ward.abbreviation} - {new_bed_display}.'
                 )
             except ValidationError as e:
                 messages.error(request, f'Erro na transferência: {str(e)}')
@@ -1631,5 +1632,4 @@ def cancel_discharge(request, patient_id, admission_id):
         messages.error(request, f'Erro ao cancelar alta: {str(e)}')
     
     return redirect('patients:detail', pk=patient.pk)
-
 

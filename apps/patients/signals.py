@@ -158,7 +158,8 @@ def update_patient_admission_status(sender, instance, created, **kwargs):
             'status': Patient.Status.INPATIENT,
             'current_admission_id': instance.id,
             'last_admission_date': instance.admission_datetime.date(),
-            'bed': instance.initial_bed or instance.final_bed,
+            # During an active admission, final_bed may hold the latest internal transfer bed.
+            'bed': instance.final_bed or instance.initial_bed,
         }
     else:
         # Patient is being discharged
@@ -191,7 +192,7 @@ def cleanup_patient_after_admission_delete(sender, instance, **kwargs):
         if active_admission:
             patient.current_admission_id = active_admission.id
             patient.status = Patient.Status.INPATIENT
-            patient.bed = active_admission.initial_bed or active_admission.final_bed
+            patient.bed = active_admission.final_bed or active_admission.initial_bed
         else:
             patient.current_admission_id = None
             patient.status = Patient.Status.OUTPATIENT

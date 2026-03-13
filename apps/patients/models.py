@@ -1061,7 +1061,7 @@ class Patient(SoftDeleteModel):
         # Update status based on current state
         if current_admission:
             self.status = self.Status.INPATIENT
-            self.bed = current_admission.initial_bed or current_admission.final_bed
+            self.bed = current_admission.final_bed or current_admission.initial_bed
             self.ward = current_admission.ward
         elif self.status == self.Status.INPATIENT:
             # Patient was marked as inpatient but has no active admission
