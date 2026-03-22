@@ -67,6 +67,7 @@ Registro contínuo de evolução da migração de workflow no `eqmd`.
 
 ### Próxima semana
 - Executar 1º change piloto em `simplenotes` com OpenSpec + TDD + slices.
+- Change iniciado: `openspec/changes/week1-simplenotes-pilot/` (artefatos criados).
 
 ### Riscos/Bloqueios
 - Necessidade de calibrar duração do smoke v1 e estabilidade dos testes por app.
