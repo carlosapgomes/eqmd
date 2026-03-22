@@ -20,4 +20,9 @@ if [[ $# -eq 0 ]]; then
   exit 2
 fi
 
+if ! docker exec "${DOCKER_SERVICE}" sh -lc 'command -v mypy >/dev/null 2>&1'; then
+  echo "[typecheck] mypy not found in ${DOCKER_SERVICE}. Installing dev dependencies..."
+  docker exec --user root "${DOCKER_SERVICE}" sh -lc 'cd /app && uv pip install --system --group dev'
+fi
+
 exec docker exec "${DOCKER_SERVICE}" mypy "$@"

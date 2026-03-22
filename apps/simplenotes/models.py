@@ -7,7 +7,7 @@ class SimpleNote(Event):
     Simple Note model that extends the base Event model.
     Used for day-to-day patient management observations and notes.
     """
-    content = models.TextField(verbose_name="Conteúdo")
+    content: models.TextField = models.TextField(verbose_name="Conteúdo")
 
     def save(self, *args, **kwargs):
         """Override save to set the correct event type."""
