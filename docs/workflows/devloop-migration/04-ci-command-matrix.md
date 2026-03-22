@@ -22,12 +22,16 @@ Rodar este comando em todo PR:
 
 ### 2. Testes do app alterado (sempre)
 
-Exemplos:
+No CI atual:
+- se o PR altera arquivos de teste (`apps/<app>/tests/*.py` ou `apps/<app>/tests.py`), roda **primeiro os módulos de teste alterados**;
+- se não houver arquivos de teste alterados, roda o label do app (`apps.<app>.tests` como fallback).
+
+Exemplos locais:
 
 ```bash
+./scripts/test.sh apps.simplenotes.tests.test_views
 ./scripts/test.sh apps.simplenotes
 ./scripts/test.sh apps.pdf_forms
-./scripts/test.sh apps.mediafiles
 ```
 
 ### 3. Typecheck do escopo alterado (sempre)
