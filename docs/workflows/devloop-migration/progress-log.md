@@ -71,3 +71,37 @@ Registro contínuo de evolução da migração de workflow no `eqmd`.
 
 ### Riscos/Bloqueios
 - Necessidade de calibrar duração do smoke v1 e estabilidade dos testes por app.
+
+---
+
+## 2026-03-22 — Semana 1 (piloto simplenotes concluído em slices)
+
+### Fase
+- 0–30 dias (Fundação + Piloto)
+
+### Concluído
+- Slice 01: hardening de `SimpleNoteForm` (descrição canônica + remoção de debug print).
+- Slice 02: safety net mínimo de views CRUD em `simplenotes`.
+- Slice 03: fechamento operacional (validação final + atualização de artefatos).
+- CI ajustado para rodar módulos de teste alterados antes de fallback por app.
+
+### Evidências
+- PR(s):
+  - #11 (`feat/week1-simplenotes-slice-01`)
+  - #12 (`feat/week1-simplenotes-slice-02`)
+  - Slice 03: branch `feat/week1-simplenotes-slice-03`
+- OpenSpec:
+  - `openspec/changes/week1-simplenotes-pilot/tasks.md`
+  - `openspec/changes/week1-simplenotes-pilot/slices/slice-03-prompt.md`
+
+### Métricas da semana
+- PRs com check obrigatório verde: #11 e #12
+- Falhas de smoke: corrigidas via estabilização de testes core e escopo de testes alterados no CI
+- Mudanças com OpenSpec completo: piloto `week1-simplenotes-pilot` com proposal/design/spec/tasks/slices
+
+### Próxima semana
+- Sincronizar/arquivar o change OpenSpec do piloto após merge do slice 3.
+- Iniciar próxima melhoria incremental no app de baixo risco (seguindo mesma disciplina).
+
+### Riscos/Bloqueios
+- Suite completa continua informativa e ainda possui falhas legadas fora do escopo do piloto.
