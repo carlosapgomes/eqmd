@@ -83,3 +83,26 @@ If you want them to use `docker-compose.deploy.yml`, run them with:
 COMPOSE_FILE=docker-compose.deploy.yml sudo ./install.sh
 COMPOSE_FILE=docker-compose.deploy.yml sudo ./upgrade.sh
 ```
+
+## Rootless upgrade script
+
+For rootless deployments, use `upgrade-rootless.sh` (run as the rootless user,
+not root):
+
+```bash
+# Typical rootless deployment
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh
+```
+
+Useful overrides:
+
+```bash
+# Validate upgrade plan only (no changes applied)
+./upgrade-rootless.sh --dry-run
+
+# Skip DB backup (not recommended)
+SKIP_DB_BACKUP=1 ./upgrade-rootless.sh
+
+# Force local build instead of pull
+FORCE_BUILD=1 ./upgrade-rootless.sh
+```

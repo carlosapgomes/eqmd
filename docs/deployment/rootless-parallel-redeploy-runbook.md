@@ -442,6 +442,10 @@ Keep backups for a few days before cleanup.
 
 - Do **not** use `upgrade.sh` for the rootless stack. It assumes rootful Docker
   and performs root-level file operations.
+- Use `./upgrade-rootless.sh` for rootless updates (run as the rootless user,
+  e.g. `eqmdr`). It includes pre-upgrade backup, migrations, health check, and
+  basic rollback to the previous image. Use `./upgrade-rootless.sh --dry-run`
+  to preview all actions without applying changes.
 - Rootless Docker uses user namespaces; permissions behave differently. Removing
   `EQMD_UID`/`EQMD_GID` and `user:` directives avoids the common pitfalls.
 
