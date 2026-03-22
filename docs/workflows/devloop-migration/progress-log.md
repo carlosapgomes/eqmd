@@ -102,7 +102,7 @@ Registro contínuo de evolução da migração de workflow no `eqmd`.
 
 ### Próxima semana
 - Iniciar próxima melhoria incremental no app de baixo risco (seguindo a mesma disciplina DevLoop).
-- Change da semana 2 aberto: `openspec/changes/week2-historyandphysicals-hardening/`.
+- Definir candidato da semana 2 e abrir novo change OpenSpec.
 
 ### Riscos/Bloqueios
 - Suite completa continua informativa e ainda possui falhas legadas fora do escopo do piloto.
