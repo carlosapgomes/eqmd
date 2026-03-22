@@ -31,6 +31,10 @@ Reduzir risco de regressão, aumentar previsibilidade de entrega e melhorar mant
    - matriz de comandos obrigatórios vs informativos
    - estratégia progressiva de gate
 
+5. [`progress-log.md`](./progress-log.md)
+   - log de progresso semanal da migração
+   - evidências, métricas e próximos passos
+
 ## Governança
 
 - Atualizar estes documentos junto com ajustes de processo.
