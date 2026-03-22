@@ -18,12 +18,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
   PIP_NO_CACHE_DIR=1 \
   PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Create app user with configurable UID/GID
-ARG USER_ID=1001
-ARG GROUP_ID=1001
-RUN groupadd -r -g ${GROUP_ID} eqmd && \
-    useradd -r -u ${USER_ID} -g eqmd eqmd
-
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
   # Poppler for PDF processing (required for pdf-forms app)
@@ -61,14 +55,11 @@ RUN uv pip install --system gunicorn
 # Copy application code
 COPY . .
 # Create logs directory for matrix bot audit
-RUN mkdir -p /app/logs && chown -R eqmd:eqmd /app
+RUN mkdir -p /app/logs
 
 # Copy static files from build stage and set www-data ownership
 COPY --from=static-builder --chown=33:33 /app/static /app/staticfiles
 RUN chmod -R 755 /app/staticfiles
-
-# Switch to eqmd user for runtime
-USER eqmd
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
