@@ -17,10 +17,7 @@ openspec/changes/**
 apps/core/docs/api-reference.md
 apps/core/docs/README.md
 apps/core/docs/templates.md
-apps/core/docs/urls.md
 apps/core/docs/views.md
-apps/core/permissions/VALIDATION_RESULTS.md
-apps/mediafiles/tests/README.md
 apps/mediafiles/tests/UAT_DOCUMENTATION.md
 apps/pdfgenerator/DEVELOPER_GUIDE.md
 apps/pdfgenerator/DOCS.md
@@ -73,11 +70,7 @@ docs/TRANSLATION_AUDIT_RESULTS.md
 # Workflows com backlog conhecido (escopo explícito)
 docs/workflows/clean-code-skill.md
 docs/workflows/devloop-migration/01-assessment-and-plan-2026-03-22.md
-docs/workflows/devloop-migration/03-branch-and-commit-conventions.md
-docs/workflows/devloop-migration/04-ci-command-matrix.md
 docs/workflows/devloop-migration/progress-log.md
-docs/workflows/how-to-run-glm-pi.md
 docs/workflows/how-to-use-workflow.md
 docs/workflows/llm-collab.md
-docs/workflows/slice-prompt-template.md
 docs/workflows/typing-rollout-plan.md
