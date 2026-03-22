@@ -2,3 +2,75 @@
 .codex/**
 node_modules/**
 .git/**
+
+# Legado/histórico - não normalizar baseline
+.claude/**
+prompts/**
+
+# OpenSpec: manter specs canônicas lintadas, ignorar backlog em changes
+openspec/changes/**
+
+# Ambiente virtual
+.venv/**
+
+# Docs de apps com backlog conhecido (escopo explícito)
+apps/core/docs/api-reference.md
+apps/core/docs/README.md
+apps/core/docs/templates.md
+apps/core/docs/views.md
+apps/mediafiles/tests/UAT_DOCUMENTATION.md
+apps/pdfgenerator/DEVELOPER_GUIDE.md
+apps/pdfgenerator/DOCS.md
+apps/pdfgenerator/DOCUMENT_TYPE_TEMPLATE.md
+apps/pdfgenerator/QUICK_REFERENCE.md
+apps/pdfgenerator/README.md
+
+# Fixtures
+fixtures/**
+
+# Editor-specific
+CLAUDE.md
+
+# Nginx (infra)
+nginx/**
+
+# Docs subdirs (planos antigos/legado)
+docs/apps/**
+docs/deployment/**
+docs/matrix/**
+docs/mediafiles/**
+docs/patients/**
+docs/performance/**
+docs/permissions/**
+docs/sample_content/**
+docs/security/**
+docs/development/**
+
+# Docs legados na raiz de docs/
+docs/admin_guide_medical_specialties.md
+docs/alert-system-standardization-plan.md
+docs/ARCHITECTURE_AUDIT_RESULTS.md
+docs/consent_forms.md
+docs/database-reset.md
+docs/data-export.md
+docs/domain-migration-guide.md
+docs/firebase-import.md
+docs/fts-vector-indexation.md
+docs/MIGRATION.md
+docs/page-navigation-loading-indicator-plan.md
+docs/postgresql-migration.md
+docs/README.md
+docs/reference-data.md
+docs/reset.md
+docs/sample-data-population.md
+docs/styling.md
+docs/TESTING.md
+docs/TRANSLATION_AUDIT_RESULTS.md
+
+# Workflows com backlog conhecido (escopo explícito)
+docs/workflows/clean-code-skill.md
+docs/workflows/devloop-migration/01-assessment-and-plan-2026-03-22.md
+docs/workflows/devloop-migration/progress-log.md
+docs/workflows/how-to-use-workflow.md
+docs/workflows/llm-collab.md
+docs/workflows/typing-rollout-plan.md

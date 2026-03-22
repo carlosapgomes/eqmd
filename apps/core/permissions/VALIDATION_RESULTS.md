@@ -36,11 +36,11 @@
 
 ## Security Verification Results
 
-```
+```text
 Permission System Audit - Medical Roles Security Verification
 ============================================================
 ✅ Medical Doctors has no admin permissions
-✅ Residents has no admin permissions  
+✅ Residents has no admin permissions
 ✅ Nurses has no admin permissions
 ✅ Physiotherapists has no admin permissions
 ✅ Students has no admin permissions
@@ -51,14 +51,14 @@ Medical roles have no administrative permissions.
 
 ## Test Suite Results
 
-```
+```text
 ======================== 15 passed, 9 warnings in 3.06s ========================
 ```
 
 **Test Coverage:**
 
 - New permission system architecture: ✅ PASSED
-- Security boundary enforcement: ✅ PASSED  
+- Security boundary enforcement: ✅ PASSED
 - Permission system integrity: ✅ PASSED
 - Role separation validation: ✅ PASSED
 - Admin permission restrictions: ✅ PASSED
@@ -94,7 +94,7 @@ Medical roles have no administrative permissions.
 # Audit system
 uv run python manage.py permission_audit --action=report
 
-# Verify medical roles have no admin permissions  
+# Verify medical roles have no admin permissions
 uv run python manage.py permission_audit --action=verify_medical_roles
 
 # User permission management
@@ -129,7 +129,7 @@ uv run python manage.py setup_groups --force
 ## Next Steps (Future Phases)
 
 - Deploy new permission system to production
-- Train staff on new role boundaries  
+- Train staff on new role boundaries
 - Implement audit logging (if required)
 - Monitor system usage and access patterns
 
@@ -137,7 +137,7 @@ uv run python manage.py setup_groups --force
 
 1. **Security**: ✅ Medical staff cannot manage user accounts or access admin functions
 2. **Functionality**: ✅ All clinical features work exactly as before
-3. **Clarity**: ✅ Clear separation between medical and administrative roles  
+3. **Clarity**: ✅ Clear separation between medical and administrative roles
 4. **Maintainability**: ✅ Simple, understandable permission structure
 5. **Compliance Ready**: ✅ Foundation for future audit requirements
 
@@ -156,7 +156,7 @@ uv run python manage.py setup_groups --force
 If issues arise:
 
 ```bash
-# Restore original permissions  
+# Restore original permissions
 python manage.py loaddata backup_permissions.json
 
 # Revert to original setup_groups.py from git
