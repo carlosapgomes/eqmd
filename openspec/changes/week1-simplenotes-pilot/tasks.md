@@ -1,15 +1,15 @@
 ## 1. Preparação do piloto (OpenSpec + escopo)
 
-- [ ] 1.1 Validar escopo exato do piloto (sem scope creep)
-- [ ] 1.2 Confirmar arquivos-alvo do slice 1
-- [ ] 1.3 Confirmar comandos de verificação (test/typecheck)
+- [x] 1.1 Validar escopo exato do piloto (sem scope creep)
+- [x] 1.2 Confirmar arquivos-alvo do slice 1
+- [x] 1.3 Confirmar comandos de verificação (test/typecheck)
 
 ## 2. Slice 1 — Form hardening (bugfix + limpeza)
 
-- [ ] 2.1 Escrever testes RED para descrição padrão no `SimpleNoteForm.save()`
-- [ ] 2.2 Corrigir persistência da descrição padrão
-- [ ] 2.3 Remover `print` de debug do form
-- [ ] 2.4 Validar `./scripts/test.sh apps.simplenotes`
+- [x] 2.1 Escrever testes RED para descrição padrão no `SimpleNoteForm.save()`
+- [x] 2.2 Corrigir persistência da descrição padrão
+- [x] 2.3 Remover `print` de debug do form
+- [x] 2.4 Validar `./scripts/test.sh apps.simplenotes`
 
 ## 3. Slice 2 — CRUD safety net mínimo
 

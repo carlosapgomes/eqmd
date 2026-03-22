@@ -9,24 +9,24 @@ Rules:
 
 Checklist:
 Spec
-- [ ] requirements understood
+- [x] requirements understood
 
 Tests (RED)
-- [ ] failing tests written
-- [ ] tests cover behavior and edge cases
+- [x] failing tests written
+- [x] tests cover behavior and edge cases
 
 Implementation (GREEN)
-- [ ] minimal code added
-- [ ] tests pass
+- [x] minimal code added
+- [x] tests pass
 
 Refactor (CLEAN)
-- [ ] responsibilities separated
-- [ ] duplication removed
-- [ ] functions small
-- [ ] naming improved
+- [x] responsibilities separated
+- [x] duplication removed
+- [x] functions small
+- [x] naming improved
 
 Verification
-- [ ] verification command passes
+- [x] verification command passes
 
 STOP RULE
-- [ ] stop here and do NOT start next slice
+- [x] stop here and do NOT start next slice
