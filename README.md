@@ -210,8 +210,10 @@ uv run python manage.py create_sample_content     # Create sample medical templa
 ### Operation Guides
 
 - **[Production Deployment](docs/deployment/docker-production-deployment.md)** - Complete production setup
+- **[Rootless Redeploy Runbook](docs/deployment/rootless-parallel-redeploy-runbook.md)** - Rootless migration and operations
 - **[Nginx Configuration](nginx.conf.example)** - Reverse proxy setup
-- **[Upgrade Procedures](upgrade.sh)** - Automated upgrade script
+- **[Upgrade Procedures (rootful)](upgrade.sh)** - Automated upgrade script for rootful Docker
+- **[Upgrade Procedures (rootless)](upgrade-rootless.sh)** - Automated upgrade script for rootless Docker
 
 ## Production Deployment
 
@@ -238,6 +240,18 @@ uv run python manage.py create_sample_content     # Create sample medical templa
 - [ ] Create user groups and permissions
 - [ ] Configure hospital information
 - [ ] Set up monitoring and backups
+
+### Rootless routine update (after migration)
+
+If your server runs the rootless stack (`eqmdr`), use this standard update flow:
+
+```bash
+git pull
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh --dry-run
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh
+```
+
+If the release includes Dockerfile changes, use `FORCE_BUILD=1` on the last command.
 
 ## Permission System
 

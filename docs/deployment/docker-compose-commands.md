@@ -87,22 +87,30 @@ COMPOSE_FILE=docker-compose.deploy.yml sudo ./upgrade.sh
 ## Rootless upgrade script
 
 For rootless deployments, use `upgrade-rootless.sh` (run as the rootless user,
-not root):
+not root).
+
+### Routine update flow (recommended)
 
 ```bash
-# Typical rootless deployment
+# 1) Get latest code
+git pull
+
+# 2) Validate plan first (no changes)
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh --dry-run
+
+# 3) Apply upgrade
 COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh
+```
+
+If the release includes Dockerfile changes, force a local rebuild on step 3:
+
+```bash
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless FORCE_BUILD=1 ./upgrade-rootless.sh
 ```
 
 Useful overrides:
 
 ```bash
-# Validate upgrade plan only (no changes applied)
-./upgrade-rootless.sh --dry-run
-
 # Skip DB backup (not recommended)
 SKIP_DB_BACKUP=1 ./upgrade-rootless.sh
-
-# Force local build instead of pull
-FORCE_BUILD=1 ./upgrade-rootless.sh
 ```
