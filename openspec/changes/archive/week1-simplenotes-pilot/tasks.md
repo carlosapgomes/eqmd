@@ -22,4 +22,4 @@
 - [x] 4.1 Rodar typecheck escopado (`./scripts/typecheck.sh apps/simplenotes`)
 - [x] 4.2 Atualizar `docs/workflows/devloop-migration/progress-log.md`
 - [x] 4.3 Registrar evidências do piloto no PR
-- [ ] 4.4 Arquivar/sincronizar change OpenSpec ao concluir piloto (pendente pós-merge do slice 3)
+- [x] 4.4 Arquivar/sincronizar change OpenSpec ao concluir piloto
