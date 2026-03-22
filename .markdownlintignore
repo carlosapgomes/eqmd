@@ -2,3 +2,60 @@
 .codex/**
 node_modules/**
 .git/**
+
+# Legado/histórico - não normalizar baseline
+.claude/**
+prompts/**
+openspec/**
+
+# Ambiente virtual
+.venv/**
+
+# Docs de apps (legado/gerado)
+apps/**/docs/**
+apps/**/*.md
+
+# Fixtures
+fixtures/**
+
+# Editor-specific
+CLAUDE.md
+
+# Nginx (infra)
+nginx/**
+
+# Docs subdirs (planos antigos/legado)
+docs/apps/**
+docs/deployment/**
+docs/matrix/**
+docs/mediafiles/**
+docs/patients/**
+docs/performance/**
+docs/permissions/**
+docs/sample_content/**
+docs/security/**
+docs/development/**
+
+# Docs legados na raiz de docs/
+docs/admin_guide_medical_specialties.md
+docs/alert-system-standardization-plan.md
+docs/ARCHITECTURE_AUDIT_RESULTS.md
+docs/consent_forms.md
+docs/database-reset.md
+docs/data-export.md
+docs/domain-migration-guide.md
+docs/firebase-import.md
+docs/fts-vector-indexation.md
+docs/MIGRATION.md
+docs/page-navigation-loading-indicator-plan.md
+docs/postgresql-migration.md
+docs/README.md
+docs/reference-data.md
+docs/reset.md
+docs/sample-data-population.md
+docs/styling.md
+docs/TESTING.md
+docs/TRANSLATION_AUDIT_RESULTS.md
+
+# Workflows (corrigir em tarefa separada)
+docs/workflows/**
