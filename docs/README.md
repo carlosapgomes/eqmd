@@ -35,6 +35,7 @@
 - **[Template Guidelines](development/template-guidelines.md)** - Django template best practices
 - **[Testing Guide](TESTING.md)** - Comprehensive testing approach
 - **[Styling Guidelines](styling.md)** - CSS and frontend standards
+- **[DevLoop Migration Package](workflows/devloop-migration/README.md)** - Workflow assessment, migration plan, PR checklist, branch/commit conventions, and CI matrix
 
 ## ⚡ Performance
 
