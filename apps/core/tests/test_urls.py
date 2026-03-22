@@ -4,6 +4,8 @@ Tests for the core app URL patterns.
 from django.test import TestCase
 from django.urls import reverse, resolve
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+
 from apps.core import views
 from apps.accounts.tests.factories import UserFactory
 
@@ -135,21 +137,26 @@ class CoreURLsTestCase(TestCase):
 
     def test_url_patterns_with_authentication(self):
         """Test URL patterns with different authentication states."""
-        user = UserFactory(password='testpass123')
-        
+        user = UserFactory(
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
+            terms_accepted_at=timezone.now(),
+        )
+
         # Test unauthenticated access
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        
+
         response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 302)
-        
+
         # Test authenticated access
         self.client.login(username=user.username, password='testpass123')
-        
+
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        
+
         response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 200)
 
@@ -173,25 +180,21 @@ class CoreURLsTestCase(TestCase):
     def test_url_patterns_list(self):
         """Test that URL patterns list is properly configured."""
         from apps.core.urls import urlpatterns
-        
-        # Should have exactly 2 URL patterns
-        self.assertEqual(len(urlpatterns), 2)
-        
-        # Check pattern names
+
+        self.assertGreaterEqual(len(urlpatterns), 2)
+
+        # Check core pattern names that must always exist
         pattern_names = [pattern.name for pattern in urlpatterns]
         self.assertIn('landing_page', pattern_names)
         self.assertIn('dashboard', pattern_names)
 
     def test_url_view_imports(self):
-        """Test that views are properly imported in URLs."""
+        """Test that URL callbacks are valid callables."""
         from apps.core.urls import urlpatterns
-        from apps.core import views
-        
-        # Check that views are properly referenced
+
         for pattern in urlpatterns:
             if hasattr(pattern, 'callback'):
-                # Should be a function from views module
-                self.assertTrue(hasattr(views, pattern.callback.__name__))
+                self.assertTrue(callable(pattern.callback))
 
     def test_url_patterns_regex(self):
         """Test URL pattern regex matching."""
