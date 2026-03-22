@@ -12,6 +12,8 @@ jobs:
   quality-gates:
     name: Smoke + Scoped Tests + Scoped Typecheck
     runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
 
     services:
       postgres:
@@ -46,25 +48,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
-
-      - name: Install system deps for media/PDF tests
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg poppler-utils
-
-      - name: Install dependencies
-        run: uv sync --group dev
-
-      - name: Detect scope (changed apps and Python files)
+      - name: Detect scope (changed apps, Python files, docs-only)
         id: scope
         shell: bash
         run: |
@@ -90,10 +74,47 @@ jobs:
             | grep -E '^(apps|config)/.*\.py$' \
             | tr '\n' ' ' || true)"
 
+          NON_DOC_FILES="$(echo "$CHANGED_FILES" \
+            | grep -Ev '(^docs/|\.md$|^\.markdownlint\.json$|^\.markdownlintignore$)' || true)"
+
+          DOCS_ONLY="false"
+          if [ -z "$NON_DOC_FILES" ]; then
+            DOCS_ONLY="true"
+          fi
+
+          echo "docs_only=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
           echo "changed_apps=$CHANGED_APPS" >> "$GITHUB_OUTPUT"
           echo "changed_py_files=$CHANGED_PY_FILES" >> "$GITHUB_OUTPUT"
 
+      - name: Docs-only PR short-circuit
+        if: steps.scope.outputs.docs_only == 'true'
+        run: |
+          echo "Docs-only PR detected. Skipping smoke/tests/typecheck for this workflow run."
+
+      - name: Setup Python
+        if: steps.scope.outputs.docs_only != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup uv
+        if: steps.scope.outputs.docs_only != 'true'
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install system deps for media/PDF tests
+        if: steps.scope.outputs.docs_only != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg poppler-utils
+
+      - name: Install dependencies
+        if: steps.scope.outputs.docs_only != 'true'
+        run: uv sync --group dev
+
       - name: Smoke v1 (mandatory)
+        if: steps.scope.outputs.docs_only != 'true'
         run: |
           uv run python manage.py test --noinput --keepdb \
             apps.accounts.tests.test_models \
@@ -102,6 +123,7 @@ jobs:
             apps.events.tests.test_record_tracking_events
 
       - name: App-scoped tests (mandatory)
+        if: steps.scope.outputs.docs_only != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -118,6 +140,7 @@ jobs:
           done
 
       - name: Scoped typecheck (mandatory)
+        if: steps.scope.outputs.docs_only != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -134,6 +157,7 @@ jobs:
     name: Full test suite (informative)
     runs-on: ubuntu-latest
     needs: quality-gates
+    if: needs.quality-gates.outputs.docs_only != 'true'
     continue-on-error: true
 
     services:

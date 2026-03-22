@@ -105,6 +105,7 @@ Tornar **bloqueante**:
 - Ambiente padrão: Docker (`eqmd_dev`) para reduzir drift Linux/Mac no desenvolvimento local.
 - No GitHub Actions, os gates equivalentes rodam via `uv run python manage.py test ...`.
 - Workflow implementado em: `.github/workflows/ci-pr.yml`.
+- PR **somente de documentação** faz short-circuit do job obrigatório (passa sem rodar smoke/test/typecheck pesado).
 - PR pequeno por slice vertical.
 - Falha de gate obrigatório = sem merge.
 
