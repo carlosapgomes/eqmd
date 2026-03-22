@@ -1,6 +1,7 @@
 # Relatório de Avaliação + Plano de Adoção DevLoop
 
 Data: 2026-03-22  
+Última atualização de execução: 2026-03-22  
 Escopo: avaliação do repositório `eqmd` e plano incremental de migração de workflow
 
 ## 1. Resumo executivo
@@ -84,13 +85,15 @@ Além do smoke, todo PR roda testes do app alterado.
 
 ## 0–30 dias — Fundação + Piloto
 
+Status: **EM ANDAMENTO (2/3 entregáveis concluídos)**
+
 Objetivo:
 - consolidar baseline DevLoop e provar workflow completo em `simplenotes`.
 
 Entregáveis:
-1. Estrutura DevLoop mínima padronizada.
-2. CI v1 com gates progressivos.
-3. 1 change piloto completo (`simplenotes`) com OpenSpec + slices + TDD + stop rule.
+- [x] Estrutura DevLoop mínima padronizada.
+- [x] CI v1 com gates progressivos.
+- [ ] 1 change piloto completo (`simplenotes`) com OpenSpec + slices + TDD + stop rule.
 
 Métricas:
 - 100% PR com commit convencional
@@ -98,6 +101,8 @@ Métricas:
 - 1 change piloto encerrado e arquivado
 
 ## 31–60 dias — Consolidação
+
+Status: **NÃO INICIADO**
 
 Objetivo:
 - expandir padrão para apps de menor/médio risco.
@@ -115,6 +120,8 @@ Métricas:
 - queda de retrabalho em regressões básicas
 
 ## 61–90 dias — Escala para hotspots
+
+Status: **NÃO INICIADO**
 
 Objetivo:
 - entrar em `patients/events/mediafiles/core` com segurança incremental.
@@ -142,10 +149,12 @@ Métricas:
 
 ## 7. Próximos passos práticos
 
-1. Operar com o checklist de PR deste pacote.
-2. Aplicar convenções de branch/commit.
-3. Rodar CI conforme matriz de comandos (v1).
-4. Abrir primeiro change piloto de `simplenotes`.
+- [x] Publicar pacote de migração em `docs/workflows/devloop-migration/`.
+- [x] Definir e publicar smoke v1.
+- [x] Implementar workflow de PR em `.github/workflows/ci-pr.yml`.
+- [x] Tornar `main` branch padrão e configurar status check obrigatório no GitHub.
+- [ ] Executar primeiro change piloto de `simplenotes` com OpenSpec + TDD + slices.
+- [ ] Rodar revisão semanal das métricas da fase 0–30 dias.
 
 ---
 
