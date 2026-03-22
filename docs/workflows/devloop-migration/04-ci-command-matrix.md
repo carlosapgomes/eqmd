@@ -23,7 +23,9 @@ Rodar este comando em todo PR:
 ### 2. Testes do app alterado (sempre)
 
 No CI atual:
-- se o PR altera arquivos de teste (`apps/<app>/tests/*.py` ou `apps/<app>/tests.py`), roda **primeiro os módulos de teste alterados**;
+
+- se o PR altera arquivos de teste (`apps/<app>/tests/*.py` ou `apps/<app>/tests.py`), roda
+  **primeiro os módulos de teste alterados**;
 - se não houver arquivos de teste alterados, roda o label do app (`apps.<app>.tests` como fallback).
 
 Exemplos locais:
@@ -46,6 +48,7 @@ Exemplos:
 ### 4. Lint do escopo alterado (sempre, quando habilitado)
 
 Status atual:
+
 - padrão documental já define `ruff`
 - integração de lint bloqueante no CI deve ser feita em PR específico de tooling
 
@@ -77,6 +80,7 @@ Executar em job informativo para acompanhar evolução sem bloquear entrega.
 ## Fase madura (v2) — alvo
 
 Tornar **bloqueante**:
+
 - smoke obrigatório
 - testes do app alterado
 - typecheck escopo
