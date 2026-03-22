@@ -13,9 +13,9 @@
 
 ## 3. Slice 2 — CRUD safety net mínimo
 
-- [ ] 3.1 Adicionar testes de view para fluxo essencial (create/update/delete)
-- [ ] 3.2 Garantir cobertura de permissões mínimas esperadas no app
-- [ ] 3.3 Validar `./scripts/test.sh apps.simplenotes`
+- [x] 3.1 Adicionar testes de view para fluxo essencial (create/update/delete)
+- [x] 3.2 Garantir cobertura de permissões mínimas esperadas no app
+- [x] 3.3 Validar `./scripts/test.sh apps.simplenotes`
 
 ## 4. Slice 3 — Fechamento da semana 1
 
