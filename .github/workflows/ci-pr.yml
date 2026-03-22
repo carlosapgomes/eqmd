@@ -1,0 +1,190 @@
+name: PR Quality Gates (DevLoop)
+
+on:
+  pull_request:
+    branches: [main, master, dev]
+
+concurrency:
+  group: pr-quality-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: Smoke + Scoped Tests + Scoped Typecheck
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: eqmd_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d eqmd_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: ci-secret-key
+      DEBUG: "False"
+      DJANGO_SETTINGS_MODULE: config.test_settings
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_NAME: eqmd_ci
+      DATABASE_TEST_NAME: test_eqmd_ci
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_PORT: "5432"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install system deps for media/PDF tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg poppler-utils
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Detect scope (changed apps and Python files)
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+
+          CHANGED_FILES="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          INSTALLED_APPS_REGEX='^(accounts|botauth|consentforms|core|dailynotes|dischargereports|drugtemplates|events|historyandphysicals|matrix_integration|mediafiles|outpatientprescriptions|patients|pdf_forms|pdfgenerator|reports|research|sample_content|simplenotes)$'
+
+          CHANGED_APPS="$(echo "$CHANGED_FILES" \
+            | awk -F/ '/^apps\/[A-Za-z0-9_\-]+\// {print $2}' \
+            | sort -u \
+            | grep -E "$INSTALLED_APPS_REGEX" \
+            | tr '\n' ' ' || true)"
+
+          CHANGED_PY_FILES="$(echo "$CHANGED_FILES" \
+            | grep -E '^(apps|config)/.*\.py$' \
+            | tr '\n' ' ' || true)"
+
+          echo "changed_apps=$CHANGED_APPS" >> "$GITHUB_OUTPUT"
+          echo "changed_py_files=$CHANGED_PY_FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke v1 (mandatory)
+        run: |
+          uv run python manage.py test --noinput --keepdb \
+            apps.accounts.tests.test_models \
+            apps.core.tests.test_urls \
+            apps.patients.tests.test_models \
+            apps.events.tests.test_record_tracking_events
+
+      - name: App-scoped tests (mandatory)
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHANGED_APPS="${{ steps.scope.outputs.changed_apps }}"
+
+          if [ -z "$CHANGED_APPS" ]; then
+            echo "No app-level changes detected. Skipping app-scoped tests."
+            exit 0
+          fi
+
+          for app in $CHANGED_APPS; do
+            echo "Running tests for apps.${app}"
+            uv run python manage.py test --noinput --keepdb "apps.${app}"
+          done
+
+      - name: Scoped typecheck (mandatory)
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHANGED_PY_FILES="${{ steps.scope.outputs.changed_py_files }}"
+
+          if [ -z "$CHANGED_PY_FILES" ]; then
+            echo "No Python file changes detected. Skipping scoped typecheck."
+            exit 0
+          fi
+
+          uv run mypy $CHANGED_PY_FILES
+
+  full-suite-informative:
+    name: Full test suite (informative)
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    continue-on-error: true
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: eqmd_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d eqmd_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: ci-secret-key
+      DEBUG: "False"
+      DJANGO_SETTINGS_MODULE: config.test_settings
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_NAME: eqmd_ci
+      DATABASE_TEST_NAME: test_eqmd_ci
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_PORT: "5432"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install system deps for media/PDF tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg poppler-utils
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run full suite
+        run: |
+          uv run python manage.py test --noinput
