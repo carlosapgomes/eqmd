@@ -6,17 +6,18 @@ This assumes you are using the pi coding agent with glm‑4.7.
 
 ## Before Each Slice
 
-1) Start with empty context.
-2) Provide the slice prompt file:
+1. Start with empty context.
+2. Provide the slice prompt file:
    - `openspec/changes/<change>/slices/slice-XX-glm-prompt.md`
-3) Ensure the model reads required files in order.
+3. Ensure the model reads required files in order.
 
 ---
 
 ## What to Send to GLM/pi
 
 Paste the entire contents of:
-```
+
+```text
 openspec/changes/<change>/slices/slice-XX-glm-prompt.md
 ```
 
@@ -51,4 +52,3 @@ openspec/changes/<change>/slices/slice-XX-glm-prompt.md
 - Never run destructive commands unless explicitly approved.
 - No database drops/resets without explicit user approval.
 - No package installs outside the app container.
-

@@ -1,6 +1,7 @@
 # MediaFiles App Testing Infrastructure
 
-This directory contains the comprehensive testing infrastructure for the MediaFiles app, implementing the testing framework specified in Step 9 of the implementation plan.
+This directory contains the comprehensive testing infrastructure for the MediaFiles app,
+implementing the testing framework specified in Step 9 of the implementation plan.
 
 ## Test Structure
 
@@ -255,7 +256,7 @@ from apps.mediafiles.tests.test_settings import (
 4. Include malicious file samples
 5. Test Unicode and international content
 
-### Security Testing
+### Security Test Cases
 
 1. Test all file validation functions
 2. Include path traversal attempts
