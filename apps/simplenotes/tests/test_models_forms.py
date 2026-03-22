@@ -1,6 +1,11 @@
+import io
+from contextlib import redirect_stdout
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+
+from apps.events.models import Event
 from apps.patients.models import Patient
 from ..models import SimpleNote
 from ..forms import SimpleNoteForm
@@ -14,6 +19,7 @@ class SimpleNoteModelTests(TestCase):
     def setUp(self):
         """Set up test data."""
         self.user = User.objects.create_user(
+            username="simplenote-model-user",
             email="test@example.com",
             password="testpass123",
             first_name="Test",
@@ -88,6 +94,7 @@ class SimpleNoteFormTests(TestCase):
     def setUp(self):
         """Set up test data."""
         self.user = User.objects.create_user(
+            username="simplenote-form-user",
             email="test@example.com",
             password="testpass123",
             first_name="Test",
@@ -132,20 +139,29 @@ class SimpleNoteFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('event_datetime', form.errors)
 
-    def test_form_save(self):
-        """Test form save functionality."""
+    def test_form_save_sets_canonical_description(self):
+        """Form save should persist canonical simple note description."""
         form_data = {
-            'event_datetime': timezone.now(),
-            'content': 'This is a valid simple note content for testing save functionality.'
+            "event_datetime": timezone.now(),
+            "content": "This is a valid simple note content for testing save functionality.",
         }
         form = SimpleNoteForm(data=form_data, user=self.user)
         self.assertTrue(form.is_valid())
-        
-        # Test creating new instance
+
         simple_note = form.save(commit=False)
         simple_note.patient = self.patient
-        simple_note.description = "Nota/Observação"
         simple_note.save()
-        
+
+        expected_description = Event.EVENT_TYPE_CHOICES[Event.SIMPLE_NOTE_EVENT][1]
+        self.assertEqual(simple_note.description, expected_description)
         self.assertEqual(simple_note.created_by, self.user)
         self.assertEqual(simple_note.updated_by, self.user)
+
+    def test_form_init_has_no_debug_stdout(self):
+        """Form initialization should not print debug output."""
+        output_buffer = io.StringIO()
+
+        with redirect_stdout(output_buffer):
+            SimpleNoteForm(user=self.user)
+
+        self.assertEqual(output_buffer.getvalue(), "")

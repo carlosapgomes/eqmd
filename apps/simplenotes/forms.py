@@ -54,8 +54,6 @@ class SimpleNoteForm(forms.ModelForm):
             )
             self.fields["event_datetime"].initial = dt.strftime("%Y-%m-%dT%H:%M")
 
-        print(self.fields["event_datetime"].initial)
-
         # Configure field properties
         self.fields[
             "content"
@@ -78,10 +76,10 @@ class SimpleNoteForm(forms.ModelForm):
         return content
 
     def save(self, commit=True):
-        """Override save to set created_by and updated_by fields."""
+        """Override save to set canonical description and audit fields."""
         instance = super().save(commit=False)
+        instance.description = Event.EVENT_TYPE_CHOICES[Event.SIMPLE_NOTE_EVENT][1]
 
-        self.description = Event.EVENT_TYPE_CHOICES[Event.SIMPLE_NOTE_EVENT][1]
         if self.user:
             if not instance.pk:  # New instance
                 instance.created_by = self.user

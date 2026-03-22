@@ -1,4 +1,6 @@
-#!/usr/bin/env sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
-docker compose exec --user root eqmd-dev uv pip install --system --group dev
+DOCKER_SERVICE="${EQMD_DOCKER_SERVICE:-eqmd_dev}"
+
+exec docker exec --user root "${DOCKER_SERVICE}" sh -lc 'cd /app && uv pip install --system --group dev'
