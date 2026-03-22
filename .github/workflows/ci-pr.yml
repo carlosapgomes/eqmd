@@ -74,6 +74,11 @@ jobs:
             | grep -E '^(apps|config)/.*\.py$' \
             | tr '\n' ' ' || true)"
 
+          CHANGED_TEST_MODULES="$(echo "$CHANGED_FILES" \
+            | grep -E '^apps/[^/]+/(tests/.*\.py|tests\.py)$' \
+            | sed 's#/#.#g; s#\.py$##' \
+            | tr '\n' ' ' || true)"
+
           NON_DOC_FILES="$(echo "$CHANGED_FILES" \
             | grep -Ev '(^docs/|\.md$|^\.markdownlint\.json$|^\.markdownlintignore$)' || true)"
 
@@ -85,6 +90,7 @@ jobs:
           echo "docs_only=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
           echo "changed_apps=$CHANGED_APPS" >> "$GITHUB_OUTPUT"
           echo "changed_py_files=$CHANGED_PY_FILES" >> "$GITHUB_OUTPUT"
+          echo "changed_test_modules=$CHANGED_TEST_MODULES" >> "$GITHUB_OUTPUT"
 
       - name: Docs-only PR short-circuit
         if: steps.scope.outputs.docs_only == 'true'
@@ -128,6 +134,16 @@ jobs:
         run: |
           set -euo pipefail
           CHANGED_APPS="${{ steps.scope.outputs.changed_apps }}"
+          CHANGED_TEST_MODULES="${{ steps.scope.outputs.changed_test_modules }}"
+
+          if [ -n "$CHANGED_TEST_MODULES" ]; then
+            echo "Running changed test modules only:"
+            for test_module in $CHANGED_TEST_MODULES; do
+              echo " - ${test_module}"
+              uv run python manage.py test --noinput --keepdb "${test_module}"
+            done
+            exit 0
+          fi
 
           if [ -z "$CHANGED_APPS" ]; then
             echo "No app-level changes detected. Skipping app-scoped tests."
@@ -135,8 +151,14 @@ jobs:
           fi
 
           for app in $CHANGED_APPS; do
-            echo "Running tests for apps.${app}"
-            uv run python manage.py test --noinput --keepdb "apps.${app}"
+            test_label="apps.${app}.tests"
+
+            if [ ! -d "apps/${app}/tests" ] && [ ! -f "apps/${app}/tests.py" ]; then
+              test_label="apps.${app}"
+            fi
+
+            echo "Running tests for ${test_label}"
+            uv run python manage.py test --noinput --keepdb "${test_label}"
           done
 
       - name: Scoped typecheck (mandatory)
