@@ -438,6 +438,29 @@ Keep backups for a few days before cleanup.
 
 ---
 
+## Routine updates (after migration)
+
+After your rootless stack is live, update it with this standard flow:
+
+```bash
+# 1) Pull latest code
+git pull
+
+# 2) Preview the upgrade (no changes)
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh --dry-run
+
+# 3) Execute the upgrade
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh
+```
+
+If the release changes the Dockerfile, use `FORCE_BUILD=1` in step 3:
+
+```bash
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless FORCE_BUILD=1 ./upgrade-rootless.sh
+```
+
+---
+
 ## Important notes
 
 - Do **not** use `upgrade.sh` for the rootless stack. It assumes rootful Docker
