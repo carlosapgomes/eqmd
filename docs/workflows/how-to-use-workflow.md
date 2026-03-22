@@ -64,3 +64,20 @@ Prompt Codex with:
 ```
 Use OpenSpec to sync specs and archive change <name>.
 ```
+
+---
+
+## 6) Process governance (DevLoop migration package)
+
+For `eqmd` process standards and rollout plan, use:
+
+- `docs/workflows/devloop-migration/README.md`
+- `docs/workflows/devloop-migration/01-assessment-and-plan-2026-03-22.md`
+- `docs/workflows/devloop-migration/02-pr-checklist.md`
+- `docs/workflows/devloop-migration/03-branch-and-commit-conventions.md`
+- `docs/workflows/devloop-migration/04-ci-command-matrix.md`
+
+This package is the operational reference for:
+- PR checklist
+- branch and commit conventions
+- smoke suite and CI gate progression
