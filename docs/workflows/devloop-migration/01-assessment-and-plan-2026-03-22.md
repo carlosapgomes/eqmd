@@ -85,7 +85,7 @@ Além do smoke, todo PR roda testes do app alterado.
 
 ## 0–30 dias — Fundação + Piloto
 
-Status: **EM ANDAMENTO (2/3 entregáveis concluídos)**
+Status: **EM ANDAMENTO (3/3 entregáveis-base concluídos; monitoramento em curso)**
 
 Objetivo:
 - consolidar baseline DevLoop e provar workflow completo em `simplenotes`.
@@ -93,7 +93,7 @@ Objetivo:
 Entregáveis:
 - [x] Estrutura DevLoop mínima padronizada.
 - [x] CI v1 com gates progressivos.
-- [ ] 1 change piloto completo (`simplenotes`) com OpenSpec + slices + TDD + stop rule.
+- [x] 1 change piloto completo (`simplenotes`) com OpenSpec + slices + TDD + stop rule.
 
 Métricas:
 - 100% PR com commit convencional
@@ -153,7 +153,7 @@ Métricas:
 - [x] Definir e publicar smoke v1.
 - [x] Implementar workflow de PR em `.github/workflows/ci-pr.yml`.
 - [x] Tornar `main` branch padrão e configurar status check obrigatório no GitHub.
-- [ ] Executar primeiro change piloto de `simplenotes` com OpenSpec + TDD + slices.
+- [x] Executar primeiro change piloto de `simplenotes` com OpenSpec + TDD + slices.
 - [ ] Rodar revisão semanal das métricas da fase 0–30 dias.
 
 ---
