@@ -9,6 +9,7 @@
   - `chore/<slug>`
 
 Exemplos:
+
 - `feat/add-simplenotes-validation-service`
 - `fix/patient-transfer-bed-sync`
 - `chore/devloop-ci-bootstrap`
@@ -28,9 +29,11 @@ type(scope): summary
 ```
 
 Tipos recomendados:
+
 - `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`, `perf`
 
 Exemplos:
+
 - `feat(simplenotes): add note visibility service`
 - `fix(patients): prevent invalid transfer status`
 - `test(events): add draft expiration scenarios`
@@ -45,6 +48,7 @@ Exemplos:
 ## 5) Relação com OpenSpec
 
 Quando houver change OpenSpec:
+
 - referenciar o `change-id` no PR
 - manter tasks sincronizadas com os commits
 - fechar o ciclo do slice antes de iniciar o próximo

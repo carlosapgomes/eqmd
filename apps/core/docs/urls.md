@@ -51,14 +51,14 @@ urlpatterns = [
 **Name**: `landing_page`
 **Full Name**: `core:landing_page`
 
-#### Details
+#### Landing Page Details
 
 - **Purpose**: Public homepage for EquipeMed
 - **Authentication**: Not required
 - **HTTP Methods**: GET
 - **Template**: `core/landing_page.html`
 
-#### URL Reversing
+#### Landing Page URL Reversing
 
 ```python
 # In views
@@ -72,7 +72,7 @@ url = reverse('core:landing_page')
 {% url 'apps.core:landing_page' %}
 ```
 
-#### Example URLs
+#### Landing Page Example URLs
 
 - `http://example.com/`
 - `https://app.sispep.com/`
@@ -84,14 +84,14 @@ url = reverse('core:landing_page')
 **Name**: `dashboard`
 **Full Name**: `core:dashboard`
 
-#### Details
+#### Dashboard Details
 
 - **Purpose**: Main authenticated user interface
 - **Authentication**: Required (`@login_required`)
 - **HTTP Methods**: GET
 - **Template**: `core/dashboard.html`
 
-#### URL Reversing
+#### Dashboard URL Reversing
 
 ```python
 # In views
@@ -105,7 +105,7 @@ url = reverse('core:dashboard')
 {% url 'apps.core:dashboard' %}
 ```
 
-#### Example URLs
+#### Dashboard Example URLs
 
 - `http://example.com/dashboard/`
 - `https://app.sispep.com/dashboard/`
@@ -161,9 +161,9 @@ Common navigation patterns in templates:
 
 <!-- Conditional navigation -->
 {% if user.is_authenticated %}
-    <a href="{% url 'core:dashboard' %}">Dashboard</a>
+<a href="{% url 'core:dashboard' %}">Dashboard</a>
 {% else %}
-    <a href="{% url 'account_login' %}">Login</a>
+<a href="{% url 'account_login' %}">Login</a>
 {% endif %}
 ```
 
@@ -298,15 +298,15 @@ class CoreURLsTestCase(TestCase):
     def test_landing_page_url_resolves(self):
         url = reverse('core:landing_page')
         self.assertEqual(url, '/')
-        
+
     def test_dashboard_url_resolves(self):
         url = reverse('core:dashboard')
         self.assertEqual(url, '/dashboard/')
-        
+
     def test_landing_page_view_resolves(self):
         view = resolve('/')
         self.assertEqual(view.view_name, 'core:landing_page')
-        
+
     def test_dashboard_requires_login(self):
         response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 302)  # Redirect to login
@@ -387,7 +387,7 @@ path('api/v2/dashboard/', include('apps.core.api.v2.urls')),
    ```python
    # Problem: Incorrect URL name
    reverse('dashboard')  # Missing namespace
-   
+
    # Solution: Use correct namespace
    reverse('core:dashboard')
    ```
