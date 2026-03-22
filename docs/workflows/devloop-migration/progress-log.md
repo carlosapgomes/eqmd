@@ -67,7 +67,7 @@ Registro contínuo de evolução da migração de workflow no `eqmd`.
 
 ### Próxima semana
 - Executar 1º change piloto em `simplenotes` com OpenSpec + TDD + slices.
-- Change iniciado: `openspec/changes/week1-simplenotes-pilot/` (artefatos criados).
+- Change iniciado e concluído: `openspec/changes/archive/week1-simplenotes-pilot/`.
 
 ### Riscos/Bloqueios
 - Necessidade de calibrar duração do smoke v1 e estabilidade dos testes por app.
@@ -91,8 +91,9 @@ Registro contínuo de evolução da migração de workflow no `eqmd`.
   - #12 (`feat/week1-simplenotes-slice-02`)
   - Slice 03: branch `feat/week1-simplenotes-slice-03`
 - OpenSpec:
-  - `openspec/changes/week1-simplenotes-pilot/tasks.md`
-  - `openspec/changes/week1-simplenotes-pilot/slices/slice-03-prompt.md`
+  - `openspec/specs/simplenotes/spec.md` (sync)
+  - `openspec/changes/archive/week1-simplenotes-pilot/tasks.md` (archive)
+  - `openspec/changes/archive/week1-simplenotes-pilot/slices/slice-03-prompt.md` (archive)
 
 ### Métricas da semana
 - PRs com check obrigatório verde: #11 e #12
@@ -100,8 +101,8 @@ Registro contínuo de evolução da migração de workflow no `eqmd`.
 - Mudanças com OpenSpec completo: piloto `week1-simplenotes-pilot` com proposal/design/spec/tasks/slices
 
 ### Próxima semana
-- Sincronizar/arquivar o change OpenSpec do piloto após merge do slice 3.
-- Iniciar próxima melhoria incremental no app de baixo risco (seguindo mesma disciplina).
+- Iniciar próxima melhoria incremental no app de baixo risco (seguindo a mesma disciplina DevLoop).
+- Definir candidato da semana 2 e abrir novo change OpenSpec.
 
 ### Riscos/Bloqueios
 - Suite completa continua informativa e ainda possui falhas legadas fora do escopo do piloto.
