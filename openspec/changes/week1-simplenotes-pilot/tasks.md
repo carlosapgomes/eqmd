@@ -19,7 +19,7 @@
 
 ## 4. Slice 3 — Fechamento da semana 1
 
-- [ ] 4.1 Rodar typecheck escopado (`./scripts/typecheck.sh apps/simplenotes`)
-- [ ] 4.2 Atualizar `docs/workflows/devloop-migration/progress-log.md`
-- [ ] 4.3 Registrar evidências do piloto no PR
-- [ ] 4.4 Arquivar/sincronizar change OpenSpec ao concluir piloto
+- [x] 4.1 Rodar typecheck escopado (`./scripts/typecheck.sh apps/simplenotes`)
+- [x] 4.2 Atualizar `docs/workflows/devloop-migration/progress-log.md`
+- [x] 4.3 Registrar evidências do piloto no PR
+- [ ] 4.4 Arquivar/sincronizar change OpenSpec ao concluir piloto (pendente pós-merge do slice 3)
