@@ -167,11 +167,6 @@ class PatientDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         context['admissions'] = patient.admissions.all().order_by('-admission_datetime')
         context['current_admission'] = patient.get_current_admission()
 
-        # Add quick action forms
-        context['quick_record_form'] = QuickRecordNumberUpdateForm()
-        context['quick_admission_form'] = QuickAdmissionForm()
-        context['quick_discharge_form'] = QuickDischargeForm()
-        
         # Add wards for status change modals
         context['wards'] = Ward.objects.filter(is_active=True).order_by('name')
 
@@ -1554,7 +1549,7 @@ def edit_admission_data(request, patient_id, admission_id):
         if form.is_valid():
             admission = form.save()
             messages.success(request, 'Dados da internação atualizados com sucesso!')
-            return redirect('patients:detail', pk=patient.pk)
+            return redirect('patients:patient_detail', pk=patient.pk)
         else:
             messages.error(request, 'Erro ao atualizar dados da internação. Verifique os campos.')
     else:
@@ -1586,7 +1581,7 @@ def edit_discharge_data(request, patient_id, admission_id):
         if form.is_valid():
             admission = form.save()
             messages.success(request, 'Dados da alta atualizados com sucesso!')
-            return redirect('patients:detail', pk=patient.pk)
+            return redirect('patients:patient_detail', pk=patient.pk)
         else:
             messages.error(request, 'Erro ao atualizar dados da alta. Verifique os campos.')
     else:
@@ -1614,22 +1609,10 @@ def cancel_discharge(request, patient_id, admission_id):
         raise PermissionDenied("You don't have permission to cancel this discharge.")
     
     try:
-        # Clear discharge data to reactivate admission
-        admission.discharge_datetime = None
-        admission.discharge_type = None
-        admission.final_bed = None
-        admission.discharge_diagnosis = None
-        admission.updated_by = request.user
-        admission.save()
-        
-        # Update patient status back to inpatient
-        patient.status = Patient.Status.INPATIENT
-        patient.updated_by = request.user
-        patient.save()
-        
+        admission.cancel_discharge(request.user)
         messages.success(request, 'Alta cancelada com sucesso! Paciente retornou ao status de internação.')
     except Exception as e:
         messages.error(request, f'Erro ao cancelar alta: {str(e)}')
     
-    return redirect('patients:detail', pk=patient.pk)
+    return redirect('patients:patient_detail', pk=patient.pk)
 
