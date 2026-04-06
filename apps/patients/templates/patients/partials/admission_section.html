@@ -78,7 +78,7 @@
                                     {% for action in admission_actions %}
                                     <button class="btn btn-sm {{ action.btn_class }}"
                                             data-bs-toggle="modal"
-                                            data-bs-target="#{{ action.action_name }}Modal"
+                                            data-bs-target="#{{ action.modal_target }}"
                                             data-admission-id="{{ current_admission.id }}"
                                             data-patient-id="{{ patient.id }}">
                                         <i class="bi bi-{{ action.icon }} me-1"></i>{{ action.label }}
@@ -194,7 +194,7 @@
                                             <button type="button"
                                                     class="btn btn-sm {{ action.btn_class }}"
                                                     data-bs-toggle="modal"
-                                                    data-bs-target="#{{ action.action_name }}Modal"
+                                                    data-bs-target="#{{ action.modal_target }}"
                                                     data-admission-id="{{ admission.id }}"
                                                     data-patient-id="{{ patient.id }}"
                                                     title="{{ action.label }}">
@@ -550,114 +550,6 @@
         </div>
     </div>
 </div>
-
-<!-- Legacy Admission Modal (keeping for backward compatibility) -->
-{% if perms.patients.add_patient and not patient.is_currently_admitted %}
-<div class="modal fade" id="admissionModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form method="post" action="{% url 'patients:quick_admit_patient' patient.id %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">Internar Paciente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Paciente</label>
-                                <input type="text" class="form-control" value="{{ patient.name }}" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label for="admission_datetime" class="form-label">Data/Hora da Admissão</label>
-                                <input type="datetime-local" class="form-control" name="admission_datetime" required
-                                       value="{% now 'Y-m-d\TH:i' %}">
-                            </div>
-                            <div class="mb-3">
-                                {{ quick_admission_form.admission_type.label_tag }}
-                                {{ quick_admission_form.admission_type }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                {{ quick_admission_form.initial_bed.label_tag }}
-                                {{ quick_admission_form.initial_bed }}
-                            </div>
-                            <div class="mb-3">
-                                {{ quick_admission_form.admission_diagnosis.label_tag }}
-                                {{ quick_admission_form.admission_diagnosis }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-sign-in-alt"></i>
-                        Internar Paciente
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Discharge Modal -->
-{% if current_admission and perms.patients.change_patient %}
-<div class="modal fade" id="dischargeModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form method="post" action="{% url 'patients:quick_discharge_patient' current_admission.id %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">Dar Alta ao Paciente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Paciente</label>
-                                <input type="text" class="form-control" value="{{ patient.name }}" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label for="discharge_datetime" class="form-label">Data/Hora da Alta</label>
-                                <input type="datetime-local" class="form-control" name="discharge_datetime" required
-                                       value="{% now 'Y-m-d\TH:i' %}">
-                            </div>
-                            <div class="mb-3">
-                                {{ quick_discharge_form.discharge_type.label_tag }}
-                                {{ quick_discharge_form.discharge_type }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="final_bed" class="form-label">Leito Final</label>
-                                <input type="text" class="form-control" name="final_bed"
-                                       value="{{ current_admission.current_bed|default:current_admission.initial_bed }}"
-                                       placeholder="Ex: A101, UTI-02, etc." maxlength="20">
-                            </div>
-                            <div class="mb-3">
-                                {{ quick_discharge_form.discharge_diagnosis.label_tag }}
-                                {{ quick_discharge_form.discharge_diagnosis }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-sign-out-alt"></i>
-                        Dar Alta
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
