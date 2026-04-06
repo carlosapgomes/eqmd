@@ -291,15 +291,25 @@
 document.addEventListener('DOMContentLoaded', function() {
     const patientId = '{{ patient.id }}';
     const canManageTags = {{ can_manage_tags|yesno:'true,false' }};
+    const addTagModal = document.getElementById('addTagModal');
+    const addTagButton = document.getElementById('add-tag-btn');
+    const confirmRemoveTagButton = document.getElementById('confirm-remove-tag-btn');
+    const removeAllTagsButton = document.getElementById('remove-all-tags-btn');
     let selectedTagId = null;
     
     // Load available tags when add modal opens
-    document.getElementById('addTagModal').addEventListener('show.bs.modal', function() {
-        loadAvailableTags();
-    });
+    if (canManageTags && addTagModal) {
+        addTagModal.addEventListener('show.bs.modal', function() {
+            loadAvailableTags();
+        });
+    }
     
     // Handle tag selection in add modal
     document.addEventListener('click', function(e) {
+        if (!canManageTags) {
+            return;
+        }
+
         if (e.target.closest('.available-tag-item')) {
             const tagItem = e.target.closest('.available-tag-item');
             
@@ -313,16 +323,20 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedTagId = tagItem.dataset.tagId;
             
             // Enable add button
-            document.getElementById('add-tag-btn').disabled = false;
+            if (addTagButton) {
+                addTagButton.disabled = false;
+            }
         }
     });
     
     // Handle add tag button click
-    document.getElementById('add-tag-btn').addEventListener('click', function() {
-        if (selectedTagId) {
-            addTagToPatient(selectedTagId);
-        }
-    });
+    if (canManageTags && addTagButton) {
+        addTagButton.addEventListener('click', function() {
+            if (selectedTagId) {
+                addTagToPatient(selectedTagId);
+            }
+        });
+    }
     
     // Handle remove tag buttons (quick remove)
     document.addEventListener('click', function(e) {
@@ -346,19 +360,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Handle confirm remove tag
-    document.getElementById('confirm-remove-tag-btn').addEventListener('click', function() {
-        const tagId = this.dataset.tagId;
-        if (tagId) {
-            removeTagFromPatient(tagId);
-        }
-    });
+    if (canManageTags && confirmRemoveTagButton) {
+        confirmRemoveTagButton.addEventListener('click', function() {
+            const tagId = this.dataset.tagId;
+            if (tagId) {
+                removeTagFromPatient(tagId);
+            }
+        });
+    }
     
     // Handle remove all tags
-    document.getElementById('remove-all-tags-btn').addEventListener('click', function() {
-        if (confirm('Tem certeza que deseja remover TODAS as tags deste paciente? Esta ação não pode ser desfeita.')) {
-            removeAllTags();
-        }
-    });
+    if (canManageTags && removeAllTagsButton) {
+        removeAllTagsButton.addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja remover TODAS as tags deste paciente? Esta ação não pode ser desfeita.')) {
+                removeAllTags();
+            }
+        });
+    }
     
     function loadAvailableTags() {
         const container = document.getElementById('available-tags');
@@ -404,7 +422,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         container.innerHTML = tagsHtml;
         selectedTagId = null;
-        document.getElementById('add-tag-btn').disabled = true;
+        if (addTagButton) {
+            addTagButton.disabled = true;
+        }
     }
     
     function addTagToPatient(tagId) {
@@ -545,8 +565,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (tags.length === 0) {
             container.innerHTML = '';
-            document.getElementById('no-tags-message').style.display = 'block';
-            document.getElementById('remove-all-tags-btn').disabled = true;
+            const noTagsMessage = document.getElementById('no-tags-message');
+            if (noTagsMessage) {
+                noTagsMessage.style.display = 'block';
+            }
+            if (removeAllTagsButton) {
+                removeAllTagsButton.disabled = true;
+            }
             return;
         }
         
@@ -567,8 +592,13 @@ document.addEventListener('DOMContentLoaded', function() {
         `).join('');
         
         container.innerHTML = tagsHtml;
-        document.getElementById('no-tags-message').style.display = 'none';
-        document.getElementById('remove-all-tags-btn').disabled = false;
+        const noTagsMessage = document.getElementById('no-tags-message');
+        if (noTagsMessage) {
+            noTagsMessage.style.display = 'none';
+        }
+        if (removeAllTagsButton) {
+            removeAllTagsButton.disabled = false;
+        }
     }
     
     function updateTagCount(count) {
