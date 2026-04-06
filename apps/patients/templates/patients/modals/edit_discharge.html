@@ -1,0 +1,56 @@
+<div class="mb-3">
+    <h6 class="mb-1">Editar Dados da Alta</h6>
+    <p class="text-muted small mb-0">
+        {{ patient.name }} · Alta em {{ admission.discharge_datetime|date:"d/m/Y H:i" }}
+    </p>
+</div>
+
+<form method="post" action="{% url 'patients:edit_discharge_data' patient_id=patient.pk admission_id=admission.pk %}">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label for="{{ form.discharge_datetime.id_for_label }}" class="form-label">{{ form.discharge_datetime.label }}</label>
+            {{ form.discharge_datetime }}
+            {% if form.discharge_datetime.errors %}
+                <div class="text-danger small mt-1">{{ form.discharge_datetime.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.discharge_type.id_for_label }}" class="form-label">{{ form.discharge_type.label }}</label>
+            {{ form.discharge_type }}
+            {% if form.discharge_type.errors %}
+                <div class="text-danger small mt-1">{{ form.discharge_type.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.final_bed.id_for_label }}" class="form-label">{{ form.final_bed.label }}</label>
+            {{ form.final_bed }}
+            {% if form.final_bed.errors %}
+                <div class="text-danger small mt-1">{{ form.final_bed.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="col-12">
+            <label for="{{ form.discharge_diagnosis.id_for_label }}" class="form-label">{{ form.discharge_diagnosis.label }}</label>
+            {{ form.discharge_diagnosis }}
+            {% if form.discharge_diagnosis.errors %}
+                <div class="text-danger small mt-1">{{ form.discharge_diagnosis.errors }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-warning">
+            <i class="bi bi-check2 me-1"></i>Salvar alterações
+        </button>
+    </div>
+</form>

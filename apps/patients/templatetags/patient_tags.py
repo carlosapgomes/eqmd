@@ -248,6 +248,7 @@ def get_admission_edit_actions(user, patient, admission):
     if can_edit_admission_data(user, admission):
         actions.append({
             'action_name': 'edit_admission',
+            'modal_target': 'editAdmissionModal',
             'label': 'Editar Internação',
             'icon': 'pencil',
             'btn_class': 'btn-outline-primary'
@@ -256,6 +257,7 @@ def get_admission_edit_actions(user, patient, admission):
     if can_edit_discharge_data(user, admission):
         actions.append({
             'action_name': 'edit_discharge',
+            'modal_target': 'editDischargeModal',
             'label': 'Editar Alta',
             'icon': 'pencil-square',
             'btn_class': 'btn-outline-warning'
@@ -264,6 +266,7 @@ def get_admission_edit_actions(user, patient, admission):
     if can_cancel_discharge(user, admission):
         actions.append({
             'action_name': 'cancel_discharge',
+            'modal_target': 'cancelDischargeModal',
             'label': 'Cancelar Alta',
             'icon': 'arrow-counterclockwise',
             'btn_class': 'btn-outline-danger'
@@ -272,6 +275,7 @@ def get_admission_edit_actions(user, patient, admission):
     if can_discharge_patient(user, admission):
         actions.append({
             'action_name': 'discharge_patient',
+            'modal_target': 'discharge_patientModal',
             'label': 'Dar Alta',
             'icon': 'box-arrow-right',
             'btn_class': 'btn-outline-success'
