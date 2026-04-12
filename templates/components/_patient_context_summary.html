@@ -1,0 +1,149 @@
+{% comment %}
+  Compact Patient Context Summary — reusable component partial.
+
+  Expected context variables:
+    patient                – Patient instance (required)
+    current_admission      – active PatientAdmission or None (optional; if not
+                             supplied the partial calls patient.get_current_admission)
+    show_details           – render expandable extended-details section (optional,
+                             default: false)
+    details_collapse_id    – HTML id for the collapse element (required when
+                             show_details is true; caller must guarantee uniqueness)
+
+  Canonical compact fields (always shown):
+    • patient.name
+    • patient.current_record_number  (safe placeholder when empty)
+    • patient.age                    (derived property)
+    • patient.get_status_display()
+
+  Admission-specific compact fields (shown only when an active admission exists):
+    • ward  – patient.ward (abbreviation)
+    • bed   – patient.bed
+
+  Optional expanded fields (when show_details is true):
+    • patient.birthday
+    • patient.get_gender_display()
+    • admission.admission_datetime   (active admission only)
+    • admission.duration_display     (active admission only)
+{% endcomment %}
+
+<div class="patient-context-summary card border-start border-4 border-medical-primary mb-3">
+  <div class="card-body py-2 px-3">
+    <div class="row align-items-center gx-3 gy-1">
+      {# Name #}
+      <div class="col-auto">
+        <span class="fw-semibold text-medical-dark-gray">
+          <i class="bi bi-person me-1" aria-hidden="true"></i>
+          {{ patient.name }}
+        </span>
+      </div>
+
+      {# Record number #}
+      <div class="col-auto">
+        <span class="text-muted small">
+          <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
+          {% if patient.current_record_number %}
+            {{ patient.current_record_number }}
+          {% else %}
+            —
+          {% endif %}
+        </span>
+      </div>
+
+      {# Age #}
+      <div class="col-auto">
+        <span class="text-muted small">
+          <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>
+          {{ patient.age }} anos
+        </span>
+      </div>
+
+      {# Status #}
+      <div class="col-auto">
+        <span class="badge bg-secondary">{{ patient.get_status_display }}</span>
+      </div>
+
+      {# Ward & bed — only for active admission #}
+      {% with admission=current_admission|default:patient.get_current_admission %}
+        {% if admission %}
+          {% if patient.ward %}
+            <div class="col-auto">
+              <span class="text-muted small">
+                <i class="bi bi-building me-1" aria-hidden="true"></i>
+                {{ patient.ward.abbreviation }}
+              </span>
+            </div>
+          {% endif %}
+          {% if patient.bed %}
+            <div class="col-auto">
+              <span class="text-muted small">
+                <i class="bi bi-bed me-1" aria-hidden="true"></i>
+                {{ patient.bed }}
+              </span>
+            </div>
+          {% endif %}
+        {% endif %}
+      {% endwith %}
+
+      {# Expand toggle — only when show_details is enabled #}
+      {% if show_details and details_collapse_id %}
+        <div class="col-auto ms-auto">
+          <button class="btn btn-sm btn-outline-secondary p-0 px-1"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#{{ details_collapse_id }}"
+                  aria-expanded="false"
+                  aria-controls="{{ details_collapse_id }}">
+            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+            <span class="visually-hidden">Expandir detalhes</span>
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    {# Expandable extended details #}
+    {% if show_details and details_collapse_id %}
+      <div class="collapse patient-context-details mt-2" id="{{ details_collapse_id }}">
+        <hr class="my-1">
+        <div class="row gx-3 gy-1 mt-1">
+          {# Birth date #}
+          <div class="col-auto">
+            <span class="text-muted small">
+              <i class="bi bi-cake me-1" aria-hidden="true"></i>
+              {{ patient.birthday|date:"d/m/Y" }}
+            </span>
+          </div>
+
+          {# Gender #}
+          <div class="col-auto">
+            <span class="text-muted small">
+              <i class="bi bi-gender-ambiguous me-1" aria-hidden="true"></i>
+              {{ patient.get_gender_display }}
+            </span>
+          </div>
+
+          {# Admission-specific extended fields #}
+          {% with admission=current_admission|default:patient.get_current_admission %}
+            {% if admission %}
+              {# Admission date #}
+              <div class="col-auto">
+                <span class="text-muted small">
+                  <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>
+                  Internado em {{ admission.admission_datetime|date:"d/m/Y" }}
+                </span>
+              </div>
+
+              {# Admission duration #}
+              <div class="col-auto">
+                <span class="text-muted small">
+                  <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+                  {{ admission.duration_display }}
+                </span>
+              </div>
+            {% endif %}
+          {% endwith %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>

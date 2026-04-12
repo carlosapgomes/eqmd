@@ -21,6 +21,7 @@ When guidance conflicts, apply rules in this order:
 - Django mypy plugin: enable after compatibility validation in rollout phases
 - Test verification command: `./scripts/test.sh`
 - Type-check command (scoped paths): `./scripts/typecheck.sh <python-path...>`
+- Markdown linting command: `markdownlint-cli2`
 - Type checker rollout plan: `docs/workflows/typing-rollout-plan.md`
 
 ## Rule Levels
@@ -101,17 +102,21 @@ When guidance conflicts, apply rules in this order:
 - Implement one slice at a time with TDD flow (RED -> GREEN -> CLEAN -> VERIFY)
 - Respect hard-stop safety rules for destructive commands unless explicitly approved
 - Keep changes in scope; avoid unrelated refactors
+- When creating or editing Markdown files, run `markdownlint-cli2` on the
+  changed `.md` files and fix reported errors before considering the work
+  complete
 
 ## Enforcement Map
 
-| Standard | Level | Enforcement |
-| --- | --- | --- |
-| Lint and formatting via `ruff` | Mandatory | Local command + CI |
-| Type checks via `mypy` + `django-stubs` | Mandatory (after phased rollout) | `./scripts/typecheck.sh` + CI (phased gate) |
-| File/function size thresholds | Mandatory/Recommended | Code review checklist |
-| Service layer boundaries | Mandatory | Code review checklist + tests |
-| Template component extraction rules | Recommended | Code review checklist |
-| Tests for new behavior | Mandatory | `./scripts/test.sh` before merge |
+| Standard                                                      | Level                            | Enforcement                                 |
+| ------------------------------------------------------------- | -------------------------------- | ------------------------------------------- |
+| Lint and formatting via `ruff`                                | Mandatory                        | Local command + CI                          |
+| Type checks via `mypy` + `django-stubs`                       | Mandatory (after phased rollout) | `./scripts/typecheck.sh` + CI (phased gate) |
+| File/function size thresholds                                 | Mandatory/Recommended            | Code review checklist                       |
+| Service layer boundaries                                      | Mandatory                        | Code review checklist + tests               |
+| Template component extraction rules                           | Recommended                      | Code review checklist                       |
+| Tests for new behavior                                        | Mandatory                        | `./scripts/test.sh` before merge            |
+| Markdown files touched in the change pass `markdownlint-cli2` | Mandatory                        | Local command before handoff/merge          |
 
 ## Ownership and Sync
 
@@ -119,4 +124,4 @@ When guidance conflicts, apply rules in this order:
 - Then update summary references in `AGENTS.md`, `CLAUDE.md`, and `openspec/config.yaml`
 - Keep those files concise and link back here instead of duplicating full rule sets
 
-Last updated: 2026-02-12
+Last updated: 2026-04-12
