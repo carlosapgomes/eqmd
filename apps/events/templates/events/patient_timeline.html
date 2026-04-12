@@ -31,24 +31,15 @@
     border: 1px solid #dee2e6;
 }
 
-/* Desktop sticky filters */
-@media (min-width: 992px) {
-    .filter-panel {
-        position: sticky;
-        top: 20px;
-        max-height: calc(100vh - 40px);
-        overflow-y: auto;
-    }
-}
+
 /* Desktop: full width within column, Mobile: constrained width */
 @media (min-width: 992px) {
     .timeline-container {
-        max-width: none; /* Use full available width on desktop */
-        padding-left: 1rem; /* Add some left padding for better spacing from sidebar */
+        max-width: none;
     }
     
     .timeline-card {
-        margin-bottom: 1.5rem; /* Better spacing between cards on desktop */
+        margin-bottom: 1.5rem;
     }
 }
 @media (max-width: 991.98px) {
@@ -627,6 +618,9 @@
                             aria-label="Abrir filtros da timeline">
                         <i class="bi bi-funnel me-1" aria-hidden="true"></i>
                         Filtros
+                        {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator %}
+                            <span class="badge bg-medical-primary rounded-pill ms-1">Ativos</span>
+                        {% endif %}
                     </button>
 
                     <a href="{% url 'apps.patients:patient_detail' patient.pk %}" 
@@ -800,20 +794,8 @@
             </div>
         </div>
 
-        <!-- Desktop Filters Panel (hidden on mobile) -->
-        <div class="col-lg-3 mb-4 d-none d-lg-block">
-            <div class="filter-panel p-3">
-                <h2 class="text-medical-primary mb-3 h5">
-                    <i class="bi bi-funnel me-2" aria-hidden="true"></i>
-                    Filtros
-                </h2>
-
-                {% include "components/_timeline_filter_form.html" %}
-            </div>
-        </div>
-
         <!-- Timeline Content -->
-        <div class="col-12 col-lg-9">
+        <div class="col-12">
             <div class="timeline-container w-100">
                 {% if events_with_permissions %}
                     <!-- Events Timeline -->
