@@ -19,9 +19,11 @@ You operate within a restricted Docker Rootless environment on Debian Bookworm.
 1. **ALWAYS** use `docker exec eqmd_dev` to run python, pip, or manage.py commands.
 2. **NEVER** attempt to install python packages in your own container.
 3. **VALIDATE** every code change by running the test suite immediately.
-4. If a 'Permission Denied' error occurs, remember you are running with UID 1001.
-5. **No Git commits allowed**. I will handle the version control on the host.
-6. **PostgreSQL only**: assume PostgreSQL for development and testing; SQLite is no longer supported.
+4. If you create or edit Markdown files, **RUN** `markdownlint-cli2` on the
+   changed `.md` files and fix reported errors before handoff.
+5. If a 'Permission Denied' error occurs, remember you are running with UID 1001.
+6. **No Git commits allowed**. I will handle the version control on the host.
+7. **PostgreSQL only**: assume PostgreSQL for development and testing; SQLite is no longer supported.
 
 ## TEST COMMAND
 

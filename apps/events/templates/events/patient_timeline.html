@@ -617,6 +617,18 @@
                     </div>
                     {% endif %}
                     
+                    <!-- Desktop Filter Trigger -->
+                    <button class="btn btn-outline-medical-primary d-none d-lg-inline-flex align-items-center"
+                            type="button"
+                            id="desktop-filter-trigger"
+                            data-bs-toggle="offcanvas"
+                            data-bs-target="#desktop-filter-offcanvas"
+                            aria-controls="desktop-filter-offcanvas"
+                            aria-label="Abrir filtros da timeline">
+                        <i class="bi bi-funnel me-1" aria-hidden="true"></i>
+                        Filtros
+                    </button>
+
                     <a href="{% url 'apps.patients:patient_detail' patient.pk %}" 
                        class="btn btn-outline-secondary"
                        aria-label="Ver perfil do paciente {{ patient.name }}">
@@ -627,6 +639,28 @@
             </div>
         </div>
     </div>
+
+    <!-- Desktop Filter Offcanvas Shell -->
+    <div class="offcanvas offcanvas-end" tabindex="-1"
+         id="desktop-filter-offcanvas"
+         aria-labelledby="desktop-filter-offcanvas-label">
+        <div class="offcanvas-header">
+            <h2 class="offcanvas-title" id="desktop-filter-offcanvas-label">
+                <i class="bi bi-funnel me-2" aria-hidden="true"></i>
+                Filtros da Timeline
+            </h2>
+            <button type="button" class="btn-close"
+                    data-bs-dismiss="offcanvas"
+                    aria-label="Fechar filtros">
+            </button>
+        </div>
+        <div class="offcanvas-body">
+            {% include "components/_timeline_filter_form.html" with filter_id_prefix="oc-" %}
+        </div>
+    </div>
+
+    <!-- Compact Patient Context Summary -->
+    {% include "components/_patient_context_summary.html" with patient=patient show_details=True details_collapse_id="timeline-patient-details" %}
 
     <div class="row">
         <!-- Mobile Filter Toggle (shown only on mobile) -->
@@ -773,113 +807,8 @@
                     <i class="bi bi-funnel me-2" aria-hidden="true"></i>
                     Filtros
                 </h2>
-                
-                <form method="get" id="timeline-filters" role="search" aria-label="Filtros da timeline">
-                    <fieldset>
-                        <legend class="visually-hidden">Filtros de eventos</legend>
-                        
-                        <!-- Event Type Filter -->
-                        <div class="mb-3" role="group" aria-labelledby="event-types-label">
-                            <label id="event-types-label" class="form-label fw-semibold">Tipos de Evento</label>
-                            {% for value, label in event_type_choices %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" 
-                                           name="types" value="{{ value }}" id="type_{{ value }}"
-                                           {% if value|stringformat:"s" in current_filters.types %}checked{% endif %}
-                                           aria-describedby="type-{{ value }}-desc">
-                                    <label class="form-check-label" for="type_{{ value }}">
-                                        {{ label }}
-                                    </label>
-                                    <span id="type-{{ value }}-desc" class="visually-hidden">
-                                        {% with count=event_counts_by_type|get_item:value %}
-                                            {{ count|default:0 }} evento{{ count|pluralize }}
-                                        {% endwith %}
-                                    </span>
-                                </div>
-                            {% endfor %}
-                        </div>
 
-                        <!-- Quick Date Filters -->
-                        <div class="mb-3">
-                            <fieldset>
-                                <legend class="form-label fw-semibold">Período</legend>
-                                <div class="btn-group-vertical d-grid gap-1" role="radiogroup" aria-label="Selecionar período">
-                                    <input type="radio" class="btn-check" name="quick_date" value="" id="all_time"
-                                           {% if not current_filters.quick_date %}checked{% endif %}>
-                                    <label class="btn btn-outline-secondary btn-sm" for="all_time">Todos</label>
-                                    
-                                    <input type="radio" class="btn-check" name="quick_date" value="24h" id="last_24h"
-                                           {% if current_filters.quick_date == '24h' %}checked{% endif %}>
-                                    <label class="btn btn-outline-secondary btn-sm" for="last_24h">Últimas 24h</label>
-                                    
-                                    <input type="radio" class="btn-check" name="quick_date" value="7d" id="last_7d"
-                                           {% if current_filters.quick_date == '7d' %}checked{% endif %}>
-                                    <label class="btn btn-outline-secondary btn-sm" for="last_7d">Últimos 7 dias</label>
-                                    
-                                    <input type="radio" class="btn-check" name="quick_date" value="30d" id="last_30d"
-                                           {% if current_filters.quick_date == '30d' %}checked{% endif %}>
-                                    <label class="btn btn-outline-secondary btn-sm" for="last_30d">Últimos 30 dias</label>
-                                </div>
-                            </fieldset>
-                        </div>
-
-                        <!-- Custom Date Range -->
-                        <div class="mb-3">
-                            <fieldset>
-                                <legend class="form-label fw-semibold">Período Personalizado</legend>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <label for="date_from" class="visually-hidden">Data inicial</label>
-                                        <input type="date" class="form-control form-control-sm" 
-                                               id="date_from" name="date_from" 
-                                               value="{{ current_filters.date_from }}"
-                                               aria-label="Data inicial do período">
-                                    </div>
-                                    <div class="col-6">
-                                        <label for="date_to" class="visually-hidden">Data final</label>
-                                        <input type="date" class="form-control form-control-sm" 
-                                               id="date_to" name="date_to" 
-                                               value="{{ current_filters.date_to }}"
-                                               aria-label="Data final do período">
-                                    </div>
-                                </div>
-                            </fieldset>
-                        </div>
-
-                        <!-- Creator Filter -->
-                        {% if available_creators %}
-                        <div class="mb-3">
-                            <label for="creator" class="form-label fw-semibold">Criado por</label>
-                            <select name="creator" id="creator" class="form-select form-select-sm" 
-                                    aria-label="Filtrar eventos por profissional">
-                                <option value="">Todos os profissionais</option>
-                                {% for creator in available_creators %}
-                                    <option value="{{ creator.id }}" 
-                                            {% if creator.id|stringformat:"s" == current_filters.creator %}selected{% endif %}>
-                                        {{ creator.first_name }} {{ creator.last_name }}
-                                        {% if creator.profession %} ({{ creator.profession }}){% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        {% endif %}
-
-                        <!-- Filter Actions -->
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-medical-primary btn-sm"
-                                    aria-label="Aplicar filtros selecionados">
-                                <i class="bi bi-search me-1" aria-hidden="true"></i>
-                                Aplicar Filtros
-                            </button>
-                            <a href="{% url 'apps.patients:patient_events_timeline' patient.pk %}" 
-                               class="btn btn-outline-secondary btn-sm"
-                               aria-label="Remover todos os filtros">
-                                <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
-                                Limpar Filtros
-                            </a>
-                        </div>
-                    </fieldset>
-                </form>
+                {% include "components/_timeline_filter_form.html" %}
             </div>
         </div>
 

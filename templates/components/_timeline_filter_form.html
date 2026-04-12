@@ -1,0 +1,140 @@
+{% load event_tags %}
+{% comment %}
+Reusable timeline filter form partial.
+
+Context variables:
+  - patient: Patient instance (for clear-filters URL)
+  - current_filters: dict of active filter values
+  - event_type_choices: list of (value, label) for event types
+  - available_creators: queryset of creator users
+  - filter_id_prefix: string prefix for HTML id attributes (default: "")
+    Use when rendering multiple copies on the same page to keep IDs unique.
+{% endcomment %}
+<form method="get"
+      id="{{ filter_id_prefix|default:'' }}timeline-filters"
+      role="search"
+      aria-label="Filtros da timeline">
+    <fieldset>
+        <legend class="visually-hidden">Filtros de eventos</legend>
+
+        <!-- Event Type Filter -->
+        <div class="mb-3" role="group"
+             aria-labelledby="{{ filter_id_prefix|default:'' }}event-types-label">
+            <label id="{{ filter_id_prefix|default:'' }}event-types-label"
+                   class="form-label fw-semibold">Tipos de Evento</label>
+            {% for value, label in event_type_choices %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                           name="types" value="{{ value }}"
+                           id="{{ filter_id_prefix|default:'' }}type_{{ value }}"
+                           {% if value|stringformat:"s" in current_filters.types %}checked{% endif %}
+                           aria-describedby="{{ filter_id_prefix|default:'' }}type-{{ value }}-desc">
+                    <label class="form-check-label"
+                           for="{{ filter_id_prefix|default:'' }}type_{{ value }}">
+                        {{ label }}
+                    </label>
+                    <span id="{{ filter_id_prefix|default:'' }}type-{{ value }}-desc"
+                          class="visually-hidden">
+                        {% with count=event_counts_by_type|get_item:value %}
+                            {{ count|default:0 }} evento{{ count|pluralize }}
+                        {% endwith %}
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Quick Date Filters -->
+        <div class="mb-3">
+            <fieldset>
+                <legend class="form-label fw-semibold">Período</legend>
+                <div class="btn-group-vertical d-grid gap-1" role="radiogroup"
+                     aria-label="Selecionar período">
+                    <input type="radio" class="btn-check" name="quick_date" value=""
+                           id="{{ filter_id_prefix|default:'' }}all_time"
+                           {% if not current_filters.quick_date %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary btn-sm"
+                           for="{{ filter_id_prefix|default:'' }}all_time">Todos</label>
+
+                    <input type="radio" class="btn-check" name="quick_date" value="24h"
+                           id="{{ filter_id_prefix|default:'' }}last_24h"
+                           {% if current_filters.quick_date == '24h' %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary btn-sm"
+                           for="{{ filter_id_prefix|default:'' }}last_24h">Últimas 24h</label>
+
+                    <input type="radio" class="btn-check" name="quick_date" value="7d"
+                           id="{{ filter_id_prefix|default:'' }}last_7d"
+                           {% if current_filters.quick_date == '7d' %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary btn-sm"
+                           for="{{ filter_id_prefix|default:'' }}last_7d">Últimos 7 dias</label>
+
+                    <input type="radio" class="btn-check" name="quick_date" value="30d"
+                           id="{{ filter_id_prefix|default:'' }}last_30d"
+                           {% if current_filters.quick_date == '30d' %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary btn-sm"
+                           for="{{ filter_id_prefix|default:'' }}last_30d">Últimos 30 dias</label>
+                </div>
+            </fieldset>
+        </div>
+
+        <!-- Custom Date Range -->
+        <div class="mb-3">
+            <fieldset>
+                <legend class="form-label fw-semibold">Período Personalizado</legend>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label for="{{ filter_id_prefix|default:'' }}date_from"
+                               class="visually-hidden">Data inicial</label>
+                        <input type="date" class="form-control form-control-sm"
+                               id="{{ filter_id_prefix|default:'' }}date_from" name="date_from"
+                               value="{{ current_filters.date_from }}"
+                               aria-label="Data inicial do período">
+                    </div>
+                    <div class="col-6">
+                        <label for="{{ filter_id_prefix|default:'' }}date_to"
+                               class="visually-hidden">Data final</label>
+                        <input type="date" class="form-control form-control-sm"
+                               id="{{ filter_id_prefix|default:'' }}date_to" name="date_to"
+                               value="{{ current_filters.date_to }}"
+                               aria-label="Data final do período">
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+        <!-- Creator Filter -->
+        {% if available_creators %}
+        <div class="mb-3">
+            <label for="{{ filter_id_prefix|default:'' }}creator"
+                   class="form-label fw-semibold">Criado por</label>
+            <select name="creator"
+                    id="{{ filter_id_prefix|default:'' }}creator"
+                    class="form-select form-select-sm"
+                    aria-label="Filtrar eventos por profissional">
+                <option value="">Todos os profissionais</option>
+                {% for creator in available_creators %}
+                    <option value="{{ creator.id }}"
+                            {% if creator.id|stringformat:"s" == current_filters.creator %}selected{% endif %}>
+                        {{ creator.first_name }} {{ creator.last_name }}
+                        {% if creator.profession %} ({{ creator.profession }}){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <!-- Filter Actions -->
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-medical-primary btn-sm"
+                    aria-label="Aplicar filtros selecionados">
+                <i class="bi bi-search me-1" aria-hidden="true"></i>
+                Aplicar Filtros
+            </button>
+            <a href="{% url 'apps.patients:patient_events_timeline' patient.pk %}"
+               class="btn btn-outline-secondary btn-sm"
+               aria-label="Remover todos os filtros">
+                <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
+                Limpar Filtros
+            </a>
+        </div>
+    </fieldset>
+</form>
