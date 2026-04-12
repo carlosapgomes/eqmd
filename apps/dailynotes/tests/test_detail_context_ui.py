@@ -112,3 +112,50 @@ class DailyNoteDetailContextUITests(TestCase):
             kwargs={'patient_id': self.patient.pk},
         )
         self.assertIn(timeline_url, content)
+
+    # ------------------------------------------------------------------
+    # 3. Desktop layout no longer uses sidebar structure
+    # ------------------------------------------------------------------
+
+    def test_dailynote_detail_desktop_no_longer_uses_sidebar_layout(self):
+        """The daily note detail page must not use the old desktop sidebar
+        layout classes (desktop-layout, patient-sidebar, content-main)."""
+        response = self.client.get(self._detail_url())
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode()
+
+        # The old desktop sidebar layout classes must be absent
+        self.assertNotIn('desktop-layout', content)
+        self.assertNotIn('patient-sidebar', content)
+        self.assertNotIn('content-main', content)
+
+    # ------------------------------------------------------------------
+    # 4. Shared context + metadata + actions still visible
+    # ------------------------------------------------------------------
+
+    def test_dailynote_detail_keeps_shared_context_metadata_and_actions_visible(self):
+        """After removing the sidebar layout the page still renders the shared
+        patient context, daily note metadata, and action buttons on desktop."""
+        response = self.client.get(self._detail_url())
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode()
+
+        # Shared patient context component is present
+        self.assertIn('patient-context-summary', content)
+        self.assertIn('Maria da Silva', content)
+
+        # Event datetime visible
+        expected_dt = self.dailynote.event_datetime.strftime('%d/%m/%Y')
+        self.assertIn(expected_dt, content)
+
+        # Page-specific metadata: description
+        self.assertIn('Evolução de teste', content)
+
+        # Created-by info is visible
+        self.assertIn('testuser', content)
+
+        # Print action visible
+        print_url = reverse('dailynotes:dailynote_print', kwargs={'pk': self.dailynote.pk})
+        self.assertIn(print_url, content)
