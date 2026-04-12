@@ -87,47 +87,7 @@
     }
   }
   
-  @media (min-width: 992px) {
-    /* Desktop optimizations */
-    .desktop-layout {
-      display: flex;
-      gap: 1.5rem;
-    }
-    
-    .patient-sidebar {
-      flex: 0 0 420px;
-      max-width: 420px;
-    }
-    
-    .content-main {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    /* Compact sidebar styling */
-    .patient-sidebar .card-body {
-      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    }
-    
-    .patient-sidebar .collapse .row {
-      font-size: 0.875rem;
-    }
-    
-    /* Improved button styling */
-    .patient-sidebar .btn[data-bs-toggle="collapse"] {
-      border: 1px solid #dee2e6;
-      transition: all 0.2s ease;
-    }
-    
-    .patient-sidebar .btn[data-bs-toggle="collapse"]:hover {
-      background-color: #f8f9fa;
-      border-color: #adb5bd;
-    }
-    
-    .patient-sidebar .btn[data-bs-toggle="collapse"][aria-expanded="true"] .bi-chevron-down {
-      transform: rotate(180deg);
-    }
-  }
+
 </style>
 {% endblock %}
 
@@ -288,84 +248,69 @@
   </div>
 </div>
 
-<!-- Desktop: Optimized two-column layout -->
-<div class="d-none d-lg-block desktop-layout">
-  <!-- Shared patient context + simple note metadata sidebar -->
-  <div class="patient-sidebar">
-    {% include "components/_patient_context_summary.html" with patient=simplenote.patient show_details=True details_collapse_id="desktop-simplenote-details" %}
+<!-- Desktop: Stacked full-width top cards -->
+<div class="d-none d-lg-block mb-3">
+  {% include "components/_patient_context_summary.html" with patient=simplenote.patient show_details=True details_collapse_id="desktop-simplenote-details" %}
 
-    <div class="card shadow-sm">
-      <div class="card-body p-3">
-        <small class="text-muted">{{ simplenote.event_datetime|date:"d/m/Y H:i" }}</small>
-        <div class="row g-2 mt-1">
-          {% if simplenote.patient.phone %}
-          <div class="col-6">
-            <small class="text-muted">Telefone:</small><br>
-            <span class="fw-medium fs-7">{{ simplenote.patient.phone }}</span>
-          </div>
-          {% endif %}
-          {% if simplenote.patient.id_number %}
-          <div class="col-6">
-            <small class="text-muted">RG:</small><br>
-            <span class="fw-medium fs-7">{{ simplenote.patient.id_number }}</span>
-          </div>
-          {% endif %}
-          <div class="col-12">
-            <small class="text-muted">Descrição:</small><br>
-            <span class="fw-medium fs-7">{{ simplenote.description }}</span>
-          </div>
-          <div class="col-12">
-            <small class="text-muted">Criado por:</small><br>
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm bg-medical-teal text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                {{ simplenote.created_by.get_full_name|default:simplenote.created_by.username|first|upper }}
-              </div>
-              <div>
-                <span class="fw-medium fs-7">{{ simplenote.created_by.get_full_name|default:simplenote.created_by.username }}</span><br>
-                <small class="text-muted">{{ simplenote.created_at|date:"d/m/Y H:i" }}</small>
-              </div>
-            </div>
-          </div>
-          {% if simplenote.updated_at != simplenote.created_at %}
-          <div class="col-12">
-            <small class="text-muted">Atualizado por:</small><br>
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm bg-medical-gray text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; font-size: 0.65rem;">
-                {{ simplenote.updated_by.get_full_name|default:simplenote.updated_by.username|first|upper }}
-              </div>
-              <div>
-                <span class="fw-medium fs-7">{{ simplenote.updated_by.get_full_name|default:simplenote.updated_by.username }}</span><br>
-                <small class="text-muted">{{ simplenote.updated_at|date:"d/m/Y H:i" }}</small>
-              </div>
-            </div>
-          </div>
-          {% endif %}
+  <div class="card shadow-sm">
+    <div class="card-body p-3">
+      <div class="row g-2">
+        <div class="col-auto">
+          <small class="text-muted">{{ simplenote.event_datetime|date:"d/m/Y H:i" }}</small>
         </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Main Content Area -->
-  <div class="content-main">
-    <div class="card shadow-sm">
-      <div class="card-header bg-medical-light">
-        <h5 class="card-title mb-0">
-          <i class="bi bi-file-text me-2"></i>
-          Conteúdo da Nota
-        </h5>
-      </div>
-      <div class="card-body">
-        {% if simplenote.content %}
-        <div class="markdown-content">
-          {{ simplenote.content|linebreaks }}
+        {% if simplenote.patient.phone %}
+        <div class="col-auto">
+          <small class="text-muted">Telefone:</small>
+          <span class="fw-medium">{{ simplenote.patient.phone }}</span>
         </div>
-        {% else %}
-        <div class="text-center py-4">
-          <i class="bi bi-file-text text-muted" style="font-size: 2rem;"></i>
-          <p class="text-muted mt-2 mb-0">Nenhum conteúdo foi adicionado a esta nota.</p>
+        {% endif %}
+        {% if simplenote.patient.id_number %}
+        <div class="col-auto">
+          <small class="text-muted">RG:</small>
+          <span class="fw-medium">{{ simplenote.patient.id_number }}</span>
+        </div>
+        {% endif %}
+        <div class="col-12">
+          <small class="text-muted">Descrição:</small><br>
+          <span class="fw-medium">{{ simplenote.description }}</span>
+        </div>
+        <div class="col-auto">
+          <small class="text-muted">Criado por:</small>
+          <span class="fw-medium">{{ simplenote.created_by.get_full_name|default:simplenote.created_by.username }}</span>
+          <small class="text-muted ms-1">{{ simplenote.created_at|date:"d/m/Y H:i" }}</small>
+        </div>
+        {% if simplenote.updated_at != simplenote.created_at %}
+        <div class="col-auto">
+          <small class="text-muted">Atualizado por:</small>
+          <span class="fw-medium">{{ simplenote.updated_by.get_full_name|default:simplenote.updated_by.username }}</span>
+          <small class="text-muted ms-1">{{ simplenote.updated_at|date:"d/m/Y H:i" }}</small>
         </div>
         {% endif %}
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Desktop Content Card -->
+<div class="d-none d-lg-block">
+  <div class="card shadow-sm">
+    <div class="card-header bg-medical-light">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-file-text me-2"></i>
+        Conteúdo da Nota
+      </h5>
+    </div>
+    <div class="card-body">
+      {% if simplenote.content %}
+      <div class="markdown-content">
+        {{ simplenote.content|linebreaks }}
+      </div>
+      {% else %}
+      <div class="text-center py-4">
+        <i class="bi bi-file-text text-muted" style="font-size: 2rem;"></i>
+        <p class="text-muted mt-2 mb-0">Nenhum conteúdo foi adicionado a esta nota.</p>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -398,18 +343,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<style>
-  .avatar-sm {
-    width: 32px;
-    height: 32px;
-    font-size: 0.875rem;
-  }
-  
-  .fs-7 {
-    font-size: 0.875rem;
-  }
-</style>
-
 <script>
 // Copy content functionality
 document.addEventListener('DOMContentLoaded', function() {
