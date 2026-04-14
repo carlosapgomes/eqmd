@@ -4,7 +4,10 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from .models import Patient, PatientRecordNumber, PatientAdmission
-from apps.events.models import RecordNumberChangeEvent, AdmissionEvent, DischargeEvent, StatusChangeEvent
+from apps.events.models import (
+    RecordNumberChangeEvent, AdmissionEvent, DischargeEvent, StatusChangeEvent,
+    PatientProfileChangeEvent,
+)
 
 
 @receiver(post_save, sender=PatientRecordNumber)
@@ -277,6 +280,135 @@ def create_status_change_event(sender, instance, created, **kwargs):
         delattr(instance, '_new_status')
         if hasattr(instance, '_status_change_user'):
             delattr(instance, '_status_change_user')
+
+
+# ---------------------------------------------------------------------------
+# Profile change tracking signals
+# ---------------------------------------------------------------------------
+
+# Fields on Patient that should trigger a profile change event when modified.
+PROFILE_MONITORED_FIELDS = [
+    'name', 'birthday', 'gender',
+    'phone',
+    'address', 'city', 'state', 'zip_code',
+    'id_number', 'fiscal_number', 'healthcard_number',
+]
+
+# Human-readable labels for monitored fields.
+PROFILE_FIELD_LABELS = {
+    'name': 'Nome',
+    'birthday': 'Data de Nascimento',
+    'gender': 'Sexo',
+    'phone': 'Telefone',
+    'address': 'Endereço',
+    'city': 'Cidade',
+    'state': 'Estado',
+    'zip_code': 'Código Postal',
+    'id_number': 'Número de Identidade',
+    'fiscal_number': 'Número Fiscal',
+    'healthcard_number': 'Número do Cartão de Saúde',
+}
+
+PLACEHOLDER = '—'
+
+
+def _normalize_field_value(field_name, value):
+    """Normalize a field value for storage in the event diff.
+
+    - None / empty string  → PLACEHOLDER
+    - gender               → human label (e.g. 'Masculino')
+    - birthday             → dd/mm/YYYY string
+    - everything else      → str(value)
+    """
+    if value is None or value == '':
+        return PLACEHOLDER
+
+    if field_name == 'gender':
+        gender_map = dict(Patient.GenderChoices.choices)
+        return gender_map.get(value, str(value))
+
+    if field_name == 'birthday':
+        # value is a date object
+        return value.strftime('%d/%m/%Y')
+
+    return str(value)
+
+
+@receiver(pre_save, sender=Patient)
+def track_profile_changes(sender, instance, **kwargs):
+    """Detect profile field changes before saving and store diffs temporarily."""
+    if not instance.pk:
+        # New patient — no previous state to compare
+        instance._profile_changes = {}
+        return
+
+    try:
+        old = Patient.objects.get(pk=instance.pk)
+    except Patient.DoesNotExist:
+        instance._profile_changes = {}
+        return
+
+    changes = {}
+    for field in PROFILE_MONITORED_FIELDS:
+        old_val = getattr(old, field)
+        new_val = getattr(instance, field)
+        if old_val != new_val:
+            changes[field] = {
+                'label': PROFILE_FIELD_LABELS.get(field, field),
+                'old': _normalize_field_value(field, old_val),
+                'new': _normalize_field_value(field, new_val),
+            }
+
+    instance._profile_changes = changes
+
+
+@receiver(post_save, sender=Patient)
+def create_profile_change_event(sender, instance, created, **kwargs):
+    """Create a PatientProfileChangeEvent when monitored fields changed."""
+    if created:
+        return
+
+    changes = getattr(instance, '_profile_changes', None)
+    if not changes:
+        return
+
+    if not getattr(instance, 'updated_by', None):
+        return
+
+    previous_values = {f: d['old'] for f, d in changes.items()}
+    new_values = {f: d['new'] for f, d in changes.items()}
+    changed_fields = ','.join(sorted(changes.keys()))
+
+    # Build a human-readable summary (full, stored in change_summary text field)
+    diff_lines = []
+    for field in sorted(changes.keys()):
+        d = changes[field]
+        diff_lines.append(f"{d['label']}: {d['old']} → {d['new']}")
+    summary = '; '.join(diff_lines)
+
+    # Build a short, bounded description guaranteed <= 255 chars.
+    # Full details remain in change_summary and JSON fields.
+    n = len(changes)
+    labels = sorted(changes[f]['label'] for f in changes)
+    if n == 1:
+        description = f"Alteração de perfil: {labels[0]}"
+    else:
+        tail = f" (+{n - 1} campo(s))" if n > 2 else f" e {labels[1]}"
+        description = f"Alteração de perfil: {labels[0]}{tail}"
+    # Hard truncate as ultimate safety net
+    description = description[:255]
+
+    PatientProfileChangeEvent.objects.create(
+        patient=instance,
+        event_datetime=timezone.now(),
+        description=description,
+        created_by=instance.updated_by,
+        updated_by=instance.updated_by,
+        changed_fields=changed_fields,
+        change_summary=summary,
+        previous_values=previous_values,
+        new_values=new_values,
+    )
 
 
 def _get_status_change_reason(old_status, new_status):

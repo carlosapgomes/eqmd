@@ -67,6 +67,7 @@ class Event(SoftDeleteModel):
     TAG_REMOVED_EVENT = 21            # NEW
     TAG_BULK_REMOVE_EVENT = 22        # NEW
     CONSENT_FORM_EVENT = 23           # NEW
+    PATIENT_PROFILE_CHANGE_EVENT = 24  # NEW
 
     EVENT_TYPE_CHOICES = (
         (HISTORY_AND_PHYSICAL_EVENT, "Anamnese e Exame Físico"),
@@ -93,6 +94,7 @@ class Event(SoftDeleteModel):
         (TAG_REMOVED_EVENT, "Tag Removida"),                      # NEW
         (TAG_BULK_REMOVE_EVENT, "Tags Removidas em Lote"),        # NEW
         (CONSENT_FORM_EVENT, "Termo de Consentimento"),           # NEW
+        (PATIENT_PROFILE_CHANGE_EVENT, "Alteração de Perfil"),     # NEW
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -215,6 +217,7 @@ class Event(SoftDeleteModel):
             21: "bg-warning",  # Tag Removed
             22: "bg-danger",  # Tag Bulk Remove
             23: "bg-medical-primary",  # Consent Form
+            24: "bg-info",              # Profile Change
         }
         return badge_classes.get(self.event_type, "bg-secondary")
 
@@ -244,7 +247,8 @@ class Event(SoftDeleteModel):
             20: "bi-tag-fill",  # Tag Added
             21: "bi-tag",  # Tag Removed
             22: "bi-tags",  # Tag Bulk Remove
-            23: "bi-pen",  # Consent Form
+            23: "bi-pen",              # Consent Form
+            24: "bi-person-gear",        # Profile Change
         }
         return icon_classes.get(self.event_type, "bi-file-text")
 
@@ -274,7 +278,8 @@ class Event(SoftDeleteModel):
             20: "Tag +",  # Tag Adicionada
             21: "Tag -",  # Tag Removida
             22: "Tags --",  # Tags Removidas em Lote
-            23: "Termo",  # Termo de Consentimento
+            23: "Termo",              # Termo de Consentimento
+            24: "Perfil",              # Alteração de Perfil
         }
         return short_display_map.get(self.event_type, self.get_event_type_display())
 
@@ -298,6 +303,7 @@ class Event(SoftDeleteModel):
             self.TAG_ADDED_EVENT,
             self.TAG_REMOVED_EVENT,
             self.TAG_BULK_REMOVE_EVENT,
+            self.PATIENT_PROFILE_CHANGE_EVENT,
         ]
         
         if self.event_type in timeline_only_events:
@@ -328,6 +334,7 @@ class Event(SoftDeleteModel):
             self.TAG_ADDED_EVENT,
             self.TAG_REMOVED_EVENT,
             self.TAG_BULK_REMOVE_EVENT,
+            self.PATIENT_PROFILE_CHANGE_EVENT,
         ]
         
         if self.event_type in timeline_only_events:
@@ -770,3 +777,60 @@ class TagBulkRemoveEvent(Event):
         """Return URL to patient detail (bulk removed tags can't be restored from timeline)"""
         from django.urls import reverse
         return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+
+
+class PatientProfileChangeEvent(Event):
+    """Event for tracking patient profile data changes in timeline.
+
+    Records field-level diffs when monitored profile fields are changed.
+    One event per save(), containing all changed fields.
+    """
+
+    PLACEHOLDER = '—'
+
+    changed_fields = models.TextField(
+        blank=True,
+        verbose_name="Campos Alterados",
+        help_text="Lista ordenada de campos alterados (nomes internos, separados por vírgula)",
+    )
+    change_summary = models.TextField(
+        blank=True,
+        verbose_name="Resumo da Alteração",
+        help_text="Texto renderizável para fallback de card",
+    )
+    previous_values = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Valores Anteriores",
+        help_text="JSON com valores anteriores dos campos alterados",
+    )
+    new_values = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Novos Valores",
+        help_text="JSON com novos valores dos campos alterados",
+    )
+
+    class Meta:
+        verbose_name = "Evento de Alteração de Perfil"
+        verbose_name_plural = "Eventos de Alteração de Perfil"
+
+    def save(self, *args, **kwargs):
+        """Override save to set event_type."""
+        self.event_type = self.PATIENT_PROFILE_CHANGE_EVENT
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Alteração de perfil: {self.change_summary}"
+
+    def get_absolute_url(self):
+        """Return URL to patient timeline."""
+        from django.urls import reverse
+        return reverse(
+            'apps.patients:patient_events_timeline',
+            kwargs={'patient_id': self.patient.pk},
+        )
+
+    def get_edit_url(self):
+        """Profile change events are not editable."""
+        return None
