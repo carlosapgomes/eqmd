@@ -30,4 +30,8 @@ urlpatterns = [
     path(
         "<uuid:pk>/print/", views.DailyNotePrintView.as_view(), name="dailynote_print"
     ),
+    # PDF download
+    path(
+        "<uuid:pk>/pdf/", views.DailyNotePDFView.as_view(), name="dailynote_pdf"
+    ),
 ]

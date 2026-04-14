@@ -115,15 +115,28 @@
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
     <div class="btn-group me-2">
-      <a href="{% url 'dailynotes:dailynote_print' pk=dailynote.pk %}" 
-         class="btn btn-outline-primary btn-sm" 
-         target="_blank" 
+      <button type="button"
+              class="btn btn-outline-danger pdf-download-btn"
+              data-pdf-url="{% url 'dailynotes:dailynote_pdf' pk=dailynote.pk %}"
+              data-filename="evolucao-{{ dailynote.patient.name|slugify }}-{{ dailynote.event_datetime|date:'d-m-Y' }}.pdf">
+        <span class="pdf-btn-content">
+          <i class="bi bi-file-earmark-pdf me-1"></i>
+          PDF
+        </span>
+        <span class="pdf-btn-spinner d-none">
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          Gerando...
+        </span>
+      </button>
+      <a href="{% url 'dailynotes:dailynote_print' pk=dailynote.pk %}"
+         class="btn btn-outline-primary btn-sm"
+         target="_blank"
          title="Imprimir evolução">
         <i class="bi bi-printer me-1"></i>
         Imprimir
       </a>
-      <button type="button" 
-              class="btn btn-outline-secondary btn-sm copy-content-btn" 
+      <button type="button"
+              class="btn btn-outline-secondary btn-sm copy-content-btn"
               title="Copiar conteúdo para área de transferência"
               data-content="{{ dailynote.content|escape }}">
         <i class="bi bi-clipboard me-1"></i>
@@ -167,16 +180,31 @@
   <div class="mobile-action-buttons">
     <div class="btn-group-vertical btn-group-sm d-grid gap-1">
       <div class="btn-group" role="group">
-        <button type="button" 
-                class="btn btn-outline-secondary copy-content-btn" 
+        <button type="button"
+                class="btn btn-outline-danger pdf-download-btn"
+                data-pdf-url="{% url 'dailynotes:dailynote_pdf' pk=dailynote.pk %}"
+                data-filename="evolucao-{{ dailynote.patient.name|slugify }}-{{ dailynote.event_datetime|date:'d-m-Y' }}.pdf">
+          <span class="pdf-btn-content">
+            <i class="bi bi-file-earmark-pdf me-1"></i>
+            PDF
+          </span>
+          <span class="pdf-btn-spinner d-none">
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            Gerando...
+          </span>
+        </button>
+        <button type="button"
+                class="btn btn-outline-secondary copy-content-btn"
                 title="Copiar conteúdo"
                 data-content="{{ dailynote.content|escape }}">
           <i class="bi bi-clipboard me-1"></i>
           Copiar
         </button>
-        <a href="{% url 'dailynotes:dailynote_print' pk=dailynote.pk %}" 
-           class="btn btn-outline-primary" 
-           target="_blank" 
+      </div>
+      <div class="btn-group" role="group">
+        <a href="{% url 'dailynotes:dailynote_print' pk=dailynote.pk %}"
+           class="btn btn-outline-primary"
+           target="_blank"
            title="Imprimir">
           <i class="bi bi-printer me-1"></i>
           Imprimir
@@ -343,6 +371,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{% static 'js/pdf-download.js' %}"></script>
 <script>
 // Copy content functionality
 document.addEventListener('DOMContentLoaded', function() {

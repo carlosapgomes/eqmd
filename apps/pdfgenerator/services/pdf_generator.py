@@ -384,6 +384,8 @@ class HospitalLetterheadGenerator:
         document_title="Document",
         patient_data=None,
         doctor_info=None,
+        canvasmaker=None,
+        header_height_cm=None,
     ):
         """
         Generate PDF with hospital letterhead and content.
@@ -403,8 +405,13 @@ class HospitalLetterheadGenerator:
         doc = BaseDocTemplate(buffer, pagesize=self.page_size, title=document_title)
 
         # Create frame for content area (leaving space for header and footer)
-        # Extra space for header when patient name is included
-        header_space = 2.4 * cm if patient_data and patient_data.get("name") else 2 * cm
+        # Header space: caller can override, otherwise use default sizing
+        if header_height_cm is not None:
+            header_space = header_height_cm * cm
+        elif patient_data and patient_data.get("name"):
+            header_space = 2.4 * cm
+        else:
+            header_space = 2 * cm
         content_frame = Frame(
             self.margins["left"],
             self.margins["bottom"] + 1 * cm,  # Extra space for footer
@@ -450,16 +457,17 @@ class HospitalLetterheadGenerator:
         story.extend(self._create_signature_section(doctor_info))
 
         # Build PDF with custom canvas for headers/footers
-        def canvas_maker(filename, **kwargs):
-            return NumberedCanvas(
-                filename,
-                hospital_config=self.hospital_config,
-                patient_data=patient_data,
-                doctor_info=doctor_info,
-                **kwargs,
-            )
+        if canvasmaker is None:
+            def canvasmaker(filename, **kwargs):
+                return NumberedCanvas(
+                    filename,
+                    hospital_config=self.hospital_config,
+                    patient_data=patient_data,
+                    doctor_info=doctor_info,
+                    **kwargs,
+                )
 
-        doc.build(story, canvasmaker=canvas_maker)
+        doc.build(story, canvasmaker=canvasmaker)
 
         # Return buffer
         buffer.seek(0)
