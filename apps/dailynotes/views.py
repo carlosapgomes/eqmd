@@ -4,6 +4,7 @@ from django.views.generic import (
     CreateView,
     UpdateView,
     DeleteView,
+    View,
 )
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -17,8 +18,14 @@ from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from datetime import datetime, timedelta
 
+import logging
+
+from django.http import HttpResponse
+from django.core.exceptions import PermissionDenied
+
 from .models import DailyNote
 from .forms import DailyNoteForm
+from .services.pdf_generator import DailyNotePDFGenerator
 from apps.core.permissions import (
     patient_access_required,
     can_edit_event_required,
@@ -30,6 +37,8 @@ from apps.core.permissions import (
 from apps.patients.models import Patient
 from apps.sample_content.models import SampleContent
 from apps.events.models import Event
+
+logger = logging.getLogger(__name__)
 
 
 class DailyNoteListView(LoginRequiredMixin, ListView):
@@ -536,5 +545,41 @@ class DailyNotePrintView(LoginRequiredMixin, DetailView):
     def get_queryset(self):
         """Optimize queryset with related objects."""
         return DailyNote.objects.select_related("patient", "created_by", "updated_by")
+
+
+class DailyNotePDFView(LoginRequiredMixin, View):
+    """Generate and return PDF for daily notes."""
+
+    def get(self, request, *args, **kwargs):
+        try:
+            dailynote = get_object_or_404(DailyNote, pk=kwargs["pk"])
+
+            if not can_access_patient(request.user, dailynote.patient):
+                raise PermissionDenied(
+                    "You don't have permission to access this patient's daily notes"
+                )
+
+            pdf_generator = DailyNotePDFGenerator()
+            pdf_buffer = pdf_generator.generate_from_dailynote(dailynote)
+
+            response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
+            safe_name = "".join(
+                c
+                for c in dailynote.patient.name
+                if c.isalnum() or c in (" ", "-", "_")
+            ).rstrip()
+            date_str = dailynote.event_datetime.strftime("%Y%m%d")
+            filename = f"Evolucao_{safe_name}_{date_str}.pdf"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+        except PermissionDenied:
+            raise
+        except Exception as exc:
+            logger.error(
+                "Daily note PDF generation error: %s", str(exc), exc_info=True
+            )
+            return HttpResponse(
+                f"Erro ao gerar PDF: {str(exc)}", status=500
+            )
 
 
