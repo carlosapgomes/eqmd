@@ -191,7 +191,10 @@ class DailyNoteCanvas(NumberedCanvas):
         # Vertically centre the block within the column
         block_height = len(lines) * line_height
         available = col_height - 2 * pad
+        top_limit = col_y + col_height - pad - font_size * 0.35
         start_y = col_y + col_height / 2 + block_height / 2 - font_size * 0.35
+        # Clamp so first line never touches the top border
+        start_y = min(start_y, top_limit)
 
         self.setFont("Times-Roman", font_size)
         self.setFillColor(black)
