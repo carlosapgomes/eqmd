@@ -167,8 +167,8 @@ class DailyNoteCanvas(NumberedCanvas):
         pd = self.patient_data or {}
         pad = self._BOX_PAD
         text_x = col_x + pad
-        font_size = 8.5
-        line_height = 0.38 * cm
+        font_size = 7.5
+        line_height = 0.35 * cm
 
         # Build context lines
         lines = []
