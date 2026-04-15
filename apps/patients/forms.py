@@ -223,6 +223,89 @@ class PatientForm(forms.ModelForm):
         return instance
 
 
+class PatientProfileForm(forms.ModelForm):
+    """Form for editing personal/contact data without changing current location."""
+
+    class Meta:
+        model = Patient
+        fields = [
+            'name', 'birthday', 'gender',
+            'id_number', 'fiscal_number', 'healthcard_number',
+            'phone', 'address', 'city', 'state', 'zip_code',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Nome completo do paciente',
+                'aria-label': 'Nome do Paciente',
+                'maxlength': '200'
+            }),
+            'birthday': forms.DateInput(attrs={
+                'class': 'form-control form-control-medical',
+                'type': 'date',
+                'aria-label': 'Data de Nascimento'
+            }, format='%Y-%m-%d'),
+            'gender': forms.Select(attrs={
+                'class': 'form-select form-control-medical',
+                'aria-label': 'Sexo'
+            }),
+            'id_number': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'RG ou documento de identidade',
+                'aria-label': 'Documento de Identidade'
+            }),
+            'fiscal_number': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'CPF (xxx.xxx.xxx-xx)',
+                'aria-label': 'CPF',
+                'pattern': '[0-9]{3}\\.?[0-9]{3}\\.?[0-9]{3}-?[0-9]{2}',
+                'maxlength': '14'
+            }),
+            'healthcard_number': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Número da carteirinha do plano de saúde',
+                'aria-label': 'Cartão de Saúde'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': '(00) 00000-0000',
+                'aria-label': 'Telefone de Contato',
+                'type': 'tel'
+            }),
+            'address': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Endereço completo',
+                'aria-label': 'Endereço'
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Cidade',
+                'aria-label': 'Cidade'
+            }),
+            'state': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': 'Estado (UF)',
+                'aria-label': 'Estado',
+                'maxlength': '2'
+            }),
+            'zip_code': forms.TextInput(attrs={
+                'class': 'form-control form-control-medical',
+                'placeholder': '00000-000',
+                'aria-label': 'CEP',
+                'pattern': '[0-9]{5}-?[0-9]{3}',
+                'maxlength': '9'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['birthday'].input_formats = [
+            '%Y-%m-%d',
+            '%d/%m/%Y',
+        ]
+
+        if self.instance and self.instance.pk and self.instance.birthday:
+            self.fields['birthday'].initial = self.instance.birthday.strftime('%Y-%m-%d')
 
 
 class AllowedTagForm(forms.ModelForm):
