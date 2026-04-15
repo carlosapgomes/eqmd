@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from .models import Patient, AllowedTag, Tag, PatientRecordNumber, PatientAdmission, Ward
 from .forms import (
-    PatientForm, AllowedTagForm, 
+    PatientForm, PatientProfileForm, AllowedTagForm, 
     PatientRecordNumberForm, QuickRecordNumberUpdateForm,
     PatientAdmissionForm, PatientDischargeForm,
     QuickAdmissionForm, QuickDischargeForm, WardForm,
@@ -221,7 +221,7 @@ class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
 
 class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Patient
-    form_class = PatientForm
+    form_class = PatientProfileForm
     template_name = 'patients/patient_update.html'
     permission_required = 'patients.change_patient'
 
