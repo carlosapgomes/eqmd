@@ -831,6 +831,41 @@ class PatientProfileChangeEvent(Event):
             kwargs={'patient_id': self.patient.pk},
         )
 
+    # Local label mapping — authoritative source for this event type.
+    # Kept in sync with apps.patients.signals.PROFILE_FIELD_LABELS.
+    FIELD_LABELS = {
+        'name': 'Nome',
+        'birthday': 'Data de Nascimento',
+        'gender': 'Sexo',
+        'phone': 'Telefone',
+        'address': 'Endereço',
+        'city': 'Cidade',
+        'state': 'Estado',
+        'zip_code': 'Código Postal',
+        'id_number': 'Número de Identidade',
+        'fiscal_number': 'Número Fiscal',
+        'healthcard_number': 'Número do Cartão de Saúde',
+    }
+
+    @property
+    def changed_fields_list(self):
+        """Return a list of dicts with label, old_value, new_value for each changed field.
+
+        Used by the timeline card template to render field-level diffs.
+        """
+        result = []
+        for field_name in self.changed_fields.split(','):
+            field_name = field_name.strip()
+            if not field_name:
+                continue
+            result.append({
+                'field': field_name,
+                'label': self.FIELD_LABELS.get(field_name, field_name),
+                'old_value': self.previous_values.get(field_name, self.PLACEHOLDER),
+                'new_value': self.new_values.get(field_name, self.PLACEHOLDER),
+            })
+        return result
+
     def get_edit_url(self):
         """Profile change events are not editable."""
         return None
