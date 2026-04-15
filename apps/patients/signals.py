@@ -161,6 +161,8 @@ def update_patient_admission_status(sender, instance, created, **kwargs):
             'status': Patient.Status.INPATIENT,
             'current_admission_id': instance.id,
             'last_admission_date': instance.admission_datetime.date(),
+            # Keep patient location in sync with active admission
+            'ward': instance.ward,
             # During an active admission, final_bed may hold the latest internal transfer bed.
             'bed': instance.final_bed or instance.initial_bed,
         }
