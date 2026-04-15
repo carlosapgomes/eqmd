@@ -849,6 +849,8 @@
                                     {% include "events/partials/event_card_transfer.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 23 %}
                                     {% include "events/partials/event_card_consentform.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 24 %}
+                                    {% include "events/partials/event_card_profile_change.html" with event=event event_data=event_data %}
                                 {% else %}
                                     {% include "events/partials/event_card_default.html" with event=event event_data=event_data %}
                                 {% endif %}
