@@ -151,3 +151,17 @@ class PatientTimelineProfileChangeTests(TestCase):
 
         # Icon should be bi-person-gear (as defined in get_event_type_icon)
         self.assertContains(response, 'bi-person-gear')
+
+    # ------------------------------------------------------------------
+    # Test 4: profile change card is informational (no view/edit actions)
+    # ------------------------------------------------------------------
+    def test_profile_change_card_shows_informational_action_text(self):
+        """Profile change card should show informational text instead of action buttons."""
+        self._create_profile_change_event()
+
+        response = self._get_timeline_response()
+        self.assertEqual(response.status_code, 200)
+
+        self.assertContains(response, 'Evento informativo')
+        self.assertNotContains(response, 'aria-label="Visualizar Alteração de Perfil completo"')
+        self.assertNotContains(response, 'aria-label="Editar Alteração de Perfil"')
