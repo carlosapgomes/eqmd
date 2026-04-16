@@ -1,0 +1,11 @@
+{
+  "constructs": ["headings", "task_lists", "unordered_lists"],
+  "expected_semantic_tokens": [
+    "h1",
+    "h2",
+    "task_checked",
+    "task_unchecked",
+    "task_nested",
+    "ul"
+  ]
+}

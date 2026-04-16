@@ -1,0 +1,4 @@
+{
+  "constructs": ["headings", "ordered_lists", "unordered_lists", "nested_lists"],
+  "expected_semantic_tokens": ["h2", "ol", "ul", "li", "li_nested"]
+}

@@ -1,0 +1,14 @@
+{
+  "constructs": ["headings", "tables", "links"],
+  "expected_semantic_tokens": [
+    "h1",
+    "h2",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "a_href"
+  ]
+}

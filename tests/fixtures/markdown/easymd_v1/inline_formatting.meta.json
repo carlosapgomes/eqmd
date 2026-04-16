@@ -1,0 +1,23 @@
+{
+  "constructs": [
+    "headings",
+    "paragraphs",
+    "strong",
+    "emphasis",
+    "strikethrough",
+    "inline_code",
+    "links",
+    "hard_breaks",
+    "thematic_breaks"
+  ],
+  "expected_semantic_tokens": [
+    "h1",
+    "strong",
+    "em",
+    "del",
+    "code_inline",
+    "a_href",
+    "hard_break",
+    "hr"
+  ]
+}
