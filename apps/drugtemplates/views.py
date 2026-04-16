@@ -84,7 +84,7 @@ class DrugTemplateListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         """Add filter context for template rendering."""
-        from apps.core.permissions.utils import is_doctor
+        from apps.core.permissions.utils import is_doctor_or_resident
 
         context = super().get_context_data(**kwargs)
 
@@ -105,7 +105,7 @@ class DrugTemplateListView(LoginRequiredMixin, ListView):
             'selected_visibility': self.request.GET.get('visibility', ''),
             'selected_sort': self.request.GET.get('sort', 'name'),
             'available_creators': available_creators,
-            'is_doctor': is_doctor(self.request.user),
+            'can_create_template': is_doctor_or_resident(self.request.user),
         })
 
         return context
@@ -345,7 +345,7 @@ class PrescriptionTemplateListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         """Add filter context for template rendering."""
-        from apps.core.permissions.utils import is_doctor
+        from apps.core.permissions.utils import is_doctor_or_resident
 
         context = super().get_context_data(**kwargs)
 
@@ -366,7 +366,7 @@ class PrescriptionTemplateListView(LoginRequiredMixin, ListView):
             'selected_visibility': self.request.GET.get('visibility', ''),
             'selected_sort': self.request.GET.get('sort', 'name'),
             'available_creators': available_creators,
-            'is_doctor': is_doctor(self.request.user),
+            'can_create_template': is_doctor_or_resident(self.request.user),
         })
 
         return context
