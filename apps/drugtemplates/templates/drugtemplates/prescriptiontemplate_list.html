@@ -9,7 +9,7 @@
         <i class="bi bi-file-earmark-medical me-2"></i>
         Modelos de Receita
     </h1>
-    {% if is_doctor %}
+    {% if can_create_template %}
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <a href="{% url 'drugtemplates:prescription_create' %}" class="btn btn-medical-primary">
