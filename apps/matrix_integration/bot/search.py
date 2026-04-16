@@ -4,6 +4,7 @@ from typing import List, Optional
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.core.utils.text import normalize_text_for_search
 from apps.patients.models import Patient, PatientAdmission
 
 
@@ -92,7 +93,7 @@ def search_inpatients(query: SearchQuery):
         )
 
     for term in query.name_terms:
-        qs = qs.filter(patient__name__icontains=term)
+        qs = qs.filter(patient__name__unaccent__icontains=term)
 
     return list(qs)
 
@@ -136,9 +137,9 @@ def _score_candidate(admission: PatientAdmission, query: SearchQuery) -> int:
             score += 300
 
     if query.name_terms:
-        name_lower = (patient.name or "").lower()
+        name_normalized = normalize_text_for_search(patient.name)
         for term in query.name_terms:
-            if term.lower() in name_lower:
+            if normalize_text_for_search(term) in name_normalized:
                 score += 200
 
     if admission.admission_datetime:

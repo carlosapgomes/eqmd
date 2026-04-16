@@ -3,6 +3,7 @@ Cache utility functions for dashboard and ward mapping data
 """
 from django.utils import timezone
 from apps.core.models import DashboardCache, WardMappingCache
+from apps.core.utils.text import normalize_text_for_search
 from datetime import timedelta
 
 
@@ -52,9 +53,12 @@ def apply_client_side_filters(ward_data, filters):
             for patient_info in ward_info['patients']:
                 # Search filter
                 if filters.get('q'):
-                    search_term = filters['q'].lower()
-                    if (search_term not in patient_info['patient']['name'].lower() and
-                        search_term not in patient_info['bed'].lower()):
+                    search_term = normalize_text_for_search(filters['q'])
+                    patient_name = normalize_text_for_search(
+                        patient_info['patient']['name']
+                    )
+                    patient_bed = normalize_text_for_search(patient_info['bed'])
+                    if search_term not in patient_name and search_term not in patient_bed:
                         continue
                 
                 # Tag filter
