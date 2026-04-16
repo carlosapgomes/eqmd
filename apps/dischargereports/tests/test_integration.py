@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from apps.patients.models import Patient
+from apps.dailynotes.models import DailyNote
 from apps.dischargereports.models import DischargeReport
 
 User = get_user_model()
@@ -289,3 +290,40 @@ class DischargeReportIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Test Specialty')
         self.assertContains(response, 'Relatório de Alta')
+
+    def test_timeline_shows_discharge_report_draft_but_not_other_drafts(self):
+        """Timeline should include discharge report drafts without exposing other draft types."""
+        self.client.login(username='testuser', password='testpass123')
+
+        DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description='Rascunho de relatório de alta',
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty='Draft Timeline Specialty',
+            is_draft=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        DailyNote.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description='Draft daily note should stay hidden',
+            content='DRAFT_DAILY_NOTE_SHOULD_NOT_APPEAR_IN_TIMELINE',
+            is_draft=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        timeline_url = reverse(
+            'apps.patients:patient_events_timeline',
+            kwargs={'patient_id': self.patient.pk}
+        )
+        response = self.client.get(timeline_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Draft Timeline Specialty')
+        self.assertContains(response, 'Rascunho')
+        self.assertNotContains(response, 'DRAFT_DAILY_NOTE_SHOULD_NOT_APPEAR_IN_TIMELINE')
