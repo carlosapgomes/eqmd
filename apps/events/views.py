@@ -73,29 +73,35 @@ class PatientEventsTimelineView(ListView):
     context_object_name = 'events'
     paginate_by = 15
     paginate_orphans = 5
-    
+
+    def _get_timeline_base_queryset(self):
+        """Base timeline queryset including finalized events and discharge report drafts."""
+        return Event.all_objects.filter(
+            patient=self.patient
+        ).filter(
+            Q(is_draft=False) | Q(event_type=Event.DISCHARGE_REPORT_EVENT)
+        )
+
     def get_queryset(self):
         """Optimized queryset with prefetch and select_related."""
         self.patient = get_object_or_404(Patient, pk=self.kwargs['patient_id'])
-        
+
         # Permission check
         if not can_access_patient(self.request.user, self.patient):
             raise PermissionDenied("You don't have permission to view this patient's events.")
-        
+
         # Optimized base queryset
-        queryset = Event.objects.filter(
-            patient=self.patient
-        ).select_subclasses().select_related(
+        queryset = self._get_timeline_base_queryset().select_subclasses().select_related(
             'created_by',
             'updated_by',
             'patient'
         ).prefetch_related(
             'created_by__groups'
         ).order_by('-created_at')
-        
+
         # Apply filters with indexing considerations
         queryset = self._apply_optimized_filters(queryset)
-        
+
         return queryset
     
     def _apply_optimized_filters(self, queryset):
@@ -183,7 +189,7 @@ class PatientEventsTimelineView(ListView):
         counts = cache.get(counts_cache_key)
         if counts is None:
             counts = {
-                'total_events': Event.objects.filter(patient=self.patient).count(),
+                'total_events': self._get_timeline_base_queryset().count(),
                 'filtered_count': self.get_queryset().count(),
             }
             cache.set(counts_cache_key, counts, 60)  # 1 minute
@@ -231,10 +237,13 @@ class PatientEventsTimelineView(ListView):
         creators = cache.get(cache_key)
         
         if creators is None:
+            creator_ids = self._get_timeline_base_queryset().values_list(
+                'created_by_id', flat=True
+            ).distinct()
             creators = list(
                 User.objects.filter(
-                    event_set__patient=self.patient
-                ).distinct().values(
+                    id__in=creator_ids
+                ).values(
                     'id', 'first_name', 'last_name', 'profession_type'
                 ).order_by('first_name', 'last_name')
             )
@@ -253,7 +262,7 @@ class PatientEventsTimelineView(ListView):
         
         if counts is None:
             counts = dict(
-                Event.objects.filter(patient=self.patient)
+                self._get_timeline_base_queryset()
                 .values_list('event_type')
                 .annotate(count=Count('id'))
                 .order_by('event_type')
