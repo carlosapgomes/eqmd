@@ -78,7 +78,7 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
         if search_query:
             queryset = queryset.filter(
                 Q(instructions__icontains=search_query)
-                | Q(patient__name__icontains=search_query)
+                | Q(patient__name__unaccent__icontains=search_query)
                 | Q(items__drug_name__icontains=search_query)
             ).distinct()
 

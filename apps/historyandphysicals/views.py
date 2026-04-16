@@ -68,7 +68,7 @@ class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(description__icontains=search_query)
                 | Q(content__icontains=search_query)
-                | Q(patient__name__icontains=search_query)
+                | Q(patient__name__unaccent__icontains=search_query)
             )
 
         # Filter by patient if specified

@@ -56,7 +56,7 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         search_query = self.request.GET.get('q', '').strip()
         if search_query:
             queryset = queryset.filter(
-                Q(name__icontains=search_query) |
+                Q(name__unaccent__icontains=search_query) |
                 Q(healthcard_number__icontains=search_query) |
                 Q(id_number__icontains=search_query) |
                 Q(fiscal_number__icontains=search_query) |
@@ -863,7 +863,7 @@ class PatientSearchAPIView(LoginRequiredMixin, View):
 
         # Search in multiple fields including record numbers
         patients = Patient.objects.filter(
-            Q(name__icontains=query) |
+            Q(name__unaccent__icontains=query) |
             Q(healthcard_number__icontains=query) |
             Q(id_number__icontains=query) |
             Q(fiscal_number__icontains=query) |

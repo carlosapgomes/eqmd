@@ -123,9 +123,9 @@ class Command(BaseCommand):
                     raise Patient.DoesNotExist()
                 return patient
             elif options['patient_name']:
-                # Find by name (partial match, case insensitive)
+                # Find by name (partial match, case and accent insensitive)
                 patients = Patient.objects.filter(
-                    name__icontains=options['patient_name']
+                    name__unaccent__icontains=options['patient_name']
                 )
                 
                 if not patients.exists():
