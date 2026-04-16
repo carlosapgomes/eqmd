@@ -1,0 +1,11 @@
+{
+  "constructs": ["headings", "blockquotes", "fenced_code_blocks", "paragraphs"],
+  "expected_semantic_tokens": [
+    "h1",
+    "blockquote",
+    "blockquote_nested",
+    "code_block",
+    "code_lang_python",
+    "code_lang_json"
+  ]
+}

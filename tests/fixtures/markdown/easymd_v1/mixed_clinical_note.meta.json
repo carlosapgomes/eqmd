@@ -1,0 +1,35 @@
+{
+  "constructs": [
+    "headings",
+    "paragraphs",
+    "strong",
+    "emphasis",
+    "strikethrough",
+    "links",
+    "inline_code",
+    "fenced_code_blocks",
+    "ordered_lists",
+    "unordered_lists",
+    "nested_lists",
+    "blockquotes",
+    "tables",
+    "task_lists",
+    "thematic_breaks"
+  ],
+  "expected_semantic_tokens": [
+    "h1",
+    "h2",
+    "h3",
+    "strong",
+    "ol",
+    "ul",
+    "li_nested",
+    "blockquote",
+    "code_block",
+    "hr",
+    "table",
+    "task_checked",
+    "task_unchecked",
+    "a_href"
+  ]
+}
