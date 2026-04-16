@@ -38,6 +38,53 @@ class DischargeReportViewTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
 
+    def test_create_form_uses_native_date_and_datetime_pickers(self):
+        """Create form should render native date/datetime picker inputs."""
+        self.client.login(username='testuser', password='testpass123')
+        url = reverse(
+            'apps.dischargereports:patient_dischargereport_create',
+            kwargs={'patient_id': self.patient.pk}
+        )
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'type="datetime-local"')
+        self.assertContains(response, 'type="date"', count=2)
+
+    def test_create_view_accepts_ptbr_date_and_datetime_inputs(self):
+        """Create view should accept pt-BR manual date input values."""
+        self.client.login(username='testuser', password='testpass123')
+        url = reverse(
+            'apps.dischargereports:patient_dischargereport_create',
+            kwargs={'patient_id': self.patient.pk}
+        )
+
+        now = timezone.now()
+        data = {
+            'patient': self.patient.pk,
+            'event_datetime': now.strftime('%d/%m/%Y %H:%M'),
+            'description': 'Relatório em formato pt-BR',
+            'admission_date': '01/01/2024',
+            'discharge_date': '05/01/2024',
+            'medical_specialty': 'Clínica Médica',
+            'admission_history': 'História',
+            'problems_and_diagnosis': 'Diagnóstico',
+            'exams_list': 'Exames',
+            'procedures_list': 'Procedimentos',
+            'inpatient_medical_history': 'Evolução',
+            'discharge_status': 'Estável',
+            'discharge_recommendations': 'Retorno ambulatorial',
+            'save_draft': 'Save Draft',
+        }
+
+        response = self.client.post(url, data)
+
+        self.assertEqual(response.status_code, 302)
+        report = DischargeReport.all_objects.get(patient=self.patient)
+        self.assertEqual(report.admission_date, date(2024, 1, 1))
+        self.assertEqual(report.discharge_date, date(2024, 1, 5))
+
     def test_create_view_saves_draft_by_default(self):
         """Test that create view saves as draft by default"""
         self.client.login(username='testuser', password='testpass123')
@@ -99,6 +146,29 @@ class DischargeReportViewTests(TestCase):
 
         report = DischargeReport.objects.get(patient=self.patient)
         self.assertFalse(report.is_draft)
+
+    def test_update_form_uses_native_date_and_datetime_pickers(self):
+        """Update form should render native date/datetime picker inputs."""
+        report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description='Draft report',
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty='Test Specialty',
+            is_draft=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        self.client.login(username='testuser', password='testpass123')
+        url = reverse('apps.dischargereports:dischargereport_update', kwargs={'pk': report.pk})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'type="datetime-local"')
+        self.assertContains(response, 'type="date"', count=2)
 
     def test_update_view_blocks_non_editable(self):
         """Test that update view blocks non-editable reports"""

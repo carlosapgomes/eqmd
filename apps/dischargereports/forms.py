@@ -5,8 +5,10 @@ from apps.events.models import Event
 
 
 class HTML5DateTimeInput(forms.DateTimeInput):
-    """Custom DateTimeInput that formats values correctly for HTML5 datetime-local inputs"""
-    
+    """Custom DateTimeInput that renders as a native datetime picker."""
+
+    input_type = "datetime-local"
+
     def format_value(self, value):
         if value is None:
             return ''
@@ -18,8 +20,10 @@ class HTML5DateTimeInput(forms.DateTimeInput):
 
 
 class HTML5DateInput(forms.DateInput):
-    """Custom DateInput that formats values correctly for HTML5 date inputs"""
-    
+    """Custom DateInput that renders as a native date picker."""
+
+    input_type = "date"
+
     def format_value(self, value):
         if value is None:
             return ''
@@ -42,13 +46,26 @@ class DischargeReportCreateForm(forms.ModelForm):
         ]
         widgets = {
             'event_datetime': HTML5DateTimeInput(
-                attrs={'class': 'form-control'}
+                attrs={
+                    'class': 'form-control',
+                    'lang': 'pt-BR',
+                    'step': '60',
+                    'placeholder': 'dd/mm/aaaa hh:mm',
+                }
             ),
             'admission_date': HTML5DateInput(
-                attrs={'class': 'form-control'}
+                attrs={
+                    'class': 'form-control',
+                    'lang': 'pt-BR',
+                    'placeholder': 'dd/mm/aaaa',
+                }
             ),
             'discharge_date': HTML5DateInput(
-                attrs={'class': 'form-control'}
+                attrs={
+                    'class': 'form-control',
+                    'lang': 'pt-BR',
+                    'placeholder': 'dd/mm/aaaa',
+                }
             ),
             'medical_specialty': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Ex: Cardiologia'}
@@ -89,7 +106,11 @@ class DischargeReportCreateForm(forms.ModelForm):
             "%d/%m/%Y %H:%M:%S",
             "%d/%m/%Y %H:%M",
         ]
-        
+
+        # Accept both HTML5 and pt-BR manual input for date fields
+        self.fields["admission_date"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+        self.fields["discharge_date"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+
         # Set default datetime to now if creating new instance
         if not self.instance.pk:
             utc_now = timezone.now().astimezone(timezone.get_default_timezone())
@@ -159,6 +180,18 @@ class DischargeReportCreateForm(forms.ModelForm):
 class DischargeReportUpdateForm(forms.ModelForm):
     """Form for updating existing discharge reports"""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["event_datetime"].input_formats = [
+            "%Y-%m-%dT%H:%M",  # HTML5 datetime-local format
+            "%Y-%m-%dT%H:%M:%S",
+            "%d/%m/%Y %H:%M:%S",
+            "%d/%m/%Y %H:%M",
+        ]
+        self.fields["admission_date"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+        self.fields["discharge_date"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+
     class Meta:
         model = DischargeReport
         fields = [
@@ -170,13 +203,26 @@ class DischargeReportUpdateForm(forms.ModelForm):
         ]
         widgets = {
             'event_datetime': HTML5DateTimeInput(
-                attrs={'class': 'form-control'}
+                attrs={
+                    'class': 'form-control',
+                    'lang': 'pt-BR',
+                    'step': '60',
+                    'placeholder': 'dd/mm/aaaa hh:mm',
+                }
             ),
             'admission_date': HTML5DateInput(
-                attrs={'class': 'form-control'}
+                attrs={
+                    'class': 'form-control',
+                    'lang': 'pt-BR',
+                    'placeholder': 'dd/mm/aaaa',
+                }
             ),
             'discharge_date': HTML5DateInput(
-                attrs={'class': 'form-control'}
+                attrs={
+                    'class': 'form-control',
+                    'lang': 'pt-BR',
+                    'placeholder': 'dd/mm/aaaa',
+                }
             ),
             'medical_specialty': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Ex: Cardiologia'}
