@@ -50,12 +50,12 @@ class DailyNote(Event):
         verbose_name="Conteúdo da Evolução",
         help_text="Descreva a evolução do paciente"
     )
-    
+
     class Meta:
         verbose_name = "Evolução"
         verbose_name_plural = "Evoluções"
         ordering = ['-event_datetime']
-    
+
     def save(self, *args, **kwargs):
         if not self.event_type:
             self.event_type = Event.DAILY_NOTE_EVENT
@@ -177,17 +177,17 @@ Displays recent daily notes with quick access links.
 - Patient with most notes
 - Average notes per patient
 
-## Duplicate Functionality
+## Duplicate Functionality Details
 
 ### Implementation Details
 
 ```python
 class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
     model = DailyNote
-    
+
     def post(self, request, *args, **kwargs):
         original = self.get_object()
-        
+
         # Create duplicate with current datetime
         duplicate = DailyNote.objects.create(
             patient=original.patient,
@@ -196,7 +196,7 @@ class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
             description=f"Duplicated from {original.event_datetime.strftime('%d/%m/%Y %H:%M')}",
             content=original.content
         )
-        
+
         messages.success(request, "Evolução duplicada com sucesso!")
         return redirect('patients:patient_detail', pk=original.patient.pk)
 ```
@@ -227,28 +227,44 @@ class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
 
 ```css
 @media print {
-    .dailynote-print {
-        font-family: 'Times New Roman', serif;
-        font-size: 12pt;
-        line-height: 1.4;
-    }
-    
-    .page-break {
-        page-break-before: always;
-    }
-    
-    .no-print {
-        display: none;
-    }
+  .dailynote-print {
+    font-family: "Times New Roman", serif;
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .no-print {
+    display: none;
+  }
 }
 ```
 
 ### Export Options
 
-- PDF generation using ReportLab
+- PDF generation using ReportLab via the shared markdown pipeline
 - CSV export for data analysis
 - JSON export for API integration
 - Print-friendly HTML views
+
+### Markdown Rendering (Shared Pipeline)
+
+Daily Notes use the unified markdown pipeline (`easymd_v1` dialect) for
+both web detail and PDF output, ensuring semantic parity:
+
+- **Web detail**: uses the `|markdown` template filter backed by
+  `apps.core.services.markdown_pipeline.render_markdown_html`. Replaces
+  the former `|linebreaks` filter, preserving nested lists, inline
+  formatting, blockquotes, code blocks, tables, and task lists.
+- **PDF output**: uses `parse_markdown` + `render_markdown_pdf_flowables`
+  from the shared pipeline. The local regex-based parsing helpers have
+  been removed from `DailyNotePDFGenerator`.
+
+See `docs/workflows/markdown-rendering-pipeline.md` for the full pipeline
+architecture and integration guide.
 
 ## Performance Optimizations
 
@@ -303,7 +319,7 @@ Location: `apps/events/templates/events/partials/event_card_dailynote.html`
 {% block event_actions %}
     {{ block.super }}
     {% if perms.events.add_event %}
-        <a href="{% url 'dailynotes:dailynote_duplicate' pk=event.pk %}" 
+        <a href="{% url 'dailynotes:dailynote_duplicate' pk=event.pk %}"
            class="btn btn-sm btn-outline-secondary">Duplicar</a>
     {% endif %}
 {% endblock %}
@@ -344,6 +360,9 @@ Location: `apps/events/templates/events/partials/event_card_dailynote.html`
 - View functions: 95%
 - Template tags: 90%
 - Form validation: 100%
+- Markdown rendering (web): `test_detail_markdown_rendering.py`
+- Markdown rendering (PDF): `test_pdf_markdown_parity.py`
+- Cross-app regression: `apps/core/tests/test_markdown_pipeline_regression.py`
 
 ## Localization
 
