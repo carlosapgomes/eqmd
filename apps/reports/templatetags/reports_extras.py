@@ -2,11 +2,10 @@
 Template tags for reports app.
 """
 
-import markdown
-
 from django import template
 from django.utils.safestring import mark_safe
 
+from apps.core.services.markdown_pipeline import render_markdown_html
 from apps.reports.services.permissions import can_manage_report_templates as can_manage
 
 register = template.Library()
@@ -21,7 +20,7 @@ def can_manage_report_templates(user):
 @register.filter
 def markdown_filter(value):
     """
-    Render markdown text to HTML.
+    Render markdown text to safe HTML via the shared pipeline.
 
     Args:
         value: Markdown text string
@@ -32,6 +31,5 @@ def markdown_filter(value):
     if not value:
         return ""
 
-    md = markdown.Markdown(extensions=['extra', 'nl2br'])
-    html = md.convert(value)
+    html = render_markdown_html(value)
     return mark_safe(html)

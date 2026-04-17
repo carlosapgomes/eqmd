@@ -3,8 +3,11 @@ from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import PageBreak, Paragraph, Spacer
 
+from apps.core.services.markdown_pipeline import parse_markdown
+from apps.core.services.markdown_pipeline.pdf_renderer import (
+    render_markdown_pdf_flowables,
+)
 from apps.pdfgenerator.services.pdf_generator import HospitalLetterheadGenerator
-from apps.pdfgenerator.services.markdown_parser import MarkdownToPDFParser
 
 from ..services.renderer import PAGE_BREAK_TOKEN
 
@@ -14,7 +17,6 @@ class ReportPDFGenerator(HospitalLetterheadGenerator):
 
     def __init__(self):
         super().__init__()
-        self.markdown_parser = MarkdownToPDFParser(self.styles)
         self._document_date = None
 
     def _format_document_date(self, document_date):
@@ -101,7 +103,10 @@ class ReportPDFGenerator(HospitalLetterheadGenerator):
         for index, part in enumerate(parts):
             part = part.strip()
             if part:
-                content_elements.extend(self.markdown_parser.parse(part))
+                doc = parse_markdown(part)
+                content_elements.extend(
+                    render_markdown_pdf_flowables(doc, self.styles)
+                )
             if index < len(parts) - 1:
                 content_elements.append(PageBreak())
 
