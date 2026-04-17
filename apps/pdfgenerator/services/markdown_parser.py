@@ -1,6 +1,20 @@
 """
 Markdown to ReportLab conversion service.
-Converts markdown text to ReportLab Paragraph objects for PDF generation.
+
+.. deprecated::
+    This module is **DEPRECATED** as of the unify-markdown-rendering-pipeline
+    initiative.  New code should use the shared pipeline:
+
+        from apps.core.services.markdown_pipeline import parse_markdown
+        from apps.core.services.markdown_pipeline.pdf_renderer import (
+            render_markdown_pdf_flowables,
+        )
+
+    ``MarkdownToPDFParser`` is retained only for apps not yet migrated
+    (``consentforms``, ``dischargereports``, ``pdfgenerator/views``).
+    It will be removed once those consumers adopt the shared pipeline.
+
+    Sunset target: after consent forms and discharge reports migration.
 """
 import re
 import markdown
