@@ -6,7 +6,6 @@ header on every page, compact note metadata, markdown-rendered content,
 and a signature section reserved for the end of the document.
 """
 
-import re
 from html import escape
 
 from reportlab.lib import colors
@@ -18,6 +17,10 @@ from reportlab.lib.colors import black, grey
 from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 from reportlab.pdfgen import canvas
 
+from apps.core.services.markdown_pipeline import parse_markdown
+from apps.core.services.markdown_pipeline.pdf_renderer import (
+    render_markdown_pdf_flowables,
+)
 from apps.pdfgenerator.services.pdf_generator import (
     HospitalLetterheadGenerator,
     NumberedCanvas,
@@ -322,7 +325,7 @@ class DailyNotePDFGenerator(HospitalLetterheadGenerator):
     # ------------------------------------------------------------------
 
     def _build_note_content(self, dailynote):
-        """Render markdown content using compact clinical-print renderer."""
+        """Render markdown content using shared pipeline PDF renderer."""
         if not dailynote.content or not dailynote.content.strip():
             return []
         return self._build_compact_content(dailynote.content)
@@ -366,131 +369,22 @@ class DailyNotePDFGenerator(HospitalLetterheadGenerator):
         ))
 
     def _build_compact_content(self, markdown_text):
-        """Build compact content flowables from markdown."""
-        blocks = self._extract_sections_from_markdown(markdown_text)
-        flowables = []
-        for block in blocks:
-            handler = {
-                "heading": lambda b: self._render_section_bar(b["text"]),
-                "paragraph": lambda b: self._render_compact_paragraph(
-                    b["text"]
-                ),
-                "list": lambda b: self._render_compact_list(
-                    b["items"], b["ordered"]
-                ),
-            }.get(block["type"])
-            if handler:
-                flowables.extend(handler(block))
-        return flowables
+        """Build compact content flowables using the shared markdown pipeline."""
+        doc = parse_markdown(markdown_text)
+        return render_markdown_pdf_flowables(doc, self.styles)
 
-    def _extract_sections_from_markdown(self, markdown_text):
-        """Parse markdown into compact semantic blocks."""
-        blocks = []
-        lines = markdown_text.split("\n")
-        idx = 0
-        while idx < len(lines):
-            stripped = lines[idx].strip()
-            if not stripped:
-                idx += 1
-                continue
+    # ------------------------------------------------------------------
+    # Deprecated local regex helpers (retained for reference)
+    # ------------------------------------------------------------------
 
-            heading_match = re.match(r'^(#{1,6})\s+(.+)$', stripped)
-            if heading_match:
-                blocks.append({
-                    "type": "heading",
-                    "level": len(heading_match.group(1)),
-                    "text": heading_match.group(2).strip(),
-                })
-                idx += 1
-                continue
-
-            items, idx, ordered = self._collect_list_items(lines, idx)
-            if items is not None:
-                blocks.append({
-                    "type": "list", "items": items,
-                    "ordered": ordered,
-                })
-                continue
-
-            para_lines, idx = self._collect_paragraph_lines(lines, idx)
-            if para_lines:
-                blocks.append({
-                    "type": "paragraph",
-                    "text": " ".join(para_lines),
-                })
-        return blocks
-
-    def _collect_list_items(self, lines, start):
-        """Collect consecutive list items starting at *start*."""
-        stripped = lines[start].strip()
-        ul_match = re.match(r'^[-*]\s+(.+)$', stripped)
-        ol_match = re.match(r'^\d+\.\s+(.+)$', stripped)
-        if not ul_match and not ol_match:
-            return None, start, False
-
-        ordered = bool(ol_match)
-        pattern = r'^\d+\.\s+(.+)$' if ordered else r'^[-*]\s+(.+)$'
-        items = []
-        idx = start
-        while idx < len(lines):
-            m = re.match(pattern, lines[idx].strip())
-            if not m:
-                break
-            items.append(m.group(1).strip())
-            idx += 1
-        return items, idx, ordered
-
-    def _collect_paragraph_lines(self, lines, start):
-        """Collect consecutive non-special lines as a paragraph."""
-        para_lines = []
-        idx = start
-        while idx < len(lines):
-            s = lines[idx].strip()
-            if not s:
-                break
-            if re.match(r'^#{1,6}\s+', s):
-                break
-            if re.match(r'^[-*]\s+', s):
-                break
-            if re.match(r'^\d+\.\s+', s):
-                break
-            para_lines.append(s)
-            idx += 1
-        return para_lines, idx
-
-    def _render_section_bar(self, title):
-        """Render a compact left-aligned section heading bar."""
-        text = self._inline_markdown_to_reportlab(title)
-        para = Paragraph(f"<b>{text}</b>",
-                         self.styles["CompactSectionBar"])
-        return [Spacer(1, COMPACT_SECTION_SPACER), para,
-                Spacer(1, COMPACT_PARA_SPACER)]
-
-    def _render_compact_paragraph(self, text):
-        """Render a paragraph with tight leading for clinical printing."""
-        formatted = self._inline_markdown_to_reportlab(text)
-        para = Paragraph(formatted, self.styles["CompactBody"])
-        return [para]
-
-    def _render_compact_list(self, items, ordered=False):
-        """Render a list with compact bullets and minimal spacing."""
-        flowables = [Spacer(1, COMPACT_PARA_SPACER)]
-        for i, item in enumerate(items, 1):
-            bullet = f"{i}. " if ordered else "\u2022 "
-            formatted = self._inline_markdown_to_reportlab(item)
-            para = Paragraph(f"{bullet}{formatted}",
-                             self.styles["CompactList"])
-            flowables.append(para)
-        flowables.append(Spacer(1, COMPACT_PARA_SPACER))
-        return flowables
-
-    @staticmethod
-    def _inline_markdown_to_reportlab(text):
-        """Convert inline markdown formatting to ReportLab markup."""
-        text = escape(text)
-        text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
-        text = re.sub(r'\*(.+?)\*', r'<i>\1</i>', text)
-        return text
+    # The following methods are superseded by the shared pipeline:
+    #   _extract_sections_from_markdown, _collect_list_items,
+    #   _collect_paragraph_lines, _render_section_bar,
+    #   _render_compact_paragraph, _render_compact_list,
+    #   _inline_markdown_to_reportlab
+    #
+    # They have been replaced by apps.core.services.markdown_pipeline
+    # .pdf_renderer.render_markdown_pdf_flowables
 
     # ------------------------------------------------------------------
     # Doctor info helper

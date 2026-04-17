@@ -10,6 +10,9 @@ Usage::
 """
 
 from apps.core.services.markdown_pipeline.html_renderer import render_html as render_markdown_html
+from apps.core.services.markdown_pipeline.pdf_renderer import (
+    render_markdown_pdf_flowables,
+)
 from apps.core.services.markdown_pipeline.parser import parse_markdown
 from apps.core.services.markdown_pipeline.profile import (
     EASYMD_V1_PROFILE,
@@ -21,4 +24,5 @@ __all__ = [
     "get_supported_constructs",
     "parse_markdown",
     "render_markdown_html",
+    "render_markdown_pdf_flowables",
 ]
