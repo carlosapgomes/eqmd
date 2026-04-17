@@ -9,6 +9,10 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
+from apps.core.services.markdown_pipeline.profile import (
+    get_supported_constructs,
+)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -17,25 +21,9 @@ FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent.parent / (
     "tests/fixtures/markdown/easymd_v1"
 )
 
-# Each construct family that easymd_v1 must cover.
-SUPPORTED_CONSTRUCTS: list[str] = [
-    "headings",
-    "paragraphs",
-    "emphasis",
-    "strong",
-    "strikethrough",
-    "links",
-    "inline_code",
-    "fenced_code_blocks",
-    "ordered_lists",
-    "unordered_lists",
-    "nested_lists",
-    "blockquotes",
-    "tables",
-    "task_lists",
-    "thematic_breaks",
-    "hard_breaks",
-]
+# Supported constructs are now centralized in the profile descriptor.
+# This alias keeps the test code readable while eliminating duplication.
+SUPPORTED_CONSTRUCTS: list[str] = list(get_supported_constructs())
 
 
 # ---------------------------------------------------------------------------
