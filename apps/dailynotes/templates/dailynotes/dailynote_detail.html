@@ -1,5 +1,6 @@
 {% extends "base_app.html" %}
 {% load static %}
+{% load markdown_tags %}
 
 {% block title %}Evolução - {{ dailynote.patient.name }}{% endblock %}
 
@@ -331,7 +332,7 @@
     <div class="card-body">
       {% if dailynote.content %}
       <div class="markdown-content">
-        {{ dailynote.content|linebreaks }}
+        {{ dailynote.content|markdown }}
       </div>
       {% else %}
       <div class="text-center py-4">
@@ -355,7 +356,7 @@
     <div class="card-body">
       {% if dailynote.content %}
       <div class="markdown-content">
-        {{ dailynote.content|linebreaks }}
+        {{ dailynote.content|markdown }}
       </div>
       {% else %}
       <div class="text-center py-4">
