@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from unittest.mock import patch
 
-from apps.patients.models import Patient, Ward
+from apps.patients.models import Patient, Ward, PatientAdmission
 from apps.accounts.models import MedicalSpecialty
 from apps.reports.models import ReportTemplate
 from apps.reports.services.context_builder import build_report_context
@@ -98,6 +98,7 @@ class TestContextBuilder(TestCase):
         self.assertEqual(context["patient_ward"], "TW")
         self.assertEqual(context["patient_bed"], "B12")
         self.assertEqual(context["patient_status"], self.patient.get_status_display())
+        self.assertEqual(context["patient_current_admission_date"], "")
 
         # Doctor fields
         self.assertIn("doctor_name", context)
@@ -153,6 +154,26 @@ class TestContextBuilder(TestCase):
         )
 
         self.assertEqual(context["doctor_name"], "No Profile")
+
+    def test_context_builder_current_admission_date_when_admitted(self):
+        """Test that current admission date is available when patient is admitted."""
+        PatientAdmission.objects.create(
+            patient=self.patient,
+            admission_datetime=timezone.make_aware(datetime(2026, 1, 12, 8, 15)),
+            admission_type=PatientAdmission.AdmissionType.EMERGENCY,
+            initial_bed="B12",
+            ward=self.ward,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        context = build_report_context(
+            patient=self.patient,
+            doctor=self.user,
+            document_date=date.today(),
+        )
+
+        self.assertEqual(context["patient_current_admission_date"], "12/01/2026")
 
     def test_context_builder_includes_page_break(self):
         """Test that page_break placeholder is available in context."""
