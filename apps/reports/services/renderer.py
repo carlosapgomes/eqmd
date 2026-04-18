@@ -14,6 +14,7 @@ ALLOWED_PLACEHOLDERS = {
     "patient_ward",
     "patient_bed",
     "patient_status",
+    "patient_current_admission_date",
     "doctor_name",
     "doctor_profession",
     "doctor_registration_number",

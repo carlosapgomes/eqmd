@@ -1,10 +1,10 @@
 """Tests for the report service."""
-from datetime import date
+from datetime import date, datetime
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from apps.patients.models import Patient, Ward
+from apps.patients.models import Patient, Ward, PatientAdmission
 from apps.reports.models import ReportTemplate, Report
 from apps.reports.services.report_service import (
     create_report_from_template,
@@ -123,6 +123,35 @@ class TestReportService(TestCase):
         # Check page break was rendered
         from apps.reports.services.renderer import PAGE_BREAK_TOKEN
         self.assertIn(PAGE_BREAK_TOKEN, report.content)
+
+    def test_report_service_renders_current_admission_date_placeholder(self):
+        """Test that report service renders current admission date when patient is admitted."""
+        PatientAdmission.objects.create(
+            patient=self.patient,
+            admission_datetime=timezone.make_aware(datetime(2026, 1, 12, 8, 15)),
+            admission_type=PatientAdmission.AdmissionType.SCHEDULED,
+            initial_bed="A1",
+            ward=self.ward,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        template = ReportTemplate.objects.create(
+            name="Admission Date Template",
+            markdown_body="Paciente: {{patient_name}} - Internação atual: {{patient_current_admission_date}}",
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        report = create_report_from_template(
+            template=template,
+            patient=self.patient,
+            doctor=self.user,
+            document_date=date.today(),
+            created_by=self.user,
+        )
+
+        self.assertIn("Internação atual: 12/01/2026", report.content)
 
     def test_report_service_sets_description(self):
         """Test that report service sets a default description."""

@@ -21,6 +21,27 @@ def _safe_string(value) -> str:
     return "" if value is None else str(value)
 
 
+def _get_current_admission_date(patient) -> str:
+    """Get the current admission date (DD/MM/YYYY) if patient is admitted."""
+    if not hasattr(patient, "get_current_admission"):
+        return ""
+
+    current_admission = patient.get_current_admission()
+    if not current_admission:
+        return ""
+
+    admission_datetime = getattr(current_admission, "admission_datetime", None)
+    if not admission_datetime:
+        return ""
+
+    admission_date = (
+        admission_datetime.date()
+        if hasattr(admission_datetime, "date")
+        else admission_datetime
+    )
+    return _format_date(admission_date)
+
+
 def _build_patient_context(patient) -> Dict[str, str]:
     """
     Build context dictionary for patient-related placeholders.
@@ -70,6 +91,7 @@ def _build_patient_context(patient) -> Dict[str, str]:
         "patient_ward": ward_name,
         "patient_bed": getattr(patient, "bed", "") or "",
         "patient_status": status,
+        "patient_current_admission_date": _get_current_admission_date(patient),
     }
 
 
@@ -169,7 +191,7 @@ def build_report_context(
 
     Returns:
         Dictionary with all placeholder values:
-        - patient_*: Patient identifiers and demographics
+        - patient_*: Patient identifiers, demographics, and active admission date
         - doctor_*: Doctor identifiers and specialty
         - document_date/document_datetime: Formatted document date/time
         - hospital_*: Hospital configuration values

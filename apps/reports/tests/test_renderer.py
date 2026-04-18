@@ -58,6 +58,11 @@ class TestTemplateValidation(TestCase):
         errors = validate_template_placeholders(template)
         assert len(errors) == 0
 
+    def test_validate_accepts_current_admission_date_placeholder(self):
+        template = "Paciente: {{patient_name}} - Internação atual: {{patient_current_admission_date}}"
+        errors = validate_template_placeholders(template)
+        assert len(errors) == 0
+
     def test_validate_accepts_all_known_placeholders(self):
         template = " ".join(f"{{{{{name}}}}}" for name in sorted(ALLOWED_PLACEHOLDERS))
         errors = validate_template_placeholders(template)
