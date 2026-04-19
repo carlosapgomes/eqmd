@@ -2,7 +2,8 @@
 Tests for Daily Note detail page PDF UI.
 
 Verifies that the detail page includes the PDF download action,
-loads the pdf-download.js script, and keeps the legacy print fallback.
+loads the pdf-download.js script, and does NOT expose a legacy print
+fallback.
 """
 
 from django.contrib.auth.models import Permission
@@ -80,13 +81,20 @@ class DailyNoteDetailPDFUITest(TestCase):
         response = self.client.get(self.url)
         self.assertContains(response, f'data-pdf-url="{pdf_url}')
 
-    def test_detail_page_keeps_legacy_print_fallback_action(self):
-        """The legacy print link should still be present on the page."""
+    def test_detail_page_has_no_legacy_print_action(self):
+        """The legacy print link must NOT appear on the detail page."""
         print_url = reverse(
             "dailynotes:dailynote_print", kwargs={"pk": self.dailynote.pk}
         )
         response = self.client.get(self.url)
-        self.assertContains(response, print_url)
+        # No link to the print endpoint should be present
+        self.assertNotContains(response, print_url)
+
+    def test_detail_page_has_no_print_icon_or_label(self):
+        """No printer icon or 'Imprimir' label should appear on the page."""
+        response = self.client.get(self.url)
+        self.assertNotContains(response, "bi-printer")
+        self.assertNotContains(response, "Imprimir")
 
     def test_detail_page_loads_pdf_download_javascript(self):
         """The page should load the pdf-download.js script."""

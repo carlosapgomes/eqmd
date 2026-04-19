@@ -224,8 +224,9 @@ class DailyNoteDetailMarkdownRenderingTest(TestCase):
     # ------------------------------------------------------------------
 
     def test_detail_preserves_action_buttons(self):
-        """PDF, print, copy, edit, duplicate, delete, and back buttons
-        must remain unchanged after markdown migration."""
+        """PDF, copy, edit, duplicate, delete, and back buttons
+        must remain unchanged after markdown migration.
+        The legacy print action must NOT appear."""
         note = self._create_dailynote("Simple content")
         response = self.client.get(self._detail_url(note.pk))
         self.assertEqual(response.status_code, 200)
@@ -237,11 +238,8 @@ class DailyNoteDetailMarkdownRenderingTest(TestCase):
         )
         self.assertIn(pdf_url, html)
 
-        # Print link
-        print_url = reverse(
-            "dailynotes:dailynote_print", kwargs={"pk": note.pk}
-        )
-        self.assertIn(print_url, html)
+        # Legacy print link must NOT be present
+        self.assertNotIn("dailynote_print", html)
 
         # Copy button
         self.assertIn("copy-content-btn", html)

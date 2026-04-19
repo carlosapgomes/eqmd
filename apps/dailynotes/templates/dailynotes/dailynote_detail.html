@@ -129,13 +129,6 @@
           Gerando...
         </span>
       </button>
-      <a href="{% url 'dailynotes:dailynote_print' pk=dailynote.pk %}"
-         class="btn btn-outline-primary btn-sm"
-         target="_blank"
-         title="Imprimir evolução">
-        <i class="bi bi-printer me-1"></i>
-        Imprimir
-      </a>
       <button type="button"
               class="btn btn-outline-secondary btn-sm copy-content-btn"
               title="Copiar conteúdo para área de transferência"
@@ -202,16 +195,6 @@
           Copiar
         </button>
       </div>
-      <div class="btn-group" role="group">
-        <a href="{% url 'dailynotes:dailynote_print' pk=dailynote.pk %}"
-           class="btn btn-outline-primary"
-           target="_blank"
-           title="Imprimir">
-          <i class="bi bi-printer me-1"></i>
-          Imprimir
-        </a>
-      </div>
-      
       {% if perms.events.change_event and can_edit_dailynote or perms.events.add_event %}
       <div class="btn-group" role="group">
         {% if perms.events.change_event and can_edit_dailynote %}
