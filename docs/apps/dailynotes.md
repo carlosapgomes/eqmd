@@ -16,8 +16,8 @@
 - **Patient-specific daily note views** with date filtering
 - **Search & Filtering**: Advanced search by content, patient, creator, and date ranges
 - **Dashboard Integration**: Recent daily notes widget and statistics counters
-- **Export/Print**: Print-friendly individual notes and patient evolution reports
-- **URLs**: `/dailynotes/`, `/dailynotes/patient/<uuid>/`, `/dailynotes/<uuid>/print/`
+- **Export**: PDF download for individual notes and patient evolution reports
+- **URLs**: `/dailynotes/`, `/dailynotes/patient/<uuid>/`
 - **Template Tags**: `recent_dailynotes_widget`, `dailynotes_count_today`, `dailynotes_count_week`
 
 ### Duplicate Functionality
@@ -87,6 +87,10 @@ class DailyNote(Event):
 - `PatientDailyNotesPrintView`: Print-friendly format
 - `PatientEvolutionReportView`: Comprehensive evolution report
 
+### PDF View
+
+- `DailyNotePDFView`: PDF download for individual daily notes via the shared markdown pipeline
+
 ### URL Configuration
 
 ```python
@@ -97,7 +101,6 @@ urlpatterns = [
     path('<uuid:pk>/edit/', DailyNoteUpdateView.as_view(), name='dailynote_edit'),
     path('<uuid:pk>/delete/', DailyNoteDeleteView.as_view(), name='dailynote_delete'),
     path('<uuid:pk>/duplicate/', DailyNoteDuplicateView.as_view(), name='dailynote_duplicate'),
-    path('<uuid:pk>/print/', DailyNotePrintView.as_view(), name='dailynote_print'),
     path('patient/<uuid:patient_id>/', PatientDailyNotesView.as_view(), name='patient_dailynotes'),
     path('patient/<uuid:patient_id>/print/', PatientDailyNotesPrintView.as_view(), name='patient_dailynotes_print'),
 ]
@@ -214,41 +217,20 @@ class DailyNoteDuplicateView(LoginRequiredMixin, DetailView):
 - User must be able to access the source patient
 - Original note must be accessible to user
 
-## Print and Export Features
+## Export Features
 
-### Print Views
+### PDF Generation
 
-- **Individual Note Print**: Single note with patient context
+- **Individual Note PDF**: Single note with patient context via `DailyNotePDFView`
 - **Patient Evolution Report**: All notes for patient in chronological order
 - **Date Range Reports**: Notes within specified date range
 - **Creator Reports**: All notes by specific user
-
-### Print Styling
-
-```css
-@media print {
-  .dailynote-print {
-    font-family: "Times New Roman", serif;
-    font-size: 12pt;
-    line-height: 1.4;
-  }
-
-  .page-break {
-    page-break-before: always;
-  }
-
-  .no-print {
-    display: none;
-  }
-}
-```
 
 ### Export Options
 
 - PDF generation using ReportLab via the shared markdown pipeline
 - CSV export for data analysis
 - JSON export for API integration
-- Print-friendly HTML views
 
 ### Markdown Rendering (Shared Pipeline)
 
@@ -351,7 +333,6 @@ Location: `apps/events/templates/events/partials/event_card_dailynote.html`
 
 - Timeline integration tests
 - Dashboard widget tests
-- Print view tests
 - Performance benchmarks
 
 ### Test Coverage

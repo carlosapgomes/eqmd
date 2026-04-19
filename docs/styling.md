@@ -2,7 +2,10 @@
 
 ## Overview
 
-EquipeMed uses a custom Bootstrap 5.3.6 theme specifically designed for medical applications. The styling emphasizes trust, security, and professionalism through a carefully curated color palette and component design.
+EquipeMed uses a custom Bootstrap 5.3.6 theme specifically designed for
+medical applications. The styling emphasizes trust, security, and
+professionalism through a carefully curated color palette and component
+design.
 
 ## Technology Stack
 
@@ -161,13 +164,13 @@ Use `.timeline-card` with `.card-medical` for event timeline cards:
 
 ```scss
 .timeline-card {
-    border-left: 4px solid var(--bs-primary);
-    transition: all 0.2s ease;
+  border-left: 4px solid var(--bs-primary);
+  transition: all 0.2s ease;
 }
 
 .timeline-card:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 ```
 
@@ -195,18 +198,18 @@ Event action buttons use small button groups with consistent styling:
 
 ```scss
 .event-actions {
-    opacity: 0;
-    transition: opacity 0.2s ease;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 .timeline-card:hover .event-actions {
-    opacity: 1;
+  opacity: 1;
 }
 
 @media (max-width: 768px) {
-    .event-actions {
-        opacity: 1; /* Always show on mobile */
-    }
+  .event-actions {
+    opacity: 1; /* Always show on mobile */
+  }
 }
 ```
 
@@ -296,7 +299,7 @@ The event timeline uses a modular template system for type-specific functionalit
 
 #### Template Structure
 
-```
+```text
 apps/events/templates/events/partials/
 ├── event_card_base.html          # Base template with common structure
 ├── event_card_dailynote.html     # DailyNote-specific card with duplicate button
@@ -310,29 +313,29 @@ The base template provides common structure that can be extended:
 ```html
 <!-- event_card_base.html -->
 <article class="timeline-card card card-medical mb-3">
-    <div class="card-body">
-        <!-- Event Header -->
-        <header class="d-flex align-items-start justify-content-between mb-2">
-            <!-- Event badge and timestamp -->
-            
-            <!-- Event Actions - Can be overridden by specific event types -->
-            {% block event_actions %}
-            <div class="btn-group btn-group-sm">
-                <!-- Default actions: view, edit -->
-            </div>
-            {% endblock event_actions %}
-        </header>
+  <div class="card-body">
+    <!-- Event Header -->
+    <header class="d-flex align-items-start justify-content-between mb-2">
+      <!-- Event badge and timestamp -->
 
-        <!-- Event Content -->
-        {% block event_content %}
-        <p class="event-excerpt">{{ event_data.excerpt }}</p>
-        {% endblock event_content %}
+      <!-- Event Actions - Can be overridden by specific event types -->
+      {% block event_actions %}
+      <div class="btn-group btn-group-sm">
+        <!-- Default actions: view, edit -->
+      </div>
+      {% endblock event_actions %}
+    </header>
 
-        <!-- Event Metadata -->
-        {% block event_metadata %}
-        <!-- Creator and timestamp info -->
-        {% endblock event_metadata %}
-    </div>
+    <!-- Event Content -->
+    {% block event_content %}
+    <p class="event-excerpt">{{ event_data.excerpt }}</p>
+    {% endblock event_content %}
+
+    <!-- Event Metadata -->
+    {% block event_metadata %}
+    <!-- Creator and timestamp info -->
+    {% endblock event_metadata %}
+  </div>
 </article>
 ```
 
@@ -342,29 +345,29 @@ Event types can extend the base template to add custom functionality:
 
 ```html
 <!-- event_card_dailynote.html -->
-{% extends "events/partials/event_card_base.html" %}
-
-{% block event_actions %}
+{% extends "events/partials/event_card_base.html" %} {% block event_actions %}
 <div class="btn-group btn-group-sm">
-    <!-- View Button -->
-    <a href="{{ event.get_absolute_url }}" class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-eye"></i>
-    </a>
-    
-    <!-- Duplicate Button - DailyNote specific -->
-    {% if perms.events.add_event %}
-        <a href="{% url 'apps.dailynotes:dailynote_duplicate' pk=event.pk %}" 
-           class="btn btn-outline-info btn-sm">
-            <i class="bi bi-files"></i>
-        </a>
-    {% endif %}
-    
-    <!-- Edit Button -->
-    {% if event_data.can_edit %}
-        <a href="{{ event.get_edit_url }}" class="btn btn-outline-warning btn-sm">
-            <i class="bi bi-pencil"></i>
-        </a>
-    {% endif %}
+  <!-- View Button -->
+  <a href="{{ event.get_absolute_url }}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-eye"></i>
+  </a>
+
+  <!-- Duplicate Button - DailyNote specific -->
+  {% if perms.events.add_event %}
+  <a
+    href="{% url 'apps.dailynotes:dailynote_duplicate' pk=event.pk %}"
+    class="btn btn-outline-info btn-sm"
+  >
+    <i class="bi bi-files"></i>
+  </a>
+  {% endif %}
+
+  <!-- Edit Button -->
+  {% if event_data.can_edit %}
+  <a href="{{ event.get_edit_url }}" class="btn btn-outline-warning btn-sm">
+    <i class="bi bi-pencil"></i>
+  </a>
+  {% endif %}
 </div>
 {% endblock event_actions %}
 ```
@@ -375,15 +378,11 @@ The main timeline template uses conditional logic to select the appropriate temp
 
 ```html
 <!-- patient_timeline.html -->
-{% for event_data in events_with_permissions %}
-    {% with event=event_data.event %}
-        {% if event.event_type == 1 %}
-            {% include "events/partials/event_card_dailynote.html" %}
-        {% else %}
-            {% include "events/partials/event_card_default.html" %}
-        {% endif %}
-    {% endwith %}
-{% endfor %}
+{% for event_data in events_with_permissions %} {% with event=event_data.event
+%} {% if event.event_type == 1 %} {% include
+"events/partials/event_card_dailynote.html" %} {% else %} {% include
+"events/partials/event_card_default.html" %} {% endif %} {% endwith %} {% endfor
+%}
 ```
 
 #### Adding New Event Types
@@ -469,7 +468,9 @@ Following Bootstrap's standard breakpoints:
 
 ### HTML + Browser Print Approach
 
-EquipeMed uses an **HTML + browser print** strategy for all document printing needs instead of server-side PDF generation. This approach provides several advantages:
+EquipeMed uses an **HTML + browser print** strategy for all document
+printing needs instead of server-side PDF generation. This approach provides
+several advantages:
 
 #### Benefits
 
@@ -488,7 +489,7 @@ EquipeMed uses an **HTML + browser print** strategy for all document printing ne
 class DocumentPrintView(LoginRequiredMixin, DetailView):
     model = YourModel
     template_name = 'app/document_print.html'
-    
+
     def get_object(self, queryset=None):
         """Add permission checks here"""
         obj = super().get_object(queryset)
@@ -501,51 +502,53 @@ class DocumentPrintView(LoginRequiredMixin, DetailView):
 ```html
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Document Title</title>
     <style>
-        @media print {
-            @page {
-                margin: 1cm;
-                size: A4;
-            }
-            .no-print { display: none !important; }
+      @media print {
+        @page {
+          margin: 1cm;
+          size: A4;
         }
-        
-        body {
-            font-family: 'Times New Roman', serif;
-            font-size: 12px;
-            line-height: 1.4;
+        .no-print {
+          display: none !important;
         }
-        
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 15px;
-        }
-        
-        /* Add more medical document styling */
+      }
+
+      body {
+        font-family: "Times New Roman", serif;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .header {
+        text-align: center;
+        border-bottom: 2px solid #000;
+        padding-bottom: 15px;
+      }
+
+      /* Add more medical document styling */
     </style>
-</head>
-<body>
-    <button class="no-print" onclick="window.print()">
-        🖨️ Imprimir
-    </button>
-    
+  </head>
+  <body>
+    <button class="no-print" onclick="window.print()">🖨️ Imprimir</button>
+
     <!-- Document content here -->
-</body>
+  </body>
 </html>
 ```
 
 ##### 3. Print Button Implementation
 
 ```html
-<a href="{% url 'app:document_print' pk=object.pk %}" 
-   class="btn btn-outline-primary" 
-   target="_blank" 
-   title="Imprimir documento">
-    <i class="bi bi-printer"></i> Imprimir
+<a
+  href="{% url 'app:document_print' pk=object.pk %}"
+  class="btn btn-outline-primary"
+  target="_blank"
+  title="Imprimir documento"
+>
+  <i class="bi bi-printer"></i> Imprimir
 </a>
 ```
 
@@ -570,27 +573,27 @@ class DocumentPrintView(LoginRequiredMixin, DetailView):
 
 ```css
 @media print {
-    @page {
-        margin: 1cm;
-        size: A4;
-    }
-    
-    .no-print {
-        display: none !important;
-    }
-    
-    body {
-        font-family: 'Times New Roman', serif;
-        color: #000;
-    }
-    
-    .page-break {
-        page-break-before: always;
-    }
-    
-    .avoid-break {
-        page-break-inside: avoid;
-    }
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    font-family: "Times New Roman", serif;
+    color: #000;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
 }
 ```
 
@@ -602,7 +605,7 @@ path('<uuid:pk>/print/', views.DocumentPrintView.as_view(), name='document_print
 path('patient/<uuid:patient_pk>/export/', views.PatientReportExportView.as_view(), name='patient_export'),
 ```
 
-#### Best Practices
+#### Print Best Practices
 
 1. **Always open in new tab** (`target="_blank"`) to preserve user's current context
 2. **Use semantic HTML** for proper document structure
@@ -623,7 +626,9 @@ path('patient/<uuid:patient_pk>/export/', views.PatientReportExportView.as_view(
 
 #### Example Implementation
 
-See `apps/dailynotes/views.py` (DailyNotePrintView) and `apps/dailynotes/templates/dailynotes/dailynote_print.html` for a complete reference implementation.
+See `apps/dailynotes/views.py` (`DailyNotePDFView`) for a PDF download
+implementation that uses the shared markdown pipeline. The print HTML pattern
+above can be adapted for any model that needs browser-based printing.
 
 ## Accessibility
 
@@ -641,7 +646,7 @@ See `apps/dailynotes/views.py` (DailyNotePrintView) and `apps/dailynotes/templat
 
 ## File Structure
 
-```
+```text
 assets/scss/
 └── main.scss           // Main stylesheet with all customizations
 
@@ -665,7 +670,7 @@ static/
 - Utility classes follow: `.{property}-medical-{color}`
 - Layout classes use: `.app-{component}`
 
-### Best Practices
+### General Best Practices
 
 1. Always use the medical color palette for brand consistency
 2. Maintain proper spacing using Bootstrap's spacing utilities
