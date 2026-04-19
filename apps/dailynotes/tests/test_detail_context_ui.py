@@ -115,11 +115,16 @@ class DailyNoteDetailContextUITests(TestCase):
 
     def test_dailynote_detail_has_no_legacy_print_action(self):
         """The detail page must not contain any link to the legacy print endpoint."""
+        from django.urls import NoReverseMatch
+
+        # Route must not resolve
+        with self.assertRaises(NoReverseMatch):
+            reverse('dailynotes:dailynote_print', kwargs={'pk': self.dailynote.pk})
+
+        # No /print/ path fragments in the rendered HTML
         response = self.client.get(self._detail_url())
         self.assertEqual(response.status_code, 200)
-        # Check the actual resolved print URL is absent
-        print_url = reverse('dailynotes:dailynote_print', kwargs={'pk': self.dailynote.pk})
-        self.assertNotContains(response, print_url)
+        self.assertNotContains(response, "/print/")
 
     # ------------------------------------------------------------------
     # 3. Desktop layout no longer uses sidebar structure
@@ -168,6 +173,5 @@ class DailyNoteDetailContextUITests(TestCase):
         pdf_url = reverse('dailynotes:dailynote_pdf', kwargs={'pk': self.dailynote.pk})
         self.assertIn(pdf_url, content)
 
-        # Legacy print action must NOT be present
-        print_url = reverse('dailynotes:dailynote_print', kwargs={'pk': self.dailynote.pk})
-        self.assertNotIn(print_url, content)
+        # Legacy print route does not exist — verify by /print/ fragment absence
+        self.assertNotIn('/print/', content)

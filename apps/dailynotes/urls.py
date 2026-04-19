@@ -26,10 +26,6 @@ urlpatterns = [
         views.PatientDailyNoteCreateView.as_view(),
         name="patient_dailynote_create",
     ),
-    # Print URLs
-    path(
-        "<uuid:pk>/print/", views.DailyNotePrintView.as_view(), name="dailynote_print"
-    ),
     # PDF download
     path(
         "<uuid:pk>/pdf/", views.DailyNotePDFView.as_view(), name="dailynote_pdf"

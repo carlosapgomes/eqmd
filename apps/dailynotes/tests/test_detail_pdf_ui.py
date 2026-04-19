@@ -82,13 +82,16 @@ class DailyNoteDetailPDFUITest(TestCase):
         self.assertContains(response, f'data-pdf-url="{pdf_url}')
 
     def test_detail_page_has_no_legacy_print_action(self):
-        """The legacy print link must NOT appear on the detail page."""
-        print_url = reverse(
-            "dailynotes:dailynote_print", kwargs={"pk": self.dailynote.pk}
-        )
+        """The legacy print route must not exist and the page must not link to it."""
+        from django.urls import NoReverseMatch
+
+        # Route must not resolve
+        with self.assertRaises(NoReverseMatch):
+            reverse("dailynotes:dailynote_print", kwargs={"pk": self.dailynote.pk})
+
+        # No /print/ path fragments in the rendered HTML
         response = self.client.get(self.url)
-        # No link to the print endpoint should be present
-        self.assertNotContains(response, print_url)
+        self.assertNotContains(response, "/print/")
 
     def test_detail_page_has_no_print_icon_or_label(self):
         """No printer icon or 'Imprimir' label should appear on the page."""

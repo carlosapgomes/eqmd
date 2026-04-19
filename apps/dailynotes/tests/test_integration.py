@@ -198,18 +198,25 @@ class DailyNoteCRUDIntegrationTests(DailyNoteIntegrationTestCase):
 # ---------------------------------------------------------------------------
 # Print / PDF
 # ---------------------------------------------------------------------------
-class PrintExportTests(DailyNoteIntegrationTestCase):
-    """Test export and print functionality."""
+class PrintRouteRemovedTests(DailyNoteIntegrationTestCase):
+    """Verify that the legacy print route has been removed."""
 
-    def test_dailynote_print_view_allowed(self):
-        """Print view returns 200 for authenticated user with patient access."""
+    def test_dailynote_print_route_no_reverse(self):
+        """Reversing 'dailynote_print' raises NoReverseMatch."""
+        from django.urls import NoReverseMatch
+
+        with self.assertRaises(NoReverseMatch):
+            reverse(
+                "dailynotes:dailynote_print",
+                kwargs={"pk": self.dailynote1.pk},
+            )
+
+    def test_dailynote_print_url_returns_404(self):
+        """Direct GET to <pk>/print/ returns 404 (route removed)."""
         self.client.login(username="doctor", password="testpass123")
-        url = reverse(
-            "dailynotes:dailynote_print",
-            kwargs={"pk": self.dailynote1.pk},
-        )
+        url = f"/dailynotes/{self.dailynote1.pk}/print/"
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
 
     @patch("apps.dailynotes.views.DailyNotePDFGenerator")
     def test_dailynote_pdf_view_success(self, mock_pdf_cls):
@@ -309,10 +316,12 @@ class UnauthenticatedAccessTests(DailyNoteIntegrationTestCase):
         # before LoginRequiredMixin, so AnonymousUser gets PermissionDenied (403)
         self.assertEqual(response.status_code, 403)
 
-    def test_print_requires_login(self):
-        url = reverse(
-            "dailynotes:dailynote_print",
-            kwargs={"pk": self.dailynote1.pk},
-        )
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+    def test_print_route_is_not_registered(self):
+        """Legacy print route is not registered — reversing raises NoReverseMatch."""
+        from django.urls import NoReverseMatch
+
+        with self.assertRaises(NoReverseMatch):
+            reverse(
+                "dailynotes:dailynote_print",
+                kwargs={"pk": self.dailynote1.pk},
+            )
