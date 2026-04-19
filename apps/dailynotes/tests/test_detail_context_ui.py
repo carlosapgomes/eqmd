@@ -92,7 +92,7 @@ class DailyNoteDetailContextUITests(TestCase):
 
     def test_dailynote_detail_keeps_event_actions_and_datetime_visible(self):
         """After adopting the shared component the page still shows the daily
-        note event datetime and action buttons (print, edit, back)."""
+        note event datetime and action buttons (PDF, copy, edit, back)."""
         response = self.client.get(self._detail_url())
         self.assertEqual(response.status_code, 200)
 
@@ -102,9 +102,9 @@ class DailyNoteDetailContextUITests(TestCase):
         expected_dt = self.dailynote.event_datetime.strftime('%d/%m/%Y')
         self.assertIn(expected_dt, content)
 
-        # Print action
-        print_url = reverse('dailynotes:dailynote_print', kwargs={'pk': self.dailynote.pk})
-        self.assertIn(print_url, content)
+        # PDF action is present
+        pdf_url = reverse('dailynotes:dailynote_pdf', kwargs={'pk': self.dailynote.pk})
+        self.assertIn(pdf_url, content)
 
         # Back-to-timeline link
         timeline_url = reverse(
@@ -112,6 +112,14 @@ class DailyNoteDetailContextUITests(TestCase):
             kwargs={'patient_id': self.patient.pk},
         )
         self.assertIn(timeline_url, content)
+
+    def test_dailynote_detail_has_no_legacy_print_action(self):
+        """The detail page must not contain any link to the legacy print endpoint."""
+        response = self.client.get(self._detail_url())
+        self.assertEqual(response.status_code, 200)
+        # Check the actual resolved print URL is absent
+        print_url = reverse('dailynotes:dailynote_print', kwargs={'pk': self.dailynote.pk})
+        self.assertNotContains(response, print_url)
 
     # ------------------------------------------------------------------
     # 3. Desktop layout no longer uses sidebar structure
@@ -156,6 +164,10 @@ class DailyNoteDetailContextUITests(TestCase):
         # Created-by info is visible
         self.assertIn('testuser', content)
 
-        # Print action visible
+        # PDF action visible (print removed)
+        pdf_url = reverse('dailynotes:dailynote_pdf', kwargs={'pk': self.dailynote.pk})
+        self.assertIn(pdf_url, content)
+
+        # Legacy print action must NOT be present
         print_url = reverse('dailynotes:dailynote_print', kwargs={'pk': self.dailynote.pk})
-        self.assertIn(print_url, content)
+        self.assertNotIn(print_url, content)
