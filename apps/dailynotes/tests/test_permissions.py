@@ -341,8 +341,9 @@ class DailyNoteUnauthenticatedAccessTests(TestCase):
         # before LoginRequiredMixin, so AnonymousUser gets PermissionDenied (403)
         self.assertEqual(response.status_code, 403)
 
-    def test_print_redirects_to_login(self):
-        response = self.client.get(
+    def test_print_route_is_not_registered(self):
+        """Legacy print route is not registered — reversing raises NoReverseMatch."""
+        from django.urls import NoReverseMatch
+
+        with self.assertRaises(NoReverseMatch):
             reverse("dailynotes:dailynote_print", kwargs={"pk": self.dailynote.pk})
-        )
-        self.assertEqual(response.status_code, 302)

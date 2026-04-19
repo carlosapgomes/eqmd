@@ -11,10 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from datetime import datetime, timedelta
 
@@ -517,34 +514,6 @@ class DailyNoteDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, Create
             f"Nova evolução para {self.source_dailynote.patient.name} criada com base na evolução anterior.",
         )
         return super().form_valid(form)
-
-
-class DailyNotePrintView(LoginRequiredMixin, DetailView):
-    """
-    Print view for DailyNote instances - clean print layout.
-    """
-
-    model = DailyNote
-    template_name = "dailynotes/dailynote_print.html"
-    context_object_name = "dailynote"
-
-    def get_object(self, queryset=None):
-        """Get object and check patient access permissions."""
-        obj = super().get_object(queryset)
-
-        # Check if user can access this patient
-        if not can_access_patient(self.request.user, obj.patient):
-            from django.core.exceptions import PermissionDenied
-
-            raise PermissionDenied(
-                "You don't have permission to access this patient's daily notes"
-            )
-
-        return obj
-
-    def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return DailyNote.objects.select_related("patient", "created_by", "updated_by")
 
 
 class DailyNotePDFView(LoginRequiredMixin, View):
