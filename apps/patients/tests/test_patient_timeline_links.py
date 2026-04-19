@@ -8,9 +8,11 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 from apps.accounts.models import EqmdCustomUser
 from apps.patients.models import Patient
+from apps.dailynotes.models import DailyNote
 
 
 class PatientTimelineLinksTests(TestCase):
@@ -54,6 +56,15 @@ class PatientTimelineLinksTests(TestCase):
             updated_by=cls.user,
         )
 
+        cls.dailynote = DailyNote.objects.create(
+            patient=cls.patient,
+            description='Daily note for timeline PDF action test',
+            content='Conteúdo da evolução para teste do botão PDF na timeline.',
+            event_datetime=timezone.now(),
+            created_by=cls.user,
+            updated_by=cls.user,
+        )
+
     def setUp(self):
         """Log in the test user."""
         self.client.login(username='testuser', password='testpassword')
@@ -73,3 +84,14 @@ class PatientTimelineLinksTests(TestCase):
         self.assertContains(response, 'bi-file-earmark-medical')
         # Check that there's no disabled report link
         self.assertNotRegex(response.content.decode(), r'disabled[^>]*>.*Relatório.*Em breve')
+
+    def test_patient_timeline_dailynote_card_includes_pdf_action_button(self):
+        """Daily note cards in timeline should expose a direct PDF action button."""
+        response = self.client.get(
+            reverse('apps.patients:patient_events_timeline', kwargs={'patient_id': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        pdf_url = reverse('dailynotes:dailynote_pdf', kwargs={'pk': self.dailynote.pk})
+        self.assertContains(response, 'pdf-download-btn')
+        self.assertContains(response, f'data-pdf-url="{pdf_url}"')
