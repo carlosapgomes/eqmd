@@ -30,6 +30,24 @@ Extends the base event card and adds the duplicate button for DailyNote events
         <i class="bi bi-clipboard" aria-hidden="true"></i>
         <span class="visually-hidden">Copiar</span>
     </button>
+
+    <!-- PDF Button -->
+    <button type="button"
+            class="btn btn-outline-danger btn-sm pdf-download-btn"
+            data-pdf-url="{% url 'apps.dailynotes:dailynote_pdf' pk=event.pk %}"
+            data-filename="evolucao-{{ event.patient.name|slugify }}-{{ event.event_datetime|date:'d-m-Y' }}.pdf"
+            aria-label="Gerar PDF da evolução"
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Gerar PDF">
+        <span class="pdf-btn-content">
+            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+            <span class="visually-hidden">PDF</span>
+        </span>
+        <span class="pdf-btn-spinner d-none">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </span>
+    </button>
     
     <!-- Duplicate Button - Only for users with add_event permission -->
     {% if perms.events.add_event %}
