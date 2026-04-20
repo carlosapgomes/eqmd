@@ -2,11 +2,9 @@ import time
 import json
 from django.test import TestCase, Client
 from django.urls import reverse
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from apps.accounts.tests.helpers import create_navigation_user
 from apps.patients.models import Patient, AllowedTag, Tag
-
-User = get_user_model()
 
 class TagManagementPerformanceTests(TestCase):
     """Test performance with large numbers of tags"""
@@ -14,19 +12,19 @@ class TagManagementPerformanceTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        # Create test user with permissions
-        self.doctor = User.objects.create_user(
+
+        # Create test user with lifecycle gates cleared for navigation
+        self.doctor = create_navigation_user(
             username='doctor',
             email='doctor@example.com',
             password='testpass123'
         )
-        
+
         # Add permissions to user
         change_patient_perm = Permission.objects.get(codename='change_patient')
         view_patient_perm = Permission.objects.get(codename='view_patient')
         self.doctor.user_permissions.add(change_patient_perm, view_patient_perm)
-        
+
         # Create patient
         self.patient = Patient.objects.create(
             name='Test Patient',
@@ -36,9 +34,9 @@ class TagManagementPerformanceTests(TestCase):
             created_by=self.doctor,
             updated_by=self.doctor
         )
-        
+
         # Login
-        self.client.login(username='doctor', password='testpass123')
+        self.client.force_login(self.doctor)
 
     def test_patient_detail_with_many_tags_timing(self):
         """Test patient detail page timing with many tags"""

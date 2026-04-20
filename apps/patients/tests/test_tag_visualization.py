@@ -1,9 +1,8 @@
 from django.test import TestCase
-from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.contrib.auth.models import Permission
+from apps.accounts.tests.helpers import create_navigation_user
 from ..models import Patient, AllowedTag, Tag
-
-User = get_user_model()
 
 
 class PatientTagVisualizationTests(TestCase):
@@ -11,13 +10,12 @@ class PatientTagVisualizationTests(TestCase):
     
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(
+        cls.user = create_navigation_user(
             username='testuser',
             email='test@example.com',
             password='testpassword'
         )
         # Add required permissions
-        from django.contrib.auth.models import Permission
         change_perm = Permission.objects.get(codename='change_patient')
         view_perm = Permission.objects.get(codename='view_patient')
         cls.user.user_permissions.add(change_perm, view_perm)
@@ -71,13 +69,13 @@ class PatientTagVisualizationTests(TestCase):
         
         # Add different colored tags
         for allowed_tag in [self.red_tag, self.blue_tag, self.green_tag]:
-            tag = Tag.objects.create(
+            Tag.objects.create(
                 allowed_tag=allowed_tag,
+                patient=patient,
                 notes=f'Color test for {allowed_tag.name}',
                 created_by=self.user,
                 updated_by=self.user
             )
-            patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -107,13 +105,13 @@ class PatientTagVisualizationTests(TestCase):
         )
         
         # Add a tag
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.red_tag,
+            patient=patient,
             notes='Style test',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -139,13 +137,13 @@ class PatientTagVisualizationTests(TestCase):
         )
         
         # Add a tag
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.blue_tag,
+            patient=patient,
             notes='Hover test',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -192,13 +190,13 @@ class PatientTagVisualizationTests(TestCase):
         )
         
         # Add a tag
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.yellow_tag,
+            patient=patient,
             notes='Modal test',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -224,13 +222,13 @@ class PatientTagVisualizationTests(TestCase):
         
         # Add tags with different colors
         for allowed_tag in [self.red_tag, self.blue_tag, self.green_tag, self.yellow_tag]:
-            tag = Tag.objects.create(
+            Tag.objects.create(
                 allowed_tag=allowed_tag,
+                patient=patient,
                 notes=f'Accessibility test for {allowed_tag.name}',
                 created_by=self.user,
                 updated_by=self.user
             )
-            patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -253,13 +251,13 @@ class PatientTagVisualizationTests(TestCase):
         )
         
         # Add a tag
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.green_tag,
+            patient=patient,
             notes='Icon test',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -286,13 +284,13 @@ class PatientTagVisualizationTests(TestCase):
         
         # Add multiple tags
         for allowed_tag in [self.red_tag, self.blue_tag, self.green_tag]:
-            tag = Tag.objects.create(
+            Tag.objects.create(
                 allowed_tag=allowed_tag,
+                patient=patient,
                 notes=f'Mobile test for {allowed_tag.name}',
                 created_by=self.user,
                 updated_by=self.user
             )
-            patient.tags.add(tag)
         
         # Test with mobile user agent
         mobile_user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)'
@@ -384,13 +382,13 @@ class PatientTagVisualizationTests(TestCase):
         
         # Add tags
         for allowed_tag in [self.red_tag, self.blue_tag]:
-            tag = Tag.objects.create(
+            Tag.objects.create(
                 allowed_tag=allowed_tag,
+                patient=patient,
                 notes=f'Count test for {allowed_tag.name}',
                 created_by=self.user,
                 updated_by=self.user
             )
-            patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -414,13 +412,13 @@ class PatientTagVisualizationTests(TestCase):
         )
         
         # Add a tag
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.yellow_tag,
+            patient=patient,
             notes='Consistency test',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag)
         
         # Test detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -459,13 +457,13 @@ class PatientTagVisualizationTests(TestCase):
         )
         
         # Add the custom colored tag
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=custom_tag,
+            patient=patient,
             notes='Custom color test',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -491,13 +489,13 @@ class PatientTagVisualizationTests(TestCase):
         # Add tags in specific order
         tags_to_add = [self.yellow_tag, self.red_tag, self.green_tag, self.blue_tag]
         for allowed_tag in tags_to_add:
-            tag = Tag.objects.create(
+            Tag.objects.create(
                 allowed_tag=allowed_tag,
+                patient=patient,
                 notes=f'Order test for {allowed_tag.name}',
                 created_by=self.user,
                 updated_by=self.user
             )
-            patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
