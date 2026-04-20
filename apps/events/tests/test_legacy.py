@@ -76,10 +76,10 @@ class EventModelTest(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
-        self.assertEqual(history_event.get_event_type_short_display(), 'A&EF')
+        self.assertEqual(history_event.get_event_type_short_display(), 'Anamese')
 
         # Test already short event types remain the same
-        self.assertEqual(self.event.get_event_type_short_display(), 'Nota')
+        self.assertEqual(self.event.get_event_type_short_display(), 'Nota/Obs.')
 
         # Test other event types
         exam_result_event = Event.objects.create(
@@ -112,7 +112,7 @@ class AdminSiteTest(TestCase):
         event_admin = admin.site._registry.get(Event)
         self.assertEqual(
             event_admin.list_display,
-            ('description', 'event_type', 'event_datetime', 'patient', 'created_by', 'created_at')
+            ('description', 'event_type', 'event_datetime', 'patient', 'created_by', 'is_deleted', 'deleted_at', 'deleted_by', 'created_at')
         )
 
 
@@ -159,7 +159,9 @@ class EventViewsTest(TestCase):
         cls.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(
@@ -216,9 +218,11 @@ class EventTemplatesTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username='testuser_template',
+            email='testuser_template@example.com',
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(
@@ -239,7 +243,7 @@ class EventTemplatesTest(TestCase):
         )
 
     def setUp(self):
-        self.client.login(username='testuser', password='testpass123')
+        self.client.login(username='testuser_template', password='testpass123')
 
     def test_patient_events_list_template_content(self):
         url = reverse('events:patient_events_list', args=[self.patient.id])
