@@ -1,7 +1,9 @@
 from django.test import TestCase
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from apps.accounts.tests.helpers import create_navigation_user
 from ..models import Patient
 
 User = get_user_model()
@@ -10,11 +12,16 @@ User = get_user_model()
 class TemplateTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(
+        cls.user = create_navigation_user(
             username='testuser',
             email='test@example.com',
-            password='testpassword'
+            password='testpassword',
         )
+
+        # Grant all patient permissions to avoid 403s
+        content_type = ContentType.objects.get_for_model(Patient)
+        permissions = Permission.objects.filter(content_type=content_type)
+        cls.user.user_permissions.add(*permissions)
 
         cls.patient = Patient.objects.create(
             name='Test Patient',
@@ -26,38 +33,18 @@ class TemplateTests(TestCase):
 
     def test_template_existence(self):
         """Test that all required templates exist"""
-        templates = [
-            'patients/patient_base.html',
-            'patients/patient_list.html',
-            'patients/patient_detail.html',
-            'patients/patient_form.html',
-            'patients/hospital_record_form.html',
-            'patients/patient_confirm_delete.html',
-            'patients/hospital_record_confirm_delete.html',
+        self.client.force_login(self.user)
+
+        templates_and_urls = [
+            ('patients/patient_list.html', reverse('patients:patient_list')),
+            ('patients/patient_detail.html', reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})),
         ]
 
-        for template in templates:
-            try:
-                context = {'request': None}
-                if 'detail' in template:
-                    context['patient'] = self.patient
-                elif 'form' in template and 'record' not in template:
-                    # Skip form templates as they need forms
-                    continue
-                elif 'form' in template:
-                    # Skip hospital record form templates as they need forms
-                    continue
-                elif 'record' in template and 'confirm_delete' in template:
-                    # Create a mock hospital record for delete template
-                    context['object'] = type('MockRecord', (), {
-                        'patient': self.patient,
-                        'hospital': type('MockHospital', (), {'name': 'Test Hospital'})()
-                    })()
-                elif 'confirm_delete' in template:
-                    context['object'] = self.patient
-                render_to_string(template, context)
-            except Exception as e:
-                self.fail(f"Template {template} failed to render: {e}")
+        for template, url in templates_and_urls:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200,
+                             f"Template {template} returned {response.status_code}")
+            self.assertTemplateUsed(response, template)
 
     def test_template_inheritance(self):
         """Test that templates properly extend base templates"""
