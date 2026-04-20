@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from apps.accounts.tests.helpers import create_navigation_user
 from ..models import Patient, AllowedTag, Tag
 
 User = get_user_model()
@@ -11,10 +12,10 @@ class PatientTagNavigationTests(TestCase):
     
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(
+        cls.user = create_navigation_user(
             username='testuser',
             email='test@example.com',
-            password='testpassword'
+            password='testpassword',
         )
         # Add required permissions
         from django.contrib.auth.models import Permission
@@ -58,7 +59,7 @@ class PatientTagNavigationTests(TestCase):
         
         # Verify patient was created successfully
         patient = Patient.objects.get(name='John Doe')
-        self.assertEqual(patient.tags.count(), 0)
+        self.assertEqual(patient.patient_tags.count(), 0)
 
     def test_patient_update_form_redirects_to_detail_page(self):
         """Test that patient update redirects to detail page where tags can be managed"""
@@ -134,13 +135,13 @@ class PatientTagNavigationTests(TestCase):
         )
         
         # Add a tag to the patient
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.allowed_tag,
+            patient=patient,
             notes='Test tag for navigation',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag)
         
         # Go to detail page
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
@@ -157,10 +158,10 @@ class PatientTagNavigationTests(TestCase):
     def test_detail_page_tag_management_permissions(self):
         """Test that tag management respects user permissions"""
         # Create a user without change_patient permission
-        limited_user = User.objects.create_user(
+        limited_user = create_navigation_user(
             username='limiteduser',
             email='limited@example.com',
-            password='testpassword'
+            password='testpassword',
         )
         # Only add view permission
         from django.contrib.auth.models import Permission
@@ -320,8 +321,8 @@ class PatientTagNavigationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         
         # 5. Verify tag was added
-        self.assertEqual(patient.tags.count(), 1)
-        tag = patient.tags.first()
+        self.assertEqual(patient.patient_tags.count(), 1)
+        tag = patient.patient_tags.first()
         self.assertEqual(tag.allowed_tag.name, 'Test Tag')
         
         # 6. Go back to detail page and verify tag display
@@ -372,13 +373,13 @@ class PatientTagNavigationTests(TestCase):
         
         # Add multiple tags to patient
         for i, allowed_tag in enumerate(allowed_tags[:10]):  # Add first 10 tags
-            tag = Tag.objects.create(
+            Tag.objects.create(
                 allowed_tag=allowed_tag,
+                patient=patient,
                 notes=f'Performance test tag {i+1}',
                 created_by=self.user,
                 updated_by=self.user
             )
-            patient.tags.add(tag)
         
         # Test detail page loading performance
         detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
