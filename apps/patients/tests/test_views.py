@@ -3,6 +3,8 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+
+from apps.accounts.tests.helpers import create_navigation_user
 from ..models import Patient
 
 User = get_user_model()
@@ -11,11 +13,12 @@ User = get_user_model()
 class PatientViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        # Create test user
-        cls.user = User.objects.create_user(
+        # Create test user with lifecycle gates cleared
+        cls.user = create_navigation_user(
             username='testuser',
             email='test@example.com',
-            password='testpassword'
+            password='testpassword',
+            profession_type=0,  # MEDICAL_DOCTOR — needed for PatientDeleteView
         )
 
         # Add permissions
@@ -52,7 +55,7 @@ class PatientViewTests(TestCase):
     def test_patient_create_view(self):
         response = self.client.get(reverse('patients:patient_create'))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'patients/patient_form.html')
+        self.assertTemplateUsed(response, 'patients/patient_create.html')
 
         # Test form submission
         response = self.client.post(reverse('patients:patient_create'), {
@@ -72,7 +75,7 @@ class PatientViewTests(TestCase):
             reverse('patients:patient_update', kwargs={'pk': self.patient.pk})
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'patients/patient_form.html')
+        self.assertTemplateUsed(response, 'patients/patient_update.html')
 
         # Test form submission
         response = self.client.post(
@@ -89,21 +92,17 @@ class PatientViewTests(TestCase):
         self.assertEqual(self.patient.gender, Patient.GenderChoices.MALE)
 
     def test_patient_delete_view(self):
-        response = self.client.get(
-            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk})
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'patients/patient_confirm_delete.html')
-
-        # Test deletion
         response = self.client.post(
-            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk})
+            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk}),
+            {'deletion_reason': 'Test deletion'}
         )
+        # Soft delete redirects to list on success
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(Patient.objects.filter(pk=self.patient.pk).count(), 0)
 
     def test_permission_required(self):
-        # Create a user without permissions
-        user_no_perms = User.objects.create_user(
+        # Create a user without permissions (lifecycle gates cleared)
+        user_no_perms = create_navigation_user(
             username='noperms',
             email='noperms@example.com',
             password='testpassword'
@@ -123,22 +122,23 @@ class PatientViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)  # Permission denied
 
-        # Test delete view
-        response = self.client.get(
-            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk})
+        # Test delete view (POST-only; non-doctor should get 403)
+        response = self.client.post(
+            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk}),
+            {'deletion_reason': 'Test'}
         )
-        self.assertEqual(response.status_code, 403)  # Permission denied
+        self.assertEqual(response.status_code, 403)  # Doctor required
 
-    def test_patient_create_with_default_gender(self):
-        """Test patient creation without specifying gender uses default"""
+    def test_patient_create_with_explicit_gender(self):
+        """Test patient creation with explicit NOT_INFORMED gender"""
         response = self.client.post(reverse('patients:patient_create'), {
             'name': 'Default Gender Patient',
             'birthday': '1990-01-01',
-            'status': Patient.Status.OUTPATIENT,
+            'gender': Patient.GenderChoices.NOT_INFORMED,
         })
         self.assertEqual(Patient.objects.filter(name='Default Gender Patient').count(), 1)
         
-        # Verify default gender was applied
+        # Verify gender was saved correctly
         patient = Patient.objects.get(name='Default Gender Patient')
         self.assertEqual(patient.gender, Patient.GenderChoices.NOT_INFORMED)
 

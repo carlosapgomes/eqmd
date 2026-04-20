@@ -98,3 +98,18 @@ class ResidentFactory(UserFactory):
 
     profession_type = 1  # RESIDENT
     professional_registration_number = factory.Faker('numerify', text='RQE-#####')
+
+
+class NavigationReadyUserFactory(UserFactory):
+    """Factory for creating users with lifecycle gates cleared.
+
+    Sets password_change_required=False and terms_accepted=True
+    so that PasswordChangeRequiredMiddleware and TermsAcceptanceRequiredMiddleware
+    do not redirect requests. Use this for view/API tests that are NOT testing
+    lifecycle middleware behaviour.
+
+    Requires factory_boy to be installed.
+    """
+
+    password_change_required = False
+    terms_accepted = True
