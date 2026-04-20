@@ -257,7 +257,7 @@ class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
 class PatientDeleteView(LoginRequiredMixin, View):
     """Soft delete patient with confirmation."""
 
-    @doctor_required
+    @method_decorator(doctor_required)
     def post(self, request, pk):
         patient = get_object_or_404(Patient, pk=pk)
 
