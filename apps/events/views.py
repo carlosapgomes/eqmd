@@ -26,6 +26,7 @@ from apps.core.permissions.utils import (
     can_cancel_discharge,
     can_discharge_patient
 )
+from apps.pdf_forms.services.duplication import can_duplicate_pdf_submission
 
 User = get_user_model()
 
@@ -217,6 +218,14 @@ class PatientEventsTimelineView(ListView):
                 'excerpt': event.get_excerpt(150)
             }
             
+            # Add PDF form duplicate permission for PDF form events
+            if event.event_type == Event.PDF_FORM_EVENT and hasattr(event, 'form_template'):
+                event_data['can_duplicate_pdf_submission'] = can_duplicate_pdf_submission(
+                    self.request.user, event
+                )
+            else:
+                event_data['can_duplicate_pdf_submission'] = False
+
             # Add admission-specific permissions for admission/discharge events
             if hasattr(event, 'admission') and event.admission:
                 admission = event.admission

@@ -814,6 +814,7 @@
                                 Report events (event_type=8) get the specialized template with PDF action
                                 PhotoSeries events (event_type=9) get the specialized template with photo series display
                                 VideoClip events (event_type=10) get the specialized template with video player
+                                PDFFormSubmission events (event_type=11) get the specialized PDF form template with duplicate action
                                 RecordNumberChange events (event_type=12) get the specialized template with record number display
                                 Admission events (event_type=13) get the specialized template with admission details
                                 Discharge events (event_type=14) get the specialized template with discharge details
@@ -839,6 +840,8 @@
                                     {% include "events/partials/event_card_photoseries.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 10 %}
                                     {% include "events/partials/event_card_videoclip.html" with event=event event_data=event_data %}
+                                {% elif event.event_type == 11 %}
+                                    {% include "events/partials/event_card_pdfform.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 12 %}
                                     {% include "events/partials/event_card_record_change.html" with event=event event_data=event_data %}
                                 {% elif event.event_type == 13 %}

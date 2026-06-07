@@ -1,0 +1,75 @@
+{% extends "events/partials/event_card_base.html" %}
+
+{% block event_content %}
+<div class="pdfform-summary">
+    <div class="small text-muted mb-1">
+        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>
+        {{ event.form_template.name }}
+    </div>
+    {% if event.form_template.is_national_form %}
+        <div class="small text-muted mb-1">
+            <i class="bi bi-building me-1" aria-hidden="true"></i>
+            Formulário Nacional
+            {% if event.form_template.form_type == 'APAC' %}
+                (APAC)
+            {% elif event.form_template.form_type == 'AIH' %}
+                (AIH)
+            {% endif %}
+        </div>
+    {% endif %}
+    <div class="small text-muted">
+        {{ event_data.excerpt }}
+    </div>
+</div>
+{% endblock event_content %}
+
+{% block event_actions %}
+<div class="btn-group btn-group-sm">
+    <a href="{{ event.get_absolute_url }}"
+       class="btn btn-outline-primary btn-sm"
+       aria-label="Visualizar formulário PDF"
+       data-bs-toggle="tooltip"
+       data-bs-placement="top"
+       title="Ver detalhes">
+        <i class="bi bi-eye" aria-hidden="true"></i>
+    </a>
+
+    <button type="button"
+            class="btn btn-outline-danger btn-sm pdf-download-btn"
+            data-pdf-url="{% url 'pdf_forms:pdf_download' submission_id=event.pk %}"
+            data-filename="formulario-{{ event.patient.name|slugify }}-{{ event.event_datetime|date:'d-m-Y' }}.pdf"
+            aria-label="Gerar PDF do formulário"
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Gerar PDF">
+        <span class="pdf-btn-content">
+            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+        </span>
+        <span class="pdf-btn-spinner d-none">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </span>
+    </button>
+
+    {% if event_data.can_duplicate_pdf_submission %}
+        <a href="{% url 'pdf_forms:submission_duplicate' pk=event.pk %}"
+           class="btn btn-outline-success btn-sm"
+           aria-label="Duplicar formulário PDF"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="Criar novo baseado neste">
+            <i class="bi bi-copy" aria-hidden="true"></i>
+        </a>
+    {% endif %}
+
+    {% if perms.events.delete_event and event_data.can_delete %}
+        <a href="{% url 'pdf_forms:submission_delete' pk=event.pk %}"
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir formulário PDF"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="Excluir">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+        </a>
+    {% endif %}
+</div>
+{% endblock event_actions %}
