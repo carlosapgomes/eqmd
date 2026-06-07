@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils import timezone
 from .models import Patient, AllowedTag, Tag, PatientRecordNumber, PatientAdmission, Ward
 from .validators import validate_record_number_format
@@ -35,7 +36,7 @@ class PatientForm(forms.ModelForm):
     # Add record number field to patient form
     initial_record_number = forms.CharField(
         max_length=50,
-        required=False,
+        required=True,
         label="Número do Prontuário",
         help_text="Número inicial do prontuário (pode ser alterado posteriormente)",
         widget=forms.TextInput(attrs={
@@ -201,25 +202,36 @@ class PatientForm(forms.ModelForm):
         return super().is_valid()
     
 
+    def clean_initial_record_number(self):
+        record_number = self.cleaned_data.get('initial_record_number')
+        if record_number:
+            validate_record_number_format(record_number)
+        return record_number
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         if commit:
-            instance.save()
-            
-            # Handle initial record number if provided
-            initial_record_number = self.cleaned_data.get('initial_record_number')
-            if initial_record_number and not instance.record_numbers.exists():
+            with transaction.atomic():
+                instance.save()
+
+                # Create initial PatientRecordNumber
+                initial_record_number = self.cleaned_data.get('initial_record_number')
                 current_user = getattr(self, 'current_user', instance.updated_by)
                 PatientRecordNumber.objects.create(
                     patient=instance,
                     record_number=initial_record_number,
+                    is_current=True,
                     change_reason="Número inicial do prontuário",
                     effective_date=timezone.now(),
                     created_by=current_user,
-                    updated_by=current_user
+                    updated_by=current_user,
                 )
-            
-                        
+
+                # Update denormalized field on Patient
+                instance.current_record_number = initial_record_number
+                instance.updated_by = current_user
+                instance.save(update_fields=["current_record_number", "updated_by", "updated_at"])
+
         return instance
 
 

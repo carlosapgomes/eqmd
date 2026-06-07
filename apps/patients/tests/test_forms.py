@@ -1,13 +1,22 @@
+from datetime import datetime
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from ..models import Patient, AllowedTag, Ward
+from django.db import transaction
+from django.utils import timezone
+
+from ..models import Patient, AllowedTag, Ward, PatientRecordNumber, PatientAdmission
 from ..forms import (
     PatientForm, AdmitPatientForm, DischargePatientForm,
-    EmergencyAdmissionForm, TransferPatientForm, DeclareDeathForm, 
+    EmergencyAdmissionForm, TransferPatientForm, DeclareDeathForm,
     SetOutpatientForm
 )
 
 User = get_user_model()
+
+
+VALID_RECORD_NUMBER = "REC001"
 
 
 class PatientFormTests(TestCase):
@@ -26,11 +35,12 @@ class PatientFormTests(TestCase):
         )
 
     def test_patient_form_valid(self):
-        """Test that patient form is valid without status field"""
+        """Test that patient form is valid with required fields including initial_record_number"""
         form = PatientForm({
             'name': 'Test Patient',
             'birthday': '1990-01-01',
             'gender': Patient.GenderChoices.MALE,
+            'initial_record_number': VALID_RECORD_NUMBER,
         })
         self.assertTrue(form.is_valid())
 
@@ -89,6 +99,7 @@ class PatientFormTests(TestCase):
                 'name': 'Test Patient',
                 'birthday': '1990-01-01',
                 'gender': gender,
+                'initial_record_number': VALID_RECORD_NUMBER,
             })
             self.assertTrue(form.is_valid(), f"Form should be valid with gender={gender}")
 
@@ -113,6 +124,7 @@ class PatientFormTests(TestCase):
             'name': 'Test Patient',
             'birthday': '1990-01-01',
             'gender': Patient.GenderChoices.MALE,
+            'initial_record_number': VALID_RECORD_NUMBER,
         }
         
         form = PatientForm(data=form_data)
@@ -126,8 +138,97 @@ class PatientFormTests(TestCase):
         
         # Verify patient was created without tags
         self.assertEqual(patient.name, 'Test Patient')
-        self.assertEqual(patient.tags.count(), 0)
+        self.assertEqual(patient.patient_tags.count(), 0)
         self.assertEqual(patient.created_by, self.user)
+
+    # --- Slice 01: initial_record_number tests ---
+
+    def test_patient_form_requires_initial_record_number(self):
+        """Form is invalid when initial_record_number is missing"""
+        form = PatientForm({
+            'name': 'Test Patient',
+            'birthday': '1990-01-01',
+            'gender': Patient.GenderChoices.MALE,
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('initial_record_number', form.errors)
+
+    def test_patient_form_invalid_initial_record_number_format(self):
+        """Form is invalid when initial_record_number violates validate_record_number_format"""
+        form = PatientForm({
+            'name': 'Test Patient',
+            'birthday': '1990-01-01',
+            'gender': Patient.GenderChoices.MALE,
+            'initial_record_number': 'AB',  # fewer than 3 chars
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('initial_record_number', form.errors)
+
+    def test_patient_form_save_creates_patient_record_number(self):
+        """Saving a valid PatientForm creates exactly one current PatientRecordNumber"""
+        form = PatientForm({
+            'name': 'Test Patient',
+            'birthday': '1990-01-01',
+            'gender': Patient.GenderChoices.MALE,
+            'initial_record_number': VALID_RECORD_NUMBER,
+        })
+        self.assertTrue(form.is_valid())
+
+        form.instance.created_by = self.user
+        form.instance.updated_by = self.user
+        form.current_user = self.user
+        patient = form.save(commit=True)
+
+        record_numbers = PatientRecordNumber.objects.filter(patient=patient)
+        self.assertEqual(record_numbers.count(), 1)
+        record = record_numbers.first()
+        self.assertTrue(record.is_current)
+        self.assertEqual(record.record_number, VALID_RECORD_NUMBER)
+
+    def test_patient_form_save_updates_current_record_number(self):
+        """Saving a valid PatientForm updates patient.current_record_number"""
+        form = PatientForm({
+            'name': 'Test Patient',
+            'birthday': '1990-01-01',
+            'gender': Patient.GenderChoices.MALE,
+            'initial_record_number': VALID_RECORD_NUMBER,
+        })
+        self.assertTrue(form.is_valid())
+
+        form.instance.created_by = self.user
+        form.instance.updated_by = self.user
+        form.current_user = self.user
+        patient = form.save(commit=True)
+
+        patient.refresh_from_db()
+        self.assertEqual(patient.current_record_number, VALID_RECORD_NUMBER)
+
+    def test_patient_form_save_rollback_on_record_number_failure(self):
+        """If PatientRecordNumber creation fails, no partial Patient remains"""
+        form = PatientForm({
+            'name': 'Rollback Patient',
+            'birthday': '1990-01-01',
+            'gender': Patient.GenderChoices.MALE,
+            'initial_record_number': VALID_RECORD_NUMBER,
+        })
+        self.assertTrue(form.is_valid())
+
+        form.instance.created_by = self.user
+        form.instance.updated_by = self.user
+        form.current_user = self.user
+
+        patient_count_before = Patient.objects.count()
+        record_count_before = PatientRecordNumber.objects.count()
+
+        with patch(
+            'apps.patients.models.PatientRecordNumber.objects.create',
+            side_effect=Exception("DB failure"),
+        ):
+            with self.assertRaises(Exception):
+                form.save(commit=True)
+
+        self.assertEqual(Patient.objects.count(), patient_count_before)
+        self.assertEqual(PatientRecordNumber.objects.count(), record_count_before)
 
 
 class StatusChangeFormTests(TestCase):
@@ -147,7 +248,10 @@ class StatusChangeFormTests(TestCase):
 
     def test_admit_patient_form_valid(self):
         """Test admit patient form validation"""
+        now_str = timezone.now().strftime('%Y-%m-%dT%H:%M')
         form = AdmitPatientForm({
+            'admission_datetime': now_str,
+            'admission_type': PatientAdmission.AdmissionType.EMERGENCY,
             'ward': self.ward.id,
             'bed': 'A101',
             'reason': 'Patient needs inpatient care',
@@ -165,7 +269,10 @@ class StatusChangeFormTests(TestCase):
 
     def test_discharge_patient_form_valid(self):
         """Test discharge patient form validation"""
+        now_str = timezone.now().strftime('%Y-%m-%dT%H:%M')
         form = DischargePatientForm({
+            'discharge_datetime': now_str,
+            'discharge_type': PatientAdmission.DischargeType.MEDICAL,
             'discharge_reason': 'Patient recovered fully',
             'reason': 'Medical discharge',
         })

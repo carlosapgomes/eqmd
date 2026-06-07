@@ -43,6 +43,7 @@ class PatientTagNavigationTests(TestCase):
             'birthday': '1990-01-01',
             'status': Patient.Status.OUTPATIENT,
             'gender': Patient.GenderChoices.MALE,
+            'initial_record_number': 'REC001',
         })
         
         # Should redirect to detail page after creation
@@ -220,6 +221,7 @@ class PatientTagNavigationTests(TestCase):
             'birthday': '1995-03-10',
             'status': Patient.Status.OUTPATIENT,
             'gender': Patient.GenderChoices.OTHER,
+            'initial_record_number': 'REC002',
         }, follow=True)
         
         # Should be on detail page now
@@ -302,6 +304,7 @@ class PatientTagNavigationTests(TestCase):
             'birthday': '1993-04-15',
             'status': Patient.Status.OUTPATIENT,
             'gender': Patient.GenderChoices.NOT_INFORMED,
+            'initial_record_number': 'REC003',
         }, follow=True)
         
         # 2. Verify on detail page
