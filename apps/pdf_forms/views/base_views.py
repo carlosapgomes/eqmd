@@ -13,6 +13,10 @@ from apps.core.permissions.utils import can_access_patient, can_delete_event
 from ..models import PDFFormTemplate, PDFFormSubmission
 from ..services.form_generator import DynamicFormGenerator
 from ..services.pdf_overlay import PDFFormOverlay
+from ..services.duplication import (
+    can_duplicate_pdf_submission,
+    build_duplicate_initial_data,
+)
 from ..permissions import (
     check_pdf_form_access, 
     check_pdf_form_creation,
@@ -185,6 +189,143 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
             messages.error(
                 self.request,
                 f"Erro ao processar formulário: {str(e)}"
+            )
+            return self.form_invalid(form)
+
+
+class PDFFormSubmissionDuplicateView(LoginRequiredMixin, FormView):
+    """
+    Duplicate an existing PDF form submission.
+
+    On GET, renders a new form prefilled from the source submission.
+    On valid POST, creates a new ``PDFFormSubmission`` for the same
+    patient and template while leaving the source unchanged.
+    """
+
+    template_name = 'pdf_forms/form_fill.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+
+        self.source = get_object_or_404(
+            PDFFormSubmission.objects.select_related(
+                'patient', 'created_by', 'form_template',
+            ),
+            pk=kwargs['pk'],
+        )
+
+        if not can_duplicate_pdf_submission(request.user, self.source):
+            raise PermissionDenied(
+                "This submission cannot be duplicated."
+            )
+
+        self.form_template = self.source.form_template
+        self.patient = self.source.patient
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_class(self):
+        generator = DynamicFormGenerator()
+        return generator.generate_form_class(
+            self.form_template,
+            self.patient,
+            self.request.user,
+        )
+
+    def get_initial(self):
+        initial = super().get_initial()
+
+        # Start with normal auto-fill values from the form generator
+        generator = DynamicFormGenerator()
+        form_class = generator.generate_form_class(
+            self.form_template,
+            self.patient,
+            self.request.user,
+        )
+
+        # Overlay source form_data values via service
+        source_initial = build_duplicate_initial_data(
+            form_class,
+            self.source.form_data,
+        )
+        initial.update(source_initial)
+
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'form_template': self.form_template,
+            'patient': self.patient,
+            'is_duplicate': True,
+            'source_submission': self.source,
+        })
+
+        form = context.get('form')
+        if form and hasattr(form.__class__, '_linked_fields_map'):
+            context['linked_fields_map'] = (
+                form.__class__._linked_fields_map
+            )
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except Exception as e:
+            messages.error(
+                request,
+                f"Erro ao processar formulário: {str(e)}",
+            )
+            form = self.get_form()
+            return self.render_to_response(
+                self.get_context_data(form=form)
+            )
+
+    def form_valid(self, form):
+        try:
+            sanitized_data = PDFFormSecurity.sanitize_form_data(
+                form.cleaned_data
+            )
+
+            submission = PDFFormSubmission(
+                form_template=self.form_template,
+                patient=self.patient,
+                created_by=self.request.user,
+                updated_by=self.request.user,
+                event_datetime=timezone.now(),
+                description=(
+                    f"Duplicata: {self.form_template.name}"
+                    f" (original: {self.source.event_datetime:%d/%m/%Y})"
+                ),
+                form_data=sanitized_data,
+            )
+            submission.save()
+
+            messages.success(
+                self.request,
+                (
+                    f"Duplicata do formulário '"
+                    f"{self.form_template.name}' criada com sucesso!"
+                ),
+            )
+
+            return redirect(
+                'pdf_forms:submission_detail',
+                pk=submission.pk,
+            )
+
+        except ValidationError as e:
+            messages.error(
+                self.request,
+                f"Erro de validação: {str(e)}",
+            )
+            return self.form_invalid(form)
+        except Exception as e:
+            messages.error(
+                self.request,
+                f"Erro ao processar formulário: {str(e)}",
             )
             return self.form_invalid(form)
 

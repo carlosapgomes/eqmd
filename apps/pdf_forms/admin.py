@@ -15,7 +15,7 @@ from .services.field_mapping import DataFieldMapper
 
 @admin.register(PDFFormTemplate)
 class PDFFormTemplateAdmin(admin.ModelAdmin):
-    list_display = ['name', 'form_type_display', 'configuration_status_display', 'is_active', 'created_at', 'pdf_preview', 'configure_fields']
+    list_display = ['name', 'form_type_display', 'configuration_status_display', 'is_active', 'allow_duplication', 'created_at', 'pdf_preview', 'configure_fields']
     list_filter = ['form_type', 'is_active', 'created_at']
     search_fields = ['name', 'description']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
@@ -35,7 +35,7 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
             'description': 'Select the type of form. National forms (APAC/AIH) enable developer mode for JSON template generation.'
         }),
         ('Settings', {
-            'fields': ('is_active',)
+            'fields': ('is_active', 'allow_duplication')
         }),
         ('Audit', {
             'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),

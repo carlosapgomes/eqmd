@@ -67,6 +67,13 @@ class PDFFormTemplate(models.Model):
     # Status
     is_active = models.BooleanField(default=True, verbose_name="Ativo")
 
+    # Duplication opt-in
+    allow_duplication = models.BooleanField(
+        default=False,
+        verbose_name="Permitir duplicação",
+        help_text="Quando ativo, permite que usuários autorizados criem cópias de submissões deste template."
+    )
+
     # Audit fields
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
     created_by = models.ForeignKey(

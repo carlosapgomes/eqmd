@@ -44,6 +44,24 @@
         {% endif %}
       </div>
 
+      {% if is_duplicate and source_submission %}
+      <div class="card-body bg-info bg-opacity-10 border-top">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-info-circle-fill text-info me-2 fs-5"></i>
+          <div>
+            <strong>Duplicando formulário</strong><br>
+            <span class="text-muted small">
+              Original:
+              <a href="{% url 'pdf_forms:submission_detail' pk=source_submission.pk %}">
+                {{ source_submission.form_template.name }} -
+                {{ source_submission.event_datetime|date:"d/m/Y H:i" }}
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Form -->
       <div class="card">
         <div class="card-body">
