@@ -5,7 +5,7 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 
 from apps.accounts.tests.helpers import create_navigation_user
-from ..models import Patient
+from ..models import Patient, PatientRecordNumber
 
 User = get_user_model()
 
@@ -62,13 +62,14 @@ class PatientViewTests(TestCase):
             'name': 'New Patient',
             'birthday': '1990-01-01',
             'gender': Patient.GenderChoices.FEMALE,
-            'status': Patient.Status.OUTPATIENT,
+            'initial_record_number': 'REC001',
         })
         self.assertEqual(Patient.objects.filter(name='New Patient').count(), 1)
         
         # Verify gender was saved correctly
         new_patient = Patient.objects.get(name='New Patient')
         self.assertEqual(new_patient.gender, Patient.GenderChoices.FEMALE)
+        self.assertEqual(new_patient.current_record_number, 'REC001')
 
     def test_patient_update_view(self):
         response = self.client.get(
@@ -84,12 +85,57 @@ class PatientViewTests(TestCase):
                 'name': 'Updated Patient',
                 'birthday': '1980-01-01',
                 'gender': Patient.GenderChoices.MALE,
-                'status': Patient.Status.OUTPATIENT,
             }
         )
         self.patient.refresh_from_db()
         self.assertEqual(self.patient.name, 'Updated Patient')
         self.assertEqual(self.patient.gender, Patient.GenderChoices.MALE)
+
+    # --- Slice 02: initial_record_number view tests ---
+
+    def test_patient_create_with_initial_record_number(self):
+        """Creating a patient with initial_record_number succeeds and creates PatientRecordNumber"""
+        initial_count = PatientRecordNumber.objects.count()
+
+        response = self.client.post(reverse('patients:patient_create'), {
+            'name': 'Record Number Patient',
+            'birthday': '1995-05-15',
+            'gender': Patient.GenderChoices.MALE,
+            'initial_record_number': 'REC123',
+        })
+
+        self.assertEqual(Patient.objects.filter(name='Record Number Patient').count(), 1)
+        new_patient = Patient.objects.get(name='Record Number Patient')
+        self.assertEqual(new_patient.current_record_number, 'REC123')
+        self.assertEqual(PatientRecordNumber.objects.count(), initial_count + 1)
+        record = PatientRecordNumber.objects.get(patient=new_patient)
+        self.assertTrue(record.is_current)
+        self.assertEqual(record.record_number, 'REC123')
+
+    def test_patient_update_ignores_initial_record_number(self):
+        """Updating a patient with unexpected initial_record_number does not create/change record number"""
+        record_count_before = PatientRecordNumber.objects.filter(
+            patient=self.patient
+        ).count()
+
+        response = self.client.post(
+            reverse('patients:patient_update', kwargs={'pk': self.patient.pk}),
+            {
+                'name': 'Updated Record Patient',
+                'birthday': '1980-01-01',
+                'gender': Patient.GenderChoices.MALE,
+                'initial_record_number': 'EVIL999',
+            }
+        )
+
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.name, 'Updated Record Patient')
+        self.assertNotEqual(self.patient.current_record_number, 'EVIL999')
+
+        record_count_after = PatientRecordNumber.objects.filter(
+            patient=self.patient
+        ).count()
+        self.assertEqual(record_count_after, record_count_before)
 
     def test_patient_delete_view(self):
         response = self.client.post(
@@ -135,6 +181,7 @@ class PatientViewTests(TestCase):
             'name': 'Default Gender Patient',
             'birthday': '1990-01-01',
             'gender': Patient.GenderChoices.NOT_INFORMED,
+            'initial_record_number': 'REC001',
         })
         self.assertEqual(Patient.objects.filter(name='Default Gender Patient').count(), 1)
         
@@ -157,7 +204,7 @@ class PatientViewTests(TestCase):
                 'name': patient_name,
                 'birthday': '1990-01-01',
                 'gender': gender,
-                'status': Patient.Status.OUTPATIENT,
+                'initial_record_number': f'REC00{i+1}',
             })
             
             # Check patient was created successfully

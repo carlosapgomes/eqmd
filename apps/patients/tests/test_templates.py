@@ -153,3 +153,33 @@ class TemplateTests(TestCase):
         
         # Test that form is accessible
         self.assertContains(response, 'name="gender"')
+
+    # --- Slice 02: initial_record_number UI tests ---
+
+    def test_patient_create_shows_record_number_section(self):
+        """Patient create page shows 'Prontuário Hospitalar' section"""
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('patients:patient_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Prontuário Hospitalar')
+
+    def test_patient_create_shows_initial_record_number_input(self):
+        """Patient create page shows initial_record_number input"""
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('patients:patient_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="initial_record_number"')
+        self.assertContains(
+            response,
+            'Informe o número inicial do prontuário hospitalar.',
+        )
+
+    def test_patient_update_does_not_show_initial_record_number(self):
+        """Patient update page does NOT show initial_record_number input"""
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse('patients:patient_update', kwargs={'pk': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'name="initial_record_number"')
+        self.assertNotContains(response, 'Prontuário Hospitalar')
