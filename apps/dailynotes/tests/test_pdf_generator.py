@@ -1031,3 +1031,593 @@ class TestContextFittingLegibility(DailyNotePDFGeneratorTestCase):
             max_width + 1e-6,
             "Short name line should not wrap",
         )
+
+
+class TestLeftColumnFit(DailyNotePDFGeneratorTestCase):
+    """Logo + hospital name must stay fully inside the left column with a
+    visible margin before the divider, capped logo size, and Times-Bold 14
+    name even when the header box grows for long clinical context."""
+
+    HGRS_NAME = "Hospital Geral Roberto Santos"
+
+    def _build_canvas(self, patient_data=None, logo_path=None):
+        """Canvas with the real HGRS hospital name and optional resolved logo."""
+        from apps.dailynotes.services.pdf_generator import DailyNoteCanvas
+
+        buf = io.BytesIO()
+        config = {"name": self.HGRS_NAME}
+        if logo_path:
+            config["logo_path"] = logo_path
+        c = DailyNoteCanvas(
+            buf,
+            pagesize=(595.27, 841.89),  # A4
+            hospital_config=config,
+            patient_data=patient_data or {},
+            specialty_name="Cardiologia",
+        )
+        return c, buf
+
+    def _dense_patient_data(self):
+        """Context dense enough to make `_box_height` exceed the minimum."""
+        return {
+            "name": "Maria " * 140,
+            "record_number": "HGRS-2025-0099999999",
+            "ward": "Unidade de Terapia Intensiva",
+            "bed": "Leito 05",
+            "age_at_event": 46,
+            "admission_datetime": datetime(
+                2026, 2, 1, 8, 30, tzinfo=timezone.get_current_timezone()
+            ),
+        }
+
+    def _draw_left_column(self, c):
+        """Draw the left column at the real box coordinates (as the header
+        would) so geometry assertions measure the actual drawing."""
+        c._draw_left_column(
+            c._BOX_LEFT,
+            c._BOX_TOP_Y - c._box_height,
+            c._box_height,
+        )
+
+    def _logo_png(self):
+        """Create a minimal valid 1x1 PNG; caller must unlink it."""
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.write(
+                b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00"
+                b"\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00"
+                b"\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9c"
+                b"\x62\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4"
+                b"\x00\x00\x00\x00IEND\xaeB`\x82"
+            )
+        return tmp.name
+
+    def test_hospital_name_keeps_margin_before_divider_with_tall_box(self):
+        """The HGRS name must end before the divider minus the named gap even
+        with a resolved logo and a box grown by dense context."""
+        import os
+        from unittest.mock import patch
+
+        from reportlab.lib.units import cm as rl_cm
+
+        from apps.dailynotes.services.pdf_generator import (
+            _HEADER_BOX_HEIGHT_MIN_CM,
+            _HOSPITAL_FONT_NAME,
+            _HOSPITAL_FONT_SIZE,
+            _LEFT_COLUMN_H_GAP_PT,
+        )
+
+        tmp_path = self._logo_png()
+        try:
+            c, _ = self._build_canvas(
+                patient_data=self._dense_patient_data(), logo_path=tmp_path
+            )
+            self.assertGreater(
+                c._box_height,
+                _HEADER_BOX_HEIGHT_MIN_CM * rl_cm,
+                "Scenario must grow the header box",
+            )
+            divider_x = c._BOX_LEFT + c._BOX_WIDTH / 2
+            with patch.object(c, "drawString", wraps=c.drawString) as mock_str:
+                self._draw_left_column(c)
+                name_calls = [
+                    call.args
+                    for call in mock_str.call_args_list
+                    if call.args[2] == self.HGRS_NAME
+                ]
+                self.assertEqual(len(name_calls), 1, "HGRS name must be drawn once")
+                x, _, text = name_calls[0]
+                width = c.stringWidth(text, _HOSPITAL_FONT_NAME, _HOSPITAL_FONT_SIZE)
+                self.assertLessEqual(
+                    x + width,
+                    divider_x - _LEFT_COLUMN_H_GAP_PT + 1e-6,
+                    "Hospital name invades the divider margin",
+                )
+        finally:
+            os.unlink(tmp_path)
+
+    def test_hospital_name_stays_times_bold_14_with_tall_box(self):
+        """The HGRS name keeps Times-Bold 14 even when the box grows."""
+        import os
+        from unittest.mock import patch
+
+        from reportlab.lib.units import cm as rl_cm
+
+        from apps.dailynotes.services.pdf_generator import (
+            _HEADER_BOX_HEIGHT_MIN_CM,
+            _HOSPITAL_FONT_NAME,
+            _HOSPITAL_FONT_SIZE,
+        )
+
+        tmp_path = self._logo_png()
+        try:
+            c, _ = self._build_canvas(
+                patient_data=self._dense_patient_data(), logo_path=tmp_path
+            )
+            self.assertGreater(
+                c._box_height,
+                _HEADER_BOX_HEIGHT_MIN_CM * rl_cm,
+                "Scenario must grow the header box",
+            )
+            with (
+                patch.object(c, "setFont", wraps=c.setFont) as mock_font,
+                patch.object(c, "drawString", wraps=c.drawString) as mock_str,
+            ):
+                self._draw_left_column(c)
+                self.assertIn(
+                    (_HOSPITAL_FONT_NAME, _HOSPITAL_FONT_SIZE),
+                    [call.args for call in mock_font.call_args_list],
+                    "HGRS name must be drawn with Times-Bold 14",
+                )
+                name_calls = [
+                    call
+                    for call in mock_str.call_args_list
+                    if call.args[2] == self.HGRS_NAME
+                ]
+                self.assertEqual(len(name_calls), 1, "HGRS name must be drawn once")
+        finally:
+            os.unlink(tmp_path)
+
+    def test_logo_size_capped_by_constant_when_box_grows(self):
+        """The drawn logo is limited by the named cap, never growing with
+        `_box_height`; at the minimum box it uses the smaller available space."""
+        import os
+        from unittest.mock import patch
+
+        from reportlab.lib.units import cm as rl_cm
+
+        from apps.dailynotes.services.pdf_generator import (
+            _HEADER_BOX_HEIGHT_MIN_CM,
+            _LOGO_MAX_SIZE_PT,
+        )
+
+        tmp_path = self._logo_png()
+        try:
+            c, _ = self._build_canvas(
+                patient_data=self._dense_patient_data(), logo_path=tmp_path
+            )
+            self.assertGreater(
+                c._box_height,
+                _HEADER_BOX_HEIGHT_MIN_CM * rl_cm,
+                "Scenario must grow the header box",
+            )
+            with patch.object(c, "drawImage", wraps=c.drawImage) as mock_img:
+                self._draw_left_column(c)
+                mock_img.assert_called_once()
+                call = mock_img.call_args
+                width = call.kwargs["width"]
+                height = call.kwargs["height"]
+                self.assertLessEqual(
+                    width, _LOGO_MAX_SIZE_PT + 1e-6, "Logo wider than its cap"
+                )
+                self.assertLessEqual(
+                    height, _LOGO_MAX_SIZE_PT + 1e-6, "Logo taller than its cap"
+                )
+                self.assertAlmostEqual(width, height, places=6, msg="Square logo")
+
+            # Normal (minimum) geometry: logo uses the available space, which
+            # must be the smaller value between it and the cap.
+            c_min, _ = self._build_canvas(logo_path=tmp_path)
+            self.assertLessEqual(
+                c_min._box_height,
+                _HEADER_BOX_HEIGHT_MIN_CM * rl_cm + 1e-6,
+                "Normal context keeps the minimum box",
+            )
+            with patch.object(c_min, "drawImage", wraps=c_min.drawImage) as mock_img:
+                self._draw_left_column(c_min)
+                call = mock_img.call_args
+                width = call.kwargs["width"]
+                height = call.kwargs["height"]
+                expected = min(
+                    c_min._box_height - 2 * c_min._BOX_PAD, _LOGO_MAX_SIZE_PT
+                )
+                self.assertAlmostEqual(width, expected, places=6)
+                self.assertAlmostEqual(height, expected, places=6)
+        finally:
+            os.unlink(tmp_path)
+
+
+class TestHospitalNameBidimensional(DailyNotePDFGeneratorTestCase):
+    """Bidimensional hospital-name fit: width AND height with full glyph
+    bounds inside the box, coherent canvas/frame reservation, no truncation,
+    and HGRS geometry untouched."""
+
+    HGRS_NAME = "Hospital Geral Roberto Santos"
+    LONG_NAME = (
+        "Hospital Estadual Doutor José Maria da Silva Santos de "
+        "Oliveira Lima e Castro Filho Neto"
+    )
+    EXTREME_NAME = (
+        "Hospital Estadual de Referência Doutor Carlos Augusto Ferreira "
+        "Lima e Silva dos Santos Neto Rodrigues Gomes Pereira Almeida "
+        "Souza Barbosa Carvalho Oliveira Mendonça"
+    )
+
+    def _build_canvas(self, hospital_name=None, patient_data=None, logo_path=None):
+        """Canvas with the given hospital name and optional resolved logo."""
+        from apps.dailynotes.services.pdf_generator import DailyNoteCanvas
+
+        buf = io.BytesIO()
+        config = {"name": hospital_name or self.HGRS_NAME}
+        if logo_path:
+            config["logo_path"] = logo_path
+        return DailyNoteCanvas(
+            buf,
+            pagesize=(595.27, 841.89),  # A4
+            hospital_config=config,
+            patient_data=patient_data or {},
+            specialty_name="Cardiologia",
+        )
+
+    def _dense_patient_data(self):
+        """Context dense enough to make the right column grow the box."""
+        return {
+            "name": "Maria " * 140,
+            "record_number": "HGRS-2025-0099999999",
+            "ward": "Unidade de Terapia Intensiva",
+            "bed": "Leito 05",
+            "age_at_event": 46,
+            "admission_datetime": datetime(
+                2026, 2, 1, 8, 30, tzinfo=timezone.get_current_timezone()
+            ),
+        }
+
+    def _minimal_patient_data(self):
+        """Context that keeps the right-column need at the minimum box."""
+        return {"name": "José", "record_number": "0001", "ward": "UTI", "bed": "01"}
+
+    def _logo_png(self):
+        """Create a minimal valid 1x1 PNG; caller must unlink it."""
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.write(
+                b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00"
+                b"\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00"
+                b"\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9c"
+                b"\x62\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4"
+                b"\x00\x00\x00\x00IEND\xaeB`\x82"
+            )
+        return tmp.name
+
+    def _name_calls(self, mock_str, name):
+        """drawString call args whose text equals the hospital name."""
+        return [call.args for call in mock_str.call_args_list if call.args[2] == name]
+
+    def _draw_left_column(self, c):
+        """Draw only the left column at the real box coordinates so every
+        ``drawString`` call belongs to the hospital name."""
+        c._draw_left_column(
+            c._BOX_LEFT,
+            c._BOX_TOP_Y - c._box_height,
+            c._box_height,
+        )
+
+    def test_hgrs_one_line_times_bold_14_with_margin_and_capped_logo(self):
+        """HGRS keeps one line, Times-Bold 14, stringWidth margin before the
+        divider, and a capped logo with a tall clinical box."""
+        import os
+        from unittest.mock import patch
+
+        from reportlab.lib.units import cm as rl_cm
+
+        from apps.dailynotes.services.pdf_generator import (
+            _HEADER_BOX_HEIGHT_MIN_CM,
+            _HOSPITAL_FONT_NAME,
+            _HOSPITAL_FONT_SIZE,
+            _LEFT_COLUMN_H_GAP_PT,
+            _LOGO_MAX_SIZE_PT,
+        )
+
+        tmp_path = self._logo_png()
+        try:
+            c = self._build_canvas(
+                hospital_name=self.HGRS_NAME,
+                patient_data=self._dense_patient_data(),
+                logo_path=tmp_path,
+            )
+            self.assertGreater(
+                c._box_height,
+                _HEADER_BOX_HEIGHT_MIN_CM * rl_cm,
+                "Scenario must grow the header box",
+            )
+            divider_x = c._BOX_LEFT + c._BOX_WIDTH / 2
+            with (
+                patch.object(c, "setFont", wraps=c.setFont) as mock_font,
+                patch.object(c, "drawString", wraps=c.drawString) as mock_str,
+                patch.object(c, "drawImage", wraps=c.drawImage) as mock_img,
+            ):
+                c._draw_compact_header(1, 1)
+                name_calls = self._name_calls(mock_str, self.HGRS_NAME)
+                self.assertEqual(len(name_calls), 1, "HGRS must stay one line")
+                x, _, text = name_calls[0]
+                width = c.stringWidth(text, _HOSPITAL_FONT_NAME, _HOSPITAL_FONT_SIZE)
+                self.assertLessEqual(
+                    x + width,
+                    divider_x - _LEFT_COLUMN_H_GAP_PT + 1e-6,
+                    "HGRS name must keep the divider margin",
+                )
+                self.assertIn(
+                    (_HOSPITAL_FONT_NAME, _HOSPITAL_FONT_SIZE),
+                    [call.args for call in mock_font.call_args_list],
+                    "HGRS must be drawn with Times-Bold 14",
+                )
+                mock_img.assert_called_once()
+                img_kw = mock_img.call_args.kwargs
+                self.assertLessEqual(img_kw["width"], _LOGO_MAX_SIZE_PT + 1e-6)
+                self.assertLessEqual(img_kw["height"], _LOGO_MAX_SIZE_PT + 1e-6)
+        finally:
+            os.unlink(tmp_path)
+
+    def test_long_name_reduces_font_and_keeps_lines_inside_box(self):
+        """A long name reduces the font (above the floor), wraps to two or
+        more lines, and keeps every line and full glyph bounds inside the
+        box interior without crossing the divider."""
+        import os
+        from unittest.mock import patch
+
+        from apps.dailynotes.services.pdf_generator import (
+            _HOSPITAL_ASCENT_RATIO,
+            _HOSPITAL_DESCENT_RATIO,
+            _HOSPITAL_FONT_MIN,
+            _HOSPITAL_FONT_NAME,
+            _HOSPITAL_FONT_SIZE,
+            _LEFT_COLUMN_H_GAP_PT,
+        )
+
+        tmp_path = self._logo_png()
+        try:
+            c = self._build_canvas(
+                hospital_name=self.LONG_NAME,
+                patient_data=self._minimal_patient_data(),
+                logo_path=tmp_path,
+            )
+            divider_x = c._BOX_LEFT + c._BOX_WIDTH / 2
+            with (
+                patch.object(c, "setFont", wraps=c.setFont) as mock_font,
+                patch.object(c, "drawString", wraps=c.drawString) as mock_str,
+            ):
+                self._draw_left_column(c)
+                name_calls = [call.args for call in mock_str.call_args_list]
+                font_calls = [
+                    call.args
+                    for call in mock_font.call_args_list
+                    if call.args[0] == _HOSPITAL_FONT_NAME
+                ]
+                self.assertEqual(len(font_calls), 1, "One hospital font call")
+                size = font_calls[0][1]
+                self.assertGreater(
+                    size,
+                    _HOSPITAL_FONT_MIN,
+                    "Long name must reduce the font, not floor it",
+                )
+                self.assertLessEqual(size, _HOSPITAL_FONT_SIZE)
+                self.assertGreaterEqual(
+                    len(name_calls), 2, "Long name must wrap to >= 2 lines"
+                )
+                ascent = _HOSPITAL_ASCENT_RATIO * size
+                descent = _HOSPITAL_DESCENT_RATIO * size
+                col_y = c._BOX_TOP_Y - c._box_height
+                interior_top = col_y + c._box_height - c._BOX_PAD
+                interior_bottom = col_y + c._BOX_PAD
+                for x, y, line in name_calls:
+                    width = c.stringWidth(line, _HOSPITAL_FONT_NAME, size)
+                    self.assertLessEqual(
+                        x + width,
+                        divider_x - _LEFT_COLUMN_H_GAP_PT + 1e-6,
+                        "Name line must keep the divider margin",
+                    )
+                    self.assertLessEqual(
+                        y + ascent,
+                        interior_top + 1e-6,
+                        "Ascender must stay inside the box",
+                    )
+                    self.assertGreaterEqual(
+                        y - descent,
+                        interior_bottom - 1e-6,
+                        "Descender must stay inside the box",
+                    )
+        finally:
+            os.unlink(tmp_path)
+
+    def test_extreme_name_grows_box_and_keeps_all_lines_inside(self):
+        """A name that cannot fit the minimum interior even at the floor font
+        grows the header box; every line and glyph stays inside it, and the
+        frame reservation clears the grown box bottom plus the gap."""
+        import os
+        from unittest.mock import patch
+
+        from reportlab.lib.units import cm as rl_cm
+
+        from apps.dailynotes.services.pdf_generator import (
+            _HEADER_BOX_HEIGHT_MIN_CM,
+            _HEADER_FRAME_GAP_CM,
+            _HEADER_FRAME_OFFSET_CM,
+            _HEADER_TOP_OFFSET_CM,
+            _HOSPITAL_ASCENT_RATIO,
+            _HOSPITAL_DESCENT_RATIO,
+            _HOSPITAL_FONT_MIN,
+            _HOSPITAL_FONT_NAME,
+            _LEFT_COLUMN_H_GAP_PT,
+            _LOGO_MAX_SIZE_PT,
+            _wrap_line_to_width,
+        )
+
+        tmp_path = self._logo_png()
+        try:
+            c = self._build_canvas(
+                hospital_name=self.EXTREME_NAME,
+                patient_data=self._minimal_patient_data(),
+                logo_path=tmp_path,
+            )
+            self.assertGreater(
+                c._box_height,
+                _HEADER_BOX_HEIGHT_MIN_CM * rl_cm,
+                "Extreme name must grow the header box",
+            )
+            divider_x = c._BOX_LEFT + c._BOX_WIDTH / 2
+            max_width = (
+                divider_x
+                - _LEFT_COLUMN_H_GAP_PT
+                - (c._BOX_LEFT + 2 * c._BOX_PAD + _LOGO_MAX_SIZE_PT)
+            )
+            expected_lines = _wrap_line_to_width(
+                self.EXTREME_NAME,
+                max_width,
+                _HOSPITAL_FONT_NAME,
+                _HOSPITAL_FONT_MIN,
+            )
+            with (
+                patch.object(c, "setFont", wraps=c.setFont) as mock_font,
+                patch.object(c, "drawString", wraps=c.drawString) as mock_str,
+            ):
+                self._draw_left_column(c)
+                name_calls = [call.args for call in mock_str.call_args_list]
+                self.assertEqual(
+                    len(name_calls),
+                    len(expected_lines),
+                    "Every extreme-name line must be preserved",
+                )
+                font_calls = [
+                    call.args
+                    for call in mock_font.call_args_list
+                    if call.args[0] == _HOSPITAL_FONT_NAME
+                ]
+                self.assertEqual(len(font_calls), 1, "One hospital font call")
+                size = font_calls[0][1]
+                self.assertEqual(
+                    size, _HOSPITAL_FONT_MIN, "Floor font at the floor layout"
+                )
+                ascent = _HOSPITAL_ASCENT_RATIO * size
+                descent = _HOSPITAL_DESCENT_RATIO * size
+                col_y = c._BOX_TOP_Y - c._box_height
+                interior_top = col_y + c._box_height - c._BOX_PAD
+                interior_bottom = col_y + c._BOX_PAD
+                for x, y, line in name_calls:
+                    width = c.stringWidth(line, _HOSPITAL_FONT_NAME, size)
+                    self.assertLessEqual(
+                        x + width,
+                        divider_x - _LEFT_COLUMN_H_GAP_PT + 1e-6,
+                        "Name line must keep the divider margin",
+                    )
+                    self.assertLessEqual(
+                        y + ascent,
+                        interior_top + 1e-6,
+                        "Ascender must stay inside the box",
+                    )
+                    self.assertGreaterEqual(
+                        y - descent,
+                        interior_bottom - 1e-6,
+                        "Descender must stay inside the box",
+                    )
+
+            box_cm = c._box_height / rl_cm
+            reservation_cm = self.generator._header_reservation_cm(box_cm)
+            margins_top_cm = self.generator.margins["top"] / rl_cm
+            frame_top_cm = margins_top_cm + reservation_cm - _HEADER_FRAME_OFFSET_CM
+            box_bottom_cm = _HEADER_TOP_OFFSET_CM + box_cm
+            self.assertGreaterEqual(
+                frame_top_cm,
+                box_bottom_cm + _HEADER_FRAME_GAP_CM - 1e-6,
+                "Frame reservation must clear the grown box bottom",
+            )
+        finally:
+            os.unlink(tmp_path)
+
+    def test_canvas_box_and_frame_reservation_coherent(self):
+        """For the same data and hospital config, the canvas box height and
+        the generator's header_height_cm are geometrically coherent."""
+        import os
+        from unittest.mock import patch
+
+        from reportlab.lib.units import cm as rl_cm
+
+        from apps.dailynotes.services import pdf_generator as dn_module
+        from apps.dailynotes.services.pdf_generator import (
+            _HEADER_FRAME_GAP_CM,
+            _HEADER_FRAME_OFFSET_CM,
+            _HEADER_TOP_OFFSET_CM,
+            HospitalLetterheadGenerator,
+            _required_header_box_height_cm,
+        )
+
+        tmp_path = self._logo_png()
+        try:
+            hospital_config = {"name": self.EXTREME_NAME, "logo_path": tmp_path}
+            pd = self._dense_patient_data()
+            self.generator.hospital_config = hospital_config
+            captured_canvases: list = []
+            real_canvas_cls = dn_module.DailyNoteCanvas
+
+            def _capture_canvas(*args, **kwargs):
+                canvas_instance = real_canvas_cls(*args, **kwargs)
+                captured_canvases.append(canvas_instance)
+                return canvas_instance
+
+            with (
+                patch.object(
+                    HospitalLetterheadGenerator,
+                    "generate_pdf",
+                    wraps=HospitalLetterheadGenerator.generate_pdf.__get__(
+                        self.generator
+                    ),
+                ) as mock_gen,
+                patch.object(dn_module, "DailyNoteCanvas", _capture_canvas),
+            ):
+                self.generator.generate_pdf(
+                    content_elements=[],
+                    patient_data=pd,
+                    specialty_name="Cardiologia",
+                )
+
+            header_space_cm = mock_gen.call_args.kwargs["header_height_cm"]
+            canvas = captured_canvases[0]
+            box_cm = canvas._box_height / rl_cm
+            pure_box_cm = _required_header_box_height_cm(
+                pd, "Cardiologia", hospital_config
+            )
+            self.assertAlmostEqual(
+                box_cm,
+                pure_box_cm,
+                places=6,
+                msg="Canvas box must equal the shared pure need",
+            )
+            margins_top_cm = self.generator.margins["top"] / rl_cm
+            expected_cm = (
+                _HEADER_TOP_OFFSET_CM
+                + box_cm
+                - margins_top_cm
+                + _HEADER_FRAME_OFFSET_CM
+                + _HEADER_FRAME_GAP_CM
+            )
+            self.assertAlmostEqual(header_space_cm, expected_cm, places=6)
+            frame_top_cm = margins_top_cm + header_space_cm - _HEADER_FRAME_OFFSET_CM
+            box_bottom_cm = _HEADER_TOP_OFFSET_CM + box_cm
+            self.assertGreaterEqual(
+                frame_top_cm,
+                box_bottom_cm + _HEADER_FRAME_GAP_CM - 1e-6,
+                "Frame reservation must clear the header box bottom",
+            )
+        finally:
+            os.unlink(tmp_path)
