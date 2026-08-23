@@ -57,6 +57,17 @@ _BOX_WIDTH_PT = A4[0] - 4 * cm  # page width minus both margins
 _BOX_PAD_PT = 0.25 * cm
 _CONTEXT_MAX_WIDTH_PT = _BOX_WIDTH_PT / 2 - 2 * _BOX_PAD_PT
 
+# Left-column logo + hospital name (points) — single source for fit math
+_HOSPITAL_FONT_NAME = "Times-Bold"
+_HOSPITAL_FONT_SIZE = 14
+_HOSPITAL_FONT_MIN = 10  # legible floor for oversized future names
+_HOSPITAL_FONT_STEP = 0.5  # deterministic font reduction step
+_HOSPITAL_LEADING_RATIO = 1.2
+_HOSPITAL_ASCENT_RATIO = 0.75  # conservative ascender bound (Times-Bold)
+_HOSPITAL_DESCENT_RATIO = 0.25  # conservative descender bound (Times-Bold)
+_LOGO_MAX_SIZE_PT = 1.2 * cm  # logo side cap: never grows with box height
+_LEFT_COLUMN_H_GAP_PT = 0.25 * cm  # name end → divider line
+
 
 # ---------------------------------------------------------------------------
 # Pure header context + wrap/fit helpers (shared by canvas and generator)
@@ -180,17 +191,95 @@ def _fit_context_block(
     return font_size, wrapped, font_size * _CONTEXT_LEADING_RATIO
 
 
-def _required_header_box_height_cm(pd: dict, specialty_name: str) -> float:
-    """Minimum header box height that fits the wrapped context with legible
-    leading at the minimum font size."""
+def _required_header_box_height_cm(
+    pd: dict, specialty_name: str, hospital_config: dict | None = None
+) -> float:
+    """Minimum header box height that fits both the wrapped clinical context
+    (right column) and the hospital name (left column) with legible leading,
+    at least the configured minimum."""
     lines = _build_context_lines(pd, specialty_name)
     wrapped = _wrap_lines_to_width(
         lines, _CONTEXT_MAX_WIDTH_PT, _CONTEXT_FONT_NAME, _CONTEXT_FONT_MIN
     )
-    needed_pt = (
+    context_needed_pt = (
         len(wrapped) * _CONTEXT_FONT_MIN * _CONTEXT_LEADING_RATIO + 2 * _BOX_PAD_PT
     )
-    return max(_HEADER_BOX_HEIGHT_MIN_CM, needed_pt / cm)
+    left_needed_pt = _hospital_left_column_needed_pt(hospital_config or {})
+    return max(
+        _HEADER_BOX_HEIGHT_MIN_CM,
+        context_needed_pt / cm,
+        left_needed_pt / cm,
+    )
+
+
+def _hospital_block_height_pt(line_count: int, font_size: float) -> float:
+    """Interior height (points) of a hospital-name block: leading between
+    lines plus the full glyph bounds (ascender + descender)."""
+    if line_count <= 0:
+        return 0.0
+    return (line_count - 1) * font_size * _HOSPITAL_LEADING_RATIO + (
+        _HOSPITAL_ASCENT_RATIO + _HOSPITAL_DESCENT_RATIO
+    ) * font_size
+
+
+def _hospital_name_max_width_pt(has_logo: bool) -> float:
+    """Max name width inside the left column, conservatively reserving the
+    logo cap and the divider gap; if the logo file later fails to resolve in
+    the canvas, the wider actual width is acceptable (bigger reservation)."""
+    text_x_offset = 2 * _BOX_PAD_PT + _LOGO_MAX_SIZE_PT if has_logo else _BOX_PAD_PT
+    max_text_end_offset = _BOX_WIDTH_PT / 2 - _LEFT_COLUMN_H_GAP_PT
+    return max(0.0, max_text_end_offset - text_x_offset)
+
+
+def _hospital_name_interior_pt(name: str, max_width: float) -> float:
+    """Interior height the name needs at the floor font with full glyph
+    bounds; smaller fonts wrap into no more lines, so this is a safe
+    reservation for every candidate the heuristic may pick."""
+    if not name:
+        return 0.0
+    lines = _wrap_line_to_width(
+        name, max_width, _HOSPITAL_FONT_NAME, _HOSPITAL_FONT_MIN
+    )
+    return _hospital_block_height_pt(len(lines), _HOSPITAL_FONT_MIN)
+
+
+def _hospital_left_column_needed_pt(hospital_config: dict) -> float:
+    """Box-height contribution of the left column: hospital-name interior at
+    the floor font plus vertical padding, using the conservative width."""
+    name = hospital_config.get("name", "")
+    if not name:
+        return 0.0
+    has_logo = bool(hospital_config.get("logo_path"))
+    interior = _hospital_name_interior_pt(name, _hospital_name_max_width_pt(has_logo))
+    return interior + 2 * _BOX_PAD_PT
+
+
+def _fit_hospital_block(
+    name: str, max_width: float, available_height: float
+) -> tuple[float, list[str], float]:
+    """Bidimensional fit of the hospital name.
+
+    Tests font sizes from ``_HOSPITAL_FONT_SIZE`` down to ``_HOSPITAL_FONT_MIN``
+    in ``_HOSPITAL_FONT_STEP`` steps and returns the largest whose wrapped
+    lines fit ``max_width`` and whose glyph block (leading + ascender +
+    descender) fits ``available_height``.  If none fits, the floor font is
+    returned with every line preserved and ``needed_height`` exceeding
+    ``available_height`` so callers can grow the box coherently.
+    """
+    if not name:
+        return _HOSPITAL_FONT_SIZE, [], 0.0
+    floor_lines: list[str] = []
+    floor_needed = 0.0
+    font_size: float = _HOSPITAL_FONT_SIZE
+    while font_size >= _HOSPITAL_FONT_MIN - 1e-9:
+        lines = _wrap_line_to_width(name, max_width, _HOSPITAL_FONT_NAME, font_size)
+        needed = _hospital_block_height_pt(len(lines), font_size) if lines else 0.0
+        floor_lines = lines
+        floor_needed = needed
+        if needed <= available_height and lines:
+            return font_size, lines, needed
+        font_size -= _HOSPITAL_FONT_STEP
+    return _HOSPITAL_FONT_MIN, floor_lines, floor_needed
 
 
 # ---------------------------------------------------------------------------
@@ -298,21 +387,46 @@ class DailyNoteCanvas(NumberedCanvas):
         # --- Right column ---
         self._draw_right_column(mid_x, by, bh)
 
-    def _draw_left_column(self, col_x, col_y, col_height):
-        """Render hospital logo and name in the left column of the header."""
-        pad = self._BOX_PAD
-        text_x = col_x + pad
+    def _draw_left_column(self, col_x: float, col_y: float, col_height: float) -> None:
+        """Render hospital logo and name in the left column of the header.
+
+        The name never crosses the vertical divider (``stringWidth`` margin)
+        and its full glyph block stays inside the box interior, which is sized
+        to fit the name by ``_required_header_box_height_cm``.
+        """
+        text_x = col_x + self._BOX_PAD
         hospital_name = self.hospital_config.get("name", "")
 
         logo_path = self._get_logo_path()
         if logo_path:
             text_x = self._try_draw_logo(col_x, col_y, col_height, logo_path, text_x)
 
-        # Hospital name
-        name_y = col_y + col_height / 2 - 0.15 * cm
-        self.setFont("Times-Bold", 14)
+        divider_x = col_x + self._BOX_WIDTH / 2
+        max_text_end = divider_x - _LEFT_COLUMN_H_GAP_PT
+        font_size, name_lines, _needed = self._fit_hospital_name(
+            hospital_name, max_text_end - text_x, col_height - 2 * self._BOX_PAD
+        )
+        if not name_lines:
+            return
+        self.setFont(_HOSPITAL_FONT_NAME, font_size)
         self.setFillColor(black)
-        self.drawString(text_x, name_y, hospital_name)
+        ascent = _HOSPITAL_ASCENT_RATIO * font_size
+        descent = _HOSPITAL_DESCENT_RATIO * font_size
+        line_gap = font_size * _HOSPITAL_LEADING_RATIO
+        block_height = (len(name_lines) - 1) * line_gap + ascent + descent
+        centered = col_y + col_height / 2 + block_height / 2 - ascent
+        top_limit = col_y + col_height - self._BOX_PAD - ascent
+        bottom_limit = col_y + self._BOX_PAD + block_height - ascent
+        first_y = min(max(centered, bottom_limit), top_limit)
+        for i, line in enumerate(name_lines):
+            self.drawString(text_x, first_y - i * line_gap, line)
+
+    def _fit_hospital_name(
+        self, name: str, max_width: float, available_height: float
+    ) -> tuple[float, list[str], float]:
+        """Bidimensional hospital-name fit: returns ``(font_size, wrapped
+        lines, needed interior height)``; see ``_fit_hospital_block``."""
+        return _fit_hospital_block(name, max_width, available_height)
 
     def _try_draw_logo(
         self,
@@ -323,9 +437,10 @@ class DailyNoteCanvas(NumberedCanvas):
         fallback_x: float,
     ) -> float:
         """Draw the logo, or fall back to the default text position on image
-        errors without hiding unrelated failures."""
+        errors without hiding unrelated failures.  The logo side is capped by
+        ``_LOGO_MAX_SIZE_PT`` so a taller header box never grows the logo."""
         try:
-            logo_h = col_height - 2 * self._BOX_PAD
+            logo_h = min(col_height - 2 * self._BOX_PAD, _LOGO_MAX_SIZE_PT)
             logo_w = logo_h  # square aspect
             logo_x = col_x + self._BOX_PAD
             logo_y = col_y + self._BOX_PAD
@@ -367,10 +482,14 @@ class DailyNoteCanvas(NumberedCanvas):
         return _build_context_lines(pd, self.specialty_name)
 
     def _required_box_height(self) -> float:
-        """Box height (points) that fits the wrapped context with legible
-        leading, at least the configured minimum."""
+        """Box height (points) that fits both the clinical right column and
+        the hospital left column, at least the configured minimum."""
         return (
-            _required_header_box_height_cm(self.patient_data or {}, self.specialty_name)
+            _required_header_box_height_cm(
+                self.patient_data or {},
+                self.specialty_name,
+                self.hospital_config,
+            )
             * cm
         )
 
@@ -638,7 +757,7 @@ class DailyNotePDFGenerator(HospitalLetterheadGenerator):
     ):
         """Generate PDF with the compact Daily Note canvas."""
         box_height_cm = _required_header_box_height_cm(
-            patient_data or {}, specialty_name
+            patient_data or {}, specialty_name, self.hospital_config
         )
         return super().generate_pdf(
             content_elements=content_elements,
