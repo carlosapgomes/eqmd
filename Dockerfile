@@ -8,8 +8,8 @@ COPY apps/ ./apps/
 COPY webpack.config.js ./
 RUN npm run build
 
-# Stage 2: Python application  
-FROM python:3.12-slim
+# Stage 2: Python dependency base (runtime + optional dev group from uv.lock)
+FROM python:3.12-slim AS python-base
 WORKDIR /app
 
 # Set environment variables
@@ -41,16 +41,30 @@ RUN apt-get update && apt-get install -y \
   # Cleanup
   && rm -rf /var/lib/apt/lists/*
 
-# Install uv for fast Python package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+# Install uv (validated 0.12.5 build tool, pinned tag; `latest` is forbidden
+# because it breaks deterministic builds, ADR-0001).
+COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /bin/uv
 
-# Copy Python dependency files
-COPY pyproject.toml ./
+# Copy dependency metadata and lockfile; install in frozen mode so Docker
+# resolution matches uv.lock exactly (ADR-0001).
+COPY pyproject.toml uv.lock ./
 
-# Install Python dependencies
-RUN uv pip install --system --editable .
-# Install production server explicitly
-RUN uv pip install --system gunicorn
+# INSTALL_DEV=true installs the dev dependency group (quality tooling) for the
+# development target; the production target installs runtime + prod groups only.
+ARG INSTALL_DEV=false
+RUN if [ "$INSTALL_DEV" = "true" ]; then \
+      uv export --frozen --no-emit-project > /tmp/requirements.txt \
+      && uv pip install --system -r /tmp/requirements.txt \
+      && uv pip install --system --no-deps --editable .; \
+    else \
+      uv export --frozen --no-dev --group prod --no-emit-project > /tmp/requirements.txt \
+      && uv pip install --system -r /tmp/requirements.txt \
+      && uv pip install --system --no-deps --editable .; \
+    fi \
+    && rm -f /tmp/requirements.txt
+
+# Stage 3: Production runtime image (derives from the lock-backed base)
+FROM python-base AS production
 
 # Copy application code
 COPY . .
