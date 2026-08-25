@@ -100,7 +100,7 @@ INSTALLED_APPS = [
     "apps.research",  # Clinical research app
     # Bot Authentication (OIDC-based delegation)
     "apps.botauth.apps.BotauthConfig",  # Bot authentication app
-    "oidc_provider",  # OIDC Provider (for bot delegation)
+    "config.third_party_apps.OpenIDConnectProviderCompatConfig",  # OIDC Provider (for bot delegation; AutoField PK compat contract)
     "apps.matrix_integration.apps.MatrixIntegrationConfig",
     # django-allauth
     "allauth",
