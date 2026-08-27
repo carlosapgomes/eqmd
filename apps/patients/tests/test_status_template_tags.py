@@ -1,9 +1,12 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from django.template import Template, Context
-from ..models import Patient, Ward
+from django.template import Context, Template
+from django.test import TestCase
+
+from ..models import Patient
 from ..templatetags.patient_tags import (
-    patient_status_badge, can_change_status, available_status_actions
+    available_status_actions,
+    can_change_status,
+    patient_status_badge,
 )
 
 User = get_user_model()
@@ -91,13 +94,15 @@ class PatientStatusTemplateTagsTests(TestCase):
         """Test available status actions for outpatient"""
         actions = available_status_actions(self.doctor, self.patient)
         
-        # Should include all other statuses except current
+        # Should include all other statuses except current (external
+        # transfer to TRANSFERRED is deprecated; only internal ward/bed
+        # transfers exist and those preserve the current status)
         action_statuses = [action['status'] for action in actions]
         self.assertIn(Patient.Status.INPATIENT, action_statuses)
         self.assertIn(Patient.Status.EMERGENCY, action_statuses)
         self.assertIn(Patient.Status.DISCHARGED, action_statuses)
-        self.assertIn(Patient.Status.TRANSFERRED, action_statuses)
         self.assertIn(Patient.Status.DECEASED, action_statuses)
+        self.assertNotIn(Patient.Status.TRANSFERRED, action_statuses)
         self.assertNotIn(Patient.Status.OUTPATIENT, action_statuses)
 
     def test_available_status_actions_inpatient(self):
