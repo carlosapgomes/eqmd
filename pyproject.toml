@@ -47,6 +47,14 @@ prod = [
     "gunicorn>=23.0.0",
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# RUF012 (mutable class attribute): Django ModelForm `Meta.fields` and
+# `Meta.widgets` are declarative class attributes consumed by Django's
+# ModelFormMetaclass; the `typing.ClassVar` annotation pattern does not
+# apply to framework-declared Meta attributes. Narrow to this single
+# patients form module; no project-wide ignore.
+"apps/patients/forms.py" = ["RUF012"]
+
 [tool.mypy]
 python_version = "3.12"
 # Keep django plugin disabled in Phase 0 due internal crashes in current stack.
