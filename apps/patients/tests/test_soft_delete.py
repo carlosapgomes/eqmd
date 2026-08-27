@@ -1,12 +1,13 @@
 """
 Tests for soft delete functionality in Patient models.
 """
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.utils import timezone
-from datetime import timedelta
-from apps.patients.models import Patient, AllowedTag
+
 from apps.events.models import Event
+from apps.patients.models import AllowedTag, Patient
 
 User = get_user_model()
 
@@ -176,7 +177,10 @@ class TestPatientSoftDelete(TestCase):
         self.assertEqual(deleted_patients.count(), 1)
         self.assertEqual(deleted_patients.first(), deleted_patient)
 
-        all_patients = Patient.all_objects.with_deleted()
+        # all_objects is the canonical with-deleted manager: it returns all
+        # objects without filtering soft-deleted ones, so no queryset-level
+        # with_deleted() passthrough is needed on the manager.
+        all_patients = Patient.all_objects.all()
         self.assertEqual(all_patients.count(), 2)
 
     def test_patient_str_method_with_deletion(self):
@@ -212,7 +216,7 @@ class TestPatientSoftDelete(TestCase):
         )
 
         # Create related event
-        event = Event.objects.create(
+        Event.objects.create(
             event_datetime=timezone.now(),
             patient=patient,
             description='Test event',
