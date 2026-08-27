@@ -1,11 +1,11 @@
-from django.test import TestCase, RequestFactory
-from django.template import Template, Context
 from django.contrib.auth import get_user_model
+from django.template import Context, Template
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
-from django.db import transaction
-from apps.patients.models import Patient, AllowedTag, Tag
+
 from apps.patients.context_processors import patient_stats, recent_patients
-from apps.patients.templatetags.patient_tags import patient_status_badge, patient_tags
+from apps.patients.models import AllowedTag, Patient, Tag
+from apps.patients.templatetags.patient_tags import patient_status_badge
 
 User = get_user_model()
 
@@ -39,9 +39,9 @@ class PatientDashboardIntegrationTest(TestCase):
 
     def test_template_tags(self):
         """Test that template tags render correctly"""
-        # Test status badge
+        # Test status badge (INPATIENT maps to bg-primary per patient_tags.py)
         badge = patient_status_badge(Patient.Status.INPATIENT)
-        self.assertIn('bg-success', badge)
+        self.assertIn('bg-primary', badge)
 
         # Test patient tags inclusion tag
         template = Template('{% load patient_tags %}{% patient_tags patient %}')
@@ -104,25 +104,25 @@ class PatientTaggingIntegrationTest(TestCase):
             updated_by=self.user
         )
         
-        # Add tags to patient
-        tag1 = Tag.objects.create(
+        # Add tags to patient via Tag.patient FK (reverse relation patient_tags)
+        Tag.objects.create(
             allowed_tag=self.high_priority_tag,
+            patient=patient,
             notes='Urgent care needed',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag1)
         
-        tag2 = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.diabetic_tag,
+            patient=patient,
             notes='Type 2 diabetes',
             created_by=self.user,
             updated_by=self.user
         )
-        patient.tags.add(tag2)
         
-        # Verify tags are assigned
-        patient_tags = patient.tags.all()
+        # Verify tags are assigned through the reverse relation
+        patient_tags = patient.patient_tags.all()
         self.assertEqual(patient_tags.count(), 2)
         
         # Verify tag content

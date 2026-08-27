@@ -1,17 +1,19 @@
-from datetime import datetime
 from unittest.mock import patch
 
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.test import TestCase
 from django.utils import timezone
 
-from ..models import Patient, AllowedTag, Ward, PatientRecordNumber, PatientAdmission
 from ..forms import (
-    PatientForm, AdmitPatientForm, DischargePatientForm,
-    EmergencyAdmissionForm, TransferPatientForm, DeclareDeathForm,
-    SetOutpatientForm
+    AdmitPatientForm,
+    DeclareDeathForm,
+    DischargePatientForm,
+    EmergencyAdmissionForm,
+    PatientForm,
+    SetOutpatientForm,
+    TransferPatientForm,
 )
+from ..models import Patient, PatientAdmission, PatientRecordNumber, Ward
 
 User = get_user_model()
 
@@ -222,10 +224,9 @@ class PatientFormTests(TestCase):
 
         with patch(
             'apps.patients.models.PatientRecordNumber.objects.create',
-            side_effect=Exception("DB failure"),
-        ):
-            with self.assertRaises(Exception):
-                form.save(commit=True)
+            side_effect=RuntimeError("DB failure"),
+        ), self.assertRaises(RuntimeError):
+            form.save(commit=True)
 
         self.assertEqual(Patient.objects.count(), patient_count_before)
         self.assertEqual(PatientRecordNumber.objects.count(), record_count_before)
