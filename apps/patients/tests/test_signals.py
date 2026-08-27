@@ -1,19 +1,28 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.utils import timezone
 from datetime import timedelta
 
-from ..models import Patient, PatientRecordNumber, PatientAdmission
-from apps.events.models import Event, RecordNumberChangeEvent, AdmissionEvent, DischargeEvent
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.utils import timezone
+
+from apps.accounts.tests.helpers import create_navigation_user
+from apps.events.models import (
+    AdmissionEvent,
+    DischargeEvent,
+    Event,
+    RecordNumberChangeEvent,
+)
+
+from ..models import Patient, PatientAdmission, PatientRecordNumber
 
 User = get_user_model()
 
 class SignalTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser', 
+        self.user = create_navigation_user(
+            username='testuser',
             email='test@example.com',
-            profession='doctor'
+            password='testpassword',
+            profession_type=User.MEDICAL_DOCTOR,
         )
         self.patient = Patient.objects.create(
             name='Test Patient',
@@ -73,7 +82,7 @@ class SignalTests(TestCase):
     def test_patient_denormalization_updates(self):
         """Test that patient denormalized fields are updated via signals"""
         # Create record number
-        record = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='REC001',
             created_by=self.user,
@@ -136,7 +145,6 @@ class SignalTests(TestCase):
         
         # Update patient to reflect admission
         self.patient.refresh_from_db()
-        original_admission_id = self.patient.current_admission_id
         
         # Verify events exist
         admission_event = AdmissionEvent.objects.filter(admission=admission).first()
@@ -214,7 +222,7 @@ class SignalTests(TestCase):
     def test_admission_denormalized_fields_calculation(self):
         """Test that admission denormalized fields are calculated correctly"""
         # Create multiple admissions
-        admission1 = PatientAdmission.objects.create(
+        PatientAdmission.objects.create(
             patient=self.patient,
             admission_datetime=timezone.now() - timedelta(days=10),
             discharge_datetime=timezone.now() - timedelta(days=5),
@@ -223,7 +231,7 @@ class SignalTests(TestCase):
             updated_by=self.user
         )
         
-        admission2 = PatientAdmission.objects.create(
+        PatientAdmission.objects.create(
             patient=self.patient,
             admission_datetime=timezone.now() - timedelta(days=3),
             discharge_datetime=timezone.now() - timedelta(days=1),
@@ -240,7 +248,7 @@ class SignalTests(TestCase):
     def test_multiple_events_creation(self):
         """Test that multiple events are created correctly"""
         # Create record number
-        record = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='REC001',
             change_reason='Initial setup',
@@ -263,7 +271,7 @@ class SignalTests(TestCase):
         admission.save()
         
         # Update record number
-        record2 = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='REC002',
             change_reason='Updated',
@@ -286,7 +294,7 @@ class SignalTests(TestCase):
         self.assertEqual(all_events.count(), 4)
     
     def test_signal_error_handling(self):
-        """Test that signals handle errors gracefully"""
+        """Soft-deleted timeline event is restored in place on source update"""
         # Create record number
         record = PatientRecordNumber.objects.create(
             patient=self.patient,
@@ -294,14 +302,38 @@ class SignalTests(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
-        
-        # Manually delete the event to test error handling
+
+        # Retain the original event primary key
+        event = RecordNumberChangeEvent.objects.get(record_change=record)
+        original_pk = event.pk
+
+        # Soft-delete the event through the supported queryset behavior
         RecordNumberChangeEvent.objects.filter(record_change=record).delete()
-        
+
+        # No active event remains; exactly one all-states row exists
+        self.assertIsNone(
+            RecordNumberChangeEvent.objects.filter(record_change=record).first()
+        )
+        all_states = RecordNumberChangeEvent.objects.all_with_deleted()
+        self.assertEqual(all_states.filter(record_change=record).count(), 1)
+
         # Update record - should not fail
         record.record_number = 'REC001_UPDATED'
         record.save()
-        
-        # Should still work
+
+        # One active event with the original primary key is restored
+        event = RecordNumberChangeEvent.objects.get(record_change=record)
+        self.assertEqual(event.pk, original_pk)
+        self.assertFalse(event.is_deleted)
+        self.assertIsNone(event.deleted_at)
+        self.assertIsNone(event.deleted_by)
+        self.assertEqual(event.deletion_reason, '')
+
+        # Exactly one all-states row with synchronized record-number data
+        self.assertEqual(all_states.filter(record_change=record).count(), 1)
+        self.assertEqual(event.new_record_number, 'REC001_UPDATED')
+        self.assertEqual(event.patient, self.patient)
+
+        # Patient denormalization updated
         self.patient.refresh_from_db()
         self.assertEqual(self.patient.current_record_number, 'REC001_UPDATED')
