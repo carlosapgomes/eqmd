@@ -1,29 +1,32 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.core.management import call_command
 from datetime import timedelta
 from io import StringIO
 
-from ..models import Patient, PatientRecordNumber, PatientAdmission
+from django.contrib.auth import get_user_model
+from django.core.management import call_command
+from django.test import TestCase
+from django.utils import timezone
+
+from apps.accounts.tests.helpers import create_navigation_user
+from apps.events.models import Event
+
+from ..models import Patient, PatientAdmission, PatientRecordNumber
 
 User = get_user_model()
 
 class RefreshCommandTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser', 
+        self.user = create_navigation_user(
+            username='testuser',
             email='test@example.com',
-            profession='doctor'
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
         )
     
     def test_refresh_patient_data_command(self):
-        """Test the refresh patient data management command"""
+        """Normal refresh persists repair of deliberately corrupted data"""
         patient = Patient.objects.create(
             name='Test Patient',
             birthday=timezone.now().date() - timedelta(days=365*30),
-            current_record_number='OLD_REC',  # Will be updated
-            total_admissions_count=999,  # Will be corrected
             created_by=self.user,
             updated_by=self.user
         )
@@ -47,11 +50,19 @@ class RefreshCommandTests(TestCase):
             updated_by=self.user
         )
         
+        # Creation signals already repaired the denormalized fields;
+        # deliberately corrupt them so the command must do real work.
+        Patient.objects.filter(pk=patient.pk).update(
+            current_record_number='OLD_REC',
+            total_admissions_count=999,
+            total_inpatient_days=999,
+        )
+
         # Run refresh command
         out = StringIO()
         call_command('refresh_patient_data', stdout=out)
         
-        # Check that data was corrected
+        # Check that data was corrected and persisted
         patient.refresh_from_db()
         self.assertEqual(patient.current_record_number, 'CORRECT_REC')
         self.assertEqual(patient.total_admissions_count, 1)
@@ -59,14 +70,13 @@ class RefreshCommandTests(TestCase):
         
         # Check command output
         output = out.getvalue()
-        self.assertIn('Refreshed denormalized fields', output)
+        self.assertIn('Refreshed denormalized fields for 1 patients', output)
     
     def test_refresh_single_patient(self):
-        """Test refreshing single patient data"""
+        """Single-patient refresh persists repair of corrupted fields"""
         patient = Patient.objects.create(
             name='Single Patient',
             birthday=timezone.now().date() - timedelta(days=365*30),
-            current_record_number='WRONG',
             created_by=self.user,
             updated_by=self.user
         )
@@ -80,6 +90,11 @@ class RefreshCommandTests(TestCase):
             updated_by=self.user
         )
         
+        # Corrupt after source creation so the command must repair it
+        Patient.objects.filter(pk=patient.pk).update(
+            current_record_number='WRONG',
+        )
+
         # Run command for specific patient
         out = StringIO()
         call_command('refresh_patient_data', f'--patient-id={patient.pk}', stdout=out)
@@ -93,10 +108,11 @@ class RefreshCommandTests(TestCase):
 
 class DataConsistencyTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser', 
+        self.user = create_navigation_user(
+            username='testuser',
             email='test@example.com',
-            profession='doctor'
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
         )
     
     def test_denormalized_field_refresh(self):
@@ -109,7 +125,7 @@ class DataConsistencyTests(TestCase):
         )
         
         # Create record number
-        record = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=patient,
             record_number='REC001',
             is_current=True,
@@ -134,7 +150,9 @@ class DataConsistencyTests(TestCase):
         call_command('populate_sample_data', '--dry-run', stdout=out)
         
         output = out.getvalue()
-        self.assertIn('patient with record number and admission history', output)
+        self.assertIn('Would create inpatient patient', output)
+        self.assertIn('Would create outpatient patient', output)
+        self.assertIn('Created 0 patients total', output)
         self.assertIn('DRY RUN COMPLETED', output)
     
     def test_data_migration_scenarios(self):
@@ -143,7 +161,6 @@ class DataConsistencyTests(TestCase):
         patient = Patient.objects.create(
             name='Migration Test Patient',
             birthday=timezone.now().date() - timedelta(days=365*30),
-            current_record_number=None,
             total_admissions_count=0,
             total_inpatient_days=0,
             created_by=self.user,
@@ -222,7 +239,7 @@ class DataConsistencyTests(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
-        admission = PatientAdmission.objects.create(
+        PatientAdmission.objects.create(
             patient=patient3,
             admission_datetime=timezone.now() - timedelta(days=1),
             admission_type=PatientAdmission.AdmissionType.EMERGENCY,
@@ -236,7 +253,7 @@ class DataConsistencyTests(TestCase):
             patient.refresh_from_db()
         
         # Verify consistency
-        self.assertIsNone(patient1.current_record_number)
+        self.assertEqual(patient1.current_record_number, '')
         self.assertEqual(patient1.total_admissions_count, 0)
         self.assertEqual(patient1.total_inpatient_days, 0)
         
@@ -246,19 +263,23 @@ class DataConsistencyTests(TestCase):
         
         self.assertEqual(patient3.current_record_number, 'REC003')
         self.assertEqual(patient3.total_admissions_count, 1)
-        self.assertIsNone(patient3.total_inpatient_days)  # Active admission
+        # Active admission contributes no completed-stay days
+        self.assertEqual(patient3.total_inpatient_days, 0)
     
     def test_command_error_handling(self):
         """Test command error handling"""
-        # Test with invalid patient ID
+        # Test with a well-formed but non-existent patient UUID
+        missing_id = '00000000-0000-0000-0000-000000000000'
         out = StringIO()
-        call_command('refresh_patient_data', '--patient-id=99999', stdout=out)
+        call_command(
+            'refresh_patient_data', f'--patient-id={missing_id}', stdout=out
+        )
         
         output = out.getvalue()
-        self.assertIn('Patient not found', output)
+        self.assertIn(f'Patient {missing_id} not found', output)
     
     def test_command_verbosity_levels(self):
-        """Test command verbosity levels"""
+        """Verbosity 2 adds aggregate progress only; no patient values"""
         # Create test data
         patient = Patient.objects.create(
             name='Verbose Test Patient',
@@ -280,19 +301,25 @@ class DataConsistencyTests(TestCase):
         call_command('refresh_patient_data', '--verbosity=2', stdout=out)
         
         output = out.getvalue()
-        self.assertIn('VERBOSE001', output)
+        # Aggregate selection/progress line with count only
+        self.assertIn('Selected 1 patients', output)
+        # Normal completion summary is preserved
         self.assertIn('Refreshed denormalized fields', output)
+        # No patient-level identifier may appear in output
+        self.assertNotIn('Verbose Test Patient', output)
+        self.assertNotIn(str(patient.pk), output)
+        self.assertNotIn('VERBOSE001', output)
     
     def test_command_dry_run_mode(self):
-        """Test command dry run mode"""
+        """Dry run executes the refresh path but persists nothing"""
         patient = Patient.objects.create(
             name='Dry Run Patient',
             birthday=timezone.now().date() - timedelta(days=365*30),
-            current_record_number='OLD',
             created_by=self.user,
             updated_by=self.user
         )
         
+        # Source record and active admission
         PatientRecordNumber.objects.create(
             patient=patient,
             record_number='NEW',
@@ -300,15 +327,60 @@ class DataConsistencyTests(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
+        PatientAdmission.objects.create(
+            patient=patient,
+            admission_datetime=timezone.now() - timedelta(days=5),
+            admission_type=PatientAdmission.AdmissionType.SCHEDULED,
+            initial_bed='B001',
+            created_by=self.user,
+            updated_by=self.user
+        )
+
+        # Corrupt denormalized state after source signals so a real
+        # refresh would have observable work to do.
+        Patient.objects.filter(pk=patient.pk).update(
+            current_record_number='OLD',
+            total_admissions_count=999,
+            total_inpatient_days=999,
+            status=Patient.Status.OUTPATIENT,
+            current_admission_id=None,
+            bed='',
+            ward=None,
+        )
+
+        history_count_before = patient.history.count()
+        events_before = Event.objects.all_with_deleted().filter(
+            patient=patient
+        ).count()
         
         # Run dry run
         out = StringIO()
         call_command('refresh_patient_data', '--dry-run', stdout=out)
         
-        # Check that data was NOT actually updated
+        output = out.getvalue()
+        # Exact aggregate mode/count expectation; no per-patient values
+        self.assertIn('DRY RUN', output)
+        self.assertIn('would refresh 1 patients', output)
+        self.assertIn('no changes were saved', output)
+        self.assertNotIn('Dry Run Patient', output)
+        self.assertNotIn(str(patient.pk), output)
+        self.assertNotIn('OLD', output)
+        self.assertNotIn('NEW', output)
+
+        # Check that NOTHING was persisted: corrupted fields unchanged
         patient.refresh_from_db()
         self.assertEqual(patient.current_record_number, 'OLD')
-        
-        output = out.getvalue()
-        self.assertIn('DRY RUN', output)
-        self.assertIn('NEW', output)
+        self.assertEqual(patient.total_admissions_count, 999)
+        self.assertEqual(patient.total_inpatient_days, 999)
+        self.assertEqual(patient.status, Patient.Status.OUTPATIENT)
+        self.assertIsNone(patient.current_admission_id)
+        self.assertEqual(patient.bed, '')
+        self.assertIsNone(patient.ward)
+        # History rows and all-states timeline events unchanged
+        self.assertEqual(patient.history.count(), history_count_before)
+        self.assertEqual(
+            Event.objects.all_with_deleted().filter(
+                patient=patient
+            ).count(),
+            events_before,
+        )

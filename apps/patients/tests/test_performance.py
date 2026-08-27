@@ -1,22 +1,24 @@
-from django.test import TestCase, TransactionTestCase
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.test.utils import override_settings
-from django.db import transaction
-from django.test import Client
-from datetime import timedelta
 import time
+from datetime import timedelta
 
-from ..models import Patient, PatientRecordNumber, PatientAdmission
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.test import Client, TestCase, TransactionTestCase
+from django.utils import timezone
+
+from apps.accounts.tests.helpers import create_navigation_user
+
+from ..models import Patient, PatientAdmission, PatientRecordNumber
 
 User = get_user_model()
 
 class PerformanceTests(TransactionTestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser', 
+        self.user = create_navigation_user(
+            username='testuser',
             email='test@example.com',
-            profession='doctor'
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
         )
         self.client = Client()
         self.client.force_login(self.user)
@@ -152,7 +154,7 @@ class PerformanceTests(TransactionTestCase):
             discharge_time = admission_time + timedelta(days=5)
             
             # Admit
-            admission = patient.admit_patient(
+            patient.admit_patient(
                 admission_datetime=admission_time,
                 admission_type=PatientAdmission.AdmissionType.SCHEDULED,
                 user=self.user
@@ -179,10 +181,11 @@ class PerformanceTests(TransactionTestCase):
 
 class DatabaseQueryTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser', 
+        self.user = create_navigation_user(
+            username='testuser',
             email='test@example.com',
-            profession='doctor'
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
         )
         
         # Create test patient with history
@@ -300,7 +303,7 @@ class DatabaseQueryTests(TestCase):
             status=Patient.Status.INPATIENT
         ).select_related().prefetch_related('record_numbers', 'admissions')
         
-        patient_list = list(active_patients)
+        list(active_patients)
         
         end_time = time.time()
         query_time = end_time - start_time
@@ -410,4 +413,4 @@ class DatabaseQueryTests(TestCase):
         processing_time = end_time - start_time
         
         self.assertLess(processing_time, 5.0, f"Large dataset processing took {processing_time:.2f}s")
-        self.assertEqual(patient_count, 100)
+        self.assertEqual(patient_count, 101)
