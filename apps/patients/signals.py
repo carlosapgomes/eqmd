@@ -1,37 +1,55 @@
-from django.db.models.signals import post_save, post_delete, pre_save
+from django.core.exceptions import ValidationError
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 
-from .models import Patient, PatientRecordNumber, PatientAdmission
 from apps.events.models import (
-    RecordNumberChangeEvent, AdmissionEvent, DischargeEvent, StatusChangeEvent,
+    AdmissionEvent,
+    DischargeEvent,
     PatientProfileChangeEvent,
+    RecordNumberChangeEvent,
+    StatusChangeEvent,
 )
+
+from .models import Patient, PatientAdmission, PatientRecordNumber
 
 
 @receiver(post_save, sender=PatientRecordNumber)
 def create_record_change_event(sender, instance, created, **kwargs):
     """Create timeline event when record number is changed"""
     if created or instance.is_current:
-        # Create or update the timeline event
-        event, event_created = RecordNumberChangeEvent.objects.get_or_create(
-            record_change=instance,
-            defaults={
-                'patient': instance.patient,
-                'event_datetime': instance.effective_date,
-                'description': f"Alteração de prontuário para {instance.record_number}",
-                'created_by': instance.created_by,
-                'updated_by': instance.updated_by,
-            }
+        # Look up the timeline event through all states so a soft-deleted
+        # row is restored in place instead of conflicting with the unique
+        # record_change relation.
+        event = (
+            RecordNumberChangeEvent.objects.all_with_deleted()
+            .filter(record_change=instance)
+            .first()
         )
-        
-        if not event_created:
-            # Update existing event
+        if event is None:
+            # First create
+            event = RecordNumberChangeEvent(
+                record_change=instance,
+                patient=instance.patient,
+                event_datetime=instance.effective_date,
+                description=f"Alteração de prontuário para {instance.record_number}",
+                created_by=instance.created_by,
+                updated_by=instance.updated_by,
+            )
+        else:
+            # Restore the existing (possibly soft-deleted) event in place
+            event.is_deleted = False
+            event.deleted_at = None
+            event.deleted_by = None
+            event.deletion_reason = ""
             event.event_datetime = instance.effective_date
             event.description = f"Alteração de prontuário para {instance.record_number}"
             event.updated_by = instance.updated_by
-            event.save()
+
+        # Save once; RecordNumberChangeEvent.save() synchronizes the domain
+        # fields (new_record_number, old_record_number, change_reason,
+        # patient, event_datetime) from the source record.
+        event.save()
 
 
 @receiver(post_save, sender=PatientAdmission)
@@ -263,7 +281,7 @@ def create_status_change_event(sender, instance, created, **kwargs):
         reason = _get_status_change_reason(old_status, new_status)
         
         # Create status change event
-        status_event = StatusChangeEvent.objects.create(
+        StatusChangeEvent.objects.create(
             patient=instance,
             event_datetime=timezone.now(),
             description=f"Alteração de status: {instance.get_status_display()}",
