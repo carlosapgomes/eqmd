@@ -290,8 +290,10 @@ class PatientRecordNumber(models.Model):
                 {"effective_date": "Data de vigência não pode ser no futuro"}
             )
 
-        # Validate current record uniqueness
-        if self.is_current:
+        # Validate current record uniqueness (only when the relation is
+        # present: excluded-field ModelForm validation runs clean() on an
+        # unsaved instance whose patient_id is not yet assigned)
+        if self.is_current and self.patient_id:
             existing_current = PatientRecordNumber.objects.filter(
                 patient=self.patient, is_current=True
             ).exclude(pk=self.pk)
