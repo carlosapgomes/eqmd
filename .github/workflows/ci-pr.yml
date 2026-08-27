@@ -41,6 +41,7 @@ jobs:
       DATABASE_PASSWORD: postgres
       DATABASE_HOST: 127.0.0.1
       DATABASE_PORT: "5432"
+      UV_FROZEN: "1"
 
     steps:
       - name: Checkout
@@ -115,9 +116,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg poppler-utils
 
+      - name: Lock verification (mandatory)
+        if: steps.scope.outputs.docs_only != 'true'
+        run: env -u UV_FROZEN uv lock --check
+
       - name: Install dependencies
         if: steps.scope.outputs.docs_only != 'true'
-        run: uv sync --group dev
+        run: uv sync --frozen --group dev
+
+      - name: Django system check (mandatory)
+        if: steps.scope.outputs.docs_only != 'true'
+        run: uv run python manage.py check
+
+      - name: Migration drift check (mandatory)
+        if: steps.scope.outputs.docs_only != 'true'
+        run: uv run python manage.py makemigrations --check --dry-run
 
       - name: Smoke v1 (mandatory)
         if: steps.scope.outputs.docs_only != 'true'
@@ -175,6 +188,34 @@ jobs:
 
           uv run mypy $CHANGED_PY_FILES
 
+      - name: Ruff check (changed files, mandatory)
+        if: steps.scope.outputs.docs_only != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHANGED_PY_FILES="${{ steps.scope.outputs.changed_py_files }}"
+
+          if [ -z "$CHANGED_PY_FILES" ]; then
+            echo "No Python file changes detected. Skipping scoped Ruff check."
+            exit 0
+          fi
+
+          uv run ruff check $CHANGED_PY_FILES
+
+      - name: Ruff format check (changed files, mandatory)
+        if: steps.scope.outputs.docs_only != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHANGED_PY_FILES="${{ steps.scope.outputs.changed_py_files }}"
+
+          if [ -z "$CHANGED_PY_FILES" ]; then
+            echo "No Python file changes detected. Skipping scoped format check."
+            exit 0
+          fi
+
+          uv run ruff format --check $CHANGED_PY_FILES
+
   full-suite-informative:
     name: Full test suite (informative)
     runs-on: ubuntu-latest
@@ -208,6 +249,7 @@ jobs:
       DATABASE_PASSWORD: postgres
       DATABASE_HOST: 127.0.0.1
       DATABASE_PORT: "5432"
+      UV_FROZEN: "1"
 
     steps:
       - name: Checkout
@@ -228,8 +270,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg poppler-utils
 
+      - name: Lock verification (mandatory)
+        run: env -u UV_FROZEN uv lock --check
+
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --frozen --group dev
 
       - name: Run full suite
         run: |
