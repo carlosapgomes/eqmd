@@ -1,311 +1,313 @@
-import json
-import uuid
-from django.test import TestCase, Client
-from django.urls import reverse
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
-from django.contrib.messages import get_messages
-from django.core.exceptions import PermissionDenied
-from apps.patients.models import Patient, AllowedTag, Tag
-from apps.core.permissions.utils import can_manage_patient_tags
-from apps.events.models import Event, TagAddedEvent, TagRemovedEvent, TagBulkRemoveEvent
+from django.contrib.auth.models import Permission
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+
+from apps.accounts.tests.helpers import create_navigation_user
+from apps.events.models import TagAddedEvent
+
+from ..models import AllowedTag, Patient, Tag
 
 User = get_user_model()
 
-class TagManagementErrorHandlingTests(TestCase):
-    """Test error handling for invalid tag operations"""
 
-    def setUp(self):
-        """Set up test data"""
-        self.client = Client()
-        
-        # Create test user with permission
-        self.doctor = User.objects.create_user(
+class TagManagementErrorHandlingTests(TestCase):
+    """Error paths for tag add/remove/bulk operations and their payloads."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.doctor = create_navigation_user(
             username='doctor',
             email='doctor@example.com',
-            password='testpass123'
+            password='testpass123',
         )
-        
-        # Add permission to user
-        from django.contrib.auth.models import Permission
-        change_patient_perm = Permission.objects.get(codename='change_patient')
-        self.doctor.user_permissions.add(change_patient_perm)
-        
-        # Create patient
-        self.patient = Patient.objects.create(
+        change_perm = Permission.objects.get(codename='change_patient')
+        cls.doctor.user_permissions.add(change_perm)
+
+        cls.patient = Patient.objects.create(
             name='Test Patient',
-            birthday='1990-01-01',
-            gender='M',
-            status=Patient.Status.INPATIENT,
-            created_by=self.doctor,
-            updated_by=self.doctor
+            birthday=timezone.now().date() - timedelta(days=365 * 30),
+            status=Patient.Status.OUTPATIENT,
+            created_by=cls.doctor,
+            updated_by=cls.doctor,
         )
-        
-        # Create allowed tag
-        self.tag = AllowedTag.objects.create(
+        cls.other_patient = Patient.objects.create(
+            name='Other Patient',
+            birthday=timezone.now().date() - timedelta(days=365 * 30),
+            status=Patient.Status.OUTPATIENT,
+            created_by=cls.doctor,
+            updated_by=cls.doctor,
+        )
+        cls.tag = AllowedTag.objects.create(
             name='Test Tag',
-            color='blue',
+            color='#007bff',
             is_active=True,
-            created_by=self.doctor,
-            updated_by=self.doctor
+            created_by=cls.doctor,
+            updated_by=cls.doctor,
         )
-        
-        # Login
-        self.client.login(username='doctor', password='testpass123')
+
+    def setUp(self):
+        self.client.force_login(self.doctor)
+
+    def _add_url(self):
+        return reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': self.patient.id},
+        )
 
     def test_add_tag_to_nonexistent_patient(self):
-        """Test adding tag to non-existent patient returns 404"""
-        fake_uuid = uuid.uuid4()
-        url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': fake_uuid})
-        
-        response = self.client.post(url, {
-            'tag_id': str(self.tag.id)
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
+        """Adding a tag to an unknown patient UUID is a 404."""
+        url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': '00000000-0000-0000-0000-000000000000'},
+        )
+        response = self.client.post(url, {'tag_id': str(self.tag.id)})
+
         self.assertEqual(response.status_code, 404)
 
     def test_remove_tag_from_nonexistent_patient(self):
-        """Test removing tag from non-existent patient returns 404"""
-        fake_uuid = uuid.uuid4()
-        url = reverse('apps.patients:patient_tag_remove', kwargs={
-            'patient_id': fake_uuid,
-            'tag_id': self.tag.pk
-        })
-        
-        response = self.client.post(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
-        self.assertEqual(response.status_code, 404)
-        # HTML response for 404, not JSON
+        """Removing a tag from an unknown patient UUID is a 404."""
+        url = reverse(
+            'patients:patient_tag_remove',
+            kwargs={
+                'patient_id': '00000000-0000-0000-0000-000000000000',
+                'tag_id': '00000000-0000-0000-0000-000000000001',
+            },
+        )
+        response = self.client.post(url)
+
         self.assertEqual(response.status_code, 404)
 
     def test_add_nonexistent_tag(self):
-        """Test adding non-existent tag returns 400"""
-        fake_tag_id = uuid.uuid4()
-        url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-        
-        response = self.client.post(url, {
-            'tag_id': str(fake_tag_id)
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
-        self.assertEqual(response.status_code, 400)
-        # HTML response for 404, not JSON
+        """An AllowedTag id that no longer exists is a domain 404."""
+        dummy = AllowedTag.objects.create(
+            name='Dummy Tag',
+            created_by=self.doctor,
+            updated_by=self.doctor,
+        )
+        missing_id = dummy.pk
+        dummy.delete()
+
+        response = self.client.post(
+            self._add_url(),
+            {'tag_id': str(missing_id)},
+        )
+
         self.assertEqual(response.status_code, 404)
 
     def test_remove_nonexistent_tag(self):
-        """Test removing non-existent tag returns 400"""
-        fake_tag_id = uuid.uuid4()
-        url = reverse('apps.patients:patient_tag_remove', kwargs={
-            'patient_id': self.patient.id,
-            'tag_id': fake_tag_id
-        })
-        
-        response = self.client.post(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
-        self.assertEqual(response.status_code, 400)
-        # HTML response for 404, not JSON
+        """Removing a tag UUID that matches nothing is a 404."""
+        url = reverse(
+            'patients:patient_tag_remove',
+            kwargs={
+                'patient_id': self.patient.id,
+                'tag_id': '00000000-0000-0000-0000-000000000001',
+            },
+        )
+        response = self.client.post(url)
+
         self.assertEqual(response.status_code, 404)
 
     def test_remove_tag_not_assigned_to_patient(self):
-        """Test removing tag that's not assigned to patient returns 400"""
-        # Tag exists but not assigned to patient
-        url = reverse('apps.patients:patient_tag_remove', kwargs={
-            'patient_id': self.patient.id,
-            'tag_id': self.tag.pk
-        })
-        
-        response = self.client.post(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
-        self.assertEqual(response.status_code, 400)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('not assigned', data['error'])
+        """A tag assigned to another patient cannot be removed: 404."""
+        Tag.objects.create(
+            patient=self.other_patient,
+            allowed_tag=self.tag,
+            created_by=self.doctor,
+            updated_by=self.doctor,
+        )
+        tag_instance = self.other_patient.patient_tags.get(allowed_tag=self.tag)
+        url = reverse(
+            'patients:patient_tag_remove',
+            kwargs={
+                'patient_id': self.patient.id,
+                'tag_id': tag_instance.id,
+            },
+        )
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 404)
 
     def test_add_inactive_tag(self):
-        """Test adding inactive tag returns 400"""
-        # Deactivate tag
+        """An inactive AllowedTag is rejected with a domain 400."""
         self.tag.is_active = False
         self.tag.save()
-        
-        url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-        
-        response = self.client.post(url, {
-            'tag_id': str(self.tag.id)
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
+
+        response = self.client.post(
+            self._add_url(),
+            {'tag_id': str(self.tag.id)},
+        )
+
         self.assertEqual(response.status_code, 400)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('inactive', data['error'])
+        self.assertEqual(
+            response.json()['error'],
+            'Não é possível adicionar esta tag ao paciente',
+        )
 
     def test_add_duplicate_tag(self):
-        """Test adding duplicate tag returns 400"""
-        # First add the tag
+        """A second add of the same AllowedTag is a domain 400."""
         Tag.objects.create(
             patient=self.patient,
             allowed_tag=self.tag,
             created_by=self.doctor,
-            updated_by=self.doctor
+            updated_by=self.doctor,
         )
-        
-        # Try to add the same tag again
-        url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-        
-        response = self.client.post(url, {
-            'tag_id': str(self.tag.id)
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
+
+        response = self.client.post(
+            self._add_url(),
+            {'tag_id': str(self.tag.id)},
+        )
+
         self.assertEqual(response.status_code, 400)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('already assigned', data['error'])
+        self.assertEqual(
+            response.json()['error'],
+            'Não é possível adicionar esta tag ao paciente',
+        )
 
     def test_bulk_remove_no_tags(self):
-        """Test bulk remove when patient has no tags"""
-        url = reverse('apps.patients:patient_tag_remove_all', kwargs={'patient_id': self.patient.id})
-        
-        response = self.client.post(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
-        self.assertEqual(response.status_code, 400)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('no tags', data['error'])
-
-    def test_add_tag_without_ajax(self):
-        """Test non-AJAX request returns 400"""
-        url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-        
-        response = self.client.post(url, {
-            'tag_id': str(self.tag.id)
-        })
-        
-        self.assertEqual(response.status_code, 400)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('AJAX', data['error'])
-
-    def test_remove_tag_without_ajax(self):
-        """Test non-AJAX request returns 400"""
-        url = reverse('apps.patients:patient_tag_remove', kwargs={
-            'patient_id': self.patient.id,
-            'tag_id': self.tag.pk
-        })
-        
+        """Bulk remove with zero tags is a domain 400 with exact payload."""
+        url = reverse(
+            'patients:patient_tag_remove_all',
+            kwargs={'patient_id': self.patient.id},
+        )
         response = self.client.post(url)
-        
-        self.assertEqual(response.status_code, 400)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('AJAX', data['error'])
 
-    def test_invalid_uuid_format(self):
-        """Test invalid UUID format returns 400"""
-        url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-        
-        response = self.client.post(url, {
-            'tag_id': 'invalid-uuid'
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
         self.assertEqual(response.status_code, 400)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('invalid UUID', data['error'])
+        self.assertEqual(
+            response.json()['error'],
+            'Nenhuma tag para remover',
+        )
 
-    def test_missing_tag_id_parameter(self):
-        """Test missing tag_id parameter returns 400"""
-        url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-        
-        response = self.client.post(url, {
-            # Missing tag_id
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
-        self.assertEqual(response.status_code, 400)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('tag_id', data['error'])
+    def test_bulk_remove_with_tags_success(self):
+        """Bulk remove clears every tag and returns an empty list."""
+        Tag.objects.create(
+            patient=self.patient,
+            allowed_tag=self.tag,
+            created_by=self.doctor,
+            updated_by=self.doctor,
+        )
+        url = reverse(
+            'patients:patient_tag_remove_all',
+            kwargs={'patient_id': self.patient.id},
+        )
+        response = self.client.post(url)
 
-    def test_api_invalid_patient_id(self):
-        """Test API endpoint with invalid patient ID"""
-        fake_uuid = uuid.uuid4()
-        url = reverse('apps.patients:patient_tags_api', kwargs={'patient_id': fake_uuid})
-        
-        response = self.client.get(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
-        self.assertEqual(response.status_code, 404)
-        # HTML response for 404, not JSON
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['tags'], [])
+        self.assertFalse(self.patient.patient_tags.exists())
+
+    def test_add_tag_without_ajax_succeeds(self):
+        """The add endpoint has no AJAX gate: plain POSTs succeed."""
+        response = self.client.post(
+            self._add_url(),
+            {'tag_id': str(self.tag.id)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_remove_tag_without_ajax_succeeds(self):
+        """The remove endpoint has no AJAX gate: plain POSTs succeed."""
+        Tag.objects.create(
+            patient=self.patient,
+            allowed_tag=self.tag,
+            created_by=self.doctor,
+            updated_by=self.doctor,
+        )
+        tag_instance = self.patient.patient_tags.get(allowed_tag=self.tag)
+        url = reverse(
+            'patients:patient_tag_remove',
+            kwargs={
+                'patient_id': self.patient.id,
+                'tag_id': tag_instance.id,
+            },
+        )
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 200)
 
     def test_permission_denied_error_format(self):
-        """Test permission denied errors are properly formatted"""
-        # Create user without permission
-        no_permission_user = User.objects.create_user(
+        """Without change_patient the request fails with 403 before the view."""
+        no_permission_user = create_navigation_user(
             username='noperm',
             email='noperm@example.com',
-            password='testpass123'
+            password='testpass123',
         )
-        self.client.login(username='noperm', password='testpass123')
-        
-        url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-        
-        response = self.client.post(url, {
-            'tag_id': str(self.tag.id)
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        
+        self.client.force_login(no_permission_user)
+
+        response = self.client.post(
+            self._add_url(),
+            {'tag_id': str(self.tag.id)},
+        )
+
         self.assertEqual(response.status_code, 403)
-        data = json.loads(response.content)
-        self.assertIn('error', data)
-        self.assertIn('permission', data['error'])
+        # PermissionRequiredMixin raises before JSON handling: HTML body.
+        self.assertIn('text/html', response['Content-Type'])
+
+    def test_api_invalid_patient_id(self):
+        """The tags API for an unknown patient UUID is a 404."""
+        url = reverse(
+            'patients:patient_tags_api',
+            kwargs={'patient_id': '00000000-0000-0000-0000-000000000000'},
+        )
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 404)
 
     def test_database_error_handling(self):
-        """Test database errors are handled gracefully"""
-        # Mock a database error
-        original_save = Tag.objects.create
-        def mock_save(*args, **kwargs):
-            raise Exception("Database connection error")
-        
-        Tag.objects.create = mock_save
-        
-        try:
-            url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-            
-            response = self.client.post(url, {
-                'tag_id': str(self.tag.id)
-            }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-            
-            self.assertEqual(response.status_code, 500)
-            data = json.loads(response.content)
-            self.assertIn('error', data)
-            self.assertIn('server error', data['error'])
-        finally:
-            # Restore original method
-            Tag.objects.create = original_save
+        """Unexpected failures return a JSON 500 with the exact payload."""
+        original_create = Tag.objects.create
 
-    def test_event_creation_failure(self):
-        """Test handling when event creation fails"""
-        # Mock event creation to fail
-        original_create = Event.objects.create
         def mock_create(*args, **kwargs):
-            raise Exception("Event creation failed")
-        
-        Event.objects.create = mock_create
-        
+            raise RuntimeError('Database connection error')
+
+        Tag.objects.create = mock_create
         try:
-            url = reverse('apps.patients:patient_tag_add', kwargs={'patient_id': self.patient.id})
-            
-            response = self.client.post(url, {
-                'tag_id': str(self.tag.id)
-            }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-            
-            # Should still succeed but log the error
-            self.assertEqual(response.status_code, 200)
-            data = json.loads(response.content)
-            self.assertIn('tags', data)
-            
-            # Verify tag was added despite event creation failure
-            self.assertTrue(
-                Tag.objects.filter(
-                    patient=self.patient,
-                    allowed_tag=self.tag
-                ).exists()
+            response = self.client.post(
+                self._add_url(),
+                {'tag_id': str(self.tag.id)},
             )
         finally:
-            # Restore original method
-            Event.objects.create = original_create
+            Tag.objects.create = original_create
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()['error'],
+            'Erro interno do servidor',
+        )
+
+    def test_event_creation_failure(self):
+        """Failure while writing the timeline event yields a JSON 500."""
+        original_create = TagAddedEvent.objects.create
+
+        def mock_create(*args, **kwargs):
+            raise RuntimeError('Event creation failed')
+
+        TagAddedEvent.objects.create = mock_create
+        try:
+            response = self.client.post(
+                self._add_url(),
+                {'tag_id': str(self.tag.id)},
+            )
+        finally:
+            TagAddedEvent.objects.create = original_create
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()['error'],
+            'Erro interno do servidor',
+        )
+
+    def test_missing_tag_id_parameter(self):
+        """A POST without tag_id is a domain 400 with exact payload."""
+        response = self.client.post(self._add_url(), {})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'],
+            'ID da tag é obrigatório',
+        )

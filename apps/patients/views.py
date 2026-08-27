@@ -1198,20 +1198,29 @@ class PatientTagAddView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
     def post(self, request, patient_id):
         patient = get_object_or_404(Patient, pk=patient_id)
-        
+
         # Enhanced permission check using new utility functions
         if not can_manage_patient_tags(request.user, patient):
             return JsonResponse({
                 'error': 'Você não tem permissão para gerenciar tags deste paciente'
             }, status=403)
-        
+
+        tag_id = request.POST.get('tag_id')
+        if not tag_id:
+            return JsonResponse({'error': 'ID da tag é obrigatório'}, status=400)
+
+        # AllowedTag.pk is an integer; a non-integer body value is a
+        # malformed request, not a missing resource.
         try:
-            tag_id = request.POST.get('tag_id')
-            if not tag_id:
-                return JsonResponse({'error': 'ID da tag é obrigatório'}, status=400)
-            
-            allowed_tag = get_object_or_404(AllowedTag, pk=tag_id)
-            
+            tag_pk = int(tag_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'ID da tag inválido'}, status=400)
+
+        # Resolved outside the broad except so a nonexistent AllowedTag id
+        # yields the domain 404 instead of a swallowed Http404 (500).
+        allowed_tag = get_object_or_404(AllowedTag, pk=tag_pk)
+
+        try:
             # Enhanced permission check for adding specific tag
             if not can_add_patient_tag(request.user, patient, allowed_tag):
                 return JsonResponse({
