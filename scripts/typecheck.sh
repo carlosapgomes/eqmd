@@ -21,8 +21,11 @@ if [[ $# -eq 0 ]]; then
 fi
 
 if ! docker exec "${DOCKER_SERVICE}" sh -lc 'command -v mypy >/dev/null 2>&1'; then
-  echo "[typecheck] mypy not found in ${DOCKER_SERVICE}. Installing dev dependencies..."
-  docker exec --user root "${DOCKER_SERVICE}" sh -lc 'cd /app && uv pip install --system --group dev'
+  echo "[typecheck] ERROR: mypy is not installed in ${DOCKER_SERVICE}." >&2
+  echo "[typecheck] Rebuild the development image from the committed lock:" >&2
+  echo "[typecheck]   docker compose build eqmd-dev" >&2
+  echo "[typecheck] Quality scripts never install packages at runtime (ADR-0001)." >&2
+  exit 3
 fi
 
 exec docker exec "${DOCKER_SERVICE}" mypy "$@"
