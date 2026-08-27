@@ -1,9 +1,10 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.urls import reverse
 
 from apps.accounts.tests.helpers import create_navigation_user
-from ..models import Patient, AllowedTag, Tag
+
+from ..models import AllowedTag, Patient, Tag
 
 User = get_user_model()
 
@@ -200,7 +201,7 @@ class PatientTagViewTests(TestCase):
 
     def test_patient_detail_displays_tags(self):
         """Test that patient detail view displays tags"""
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.allowed_tag,
             patient=self.patient,
             created_by=self.user,
@@ -217,7 +218,7 @@ class PatientTagViewTests(TestCase):
 
     def test_patient_list_displays_tags(self):
         """Test that patient list view displays tags"""
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.allowed_tag,
             patient=self.patient,
             created_by=self.user,
@@ -320,9 +321,10 @@ class PatientTagManagementViewTests(TestCase):
             'notes': 'Urgent case'
         })
 
-        # get_object_or_404 is inside try/except in the view, so Http404
-        # is caught and surfaces as 500 (internal error handler).
-        self.assertEqual(response.status_code, 500)
+        # A well-formed but nonexistent AllowedTag id is a domain 404:
+        # the view resolves it with get_object_or_404 outside its broad
+        # except, so Http404 reaches the standard 404 handler.
+        self.assertEqual(response.status_code, 404)
 
     def test_patient_tag_add_view_permission_denied(self):
         """Test tag addition without proper permissions"""
@@ -434,7 +436,7 @@ class PatientTagManagementViewTests(TestCase):
     def test_patient_tags_api_view_success(self):
         """Test successful API response for patient tags"""
         # Add a tag
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
             notes='Urgent case',
@@ -645,7 +647,7 @@ class PatientTagIntegrationTests(TestCase):
     def test_tag_api_available_tags_filtering(self):
         """Test that available tags API correctly filters already assigned tags"""
         # Add a tag to patient
-        tag = Tag.objects.create(
+        Tag.objects.create(
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
             created_by=self.user,
@@ -866,8 +868,6 @@ class PatientTagPermissionTests(TestCase):
 
     def test_cross_patient_tag_access(self):
         """Test that any authenticated user can view tags (can_view_patient_tags allows all auth'd users)"""
-        from django.contrib.auth.models import Permission
-
         # Create another patient
         other_patient = Patient.objects.create(
             name='Other Patient',

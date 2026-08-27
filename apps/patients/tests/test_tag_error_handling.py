@@ -1,544 +1,456 @@
-from django.test import TestCase
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.test import Client, TestCase
 from django.urls import reverse
-from ..models import Patient, AllowedTag, Tag
+from django.utils import timezone
+
+from apps.accounts.tests.helpers import create_navigation_user
+from apps.events.models import TagAddedEvent
+
+from ..models import AllowedTag, Patient, Tag
 
 User = get_user_model()
 
 
 class PatientTagErrorHandlingTests(TestCase):
-    """Tests for error handling in tag management operations"""
-    
+    """Strict HTTP/error contracts for patient tag management endpoints."""
+
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(
+        cls.user = create_navigation_user(
             username='testuser',
             email='test@example.com',
-            password='testpassword'
+            password='testpass123',
         )
-        # Add required permissions
-        from django.contrib.auth.models import Permission
         change_perm = Permission.objects.get(codename='change_patient')
         view_perm = Permission.objects.get(codename='view_patient')
         cls.user.user_permissions.add(change_perm, view_perm)
-        
+
         cls.allowed_tag = AllowedTag.objects.create(
             name='Test Tag',
             color='#007bff',
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
 
     def setUp(self):
         self.client.force_login(self.user)
 
-    def test_add_tag_with_missing_tag_id(self):
-        """Test error handling when tag_id is missing"""
-        patient = Patient.objects.create(
-            name='Error Test Patient',
-            birthday='1980-01-01',
+    def _create_patient(self, name='Error Test Patient'):
+        return Patient.objects.create(
+            name=name,
+            birthday=timezone.now().date() - timedelta(days=365 * 30),
             status=Patient.Status.OUTPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'notes': 'Missing tag_id'
-        })
-        
-        self.assertEqual(response.status_code, 400)
-        data = response.json()
-        self.assertIn('ID da tag é obrigatório', data['error'])
 
-    def test_add_tag_with_invalid_tag_id(self):
-        """Test error handling with invalid tag_id"""
-        patient = Patient.objects.create(
-            name='Error Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+    def test_add_tag_with_missing_tag_id(self):
+        """Missing tag_id is a domain 400 with the exact payload."""
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
         )
-        
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': 'invalid-uuid-format',
-            'notes': 'Invalid tag_id'
-        })
-        
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [400, 404, 500])
+        response = self.client.post(add_url, data={'notes': 'Missing tag_id'})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'],
+            'ID da tag é obrigatório',
+        )
 
     def test_add_tag_with_nonexistent_tag_id(self):
-        """Test error handling with non-existent tag_id"""
-        patient = Patient.objects.create(
-            name='Error Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        # Create a dummy allowed tag to get a valid ID format, then delete it
-        dummy_allowed_tag = AllowedTag.objects.create(
+        """An integer tag_id that matches no AllowedTag is a 404.
+
+        The view resolves the tag with get_object_or_404, so a missing
+        AllowedTag id yields the domain 404.
+        """
+        patient = self._create_patient()
+        dummy = AllowedTag.objects.create(
             name='Dummy Tag',
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        tag_id = dummy_allowed_tag.id
-        dummy_allowed_tag.delete()
-        
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': tag_id,
-            'notes': 'Non-existent tag'
-        })
-        
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [400, 404, 500])
+        missing_id = dummy.pk
+        dummy.delete()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.post(
+            add_url,
+            data={'tag_id': missing_id},
+        )
 
-    def test_add_tag_with_invalid_patient_id(self):
-        """Test error handling with invalid patient_id"""
-        fake_uuid = '12345678-1234-5678-9012-123456789012'
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': fake_uuid})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Invalid patient'
-        })
-        
         self.assertEqual(response.status_code, 404)
 
-    def test_remove_tag_with_invalid_tag_id(self):
-        """Test error handling when removing tag with invalid tag_id"""
-        patient = Patient.objects.create(
-            name='Error Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+    def test_add_tag_with_malformed_tag_id(self):
+        """A non-integer tag_id body is a malformed request: domain 400.
+
+        AllowedTag.pk is an integer AutoField, so a non-integer body
+        value is a bad request, not a missing resource.
+        """
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
         )
-        
-        remove_url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': patient.pk,
-            'tag_id': 'invalid-uuid-format'
-        })
-        
-        response = self.client.post(remove_url)
+        response = self.client.post(
+            add_url,
+            data={'tag_id': 'not-an-integer'},
+        )
+
         self.assertEqual(response.status_code, 400)
-
-    def test_remove_tag_with_nonexistent_tag_id(self):
-        """Test error handling when removing non-existent tag"""
-        patient = Patient.objects.create(
-            name='Error Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+        self.assertEqual(
+            response.json()['error'],
+            'ID da tag inválido',
         )
-        
-        # Create a dummy tag to get a valid ID format, then delete it
-        dummy_tag = Tag.objects.create(
-            allowed_tag=self.allowed_tag,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        tag_id = dummy_tag.pk
-        dummy_tag.delete()
-        
-        remove_url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': patient.pk,
-            'tag_id': tag_id
-        })
-        
-        response = self.client.post(remove_url)
-        self.assertEqual(response.status_code, 404)
 
-    def test_remove_tag_with_invalid_patient_id(self):
-        """Test error handling when removing tag with invalid patient_id"""
-        fake_uuid = '12345678-1234-5678-9012-123456789012'
-        remove_url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': fake_uuid,
-            'tag_id': 'some-tag-id'
-        })
-        
-        response = self.client.post(remove_url)
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [404, 400, 500, 302])
-
-    def test_remove_all_tags_with_invalid_patient_id(self):
-        """Test error handling when removing all tags with invalid patient_id"""
-        fake_uuid = '12345678-1234-5678-9012-123456789012'
-        remove_all_url = reverse('patients:patient_tag_remove_all', kwargs={'patient_id': fake_uuid})
-        response = self.client.post(remove_all_url)
-        
-        self.assertEqual(response.status_code, 404)
-
-    def test_remove_all_tags_when_no_tags_exist(self):
-        """Test error handling when trying to remove all tags from patient with no tags"""
-        patient = Patient.objects.create(
-            name='Error Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        remove_all_url = reverse('patients:patient_tag_remove_all', kwargs={'patient_id': patient.pk})
-        response = self.client.post(remove_all_url)
-        
-        self.assertEqual(response.status_code, 400)
-        data = response.json()
-        self.assertIn('Nenhuma tag para remover', data['error'])
-
-    def test_api_access_with_invalid_patient_id(self):
-        """Test error handling when accessing API with invalid patient_id"""
-        fake_uuid = '12345678-1234-5678-9012-123456789012'
-        api_url = reverse('patients:patient_tags_api', kwargs={'patient_id': fake_uuid})
-        response = self.client.get(api_url)
-        
-        self.assertEqual(response.status_code, 404)
-
-    def test_permission_denied_error_handling(self):
-        """Test that permission denied errors are handled properly"""
-        # Create user without permissions
-        limited_user = User.objects.create_user(
-            username='limiteduser',
-            email='limited@example.com',
-            password='testpassword'
-        )
-        
-        patient = Patient.objects.create(
-            name='Permission Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        self.client.force_login(limited_user)
-        
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Should fail'
-        })
-        
-        # Should handle permission error gracefully
-        self.assertIn(response.status_code, [403, 302])
-
-    def test_anonymous_user_error_handling(self):
-        """Test that anonymous user access is handled properly"""
-        self.client.logout()
-        
-        patient = Patient.objects.create(
-            name='Anonymous Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Should redirect'
-        })
-        
-        # Should redirect to login
-        self.assertEqual(response.status_code, 302)
-
-    def test_csrf_token_error_handling(self):
-        """Test that CSRF token validation works"""
-        patient = Patient.objects.create(
-            name='CSRF Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        
-        # Try to post without CSRF token
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'No CSRF token'
-        })
-        
-        # Should handle CSRF protection
-        self.assertIn(response.status_code, [200, 403])
-
-    def test_inactive_allowed_tag_error_handling(self):
-        """Test error handling when trying to add inactive allowed tag"""
-        # Create an inactive allowed tag
+    def test_add_tag_with_inactive_tag_id(self):
+        """Inactive AllowedTag is rejected with a domain 400 payload."""
         inactive_tag = AllowedTag.objects.create(
             name='Inactive Tag',
             color='#6c757d',
             is_active=False,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
-        patient = Patient.objects.create(
-            name='Inactive Tag Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
         )
-        
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': inactive_tag.pk,
-            'notes': 'Should fail'
-        })
-        
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [400, 404, 500])
+        response = self.client.post(
+            add_url,
+            data={'tag_id': inactive_tag.pk, 'notes': 'Should fail'},
+        )
 
-    def test_database_connection_error_simulation(self):
-        """Test error handling when database operations fail"""
-        # This is a simple test to verify error handling structure
-        # In a real application, you might mock database operations to simulate failures
-        
-        patient = Patient.objects.create(
-            name='Database Error Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'],
+            'Não é possível adicionar esta tag ao paciente',
         )
-        
-        # Test with invalid data that would cause database errors
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': 'invalid-data-type',
-            'notes': 'Database error test'
-        })
-        
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [400, 404, 500])
 
-    def test_concurrent_tag_modification_error_handling(self):
-        """Test error handling for concurrent tag modifications"""
-        patient = Patient.objects.create(
-            name='Concurrent Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        # Add a tag
-        tag = Tag.objects.create(
+    def test_add_tag_duplicate(self):
+        """Assigning the same AllowedTag twice is a domain 400."""
+        patient = self._create_patient()
+        Tag.objects.create(
+            patient=patient,
             allowed_tag=self.allowed_tag,
-            notes='Concurrent test',
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        patient.tags.add(tag)
-        
-        # Try to remove the same tag multiple times
-        remove_url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': patient.pk,
-            'tag_id': tag.pk
-        })
-        
-        # First removal should succeed
-        response1 = self.client.post(remove_url)
-        self.assertEqual(response1.status_code, 200)
-        
-        # Second removal should fail
-        response2 = self.client.post(remove_url)
-        self.assertEqual(response2.status_code, 404)
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.post(
+            add_url,
+            data={'tag_id': self.allowed_tag.pk},
+        )
 
-    def test_invalid_json_response_handling(self):
-        """Test that invalid JSON responses are handled"""
-        patient = Patient.objects.create(
-            name='JSON Error Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+        self.assertEqual(response.status_code, 400)
+        # can_add_patient_tag rejects duplicates before the view's own
+        # existing_tag branch, so this is the authoritative payload.
+        self.assertEqual(
+            response.json()['error'],
+            'Não é possível adicionar esta tag ao paciente',
         )
-        
-        # Test API access
-        api_url = reverse('patients:patient_tags_api', kwargs={'patient_id': patient.pk})
-        response = self.client.get(api_url)
-        
-        # Should return valid JSON
+
+    def test_add_tag_success(self):
+        """Valid add returns 200 with the refreshed tag list."""
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.post(
+            add_url,
+            data={'tag_id': self.allowed_tag.pk, 'notes': 'ok'},
+        )
+
         self.assertEqual(response.status_code, 200)
-        try:
-            data = response.json()
-            self.assertIsInstance(data, dict)
-        except ValueError:
-            self.fail('API response should be valid JSON')
-
-    def test_rate_limiting_error_handling(self):
-        """Test error handling for rate limiting (if implemented)"""
-        patient = Patient.objects.create(
-            name='Rate Limit Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(len(data['tags']), 1)
+        self.assertEqual(data['tags'][0]['name'], 'Test Tag')
+        self.assertTrue(
+            patient.patient_tags.filter(allowed_tag=self.allowed_tag).exists()
         )
-        
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        
-        # Make multiple rapid requests
-        for i in range(5):
-            response = self.client.post(add_url, data={
-                'tag_id': self.allowed_tag.pk,
-                'notes': f'Rate limit test {i}'
-            })
-            # All should succeed (rate limiting may not be implemented)
-            self.assertIn(response.status_code, [200, 400])
 
-    def test_validation_error_handling(self):
-        """Test that validation errors are handled properly"""
-        patient = Patient.objects.create(
-            name='Validation Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
+    def test_remove_tag_not_assigned_to_patient(self):
+        """Removing a tag that belongs to another patient is a 404."""
+        other_patient = self._create_patient(name='Other Patient')
+        tag = Tag.objects.create(
+            patient=other_patient,
+            allowed_tag=self.allowed_tag,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
-        # Test with extremely long notes that might cause validation errors
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'x' * 10000  # Very long notes
-        })
-        
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [200, 400])
+        patient = self._create_patient(name='Remove Target Patient')
+        remove_url = reverse(
+            'patients:patient_tag_remove',
+            kwargs={'patient_id': patient.pk, 'tag_id': tag.pk},
+        )
+        response = self.client.post(remove_url)
 
-    def test_server_error_simulation(self):
-        """Test handling of server errors (500 status)"""
-        # This test verifies that the error handling infrastructure is in place
-        # In a real application, you might simulate server errors using mocks
-        
-        patient = Patient.objects.create(
-            name='Server Error Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        # Test with malformed request that might cause server errors
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': None,  # Invalid data
-            'notes': 'Server error test'
-        })
-        
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [400, 404, 500])
+        self.assertEqual(response.status_code, 404)
 
-    def test_timeout_error_handling(self):
-        """Test that timeout errors are handled properly"""
-        # This test verifies the timeout handling infrastructure
-        # In a real application, you might mock timeout scenarios
-        
-        patient = Patient.objects.create(
-            name='Timeout Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
+    def test_remove_tag_success_then_second_remove_404(self):
+        """Removing twice: first succeeds, second is a 404."""
+        patient = self._create_patient()
+        tag = Tag.objects.create(
+            patient=patient,
+            allowed_tag=self.allowed_tag,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
-        # Normal requests should work
-        api_url = reverse('patients:patient_tags_api', kwargs={'patient_id': patient.pk})
-        response = self.client.get(api_url)
-        
-        # Should complete quickly
+        remove_url = reverse(
+            'patients:patient_tag_remove',
+            kwargs={'patient_id': patient.pk, 'tag_id': tag.pk},
+        )
+
+        first = self.client.post(remove_url)
+        self.assertEqual(first.status_code, 200)
+        self.assertTrue(first.json()['success'])
+        self.assertFalse(patient.patient_tags.exists())
+
+        second = self.client.post(remove_url)
+        self.assertEqual(second.status_code, 404)
+
+    def test_remove_all_tags_when_no_tags_exist(self):
+        """Bulk remove with zero tags is a domain 400 with exact payload."""
+        patient = self._create_patient()
+        remove_all_url = reverse(
+            'patients:patient_tag_remove_all',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.post(remove_all_url)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'],
+            'Nenhuma tag para remover',
+        )
+
+    def test_remove_all_tags_success(self):
+        """Bulk remove clears every tag and returns an empty list."""
+        patient = self._create_patient()
+        Tag.objects.create(
+            patient=patient,
+            allowed_tag=self.allowed_tag,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        remove_all_url = reverse(
+            'patients:patient_tag_remove_all',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.post(remove_all_url)
+
         self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['tags'], [])
+        self.assertFalse(patient.patient_tags.exists())
 
-    def test_malformed_request_handling(self):
-        """Test handling of malformed HTTP requests"""
-        patient = Patient.objects.create(
-            name='Malformed Request Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+    def test_api_nonexistent_patient(self):
+        """Tags API for an unknown patient UUID is a 404."""
+        api_url = reverse(
+            'patients:patient_tags_api',
+            kwargs={'patient_id': '00000000-0000-0000-0000-000000000000'},
         )
-        
-        # Test with malformed POST data
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'invalid_field': 'invalid_value',
-            'malformed': 'data'
-        })
-        
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [400, 404, 500])
+        response = self.client.get(api_url)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_api_success_json(self):
+        """Tags API returns the documented JSON shape."""
+        patient = self._create_patient()
+        Tag.objects.create(
+            patient=patient,
+            allowed_tag=self.allowed_tag,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        api_url = reverse(
+            'patients:patient_tags_api',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.get(api_url)
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['patient_id'], str(patient.pk))
+        self.assertEqual(data['patient_name'], patient.name)
+        self.assertEqual(len(data['current_tags']), 1)
+        self.assertTrue(data['permissions']['can_manage_tags'])
+        self.assertTrue(data['permissions']['can_view_tags'])
+
+    def test_anonymous_user_redirects_to_login(self):
+        """Anonymous access is redirected to login (auth contract)."""
+        patient = self._create_patient()
+        self.client.logout()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.post(
+            add_url,
+            data={'tag_id': self.allowed_tag.pk},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/login/', response.url)
+
+    def test_permission_denied_without_change_permission(self):
+        """A user without change_patient gets a 403 before the view runs."""
+        limited_user = create_navigation_user(
+            username='limiteduser',
+            email='limited@example.com',
+            password='testpass123',
+        )
+        patient = self._create_patient()
+        self.client.force_login(limited_user)
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.post(
+            add_url,
+            data={'tag_id': self.allowed_tag.pk},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        # PermissionRequiredMixin raises before any JSON handling: HTML.
+        self.assertIn('text/html', response['Content-Type'])
+
+    def test_csrf_rejected_without_token(self):
+        """POST without a CSRF token is rejected with 403."""
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
+        )
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        response = csrf_client.post(
+            add_url,
+            data={'tag_id': self.allowed_tag.pk},
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_malformed_patient_id_path_404(self):
+        """A non-UUID patient_id never reaches the view: router 404."""
+        response = self.client.post('/patients/not-a-uuid/tags/add/')
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_malformed_tag_id_path_404(self):
+        """A non-UUID tag_id in the remove path is a router 404."""
+        patient = self._create_patient()
+        response = self.client.post(
+            f'/patients/{patient.pk}/tags/not-a-uuid/remove/'
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_long_notes_accepted(self):
+        """Notes is unbounded text: very long values are accepted."""
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
+        )
+        response = self.client.post(
+            add_url,
+            data={'tag_id': self.allowed_tag.pk, 'notes': 'x' * 10000},
+        )
+
+        self.assertEqual(response.status_code, 200)
 
     def test_error_message_consistency(self):
-        """Test that error messages are consistent and user-friendly"""
-        patient = Patient.objects.create(
-            name='Error Message Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+        """Missing-tag_id error is a non-empty string with exact text."""
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
         )
-        
-        # Test missing tag_id error
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
         response = self.client.post(add_url, data={'notes': 'Missing tag_id'})
-        
+
         self.assertEqual(response.status_code, 400)
         data = response.json()
-        self.assertIn('error', data)
         self.assertIsInstance(data['error'], str)
-        self.assertTrue(len(data['error']) > 0)
+        self.assertEqual(data['error'], 'ID da tag é obrigatório')
 
-    def test_error_logging_infrastructure(self):
-        """Test that error logging infrastructure is in place"""
-        # This test verifies that the views have proper error handling
-        # that would log errors in a production environment
-        
-        patient = Patient.objects.create(
-            name='Error Logging Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+    def test_database_error_returns_json_500(self):
+        """Unexpected failures return a JSON 500 with the exact payload."""
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
         )
-        
-        # Test with invalid data that would trigger error handling
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': 'invalid',
-            'notes': 'Error logging test'
-        })
-        
-        # Should handle the error gracefully
-        self.assertIn(response.status_code, [400, 404, 500])
+        original_create = Tag.objects.create
+
+        def mock_create(*args, **kwargs):
+            raise RuntimeError('Database connection error')
+
+        Tag.objects.create = mock_create
+        try:
+            response = self.client.post(
+                add_url,
+                data={'tag_id': self.allowed_tag.pk},
+            )
+        finally:
+            Tag.objects.create = original_create
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()['error'],
+            'Erro interno do servidor',
+        )
+
+    def test_event_creation_failure_returns_json_500(self):
+        """Failure while writing the timeline event still yields JSON 500."""
+        patient = self._create_patient()
+        add_url = reverse(
+            'patients:patient_tag_add',
+            kwargs={'patient_id': patient.pk},
+        )
+        original_create = TagAddedEvent.objects.create
+
+        def mock_create(*args, **kwargs):
+            raise RuntimeError('Event creation failed')
+
+        TagAddedEvent.objects.create = mock_create
+        try:
+            response = self.client.post(
+                add_url,
+                data={'tag_id': self.allowed_tag.pk},
+            )
+        finally:
+            TagAddedEvent.objects.create = original_create
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()['error'],
+            'Erro interno do servidor',
+        )
 
     def test_graceful_degradation_on_errors(self):
-        """Test that the system degrades gracefully on errors"""
-        patient = Patient.objects.create(
-            name='Graceful Degradation Test Patient',
-            birthday='1980-01-01',
-            status=Patient.Status.OUTPATIENT,
-            created_by=self.user,
-            updated_by=self.user
+        """Detail page still renders the tag management UI and its JS hooks."""
+        patient = self._create_patient()
+        detail_url = reverse(
+            'patients:patient_detail',
+            kwargs={'pk': patient.pk},
         )
-        
-        # Test that the page still loads even if some components fail
-        detail_url = reverse('patients:patient_detail', kwargs={'pk': patient.pk})
         response = self.client.get(detail_url)
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Gerenciamento de Tags')
-        
-        # The JavaScript should handle errors gracefully
         self.assertContains(response, 'showError')
         self.assertContains(response, 'showSuccess')
