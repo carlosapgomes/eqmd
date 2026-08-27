@@ -1,6 +1,7 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from apps.patients.models import Patient, AllowedTag, Tag
+from django.test import TestCase
+
+from apps.patients.models import AllowedTag, Patient, Tag
 
 User = get_user_model()
 
@@ -190,8 +191,8 @@ class TagArchitectureRefactorTests(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
-        
-        tag2 = Tag.objects.create(
+
+        Tag.objects.create(
             allowed_tag=self.high_priority_tag,
             patient=self.patient2,
             created_by=self.user,
@@ -217,8 +218,8 @@ class TagArchitectureRefactorTests(TestCase):
         self.assertEqual(remaining_tag.allowed_tag, self.high_priority_tag)
 
     def test_allowed_tag_deletion_cascades_properly(self):
-        """Test that deleting an AllowedTag cascades to all Tag instances"""
-        
+        """Test AllowedTag soft-delete preserves Tag instances; hard-delete cascades"""
+
         # Assign same AllowedTag to both patients
         Tag.objects.create(
             allowed_tag=self.high_priority_tag,
@@ -226,21 +227,36 @@ class TagArchitectureRefactorTests(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
-        
+
         Tag.objects.create(
             allowed_tag=self.high_priority_tag,
             patient=self.patient2,
             created_by=self.user,
             updated_by=self.user
         )
-        
+
         # Verify both patients have tags
         self.assertEqual(self.patient1.patient_tags.count(), 1)
         self.assertEqual(self.patient2.patient_tags.count(), 1)
-        
-        # Delete the AllowedTag
+
+        # AllowedTag.delete() is a SOFT delete (SoftDeleteModel): the tag
+        # disappears from the default manager but Tag instances survive
         self.high_priority_tag.delete()
-        
+
+        self.assertFalse(
+            AllowedTag.objects.filter(id=self.high_priority_tag.id).exists()
+        )
+        self.assertTrue(
+            AllowedTag.all_objects.filter(
+                id=self.high_priority_tag.id, is_deleted=True
+            ).exists()
+        )
+        self.assertEqual(self.patient1.patient_tags.count(), 1)
+        self.assertEqual(self.patient2.patient_tags.count(), 1)
+
+        # hard_delete() removes the row and the FK CASCADE fires
+        self.high_priority_tag.hard_delete()
+
         # Verify all Tag instances are deleted due to CASCADE
         self.assertEqual(self.patient1.patient_tags.count(), 0)
         self.assertEqual(self.patient2.patient_tags.count(), 0)
