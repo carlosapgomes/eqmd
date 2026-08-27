@@ -1,31 +1,55 @@
-from django.test import TestCase
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
-from django.db import models
-from apps.patients.models import Patient, AllowedTag
-from datetime import datetime, timedelta
+from django.test import TestCase
+from django.utils import timezone
+
+from apps.accounts.tests.helpers import create_navigation_user
+from apps.patients.models import AllowedTag, Patient
 
 User = get_user_model()
 
 
+def _create_patient(user, name, **kwargs):
+    """Create a Patient with the audit actor set for history tracking."""
+    patient = Patient(
+        name=name,
+        birthday='1980-01-01',
+        created_by=user,
+        updated_by=user,
+        **kwargs,
+    )
+    patient._history_user = user
+    patient.save()
+    return patient
+
+
+def _create_allowed_tag(user, name, **kwargs):
+    """Create an AllowedTag with the audit actor set for history tracking."""
+    tag = AllowedTag(name=name, created_by=user, updated_by=user, **kwargs)
+    tag._history_user = user
+    tag.save()
+    return tag
+
+
 class TestPatientHistory(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
+        self.user = create_navigation_user(
             username='testuser',
             email='test@example.com',
-            profession_type='doctor'
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
         )
-        self.user2 = User.objects.create_user(
+        self.user2 = create_navigation_user(
             username='testuser2',
             email='test2@example.com',
-            profession_type='nurse'
+            password='testpass123',
+            profession_type=User.NURSE,
         )
         
     def test_patient_creation_history(self):
         """Test that patient creation is tracked."""
-        patient = Patient.objects.create(
-            name='Test Patient',
-            created_by=self.user
-        )
+        patient = _create_patient(self.user, 'Test Patient')
         
         # Check history record created
         history = patient.history.first()
@@ -35,14 +59,11 @@ class TestPatientHistory(TestCase):
         
     def test_patient_modification_history(self):
         """Test that patient modifications are tracked."""
-        patient = Patient.objects.create(
-            name='Test Patient',
-            created_by=self.user
-        )
+        patient = _create_patient(self.user, 'Test Patient')
         
         # Modify patient
         patient.name = 'Modified Patient'
-        patient.status = 'inpatient'
+        patient.status = Patient.Status.INPATIENT
         patient._change_reason = 'Updated patient name and status'
         patient.save()
         
@@ -54,15 +75,12 @@ class TestPatientHistory(TestCase):
         latest = history_records[0]
         self.assertEqual(latest.history_type, '~')  # Change
         self.assertEqual(latest.name, 'Modified Patient')
-        self.assertEqual(latest.status, 'inpatient')
+        self.assertEqual(latest.status, Patient.Status.INPATIENT)
         self.assertEqual(latest.history_change_reason, 'Updated patient name and status')
         
     def test_patient_multiple_modifications(self):
         """Test multiple sequential modifications are tracked."""
-        patient = Patient.objects.create(
-            name='Test Patient',
-            created_by=self.user
-        )
+        patient = _create_patient(self.user, 'Test Patient')
         
         # First modification
         patient.name = 'Modified Name 1'
@@ -70,7 +88,7 @@ class TestPatientHistory(TestCase):
         patient.save()
         
         # Second modification by different user
-        patient.status = 'discharged'
+        patient.status = Patient.Status.DISCHARGED
         patient._change_reason = 'Status change by nurse'
         patient.updated_by = self.user2
         patient.save()
@@ -80,7 +98,7 @@ class TestPatientHistory(TestCase):
         self.assertEqual(len(history_records), 3)
         
         # Verify sequence
-        self.assertEqual(history_records[0].status, 'discharged')
+        self.assertEqual(history_records[0].status, Patient.Status.DISCHARGED)
         self.assertEqual(history_records[0].history_change_reason, 'Status change by nurse')
         self.assertEqual(history_records[1].name, 'Modified Name 1')
         self.assertEqual(history_records[1].history_change_reason, 'First modification')
@@ -88,10 +106,7 @@ class TestPatientHistory(TestCase):
         
     def test_user_association_with_changes(self):
         """Test that changes are correctly associated with users."""
-        patient = Patient.objects.create(
-            name='Test Patient',
-            created_by=self.user
-        )
+        patient = _create_patient(self.user, 'Test Patient')
         
         # Modification by first user
         patient.name = 'Modified by User 1'
@@ -111,10 +126,7 @@ class TestPatientHistory(TestCase):
         
     def test_change_reason_tracking(self):
         """Test that change reasons are properly tracked."""
-        patient = Patient.objects.create(
-            name='Test Patient',
-            created_by=self.user
-        )
+        patient = _create_patient(self.user, 'Test Patient')
         
         test_reasons = [
             'Updated patient personal information',
@@ -129,25 +141,25 @@ class TestPatientHistory(TestCase):
             
         history_records = list(patient.history.all().order_by('-history_date'))
         
-        # Check each reason is tracked (excluding creation record)
-        for i, reason in enumerate(test_reasons):
+        # Check each reason is tracked (newest first, excluding creation record)
+        for i, reason in enumerate(reversed(test_reasons)):
             self.assertEqual(history_records[i].history_change_reason, reason)
             
     def test_status_change_to_deceased_tracking(self):
         """Test tracking of critical status changes to deceased."""
-        patient = Patient.objects.create(
-            name='Test Patient',
-            status='inpatient',
-            created_by=self.user
+        patient = _create_patient(
+            self.user, 'Test Patient', status=Patient.Status.INPATIENT
         )
         
         # Change to deceased status
-        patient.status = 'deceased'
+        patient.status = Patient.Status.DECEASED
         patient._change_reason = 'Patient declared deceased by physician'
         patient.save()
         
         # Find the deceased status change in history
-        deceased_change = patient.history.filter(status='deceased').first()
+        deceased_change = patient.history.filter(
+            status=Patient.Status.DECEASED
+        ).first()
         self.assertIsNotNone(deceased_change)
         self.assertEqual(deceased_change.history_type, '~')
         self.assertEqual(deceased_change.history_change_reason, 'Patient declared deceased by physician')
@@ -157,18 +169,15 @@ class TestPatientHistory(TestCase):
         # Create multiple patients with changes by same user
         patients = []
         for i in range(15):  # Create more than threshold (10)
-            patient = Patient.objects.create(
-                name=f'Patient {i}',
-                created_by=self.user
-            )
+            patient = _create_patient(self.user, f'Patient {i}')
             # Make a modification to each
-            patient.status = 'inpatient'
+            patient.status = Patient.Status.INPATIENT
             patient._change_reason = f'Bulk admission {i}'
             patient.save()
             patients.append(patient)
             
         # Count changes by user in last day
-        yesterday = datetime.now() - timedelta(days=1)
+        yesterday = timezone.now() - timedelta(days=1)
         change_count = Patient.history.filter(
             history_date__gte=yesterday,
             history_user=self.user,
@@ -181,19 +190,20 @@ class TestPatientHistory(TestCase):
 
 class TestAllowedTagHistory(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
+        self.user = create_navigation_user(
             username='admin_user',
             email='admin@example.com',
-            profession_type='doctor'
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
         )
         
     def test_allowed_tag_creation_history(self):
         """Test that AllowedTag creation is tracked."""
-        tag = AllowedTag.objects.create(
+        tag = _create_allowed_tag(
+            self.user,
             name='Test Tag',
             description='Test Description',
             color='#FF0000',
-            created_by=self.user
         )
         
         # Check history record created
@@ -204,11 +214,11 @@ class TestAllowedTagHistory(TestCase):
         
     def test_allowed_tag_modification_history(self):
         """Test that AllowedTag modifications are tracked."""
-        tag = AllowedTag.objects.create(
+        tag = _create_allowed_tag(
+            self.user,
             name='Original Tag',
             description='Original Description',
             color='#FF0000',
-            created_by=self.user
         )
         
         # Modify tag
@@ -230,37 +240,40 @@ class TestAllowedTagHistory(TestCase):
 
 class TestUserHistory(TestCase):
     def setUp(self):
-        self.admin_user = User.objects.create_user(
+        self.admin_user = create_navigation_user(
             username='admin',
             email='admin@example.com',
-            profession_type='doctor',
-            is_staff=True
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
+            is_staff=True,
         )
         
     def test_user_creation_history(self):
         """Test that user creation is tracked."""
-        user = User.objects.create_user(
+        user = create_navigation_user(
             username='newuser',
             email='newuser@example.com',
-            profession_type='nurse'
+            password='testpass123',
+            profession_type=User.NURSE,
         )
         
         # Check history record created
         history = user.history.first()
         self.assertEqual(history.history_type, '+')
         self.assertEqual(history.username, 'newuser')
-        self.assertEqual(history.profession_type, 'nurse')
+        self.assertEqual(history.profession_type, User.NURSE)
         
     def test_user_modification_history(self):
         """Test that user modifications are tracked."""
-        user = User.objects.create_user(
+        user = create_navigation_user(
             username='testuser',
             email='test@example.com',
-            profession_type='student'
+            password='testpass123',
+            profession_type=User.STUDENT,
         )
         
         # Modify user
-        user.profession_type = 'nurse'
+        user.profession_type = User.NURSE
         user.first_name = 'Test'
         user.last_name = 'User'
         user._change_reason = 'Updated profession and name'
@@ -272,16 +285,16 @@ class TestUserHistory(TestCase):
         
         latest = history_records[0]
         self.assertEqual(latest.history_type, '~')
-        self.assertEqual(latest.profession_type, 'nurse')
+        self.assertEqual(latest.profession_type, User.NURSE)
         self.assertEqual(latest.first_name, 'Test')
         self.assertEqual(latest.history_change_reason, 'Updated profession and name')
         
     def test_sensitive_fields_excluded(self):
         """Test that sensitive fields like password are excluded from history."""
-        user = User.objects.create_user(
+        user = create_navigation_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
         )
         
         # Change password
@@ -298,10 +311,11 @@ class TestUserHistory(TestCase):
 
 class TestHistoryPerformance(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
+        self.user = create_navigation_user(
             username='perftest',
             email='perf@example.com',
-            profession_type='doctor'
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
         )
         
     def test_history_query_performance(self):
@@ -309,13 +323,14 @@ class TestHistoryPerformance(TestCase):
         # Create patients with history
         patients = []
         for i in range(50):
-            patient = Patient.objects.create(
-                name=f'Performance Test Patient {i}',
-                created_by=self.user
-            )
+            patient = _create_patient(self.user, f'Performance Test Patient {i}')
             # Add some modifications
             for j in range(3):
-                patient.status = ['inpatient', 'outpatient', 'discharged'][j]
+                patient.status = [
+                    Patient.Status.INPATIENT,
+                    Patient.Status.OUTPATIENT,
+                    Patient.Status.DISCHARGED,
+                ][j]
                 patient._change_reason = f'Status change {j}'
                 patient.save()
             patients.append(patient)
