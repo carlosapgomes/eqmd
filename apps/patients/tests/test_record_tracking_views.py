@@ -75,6 +75,50 @@ class RecordNumberViewTests(TestCase):
         # Check record was created
         self.patient.refresh_from_db()
         self.assertEqual(self.patient.current_record_number, 'REC001')
+
+    def test_record_number_create_view_replaces_existing_current(self):
+        """Creating a record number can replace an existing current record."""
+        # Create the patient's current record REC001 via the supported method
+        self.patient.update_current_record_number(
+            record_number='REC001',
+            user=self.user,
+            reason='Initial setup',
+        )
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.current_record_number, 'REC001')
+
+        # POST a new record number to the create view
+        url = reverse(
+            'patients:record_number_create',
+            kwargs={'patient_id': self.patient.pk},
+        )
+        data = {
+            'record_number': 'REC002',
+            'change_reason': 'Replaced on migration',
+            'effective_date': timezone.localtime(timezone.now()).strftime('%Y-%m-%dT%H:%M'),
+        }
+        response = self.client.post(url, data)
+
+        # Should redirect to patient detail
+        self.assertRedirects(
+            response,
+            reverse('patients:patient_detail', kwargs={'pk': self.patient.pk}),
+        )
+
+        # Exactly one current record remains: REC002
+        self.patient.refresh_from_db()
+        current = list(self.patient.record_numbers.filter(is_current=True))
+        self.assertEqual(len(current), 1)
+        self.assertEqual(current[0].record_number, 'REC002')
+
+        # Old record deactivated; previous number retained on the new one
+        old = self.patient.record_numbers.get(record_number='REC001')
+        self.assertFalse(old.is_current)
+        self.assertEqual(current[0].previous_record_number, 'REC001')
+
+        # Patient denormalization updated
+        self.assertEqual(self.patient.current_record_number, 'REC002')
+    
     def test_quick_record_number_update(self):
         """Test quick record number update"""
         url = reverse('patients:quick_record_number_update', kwargs={'patient_id': self.patient.pk})
