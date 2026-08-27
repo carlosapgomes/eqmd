@@ -1,11 +1,13 @@
-from django.test import TestCase, Client
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta
-import json
 
-from ..models import Patient, PatientRecordNumber, PatientAdmission
+from apps.accounts.tests.helpers import create_navigation_user
+
+from ..models import Patient, PatientAdmission, PatientRecordNumber
 
 User = get_user_model()
 
@@ -14,22 +16,20 @@ class PatientAPITests(TestCase):
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
         
-        self.user = User.objects.create_user(
+        self.user = create_navigation_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            profession_type=User.MEDICAL_DOCTOR,
         )
-        self.user.profession = 'doctor'
-        self.user.save()
         
         # Grant necessary permissions by creating them if they don't exist
         models = [Patient, PatientRecordNumber, PatientAdmission]
-        permissions = ['view_patient', 'view_patientrecordnumber', 'view_patientadmission']
         
         for model in models:
             content_type = ContentType.objects.get_for_model(model)
             for action in ['view']:
-                perm, created = Permission.objects.get_or_create(
+                perm, _created = Permission.objects.get_or_create(
                     codename=f'{action}_{model._meta.model_name}',
                     name=f'Can {action} {model._meta.verbose_name}',
                     content_type=content_type,
@@ -50,14 +50,14 @@ class PatientAPITests(TestCase):
     def test_patient_record_numbers_api(self):
         """Test patient record numbers API endpoint"""
         # Create record numbers
-        record1 = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='REC001',
             is_current=False,
             created_by=self.user,
             updated_by=self.user
         )
-        record2 = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='REC002',
             is_current=True,
@@ -84,7 +84,7 @@ class PatientAPITests(TestCase):
 
     def test_record_number_lookup_api(self):
         """Test record number lookup API"""
-        record = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='LOOKUP123',
             is_current=True,
@@ -106,7 +106,7 @@ class PatientAPITests(TestCase):
 
     def test_patient_admissions_api(self):
         """Test patient admissions API endpoint"""
-        admission = PatientAdmission.objects.create(
+        PatientAdmission.objects.create(
             patient=self.patient,
             admission_datetime=timezone.now() - timedelta(days=2),
             admission_type='emergency',
@@ -163,7 +163,7 @@ class PatientAPITests(TestCase):
     def test_record_number_lookup_historical(self):
         """Test lookup for historical record numbers"""
         # Create historical record
-        record = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='HIST001',
             is_current=False,
@@ -267,13 +267,12 @@ class PatientAPITests(TestCase):
     def test_permission_denied(self):
         """Test permission checks on API endpoints"""
         # Create user without permissions
-        no_perm_user = User.objects.create_user(
+        no_perm_user = create_navigation_user(
             username='noperm',
             email='noperm@example.com',
-            password='testpass123'
+            password='testpass123',
+            profession_type=User.STUDENT,
         )
-        no_perm_user.profession = 'student'
-        no_perm_user.save()
         self.client.force_login(no_perm_user)
 
         # User doesn't have view_patient permission by default
