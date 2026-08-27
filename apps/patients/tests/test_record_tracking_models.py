@@ -1,22 +1,30 @@
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.db import IntegrityError
 from datetime import timedelta
 
-from ..models import Patient, PatientRecordNumber, PatientAdmission
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.utils import timezone
+
+from apps.accounts.tests.helpers import create_navigation_user
+
+from ..models import Patient, PatientAdmission, PatientRecordNumber
 
 User = get_user_model()
 
 
+def _create_user():
+    """Create a navigation-ready doctor user for record-tracking tests."""
+    return create_navigation_user(
+        username='testuser',
+        email='test@example.com',
+        password='testpass123',
+        profession_type=User.MEDICAL_DOCTOR,
+    )
+
+
 class PatientRecordNumberModelTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser', 
-            email='test@example.com',
-            profession='doctor'
-        )
+        self.user = _create_user()
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday=timezone.now().date() - timedelta(days=365*30),
@@ -50,7 +58,7 @@ class PatientRecordNumberModelTests(TestCase):
         )
         
         # This should work (will auto-deactivate the previous one via signals)
-        record2 = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='REC002',
             is_current=True,
@@ -105,7 +113,7 @@ class PatientRecordNumberModelTests(TestCase):
     def test_record_number_history(self):
         """Test record number change history"""
         # Create initial record
-        record1 = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='REC001',
             change_reason='Initial setup',
@@ -114,7 +122,7 @@ class PatientRecordNumberModelTests(TestCase):
         )
         
         # Create updated record
-        record2 = PatientRecordNumber.objects.create(
+        PatientRecordNumber.objects.create(
             patient=self.patient,
             record_number='REC002',
             previous_record_number='REC001',
@@ -139,11 +147,7 @@ class PatientRecordNumberModelTests(TestCase):
 
 class PatientAdmissionModelTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser', 
-            email='test@example.com',
-            profession='doctor'
-        )
+        self.user = _create_user()
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday=timezone.now().date() - timedelta(days=365*30),
@@ -275,9 +279,10 @@ class PatientAdmissionModelTests(TestCase):
             updated_by=self.user
         )
         
-        # Try to create second active admission - should raise integrity error
-        from django.db import IntegrityError
-        with self.assertRaises(IntegrityError):
+        # Try to create second active admission - the pre_save signal
+        # (apps.patients.signals.validate_admission_change) rejects it with a
+        # ValidationError before the DB partial unique constraint is reached.
+        with self.assertRaises(ValidationError):
             PatientAdmission.objects.create(
                 patient=self.patient,
                 admission_datetime=admission_time,
@@ -290,11 +295,7 @@ class PatientAdmissionModelTests(TestCase):
 
 class PatientIntegrationTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser', 
-            email='test@example.com',
-            profession='doctor'
-        )
+        self.user = _create_user()
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday=timezone.now().date() - timedelta(days=365*30),
@@ -376,7 +377,7 @@ class PatientIntegrationTests(TestCase):
         self.patient.update_current_record_number('REC001', self.user)
         
         # First admission
-        admission1 = self.patient.admit_patient(
+        self.patient.admit_patient(
             admission_datetime=timezone.now() - timedelta(days=10),
             admission_type=PatientAdmission.AdmissionType.EMERGENCY,
             user=self.user
