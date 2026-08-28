@@ -1,5 +1,5 @@
-from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from apps.drugtemplates.models import DrugTemplate
@@ -11,11 +11,15 @@ class DrugTemplateSearchTest(TestCase):
     """Tests for accent-insensitive drug template autocomplete search."""
 
     def setUp(self):
+        # Lifecycle gates cleared so the core middleware does not redirect the
+        # logged-in request (NavigationReadyUserFactory contract).
         self.user = User.objects.create_user(
             username="doctor",
             email="doctor@example.com",
             password="testpass123",
-            profession=1,
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.client = Client()
         self.client.login(username="doctor", password="testpass123")
