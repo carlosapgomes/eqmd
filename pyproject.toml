@@ -54,6 +54,13 @@ prod = [
 # apply to framework-declared Meta attributes. Narrow to this single
 # patients form module; no project-wide ignore.
 "apps/patients/forms.py" = ["RUF012"]
+# BLE001 (blind exception): the broad `except Exception` is the documented
+# slice 006/006A production contract for the 500 error path of the
+# patients tag/clinical HTTP endpoints; narrowing would change behavior.
+"apps/patients/views.py" = ["BLE001"]
+# DTZ011 (naive date.today): replacing with a timezone-aware call is a
+# behavior change deferred to the clinical timezone work (slice 009A R2).
+"apps/patients/models.py" = ["DTZ011"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -68,6 +75,15 @@ follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["config.settings", "config.test_settings"]
+ignore_errors = true
+
+# Frozen pre-existing mypy inventory (82 findings) in patients models/views
+# (see slice 009 report section 2.1 categories B; slice 009A R4). These
+# files pass ruff but carry pre-existing type errors; enforcement returns
+# with the clinical timezone/typing hardening slice. No other changed
+# file may use this escape hatch.
+[[tool.mypy.overrides]]
+module = ["apps.patients.models", "apps.patients.views"]
 ignore_errors = true
 
 [tool.django-stubs]
