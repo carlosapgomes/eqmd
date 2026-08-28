@@ -2,14 +2,16 @@
 import os
 import uuid
 from pathlib import Path
-from django.core.exceptions import ValidationError
+from typing import ClassVar
+
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 
 class PDFFormSecurity:
     """Security utilities for PDF form handling."""
 
-    ALLOWED_EXTENSIONS = ['.pdf']
+    ALLOWED_EXTENSIONS: ClassVar[list[str]] = [".pdf"]
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
     @staticmethod
@@ -22,17 +24,24 @@ class PDFFormSecurity:
 
         # Check file size
         if uploaded_file.size > PDFFormSecurity.MAX_FILE_SIZE:
-            raise ValidationError(f"File too large. Maximum size: {PDFFormSecurity.MAX_FILE_SIZE} bytes")
+            raise ValidationError(
+                f"File too large. Maximum size: {PDFFormSecurity.MAX_FILE_SIZE} bytes"
+            )
 
         # Check MIME type (skip for test files that may not have content_type)
-        if hasattr(uploaded_file, 'content_type') and uploaded_file.content_type:
-            if uploaded_file.content_type != 'application/pdf':
-                raise ValidationError(f"Invalid file type. Expected PDF, got: {uploaded_file.content_type}")
+        if (
+            hasattr(uploaded_file, "content_type")
+            and uploaded_file.content_type
+            and uploaded_file.content_type != "application/pdf"
+        ):
+            raise ValidationError(
+                f"Invalid file type. Expected PDF, got: {uploaded_file.content_type}"
+            )
 
         return True
 
     @staticmethod
-    def generate_secure_filename(original_filename, prefix=''):
+    def generate_secure_filename(original_filename, prefix=""):
         """Generate secure filename with UUID."""
         file_extension = os.path.splitext(original_filename)[1].lower()
         secure_name = f"{prefix}{uuid.uuid4()}{file_extension}"
@@ -59,23 +68,34 @@ class PDFFormSecurity:
         sanitized_data = {}
         for key, value in form_data.items():
             # Sanitize key
-            if not isinstance(key, str) or not key.replace('_', '').isalnum():
+            if not isinstance(key, str) or not key.replace("_", "").isalnum():
                 continue  # Skip invalid keys
 
             # Sanitize value based on type
             if isinstance(value, str):
                 # Use proper HTML sanitization instead of regex
                 from django.utils.html import escape
+
                 # Escape HTML entities to prevent XSS
                 value = escape(value).strip()
             elif isinstance(value, (int, float, bool)):
                 pass  # These types are safe
             elif isinstance(value, list):
-                # Sanitize list items
-                value = [PDFFormSecurity.sanitize_form_data(item) for item in value if item is not None]
+                # Sanitize list items (strings escaped exactly like top-level values)
+                from django.utils.html import escape
+
+                sanitized_items = []
+                for item in value:
+                    if item is None:
+                        continue
+                    if isinstance(item, str):
+                        sanitized_items.append(escape(item).strip())
+                    else:
+                        sanitized_items.append(PDFFormSecurity.sanitize_form_data(item))
+                value = sanitized_items
             else:
                 # Convert other types to string and sanitize
-                value = str(value) if value is not None else ''
+                value = str(value) if value is not None else ""
 
             sanitized_data[key] = value
 
@@ -92,80 +112,123 @@ class PDFFormSecurity:
             return True
 
         # Handle new sectioned format
-        if 'sections' in field_config and 'fields' in field_config:
+        if "sections" in field_config and "fields" in field_config:
             # Validate sections configuration
-            PDFFormSecurity.validate_section_configuration(field_config.get('sections', {}))
+            PDFFormSecurity.validate_section_configuration(
+                field_config.get("sections", {})
+            )
             # Validate fields configuration
-            fields_config = field_config.get('fields', {})
+            fields_config = field_config.get("fields", {})
             # NEW: Validate data sources if present
-            data_sources = field_config.get('data_sources', {})
+            data_sources = field_config.get("data_sources", {})
             if data_sources:
                 PDFFormSecurity.validate_data_sources(data_sources)
         else:
             # Backward compatibility: treat entire config as fields
             # But first extract data_sources if present in legacy format
-            data_sources = field_config.get('data_sources', {})
+            data_sources = field_config.get("data_sources", {})
             if data_sources:
                 PDFFormSecurity.validate_data_sources(data_sources)
                 # Remove data_sources from fields config to avoid treating it as a field
-                fields_config = {k: v for k, v in field_config.items() if k not in ['data_sources', 'sections', 'fields']}
+                fields_config = {
+                    k: v
+                    for k, v in field_config.items()
+                    if k not in ["data_sources", "sections", "fields"]
+                }
             else:
                 fields_config = field_config
 
         for field_name, config in fields_config.items():
             # Validate field name
-            if not isinstance(field_name, str) or not field_name.replace('_', '').isalnum():
+            if (
+                not isinstance(field_name, str)
+                or not field_name.replace("_", "").isalnum()
+            ):
                 raise ValidationError(f"Invalid field name: {field_name}")
 
             # Validate configuration structure
             if not isinstance(config, dict):
-                raise ValidationError(f"Field configuration for '{field_name}' must be a dictionary")
+                raise ValidationError(
+                    f"Field configuration for '{field_name}' must be a dictionary"
+                )
 
             # Required fields
-            required_fields = ['type', 'label']
+            required_fields = ["type", "label"]
             for required_field in required_fields:
                 if required_field not in config:
-                    raise ValidationError(f"Field '{field_name}' missing required property: {required_field}")
+                    raise ValidationError(
+                        f"Field '{field_name}' missing required property: {required_field}"
+                    )
 
             # Validate field type
-            allowed_types = ['text', 'textarea', 'email', 'number', 'decimal', 'date', 'datetime', 'time', 'boolean', 'choice', 'multiple_choice']
-            if config['type'] not in allowed_types:
-                raise ValidationError(f"Invalid field type '{config['type']}' for field '{field_name}'")
+            allowed_types = [
+                "text",
+                "textarea",
+                "email",
+                "number",
+                "decimal",
+                "date",
+                "datetime",
+                "time",
+                "boolean",
+                "choice",
+                "multiple_choice",
+            ]
+            if config["type"] not in allowed_types:
+                raise ValidationError(
+                    f"Invalid field type '{config['type']}' for field '{field_name}'"
+                )
 
             # Validate coordinates
-            for coord in ['x', 'y', 'width', 'height']:
+            for coord in ["x", "y", "width", "height"]:
                 if coord in config:
                     try:
                         float(config[coord])
                         if float(config[coord]) < 0:
-                            raise ValidationError(f"Coordinate '{coord}' cannot be negative for field '{field_name}'")
+                            raise ValidationError(
+                                f"Coordinate '{coord}' cannot be negative for field '{field_name}'"
+                            )
                     except (ValueError, TypeError):
-                        raise ValidationError(f"Invalid coordinate '{coord}' for field '{field_name}'")
+                        raise ValidationError(
+                            f"Invalid coordinate '{coord}' for field '{field_name}'"
+                        )
 
             # Validate choices for choice fields (unless using data source)
-            if config['type'] in ['choice', 'multiple_choice']:
-                # Data source fields don't need explicit choices
-                if 'data_source' not in config:
-                    if 'choices' not in config or not isinstance(config['choices'], list):
-                        raise ValidationError(f"Choice field '{field_name}' must have a 'choices' list")
+            if (
+                config["type"] in ["choice", "multiple_choice"]
+                and "data_source" not in config
+                and ("choices" not in config or not isinstance(config["choices"], list))
+            ):
+                raise ValidationError(
+                    f"Choice field '{field_name}' must have a 'choices' list"
+                )
 
             # Validate section reference if present
-            if 'section' in config:
-                section_key = config['section']
-                if not isinstance(section_key, str) or not section_key.replace('_', '').isalnum():
-                    raise ValidationError(f"Invalid section key '{section_key}' for field '{field_name}'")
+            if "section" in config:
+                section_key = config["section"]
+                if (
+                    not isinstance(section_key, str)
+                    or not section_key.replace("_", "").isalnum()
+                ):
+                    raise ValidationError(
+                        f"Invalid section key '{section_key}' for field '{field_name}'"
+                    )
 
             # Validate field order if present
-            if 'field_order' in config:
+            if "field_order" in config:
                 try:
-                    field_order = int(config['field_order'])
+                    field_order = int(config["field_order"])
                     if field_order < 1:
-                        raise ValidationError(f"Field order must be positive for field '{field_name}'")
+                        raise ValidationError(
+                            f"Field order must be positive for field '{field_name}'"
+                        )
                 except (ValueError, TypeError):
-                    raise ValidationError(f"Invalid field order for field '{field_name}'")
+                    raise ValidationError(
+                        f"Invalid field order for field '{field_name}'"
+                    )
 
             # NEW: Validate field data source references
-            if isinstance(config, dict) and 'data_source' in config:
+            if isinstance(config, dict) and "data_source" in config:
                 PDFFormSecurity.validate_field_data_source_reference(
                     field_name, config, data_sources
                 )
@@ -185,49 +248,70 @@ class PDFFormSecurity:
         section_orders = []
         for section_key, section_config in sections_config.items():
             # Validate section key
-            if not isinstance(section_key, str) or not section_key.replace('_', '').isalnum():
+            if (
+                not isinstance(section_key, str)
+                or not section_key.replace("_", "").isalnum()
+            ):
                 raise ValidationError(f"Invalid section key: {section_key}")
 
             # Validate section configuration structure
             if not isinstance(section_config, dict):
-                raise ValidationError(f"Section configuration for '{section_key}' must be a dictionary")
+                raise ValidationError(
+                    f"Section configuration for '{section_key}' must be a dictionary"
+                )
 
             # Required fields
-            required_fields = ['label', 'order']
+            required_fields = ["label", "order"]
             for required_field in required_fields:
                 if required_field not in section_config:
-                    raise ValidationError(f"Section '{section_key}' missing required property: {required_field}")
+                    raise ValidationError(
+                        f"Section '{section_key}' missing required property: {required_field}"
+                    )
 
             # Validate label
-            label = section_config['label']
+            label = section_config["label"]
             if not isinstance(label, str) or not label.strip():
-                raise ValidationError(f"Section '{section_key}' must have a non-empty label")
+                raise ValidationError(
+                    f"Section '{section_key}' must have a non-empty label"
+                )
 
             # Validate order
             try:
-                order = int(section_config['order'])
+                order = int(section_config["order"])
                 if order < 1:
-                    raise ValidationError(f"Section order must be positive for section '{section_key}'")
+                    raise ValidationError(
+                        f"Section order must be positive for section '{section_key}'"
+                    )
                 section_orders.append(order)
             except (ValueError, TypeError):
                 raise ValidationError(f"Invalid order for section '{section_key}'")
 
             # Validate optional fields
-            if 'description' in section_config:
-                if not isinstance(section_config['description'], str):
-                    raise ValidationError(f"Section description must be a string for section '{section_key}'")
+            if "description" in section_config and not isinstance(
+                section_config["description"], str
+            ):
+                raise ValidationError(
+                    f"Section description must be a string for section '{section_key}'"
+                )
 
-            if 'collapsed' in section_config:
-                if not isinstance(section_config['collapsed'], bool):
-                    raise ValidationError(f"Section collapsed property must be boolean for section '{section_key}'")
+            if "collapsed" in section_config and not isinstance(
+                section_config["collapsed"], bool
+            ):
+                raise ValidationError(
+                    f"Section collapsed property must be boolean for section '{section_key}'"
+                )
 
-            if 'icon' in section_config:
-                icon = section_config['icon']
+            if "icon" in section_config:
+                icon = section_config["icon"]
                 if not isinstance(icon, str):
-                    raise ValidationError(f"Section icon must be a string for section '{section_key}'")
+                    raise ValidationError(
+                        f"Section icon must be a string for section '{section_key}'"
+                    )
                 # Basic validation for Bootstrap icons
-                if icon and not icon.startswith('bi-'):
-                    raise ValidationError(f"Invalid icon format for section '{section_key}'. Must start with 'bi-'")
+                if icon and not icon.startswith("bi-"):
+                    raise ValidationError(
+                        f"Invalid icon format for section '{section_key}'. Must start with 'bi-'"
+                    )
 
         # Check for duplicate orders
         if len(section_orders) != len(set(section_orders)):
@@ -272,7 +356,9 @@ class PDFFormSecurity:
                     )
 
     @staticmethod
-    def validate_field_data_source_reference(field_name, field_config, available_sources):
+    def validate_field_data_source_reference(
+        field_name, field_config, available_sources
+    ):
         """
         Validate that field's data source reference is valid.
 
@@ -284,8 +370,8 @@ class PDFFormSecurity:
         Raises:
             ValidationError: If reference is invalid
         """
-        data_source = field_config.get('data_source')
-        data_source_key = field_config.get('data_source_key')
+        data_source = field_config.get("data_source")
+        data_source_key = field_config.get("data_source_key")
 
         # Both or neither must be present
         if bool(data_source) != bool(data_source_key):
@@ -317,11 +403,11 @@ class PDFFormSecurity:
     def validate_pdf_content(file_path):
         """Basic validation that file is actually a PDF."""
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 header = f.read(8)
-                if not header.startswith(b'%PDF-'):
+                if not header.startswith(b"%PDF-"):
                     raise ValidationError("File does not appear to be a valid PDF")
-        except IOError:
+        except OSError:
             raise ValidationError("Cannot read PDF file")
 
         return True

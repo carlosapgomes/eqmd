@@ -1,37 +1,36 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
-from django.views.generic import ListView, DetailView, FormView, View, DeleteView
-from django.http import HttpResponse, Http404, FileResponse
-from django.urls import reverse_lazy, reverse
-from django.utils import timezone
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
-from io import BytesIO
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views.generic import DeleteView, DetailView, FormView, ListView, View
 
-from apps.core.permissions.decorators import patient_access_required
 from apps.core.permissions.utils import can_access_patient, can_delete_event
-from ..models import PDFFormTemplate, PDFFormSubmission
-from ..services.form_generator import DynamicFormGenerator
-from ..services.pdf_overlay import PDFFormOverlay
-from ..services.duplication import (
-    can_duplicate_pdf_submission,
-    build_duplicate_initial_data,
-)
+
+from ..models import PDFFormSubmission, PDFFormTemplate
 from ..permissions import (
-    check_pdf_form_access, 
+    check_pdf_download_access,
+    check_pdf_form_access,
     check_pdf_form_creation,
     check_pdf_form_template_access,
-    check_pdf_download_access
 )
 from ..security import PDFFormSecurity
+from ..services.duplication import (
+    build_duplicate_initial_data,
+    can_duplicate_pdf_submission,
+)
+from ..services.form_generator import DynamicFormGenerator
+from ..services.pdf_overlay import PDFFormOverlay
 
 
 class PDFFormTemplateListView(LoginRequiredMixin, ListView):
     """List available PDF form templates for current hospital."""
 
     model = PDFFormTemplate
-    template_name = 'pdf_forms/form_template_list.html'
-    context_object_name = 'form_templates'
+    template_name = "pdf_forms/form_template_list.html"
+    context_object_name = "form_templates"
     paginate_by = 20
 
     def dispatch(self, request, *args, **kwargs):
@@ -40,14 +39,19 @@ class PDFFormTemplateListView(LoginRequiredMixin, ListView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        return PDFFormTemplate.objects.filter(
-            is_active=True,
-            hospital_specific=True  # Only hospital-specific forms
-        ).exclude(
-            form_fields__isnull=True  # Exclude templates without any configuration
-        ).exclude(
-            form_fields__exact={}  # Exclude templates with empty configuration
-        ).order_by('name')
+        return (
+            PDFFormTemplate.objects.filter(
+                is_active=True,
+                hospital_specific=True,  # Only hospital-specific forms
+            )
+            .exclude(
+                form_fields__isnull=True  # Exclude templates without any configuration
+            )
+            .exclude(
+                form_fields__exact={}  # Exclude templates with empty configuration
+            )
+            .order_by("name")
+        )
 
 
 class PDFFormSelectView(LoginRequiredMixin, View):
@@ -56,51 +60,54 @@ class PDFFormSelectView(LoginRequiredMixin, View):
     def get(self, request, patient_id):
         # Check patient access
         from apps.patients.models import Patient
+
         patient = get_object_or_404(Patient, id=patient_id)
 
         # Use security permission check
         check_pdf_form_access(request.user, patient)
 
         # Get available forms (both hospital and national forms)
-        form_templates = PDFFormTemplate.objects.filter(
-            is_active=True
-        ).exclude(
-            form_fields__isnull=True  # Exclude templates without any configuration
-        ).exclude(
-            form_fields__exact={}  # Exclude templates with empty configuration
-        ).order_by('form_type', 'name')
+        form_templates = (
+            PDFFormTemplate.objects.filter(is_active=True)
+            .exclude(
+                form_fields__isnull=True  # Exclude templates without any configuration
+            )
+            .exclude(
+                form_fields__exact={}  # Exclude templates with empty configuration
+            )
+            .order_by("form_type", "name")
+        )
 
         # Group forms by type
-        hospital_forms = [f for f in form_templates if f.form_type == 'HOSPITAL']
+        hospital_forms = [f for f in form_templates if f.form_type == "HOSPITAL"]
         national_forms = [f for f in form_templates if f.is_national_form]
 
         context = {
-            'patient': patient,
-            'hospital_forms': hospital_forms,
-            'national_forms': national_forms,
+            "patient": patient,
+            "hospital_forms": hospital_forms,
+            "national_forms": national_forms,
         }
-        return render(request, 'pdf_forms/form_select.html', context)
+        return render(request, "pdf_forms/form_select.html", context)
 
 
 class PDFFormFillView(LoginRequiredMixin, FormView):
     """Display and handle PDF form filling."""
 
-    template_name = 'pdf_forms/form_fill.html'
+    template_name = "pdf_forms/form_fill.html"
 
     def dispatch(self, request, *args, **kwargs):
         # Check authentication first - if not authenticated, LoginRequiredMixin will redirect
         if not request.user.is_authenticated:
             return super().dispatch(request, *args, **kwargs)
-            
+
         # Get template and patient
         self.form_template = get_object_or_404(
-            PDFFormTemplate,
-            id=kwargs['template_id'],
-            is_active=True
+            PDFFormTemplate, id=kwargs["template_id"], is_active=True
         )
 
         from apps.patients.models import Patient
-        self.patient = get_object_or_404(Patient, id=kwargs['patient_id'])
+
+        self.patient = get_object_or_404(Patient, id=kwargs["patient_id"])
 
         # Check permissions using security module
         check_pdf_form_creation(request.user, self.patient)
@@ -110,34 +117,41 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
     def get_form_class(self):
         """Generate form class dynamically based on PDF template."""
         generator = DynamicFormGenerator()
-        return generator.generate_form_class(self.form_template, self.patient, self.request.user)
+        return generator.generate_form_class(
+            self.form_template, self.patient, self.request.user
+        )
 
     def get_initial(self):
         """Get initial data for the form, including auto-fill values."""
         initial = super().get_initial()
-        
-        # Generate form class to get auto-fill initial values  
+
+        # Generate form class to get auto-fill initial values
         from ..services.form_generator import DynamicFormGenerator
+
         generator = DynamicFormGenerator()
-        form_class = generator.generate_form_class(self.form_template, self.patient, self.request.user)
-        
+        form_class = generator.generate_form_class(
+            self.form_template, self.patient, self.request.user
+        )
+
         # Add patient/hospital auto-fill initial values
-        if hasattr(form_class, '_patient_initial_values'):
+        if hasattr(form_class, "_patient_initial_values"):
             initial.update(form_class._patient_initial_values)
-            
+
         return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update({
-            'form_template': self.form_template,
-            'patient': self.patient,
-        })
+        context.update(
+            {
+                "form_template": self.form_template,
+                "patient": self.patient,
+            }
+        )
 
         # Add linked fields map if available for JavaScript initialization
-        form = context.get('form')
-        if form and hasattr(form.__class__, '_linked_fields_map'):
-            context['linked_fields_map'] = form.__class__._linked_fields_map
+        form = context.get("form")
+        if form and hasattr(form.__class__, "_linked_fields_map"):
+            context["linked_fields_map"] = form.__class__._linked_fields_map
 
         return context
 
@@ -145,11 +159,8 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
         """Handle POST request with exception handling."""
         try:
             return super().post(request, *args, **kwargs)
-        except Exception as e:
-            messages.error(
-                request,
-                f"Erro ao processar formulário: {str(e)}"
-            )
+        except Exception as e:  # noqa: BLE001 - view error path
+            messages.error(request, f"Erro ao processar formulário: {e!s}")
             # Return the form with error message
             form = self.get_form()
             return self.render_to_response(self.get_context_data(form=form))
@@ -174,22 +185,16 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
 
             messages.success(
                 self.request,
-                f"Formulário '{self.form_template.name}' preenchido com sucesso!"
+                f"Formulário '{self.form_template.name}' preenchido com sucesso!",
             )
 
-            return redirect('pdf_forms:submission_detail', pk=submission.pk)
+            return redirect("pdf_forms:submission_detail", pk=submission.pk)
 
         except ValidationError as e:
-            messages.error(
-                self.request,
-                f"Erro de validação: {str(e)}"
-            )
+            messages.error(self.request, f"Erro de validação: {e!s}")
             return self.form_invalid(form)
-        except Exception as e:
-            messages.error(
-                self.request,
-                f"Erro ao processar formulário: {str(e)}"
-            )
+        except Exception as e:  # noqa: BLE001 - view error path
+            messages.error(self.request, f"Erro ao processar formulário: {e!s}")
             return self.form_invalid(form)
 
 
@@ -202,7 +207,7 @@ class PDFFormSubmissionDuplicateView(LoginRequiredMixin, FormView):
     patient and template while leaving the source unchanged.
     """
 
-    template_name = 'pdf_forms/form_fill.html'
+    template_name = "pdf_forms/form_fill.html"
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -210,15 +215,15 @@ class PDFFormSubmissionDuplicateView(LoginRequiredMixin, FormView):
 
         self.source = get_object_or_404(
             PDFFormSubmission.objects.select_related(
-                'patient', 'created_by', 'form_template',
+                "patient",
+                "created_by",
+                "form_template",
             ),
-            pk=kwargs['pk'],
+            pk=kwargs["pk"],
         )
 
         if not can_duplicate_pdf_submission(request.user, self.source):
-            raise PermissionDenied(
-                "This submission cannot be duplicated."
-            )
+            raise PermissionDenied("This submission cannot be duplicated.")
 
         self.form_template = self.source.form_template
         self.patient = self.source.patient
@@ -255,39 +260,35 @@ class PDFFormSubmissionDuplicateView(LoginRequiredMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update({
-            'form_template': self.form_template,
-            'patient': self.patient,
-            'is_duplicate': True,
-            'source_submission': self.source,
-        })
+        context.update(
+            {
+                "form_template": self.form_template,
+                "patient": self.patient,
+                "is_duplicate": True,
+                "source_submission": self.source,
+            }
+        )
 
-        form = context.get('form')
-        if form and hasattr(form.__class__, '_linked_fields_map'):
-            context['linked_fields_map'] = (
-                form.__class__._linked_fields_map
-            )
+        form = context.get("form")
+        if form and hasattr(form.__class__, "_linked_fields_map"):
+            context["linked_fields_map"] = form.__class__._linked_fields_map
 
         return context
 
     def post(self, request, *args, **kwargs):
         try:
             return super().post(request, *args, **kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - view error path
             messages.error(
                 request,
-                f"Erro ao processar formulário: {str(e)}",
+                f"Erro ao processar formulário: {e!s}",
             )
             form = self.get_form()
-            return self.render_to_response(
-                self.get_context_data(form=form)
-            )
+            return self.render_to_response(self.get_context_data(form=form))
 
     def form_valid(self, form):
         try:
-            sanitized_data = PDFFormSecurity.sanitize_form_data(
-                form.cleaned_data
-            )
+            sanitized_data = PDFFormSecurity.sanitize_form_data(form.cleaned_data)
 
             submission = PDFFormSubmission(
                 form_template=self.form_template,
@@ -312,20 +313,20 @@ class PDFFormSubmissionDuplicateView(LoginRequiredMixin, FormView):
             )
 
             return redirect(
-                'pdf_forms:submission_detail',
+                "pdf_forms:submission_detail",
                 pk=submission.pk,
             )
 
         except ValidationError as e:
             messages.error(
                 self.request,
-                f"Erro de validação: {str(e)}",
+                f"Erro de validação: {e!s}",
             )
             return self.form_invalid(form)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - view error path
             messages.error(
                 self.request,
-                f"Erro ao processar formulário: {str(e)}",
+                f"Erro ao processar formulário: {e!s}",
             )
             return self.form_invalid(form)
 
@@ -334,8 +335,8 @@ class PDFFormSubmissionDetailView(LoginRequiredMixin, DetailView):
     """View completed PDF form submission."""
 
     model = PDFFormSubmission
-    template_name = 'pdf_forms/form_submission_detail.html'
-    context_object_name = 'submission'
+    template_name = "pdf_forms/form_submission_detail.html"
+    context_object_name = "submission"
 
     def get_object(self):
         submission = super().get_object()
@@ -347,7 +348,9 @@ class PDFFormSubmissionDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['can_delete_submission'] = can_delete_event(self.request.user, self.object)
+        context["can_delete_submission"] = can_delete_event(
+            self.request.user, self.object
+        )
         return context
 
 
@@ -376,10 +379,9 @@ class PDFFormDownloadView(LoginRequiredMixin, View):
             pdf_service = PDFFormOverlay()
 
             # Generate secure filename
-            timestamp = submission.event_datetime.strftime('%Y%m%d_%H%M%S')
+            timestamp = submission.event_datetime.strftime("%Y%m%d_%H%M%S")
             secure_filename = PDFFormSecurity.generate_secure_filename(
-                f"{submission.form_template.name}_{timestamp}.pdf",
-                prefix="pdf_form_"
+                f"{submission.form_template.name}_{timestamp}.pdf", prefix="pdf_form_"
             )
 
             # Generate PDF response directly from form data
@@ -387,36 +389,39 @@ class PDFFormDownloadView(LoginRequiredMixin, View):
                 template_path=submission.form_template.pdf_file.path,
                 form_data=submission.form_data,
                 field_config=submission.form_template.form_fields,
-                filename=secure_filename
+                filename=secure_filename,
             )
 
             return response
 
         except ValidationError as e:
-            raise PermissionDenied(f"Security validation failed: {str(e)}")
+            raise PermissionDenied(f"Security validation failed: {e!s}")
         except FileNotFoundError as e:
-            raise Http404(f"Template file not found: {str(e)}")
-        except Exception as e:
+            raise Http404(f"Template file not found: {e!s}")
+        except Exception as e:  # noqa: BLE001 - view error path
             # Log the error for debugging while showing generic message to user
             import logging
+
             logger = logging.getLogger(__name__)
-            logger.error(f"PDF generation failed for submission {submission_id}: {str(e)}")
+            logger.error(f"PDF generation failed for submission {submission_id}: {e!s}")
             raise Http404("Erro ao gerar PDF. Tente novamente ou contacte o suporte.")
 
 
-class PDFFormSubmissionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class PDFFormSubmissionDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     """Delete view for PDF form submissions with permission checking."""
 
     model = PDFFormSubmission
-    template_name = 'pdf_forms/submission_confirm_delete.html'
-    context_object_name = 'submission'
-    permission_required = 'events.delete_event'
+    template_name = "pdf_forms/submission_confirm_delete.html"
+    context_object_name = "submission"
+    permission_required = "events.delete_event"
 
     def get_success_url(self):
         """Redirect to patient timeline after successful deletion."""
         return reverse_lazy(
-            'apps.patients:patient_events_timeline',
-            kwargs={'patient_id': self.object.patient.pk}
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.pk},
         )
 
     def get_object(self, queryset=None):
@@ -439,12 +444,17 @@ class PDFFormSubmissionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, D
 
     def get_queryset(self):
         """Optimize queryset with related objects."""
-        return PDFFormSubmission.objects.select_related('patient', 'created_by', 'form_template')
+        return PDFFormSubmission.objects.select_related(
+            "patient", "created_by", "form_template"
+        )
 
-    def delete(self, request, *args, **kwargs):
-        """Handle successful deletion."""
-        submission = self.get_object()
+    def form_valid(self, form):
+        """Add the success message before the object is deleted and redirected."""
+        submission = self.object
         patient_name = submission.patient.name
         form_name = submission.form_template.name
-        messages.success(request, f"Formulário '{form_name}' para {patient_name} excluído com sucesso.")
-        return super().delete(request, *args, **kwargs)
+        messages.success(
+            self.request,
+            f"Formulário '{form_name}' para {patient_name} excluído com sucesso.",
+        )
+        return super().form_valid(form)
