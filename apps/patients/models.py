@@ -1,17 +1,20 @@
 import uuid
 from datetime import date
-from django.db import models
+from typing import ClassVar
+
 from django.conf import settings
-from django.urls import reverse
 from django.core.exceptions import ValidationError
+from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
 from apps.core.models.soft_delete import SoftDeleteModel
+
 from .validators import (
-    validate_record_number_format,
     validate_admission_datetime,
     validate_discharge_datetime,
+    validate_record_number_format,
 )
 
 
@@ -49,12 +52,12 @@ class AllowedTag(SoftDeleteModel):
     )
 
     class Meta:
-        db_table = 'patients_allowedtag'
-        ordering = ["name"]
+        db_table = "patients_allowedtag"
+        ordering: ClassVar[list[str]] = ["name"]
         verbose_name = "Tag Permitida"
         verbose_name_plural = "Tags Permitidas"
-        indexes = [
-            models.Index(fields=['is_deleted', 'name']),
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["is_deleted", "name"]),
         ]
 
     def __str__(self):
@@ -72,7 +75,7 @@ class Tag(models.Model):
         verbose_name="Tag Permitida",
     )
     patient = models.ForeignKey(
-        'Patient',
+        "Patient",
         on_delete=models.CASCADE,
         related_name="patient_tags",
         verbose_name="Paciente",
@@ -96,10 +99,10 @@ class Tag(models.Model):
     class Meta:
         verbose_name = "Tag"
         verbose_name_plural = "Tags"
-        constraints = [
+        constraints: ClassVar[list[models.UniqueConstraint]] = [
             models.UniqueConstraint(
-                fields=['allowed_tag', 'patient'],
-                name='unique_tag_per_patient_per_allowed_tag'
+                fields=["allowed_tag", "patient"],
+                name="unique_tag_per_patient_per_allowed_tag",
             )
         ]
 
@@ -115,87 +118,89 @@ class Tag(models.Model):
         return self.allowed_tag.color
 
 
-
 class Ward(models.Model):
     """Model representing hospital wards/departments"""
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
-        max_length=100, 
+        max_length=100,
         unique=True,
         verbose_name="Nome da Ala",
-        help_text="Nome completo da ala (ex: Unidade de Terapia Intensiva)"
+        help_text="Nome completo da ala (ex: Unidade de Terapia Intensiva)",
     )
     abbreviation = models.CharField(
-        max_length=10, 
+        max_length=10,
         unique=True,
         verbose_name="Sigla",
-        help_text="Sigla da ala (ex: UTI, CC, PS)"
+        help_text="Sigla da ala (ex: UTI, CC, PS)",
     )
     description = models.TextField(
-        blank=True, 
+        blank=True,
         verbose_name="Descrição",
-        help_text="Descrição detalhada da ala e suas especialidades"
+        help_text="Descrição detalhada da ala e suas especialidades",
     )
     is_active = models.BooleanField(
-        default=True, 
+        default=True,
         verbose_name="Ativa",
-        help_text="Indica se a ala está ativa e disponível para uso"
+        help_text="Indica se a ala está ativa e disponível para uso",
     )
-    
+
     # Optional ward characteristics
     floor = models.CharField(
         max_length=20,
         blank=True,
         verbose_name="Andar",
-        help_text="Andar onde a ala está localizada (ex: 2º Andar, Térreo)"
+        help_text="Andar onde a ala está localizada (ex: 2º Andar, Térreo)",
     )
     capacity_estimate = models.PositiveIntegerField(
         null=True,
         blank=True,
         verbose_name="Capacidade Estimada",
-        help_text="Estimativa de capacidade de leitos (informativo apenas)"
+        help_text="Estimativa de capacidade de leitos (informativo apenas)",
     )
-    
+
     # Tracking fields
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.PROTECT, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
         related_name="created_wards",
-        verbose_name="Criado por"
+        verbose_name="Criado por",
     )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.PROTECT, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
         related_name="updated_wards",
-        verbose_name="Atualizado por"
+        verbose_name="Atualizado por",
     )
 
     class Meta:
-        ordering = ["name"]
+        ordering: ClassVar[list[str]] = ["name"]
         verbose_name = "Ala"
         verbose_name_plural = "Alas"
-        indexes = [
-            models.Index(fields=['is_active', 'name']),  # For active ward queries
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["is_active", "name"]),  # For active ward queries
         ]
 
     def __str__(self):
         return f"{self.abbreviation} - {self.name}"
-    
+
     def get_current_patients_count(self):
         """Get count of patients currently in this ward"""
         return self.patients.filter(
             status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY]
         ).count()
-    
+
     def get_available_beds_list(self):
         """Get list of bed identifiers currently in use in this ward"""
         return list(
             self.patients.filter(
                 status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY]
-            ).exclude(bed="").values_list("bed", flat=True).distinct()
+            )
+            .exclude(bed="")
+            .values_list("bed", flat=True)
+            .distinct()
         )
 
 
@@ -257,17 +262,17 @@ class PatientRecordNumber(models.Model):
     )
 
     class Meta:
-        ordering = ["-effective_date", "-created_at"]
+        ordering: ClassVar[list[str]] = ["-effective_date", "-created_at"]
         verbose_name = "Número de Prontuário"
         verbose_name_plural = "Números de Prontuário"
-        constraints = [
+        constraints: ClassVar[list[models.UniqueConstraint]] = [
             models.UniqueConstraint(
                 fields=["patient"],
                 condition=models.Q(is_current=True),
                 name="unique_current_record_per_patient",
             )
         ]
-        indexes = [
+        indexes: ClassVar[list[models.Index]] = [
             models.Index(fields=["patient", "is_current"]),
             models.Index(fields=["record_number"]),
             models.Index(fields=["effective_date"]),
@@ -371,13 +376,13 @@ class PatientAdmission(models.Model):
         help_text="Último leito/quarto antes da alta",
     )
     ward = models.ForeignKey(
-        Ward, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        Ward,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         related_name="admissions",
         verbose_name="Ala",
-        help_text="Ala onde a internação ocorreu"
+        help_text="Ala onde a internação ocorreu",
     )
 
     # Clinical data
@@ -430,10 +435,10 @@ class PatientAdmission(models.Model):
     )
 
     class Meta:
-        ordering = ["-admission_datetime"]
+        ordering: ClassVar[list[str]] = ["-admission_datetime"]
         verbose_name = "Internação"
         verbose_name_plural = "Internações"
-        constraints = [
+        constraints: ClassVar[list[models.BaseConstraint]] = [
             models.UniqueConstraint(
                 fields=["patient"],
                 condition=models.Q(is_active=True),
@@ -445,13 +450,17 @@ class PatientAdmission(models.Model):
                 name="discharge_after_admission",
             ),
         ]
-        indexes = [
+        indexes: ClassVar[list[models.Index]] = [
             models.Index(fields=["patient", "is_active"]),
             models.Index(fields=["admission_datetime"]),
             models.Index(fields=["discharge_datetime"]),
             models.Index(fields=["admission_type"]),
-            models.Index(fields=["patient", "admission_datetime"]),  # For patient timeline queries
-            models.Index(fields=["ward", "admission_datetime"]),  # For ward-based queries
+            models.Index(
+                fields=["patient", "admission_datetime"]
+            ),  # For patient timeline queries
+            models.Index(
+                fields=["ward", "admission_datetime"]
+            ),  # For ward-based queries
         ]
 
     def __str__(self):
@@ -525,7 +534,7 @@ class PatientAdmission(models.Model):
             duration = timezone.now() - self.admission_datetime
             days = duration.days
             hours = int(duration.total_seconds() / 3600) % 24
-            
+
             if days > 0:
                 return f"{days}d {hours}h"
             else:
@@ -625,10 +634,10 @@ class Patient(SoftDeleteModel):
         DECEASED = 6, "Óbito"
 
     class GenderChoices(models.TextChoices):
-        MALE = 'M', 'Masculino'
-        FEMALE = 'F', 'Feminino'
-        OTHER = 'O', 'Outro'
-        NOT_INFORMED = 'N', 'Não Informado'
+        MALE = "M", "Masculino"
+        FEMALE = "F", "Feminino"
+        OTHER = "O", "Outro"
+        NOT_INFORMED = "N", "Não Informado"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, verbose_name="Nome Completo")
@@ -637,7 +646,7 @@ class Patient(SoftDeleteModel):
         max_length=1,
         choices=GenderChoices.choices,
         default=GenderChoices.NOT_INFORMED,
-        verbose_name="Sexo"
+        verbose_name="Sexo",
     )
     healthcard_number = models.CharField(
         max_length=60, blank=True, verbose_name="Número do Cartão de Saúde"
@@ -664,13 +673,13 @@ class Patient(SoftDeleteModel):
     )
     bed = models.CharField(max_length=20, blank=True, verbose_name="Leito/Cama")
     ward = models.ForeignKey(
-        Ward, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        Ward,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         related_name="patients",
         verbose_name="Ala",
-        help_text="Ala onde o paciente está localizado"
+        help_text="Ala onde o paciente está localizado",
     )
     last_admission_date = models.DateField(
         null=True, blank=True, verbose_name="Data da Última Admissão"
@@ -728,19 +737,21 @@ class Patient(SoftDeleteModel):
     )
 
     class Meta:
-        db_table = 'patients_patient'
-        ordering = ["-created_at"]
+        db_table = "patients_patient"
+        ordering: ClassVar[list[str]] = ["-created_at"]
         verbose_name = "Paciente"
         verbose_name_plural = "Pacientes"
-        indexes = [
-            models.Index(fields=['is_deleted', 'status']),
-            models.Index(fields=['is_deleted', 'created_at']),
-            models.Index(fields=['status', 'ward']),
-            models.Index(fields=['name']),  # For search
-            models.Index(fields=['current_record_number']),  # For record number searches
-            models.Index(fields=['current_admission_id']),  # For admission lookups
-            models.Index(fields=['last_admission_date']),  # For date-based queries
-            models.Index(fields=['last_discharge_date']),  # For date-based queries
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["is_deleted", "status"]),
+            models.Index(fields=["is_deleted", "created_at"]),
+            models.Index(fields=["status", "ward"]),
+            models.Index(fields=["name"]),  # For search
+            models.Index(
+                fields=["current_record_number"]
+            ),  # For record number searches
+            models.Index(fields=["current_admission_id"]),  # For admission lookups
+            models.Index(fields=["last_admission_date"]),  # For date-based queries
+            models.Index(fields=["last_discharge_date"]),  # For date-based queries
         ]
 
     def __str__(self):
@@ -754,7 +765,11 @@ class Patient(SoftDeleteModel):
     def age(self):
         """Calculate current age in years"""
         today = date.today()
-        return today.year - self.birthday.year - ((today.month, today.day) < (self.birthday.month, self.birthday.day))
+        return (
+            today.year
+            - self.birthday.year
+            - ((today.month, today.day) < (self.birthday.month, self.birthday.day))
+        )
 
     def clean(self):
         """Validate patient data"""
@@ -859,7 +874,7 @@ class Patient(SoftDeleteModel):
         # Update status based on current admission
         if current_admission:
             self.status = self.Status.INPATIENT
-        elif not self.status == self.Status.DISCHARGED:
+        elif self.status != self.Status.DISCHARGED:
             self.status = self.Status.OUTPATIENT
 
     def is_currently_admitted(self):

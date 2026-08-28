@@ -13,63 +13,52 @@ class AllowedTagModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = create_navigation_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword'
+            username="testuser", email="test@example.com", password="testpassword"
         )
 
     def test_allowed_tag_creation(self):
         """Test that AllowedTag can be created with required fields"""
         tag = AllowedTag.objects.create(
-            name='High Priority',
-            description='For high priority patients',
-            color='#dc3545',
+            name="High Priority",
+            description="For high priority patients",
+            color="#dc3545",
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        self.assertEqual(tag.name, 'High Priority')
-        self.assertEqual(tag.color, '#dc3545')
+        self.assertEqual(tag.name, "High Priority")
+        self.assertEqual(tag.color, "#dc3545")
         self.assertTrue(tag.is_active)
 
     def test_allowed_tag_str_representation(self):
         """Test string representation of AllowedTag"""
         tag = AllowedTag.objects.create(
-            name='Emergency',
-            created_by=self.user,
-            updated_by=self.user
+            name="Emergency", created_by=self.user, updated_by=self.user
         )
-        self.assertEqual(str(tag), 'Emergency')
+        self.assertEqual(str(tag), "Emergency")
 
     def test_allowed_tag_default_color(self):
         """Test that AllowedTag has default color"""
         tag = AllowedTag.objects.create(
-            name='Test Tag',
-            created_by=self.user,
-            updated_by=self.user
+            name="Test Tag", created_by=self.user, updated_by=self.user
         )
-        self.assertEqual(tag.color, '#007bff')
+        self.assertEqual(tag.color, "#007bff")
 
 
 class TagModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = create_navigation_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword'
+            username="testuser", email="test@example.com", password="testpassword"
         )
         cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
+            name="Test Patient",
+            birthday="1980-01-01",
             status=Patient.Status.OUTPATIENT,
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
         cls.allowed_tag = AllowedTag.objects.create(
-            name='Critical',
-            color='#dc3545',
-            created_by=cls.user,
-            updated_by=cls.user
+            name="Critical", color="#dc3545", created_by=cls.user, updated_by=cls.user
         )
 
     def test_tag_creation(self):
@@ -77,13 +66,13 @@ class TagModelTests(TestCase):
         tag = Tag.objects.create(
             allowed_tag=self.allowed_tag,
             patient=self.patient,
-            notes='Critical patient needs immediate attention',
+            notes="Critical patient needs immediate attention",
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         self.assertEqual(tag.allowed_tag, self.allowed_tag)
-        self.assertEqual(tag.name, 'Critical')
-        self.assertEqual(tag.color, '#dc3545')
+        self.assertEqual(tag.name, "Critical")
+        self.assertEqual(tag.color, "#dc3545")
 
     def test_tag_str_representation(self):
         """Test string representation of Tag"""
@@ -91,9 +80,9 @@ class TagModelTests(TestCase):
             allowed_tag=self.allowed_tag,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        self.assertEqual(str(tag), 'Critical')
+        self.assertEqual(str(tag), "Critical")
 
     def test_tag_properties(self):
         """Test Tag properties that access AllowedTag fields"""
@@ -101,7 +90,7 @@ class TagModelTests(TestCase):
             allowed_tag=self.allowed_tag,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         self.assertEqual(tag.name, self.allowed_tag.name)
         self.assertEqual(tag.color, self.allowed_tag.color)
@@ -111,28 +100,23 @@ class PatientTagsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = create_navigation_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword'
+            username="testuser", email="test@example.com", password="testpassword"
         )
         cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
+            name="Test Patient",
+            birthday="1980-01-01",
             status=Patient.Status.OUTPATIENT,
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
         cls.allowed_tag1 = AllowedTag.objects.create(
-            name='High Priority',
-            color='#dc3545',
+            name="High Priority",
+            color="#dc3545",
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
         cls.allowed_tag2 = AllowedTag.objects.create(
-            name='Follow Up',
-            color='#ffc107',
-            created_by=cls.user,
-            updated_by=cls.user
+            name="Follow Up", color="#ffc107", created_by=cls.user, updated_by=cls.user
         )
 
     def test_patient_tag_assignment(self):
@@ -141,13 +125,13 @@ class PatientTagsTests(TestCase):
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         tag2 = Tag.objects.create(
             allowed_tag=self.allowed_tag2,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         self.assertEqual(self.patient.patient_tags.count(), 2)
@@ -160,7 +144,7 @@ class PatientTagsTests(TestCase):
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         self.assertEqual(self.patient.patient_tags.count(), 1)
@@ -173,27 +157,23 @@ class PatientTagViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = create_navigation_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword'
+            username="testuser", email="test@example.com", password="testpassword"
         )
         # Add required permissions
         from django.contrib.auth.models import Permission
-        view_perm = Permission.objects.get(codename='view_patient')
+
+        view_perm = Permission.objects.get(codename="view_patient")
         cls.user.user_permissions.add(view_perm)
 
         cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
+            name="Test Patient",
+            birthday="1980-01-01",
             status=Patient.Status.OUTPATIENT,
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
         cls.allowed_tag = AllowedTag.objects.create(
-            name='VIP',
-            color='#6f42c1',
-            created_by=cls.user,
-            updated_by=cls.user
+            name="VIP", color="#6f42c1", created_by=cls.user, updated_by=cls.user
         )
 
     def setUp(self):
@@ -205,16 +185,16 @@ class PatientTagViewTests(TestCase):
             allowed_tag=self.allowed_tag,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         response = self.client.get(
-            reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+            reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'VIP')
-        self.assertContains(response, '#6f42c1')
+        self.assertContains(response, "VIP")
+        self.assertContains(response, "#6f42c1")
 
     def test_patient_list_displays_tags(self):
         """Test that patient list view displays tags"""
@@ -222,14 +202,14 @@ class PatientTagViewTests(TestCase):
             allowed_tag=self.allowed_tag,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
-        response = self.client.get(reverse('patients:patient_list'))
+        response = self.client.get(reverse("patients:patient_list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'VIP')
-        self.assertContains(response, '#6f42c1')
+        self.assertContains(response, "VIP")
+        self.assertContains(response, "#6f42c1")
 
 
 class PatientTagManagementViewTests(TestCase):
@@ -238,34 +218,30 @@ class PatientTagManagementViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = create_navigation_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword'
+            username="testuser", email="test@example.com", password="testpassword"
         )
         # Add required permissions
         from django.contrib.auth.models import Permission
-        change_perm = Permission.objects.get(codename='change_patient')
-        view_perm = Permission.objects.get(codename='view_patient')
+
+        change_perm = Permission.objects.get(codename="change_patient")
+        view_perm = Permission.objects.get(codename="view_patient")
         cls.user.user_permissions.add(change_perm, view_perm)
 
         cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
+            name="Test Patient",
+            birthday="1980-01-01",
             status=Patient.Status.OUTPATIENT,
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
         cls.allowed_tag1 = AllowedTag.objects.create(
-            name='High Priority',
-            color='#dc3545',
+            name="High Priority",
+            color="#dc3545",
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
         cls.allowed_tag2 = AllowedTag.objects.create(
-            name='Follow Up',
-            color='#ffc107',
-            created_by=cls.user,
-            updated_by=cls.user
+            name="Follow Up", color="#ffc107", created_by=cls.user, updated_by=cls.user
         )
 
     def setUp(self):
@@ -273,53 +249,57 @@ class PatientTagManagementViewTests(TestCase):
 
     def test_patient_tag_add_view_success(self):
         """Test successful tag addition via AJAX"""
-        url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
 
-        response = self.client.post(url, data={
-            'tag_id': self.allowed_tag1.pk,
-            'notes': 'Urgent case'
-        })
+        response = self.client.post(
+            url, data={"tag_id": self.allowed_tag1.pk, "notes": "Urgent case"}
+        )
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertTrue(data['success'])
-        self.assertIn('High Priority', data['message'])
+        self.assertTrue(data["success"])
+        self.assertIn("High Priority", data["message"])
 
         # Verify tag was created and assigned
         self.assertEqual(self.patient.patient_tags.count(), 1)
         tag = self.patient.patient_tags.first()
-        self.assertEqual(tag.allowed_tag.name, 'High Priority')
-        self.assertEqual(tag.notes, 'Urgent case')
+        self.assertEqual(tag.allowed_tag.name, "High Priority")
+        self.assertEqual(tag.notes, "Urgent case")
 
     def test_patient_tag_add_view_missing_tag_id(self):
         """Test tag addition with missing tag_id"""
-        url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
 
-        response = self.client.post(url, data={
-            'notes': 'Urgent case'
-        })
+        response = self.client.post(url, data={"notes": "Urgent case"})
 
         self.assertEqual(response.status_code, 400)
         data = response.json()
-        self.assertIn('ID da tag é obrigatório', data['error'])
+        self.assertIn("ID da tag é obrigatório", data["error"])
 
     def test_patient_tag_add_view_invalid_tag_id(self):
         """Test tag addition with invalid tag_id"""
         # Create a dummy allowed tag to get a valid ID format, then delete it
         dummy_allowed_tag = AllowedTag.objects.create(
-            name='Dummy Tag',
-            created_by=self.user,
-            updated_by=self.user
+            name="Dummy Tag", created_by=self.user, updated_by=self.user
         )
         tag_id = dummy_allowed_tag.id
         dummy_allowed_tag.delete()
 
-        url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
 
-        response = self.client.post(url, data={
-            'tag_id': tag_id,  # Non-existent tag
-            'notes': 'Urgent case'
-        })
+        response = self.client.post(
+            url,
+            data={
+                "tag_id": tag_id,  # Non-existent tag
+                "notes": "Urgent case",
+            },
+        )
 
         # A well-formed but nonexistent AllowedTag id is a domain 404:
         # the view resolves it with get_object_or_404 outside its broad
@@ -330,18 +310,17 @@ class PatientTagManagementViewTests(TestCase):
         """Test tag addition without proper permissions"""
         # Create user without change_patient permission
         limited_user = create_navigation_user(
-            username='limiteduser',
-            email='limited@example.com',
-            password='testpassword'
+            username="limiteduser", email="limited@example.com", password="testpassword"
         )
         self.client.force_login(limited_user)
 
-        url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
 
-        response = self.client.post(url, data={
-            'tag_id': self.allowed_tag1.pk,
-            'notes': 'Urgent case'
-        })
+        response = self.client.post(
+            url, data={"tag_id": self.allowed_tag1.pk, "notes": "Urgent case"}
+        )
 
         self.assertEqual(response.status_code, 403)
 
@@ -351,22 +330,22 @@ class PatientTagManagementViewTests(TestCase):
         tag = Tag.objects.create(
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
-            notes='Urgent case',
+            notes="Urgent case",
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
-        url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': self.patient.pk,
-            'tag_id': tag.pk
-        })
+        url = reverse(
+            "patients:patient_tag_remove",
+            kwargs={"patient_id": self.patient.pk, "tag_id": tag.pk},
+        )
 
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertTrue(data['success'])
-        self.assertIn('High Priority', data['message'])
+        self.assertTrue(data["success"])
+        self.assertIn("High Priority", data["message"])
 
         # Verify tag was removed and deleted
         self.assertEqual(self.patient.patient_tags.count(), 0)
@@ -379,15 +358,18 @@ class PatientTagManagementViewTests(TestCase):
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         tag_id = dummy_tag.pk
         dummy_tag.delete()
 
-        url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': self.patient.pk,
-            'tag_id': tag_id  # Non-existent tag
-        })
+        url = reverse(
+            "patients:patient_tag_remove",
+            kwargs={
+                "patient_id": self.patient.pk,
+                "tag_id": tag_id,  # Non-existent tag
+            },
+        )
 
         response = self.client.post(url)
 
@@ -400,23 +382,25 @@ class PatientTagManagementViewTests(TestCase):
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         tag2 = Tag.objects.create(
             allowed_tag=self.allowed_tag2,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
-        url = reverse('patients:patient_tag_remove_all', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tag_remove_all", kwargs={"patient_id": self.patient.pk}
+        )
 
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertTrue(data['success'])
-        self.assertIn('2 tag(s)', data['message'])
+        self.assertTrue(data["success"])
+        self.assertIn("2 tag(s)", data["message"])
 
         # Verify all tags were removed and deleted
         self.assertEqual(self.patient.patient_tags.count(), 0)
@@ -425,13 +409,15 @@ class PatientTagManagementViewTests(TestCase):
 
     def test_patient_tag_remove_all_view_no_tags(self):
         """Test bulk tag removal when patient has no tags"""
-        url = reverse('patients:patient_tag_remove_all', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tag_remove_all", kwargs={"patient_id": self.patient.pk}
+        )
 
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, 400)
         data = response.json()
-        self.assertIn('Nenhuma tag para remover', data['error'])
+        self.assertIn("Nenhuma tag para remover", data["error"])
 
     def test_patient_tags_api_view_success(self):
         """Test successful API response for patient tags"""
@@ -439,12 +425,14 @@ class PatientTagManagementViewTests(TestCase):
         Tag.objects.create(
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
-            notes='Urgent case',
+            notes="Urgent case",
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
-        url = reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
 
         response = self.client.get(url)
 
@@ -452,19 +440,21 @@ class PatientTagManagementViewTests(TestCase):
         data = response.json()
 
         # Check tags data
-        self.assertEqual(len(data['current_tags']), 1)
-        tag_data = data['current_tags'][0]
-        self.assertEqual(tag_data['name'], 'High Priority')
-        self.assertEqual(tag_data['color'], '#dc3545')
-        self.assertEqual(tag_data['notes'], 'Urgent case')
+        self.assertEqual(len(data["current_tags"]), 1)
+        tag_data = data["current_tags"][0]
+        self.assertEqual(tag_data["name"], "High Priority")
+        self.assertEqual(tag_data["color"], "#dc3545")
+        self.assertEqual(tag_data["notes"], "Urgent case")
 
         # Check available tags data
-        self.assertTrue(data['permissions']['can_manage_tags'])
-        self.assertTrue(data['permissions']['can_view_tags'])
+        self.assertTrue(data["permissions"]["can_manage_tags"])
+        self.assertTrue(data["permissions"]["can_view_tags"])
 
     def test_patient_tags_api_view_no_tags(self):
         """Test API response for patient with no tags"""
-        url = reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
 
         response = self.client.get(url)
 
@@ -472,22 +462,22 @@ class PatientTagManagementViewTests(TestCase):
         data = response.json()
 
         # Check empty tags list
-        self.assertEqual(len(data['current_tags']), 0)
+        self.assertEqual(len(data["current_tags"]), 0)
 
         # Check available tags (should show both allowed tags)
-        self.assertEqual(len(data['available_tags']), 2)
+        self.assertEqual(len(data["available_tags"]), 2)
 
     def test_patient_tags_api_view_permission_denied(self):
         """Test API access without proper permissions"""
         # Create user without view_patient permission
         limited_user = create_navigation_user(
-            username='limiteduser',
-            email='limited@example.com',
-            password='testpassword'
+            username="limiteduser", email="limited@example.com", password="testpassword"
         )
         self.client.force_login(limited_user)
 
-        url = reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+        url = reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
 
         response = self.client.get(url)
 
@@ -502,36 +492,35 @@ class PatientTagIntegrationTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = create_navigation_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword'
+            username="testuser", email="test@example.com", password="testpassword"
         )
         # Add required permissions
         from django.contrib.auth.models import Permission
-        change_perm = Permission.objects.get(codename='change_patient')
-        view_perm = Permission.objects.get(codename='view_patient')
+
+        change_perm = Permission.objects.get(codename="change_patient")
+        view_perm = Permission.objects.get(codename="view_patient")
         cls.user.user_permissions.add(change_perm, view_perm)
 
         cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
+            name="Test Patient",
+            birthday="1980-01-01",
             status=Patient.Status.OUTPATIENT,
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
         cls.allowed_tag1 = AllowedTag.objects.create(
-            name='High Priority',
-            color='#dc3545',
-            description='For high priority patients',
+            name="High Priority",
+            color="#dc3545",
+            description="For high priority patients",
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
         cls.allowed_tag2 = AllowedTag.objects.create(
-            name='Follow Up',
-            color='#ffc107',
-            description='Requires follow-up',
+            name="Follow Up",
+            color="#ffc107",
+            description="Requires follow-up",
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
 
     def setUp(self):
@@ -543,43 +532,50 @@ class PatientTagIntegrationTests(TestCase):
         self.assertEqual(self.patient.patient_tags.count(), 0)
 
         # 2. Add first tag via API
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag1.pk,
-            'notes': 'Urgent case needs immediate attention'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url,
+            data={
+                "tag_id": self.allowed_tag1.pk,
+                "notes": "Urgent case needs immediate attention",
+            },
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.patient.patient_tags.count(), 1)
 
         # 3. Add second tag via API
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag2.pk,
-            'notes': 'Follow up in 2 weeks'
-        })
+        response = self.client.post(
+            add_url,
+            data={"tag_id": self.allowed_tag2.pk, "notes": "Follow up in 2 weeks"},
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.patient.patient_tags.count(), 2)
 
         # 4. Verify tags via API
-        api_url = reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+        api_url = reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
         response = self.client.get(api_url)
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(len(data['current_tags']), 2)
+        self.assertEqual(len(data["current_tags"]), 2)
 
         # Verify tag details
-        tag_names = [tag['name'] for tag in data['current_tags']]
-        self.assertIn('High Priority', tag_names)
-        self.assertIn('Follow Up', tag_names)
+        tag_names = [tag["name"] for tag in data["current_tags"]]
+        self.assertIn("High Priority", tag_names)
+        self.assertIn("Follow Up", tag_names)
 
         # 5. Remove one tag
-        tag_to_remove = self.patient.patient_tags.get(allowed_tag__name='High Priority')
-        remove_url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': self.patient.pk,
-            'tag_id': tag_to_remove.pk
-        })
+        tag_to_remove = self.patient.patient_tags.get(allowed_tag__name="High Priority")
+        remove_url = reverse(
+            "patients:patient_tag_remove",
+            kwargs={"patient_id": self.patient.pk, "tag_id": tag_to_remove.pk},
+        )
 
         response = self.client.post(remove_url)
         self.assertEqual(response.status_code, 200)
@@ -588,11 +584,13 @@ class PatientTagIntegrationTests(TestCase):
         # 6. Verify remaining tag
         response = self.client.get(api_url)
         data = response.json()
-        self.assertEqual(len(data['current_tags']), 1)
-        self.assertEqual(data['current_tags'][0]['name'], 'Follow Up')
+        self.assertEqual(len(data["current_tags"]), 1)
+        self.assertEqual(data["current_tags"][0]["name"], "Follow Up")
 
         # 7. Remove all remaining tags
-        remove_all_url = reverse('patients:patient_tag_remove_all', kwargs={'patient_id': self.patient.pk})
+        remove_all_url = reverse(
+            "patients:patient_tag_remove_all", kwargs={"patient_id": self.patient.pk}
+        )
         response = self.client.post(remove_all_url)
 
         self.assertEqual(response.status_code, 200)
@@ -600,26 +598,26 @@ class PatientTagIntegrationTests(TestCase):
 
     def test_tag_management_with_duplicate_tags(self):
         """Test that duplicate tags are rejected by the view"""
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
 
         # Add tag first time
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag1.pk,
-            'notes': 'First addition'
-        })
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag1.pk, "notes": "First addition"}
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.patient.patient_tags.count(), 1)
 
         # Try to add same tag again — view rejects duplicates (400)
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag1.pk,
-            'notes': 'Second addition'
-        })
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag1.pk, "notes": "Second addition"}
+        )
 
         self.assertEqual(response.status_code, 400)
         data = response.json()
-        self.assertIn('não é possível', data['error'].lower())
+        self.assertIn("não é possível", data["error"].lower())
         # Still only 1 tag assigned
         self.assertEqual(self.patient.patient_tags.count(), 1)
 
@@ -627,19 +625,20 @@ class PatientTagIntegrationTests(TestCase):
         """Test that inactive allowed tags are handled correctly"""
         # Create an inactive allowed tag
         inactive_tag = AllowedTag.objects.create(
-            name='Deprecated Tag',
-            color='#6c757d',
+            name="Deprecated Tag",
+            color="#6c757d",
             is_active=False,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Try to add inactive tag via API
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': inactive_tag.pk,
-            'notes': 'Should not be added'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url, data={"tag_id": inactive_tag.pk, "notes": "Should not be added"}
+        )
 
         # can_add_patient_tag returns False for inactive tags → view returns 400
         self.assertEqual(response.status_code, 400)
@@ -651,47 +650,51 @@ class PatientTagIntegrationTests(TestCase):
             allowed_tag=self.allowed_tag1,
             patient=self.patient,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Check API response
-        api_url = reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+        api_url = reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
         response = self.client.get(api_url)
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
         # Should show only unassigned allowed tags in available_tags
-        available_tag_names = [tag['name'] for tag in data['available_tags']]
-        self.assertNotIn('High Priority', available_tag_names)  # Already assigned
-        self.assertIn('Follow Up', available_tag_names)  # Available
+        available_tag_names = [tag["name"] for tag in data["available_tags"]]
+        self.assertNotIn("High Priority", available_tag_names)  # Already assigned
+        self.assertIn("Follow Up", available_tag_names)  # Available
 
     def test_tag_management_timeline_integration(self):
         """Test that tag operations create timeline events"""
         from apps.events.models import TagAddedEvent, TagRemovedEvent
 
         # Add a tag
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag1.pk,
-            'notes': 'Test timeline integration'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url,
+            data={"tag_id": self.allowed_tag1.pk, "notes": "Test timeline integration"},
+        )
 
         self.assertEqual(response.status_code, 200)
 
         # Check that TagAddedEvent was created
         tag_added_event = TagAddedEvent.objects.filter(patient=self.patient).first()
         self.assertIsNotNone(tag_added_event)
-        self.assertEqual(tag_added_event.tag_name, 'High Priority')
-        self.assertEqual(tag_added_event.tag_color, '#dc3545')
-        self.assertEqual(tag_added_event.tag_notes, 'Test timeline integration')
+        self.assertEqual(tag_added_event.tag_name, "High Priority")
+        self.assertEqual(tag_added_event.tag_color, "#dc3545")
+        self.assertEqual(tag_added_event.tag_notes, "Test timeline integration")
 
         # Remove the tag
         tag = self.patient.patient_tags.first()
-        remove_url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': self.patient.pk,
-            'tag_id': tag.pk
-        })
+        remove_url = reverse(
+            "patients:patient_tag_remove",
+            kwargs={"patient_id": self.patient.pk, "tag_id": tag.pk},
+        )
 
         response = self.client.post(remove_url)
         self.assertEqual(response.status_code, 200)
@@ -699,25 +702,25 @@ class PatientTagIntegrationTests(TestCase):
         # Check that TagRemovedEvent was created
         tag_removed_event = TagRemovedEvent.objects.filter(patient=self.patient).first()
         self.assertIsNotNone(tag_removed_event)
-        self.assertEqual(tag_removed_event.tag_name, 'High Priority')
-        self.assertEqual(tag_removed_event.tag_color, '#dc3545')
+        self.assertEqual(tag_removed_event.tag_name, "High Priority")
+        self.assertEqual(tag_removed_event.tag_color, "#dc3545")
 
     def test_concurrent_tag_operations(self):
         """Test sequential tag additions (both succeed)"""
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
 
         # Add first tag
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag1.pk,
-            'notes': 'Sequential add 1'
-        })
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag1.pk, "notes": "Sequential add 1"}
+        )
         self.assertEqual(response.status_code, 200)
 
         # Add second tag
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag2.pk,
-            'notes': 'Sequential add 2'
-        })
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag2.pk, "notes": "Sequential add 2"}
+        )
         self.assertEqual(response.status_code, 200)
 
         # Both tags should be assigned
@@ -731,68 +734,62 @@ class PatientTagPermissionTests(TestCase):
     def setUpTestData(cls):
         # Create users with different permission levels
         cls.doctor = create_navigation_user(
-            username='doctor',
-            email='doctor@example.com',
-            password='testpassword'
+            username="doctor", email="doctor@example.com", password="testpassword"
         )
 
         cls.nurse = create_navigation_user(
-            username='nurse',
-            email='nurse@example.com',
-            password='testpassword'
+            username="nurse", email="nurse@example.com", password="testpassword"
         )
 
         cls.student = create_navigation_user(
-            username='student',
-            email='student@example.com',
-            password='testpassword'
+            username="student", email="student@example.com", password="testpassword"
         )
 
         cls.limited_user = create_navigation_user(
-            username='limited',
-            email='limited@example.com',
-            password='testpassword'
+            username="limited", email="limited@example.com", password="testpassword"
         )
 
         cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
+            name="Test Patient",
+            birthday="1980-01-01",
             status=Patient.Status.OUTPATIENT,
             created_by=cls.doctor,
-            updated_by=cls.doctor
+            updated_by=cls.doctor,
         )
 
         cls.allowed_tag = AllowedTag.objects.create(
-            name='Test Tag',
-            color='#007bff',
+            name="Test Tag",
+            color="#007bff",
             created_by=cls.doctor,
-            updated_by=cls.doctor
+            updated_by=cls.doctor,
         )
 
     def test_doctor_can_manage_all_tags(self):
         """Test that doctors can manage all tags"""
         # Add change_patient permission to doctor
         from django.contrib.auth.models import Permission
-        change_perm = Permission.objects.get(codename='change_patient')
+
+        change_perm = Permission.objects.get(codename="change_patient")
         self.doctor.user_permissions.add(change_perm)
 
         self.client.force_login(self.doctor)
 
         # Test tag addition
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Doctor adding tag'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag.pk, "notes": "Doctor adding tag"}
+        )
 
         self.assertEqual(response.status_code, 200)
 
         # Test tag removal
         tag = self.patient.patient_tags.first()
-        remove_url = reverse('patients:patient_tag_remove', kwargs={
-            'patient_id': self.patient.pk,
-            'tag_id': tag.pk
-        })
+        remove_url = reverse(
+            "patients:patient_tag_remove",
+            kwargs={"patient_id": self.patient.pk, "tag_id": tag.pk},
+        )
 
         response = self.client.post(remove_url)
         self.assertEqual(response.status_code, 200)
@@ -800,16 +797,18 @@ class PatientTagPermissionTests(TestCase):
     def test_nurse_with_permission_can_manage_tags(self):
         """Test that nurses with proper permission can manage tags"""
         from django.contrib.auth.models import Permission
-        change_perm = Permission.objects.get(codename='change_patient')
+
+        change_perm = Permission.objects.get(codename="change_patient")
         self.nurse.user_permissions.add(change_perm)
 
         self.client.force_login(self.nurse)
 
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Nurse adding tag'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag.pk, "notes": "Nurse adding tag"}
+        )
 
         self.assertEqual(response.status_code, 200)
 
@@ -817,11 +816,12 @@ class PatientTagPermissionTests(TestCase):
         """Test that users without change_patient permission cannot manage tags"""
         self.client.force_login(self.limited_user)
 
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Should not work'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag.pk, "notes": "Should not work"}
+        )
 
         self.assertEqual(response.status_code, 403)
 
@@ -829,11 +829,12 @@ class PatientTagPermissionTests(TestCase):
         """Test that anonymous users cannot access tag management APIs"""
         self.client.logout()
 
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Should not work'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag.pk, "notes": "Should not work"}
+        )
 
         # Should redirect to login
         self.assertEqual(response.status_code, 302)
@@ -843,19 +844,21 @@ class PatientTagPermissionTests(TestCase):
         from django.contrib.auth.models import Permission
 
         # User with permissions
-        change_perm = Permission.objects.get(codename='change_patient')
+        change_perm = Permission.objects.get(codename="change_patient")
         self.doctor.user_permissions.add(change_perm)
 
         self.client.force_login(self.doctor)
 
-        api_url = reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
+        api_url = reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
         response = self.client.get(api_url)
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
-        self.assertTrue(data['permissions']['can_manage_tags'])
-        self.assertTrue(data['permissions']['can_view_tags'])
+        self.assertTrue(data["permissions"]["can_manage_tags"])
+        self.assertTrue(data["permissions"]["can_view_tags"])
 
         # Limited user is still authenticated → can_view_patient_tags returns True
         self.client.force_login(self.limited_user)
@@ -863,24 +866,26 @@ class PatientTagPermissionTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertFalse(data['permissions']['can_manage_tags'])
-        self.assertTrue(data['permissions']['can_view_tags'])
+        self.assertFalse(data["permissions"]["can_manage_tags"])
+        self.assertTrue(data["permissions"]["can_view_tags"])
 
     def test_cross_patient_tag_access(self):
         """Test that any authenticated user can view tags (can_view_patient_tags allows all auth'd users)"""
         # Create another patient
         other_patient = Patient.objects.create(
-            name='Other Patient',
-            birthday='1990-01-01',
+            name="Other Patient",
+            birthday="1990-01-01",
             status=Patient.Status.INPATIENT,
             created_by=self.doctor,
-            updated_by=self.doctor
+            updated_by=self.doctor,
         )
 
         # Limited user is still authenticated → can_view_patient_tags returns True
         self.client.force_login(self.limited_user)
 
-        api_url = reverse('patients:patient_tags_api', kwargs={'patient_id': other_patient.pk})
+        api_url = reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": other_patient.pk}
+        )
         response = self.client.get(api_url)
 
         self.assertEqual(response.status_code, 200)
@@ -889,20 +894,22 @@ class PatientTagPermissionTests(TestCase):
         """Test that superuser can manage all tags regardless of other permissions"""
         # Create superuser
         superuser = User.objects.create_superuser(
-            username='superuser',
-            email='super@example.com',
-            password='testpassword',
+            username="superuser",
+            email="super@example.com",
+            password="testpassword",
             password_change_required=False,
             terms_accepted=True,
         )
 
         self.client.force_login(superuser)
 
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Superuser adding tag'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url,
+            data={"tag_id": self.allowed_tag.pk, "notes": "Superuser adding tag"},
+        )
 
         self.assertEqual(response.status_code, 200)
 
@@ -910,11 +917,12 @@ class PatientTagPermissionTests(TestCase):
         """Test that permission denied responses redirect to login (PermissionRequiredMixin default)"""
         self.client.force_login(self.limited_user)
 
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        response = self.client.post(add_url, data={
-            'tag_id': self.allowed_tag.pk,
-            'notes': 'Should not work'
-        })
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        response = self.client.post(
+            add_url, data={"tag_id": self.allowed_tag.pk, "notes": "Should not work"}
+        )
 
         # PermissionRequiredMixin returns 403 for authenticated users without permission
         self.assertEqual(response.status_code, 403)
@@ -924,18 +932,22 @@ class PatientTagPermissionTests(TestCase):
         from django.contrib.auth.models import Permission
 
         # Add tags first with doctor
-        change_perm = Permission.objects.get(codename='change_patient')
+        change_perm = Permission.objects.get(codename="change_patient")
         self.doctor.user_permissions.add(change_perm)
 
         self.client.force_login(self.doctor)
 
-        add_url = reverse('patients:patient_tag_add', kwargs={'patient_id': self.patient.pk})
-        self.client.post(add_url, data={'tag_id': self.allowed_tag.pk})
+        add_url = reverse(
+            "patients:patient_tag_add", kwargs={"patient_id": self.patient.pk}
+        )
+        self.client.post(add_url, data={"tag_id": self.allowed_tag.pk})
 
         # Try bulk removal with limited user
         self.client.force_login(self.limited_user)
 
-        remove_all_url = reverse('patients:patient_tag_remove_all', kwargs={'patient_id': self.patient.pk})
+        remove_all_url = reverse(
+            "patients:patient_tag_remove_all", kwargs={"patient_id": self.patient.pk}
+        )
         response = self.client.post(remove_all_url)
 
         self.assertEqual(response.status_code, 403)

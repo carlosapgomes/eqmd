@@ -56,32 +56,41 @@ def create_record_change_event(sender, instance, created, **kwargs):
 def create_admission_discharge_events(sender, instance, created, **kwargs):
     """Create timeline events for admission and discharge"""
     import logging
+
     logger = logging.getLogger(__name__)
-    
-    logger.info(f"Signal: create_admission_discharge_events triggered for admission {instance.pk}")
-    logger.info(f"Signal: created={created}, discharge_datetime={instance.discharge_datetime}")
-    
+
+    logger.info(
+        f"Signal: create_admission_discharge_events triggered for admission {instance.pk}"
+    )
+    logger.info(
+        f"Signal: created={created}, discharge_datetime={instance.discharge_datetime}"
+    )
+
     # Create or update admission event
     admission_event, admission_created = AdmissionEvent.objects.get_or_create(
         admission=instance,
         defaults={
-            'patient': instance.patient,
-            'event_datetime': instance.admission_datetime,
-            'description': f"Admissão hospitalar - {instance.get_admission_type_display()}",
-            'created_by': instance.created_by,
-            'updated_by': instance.updated_by,
-        }
+            "patient": instance.patient,
+            "event_datetime": instance.admission_datetime,
+            "description": f"Admissão hospitalar - {instance.get_admission_type_display()}",
+            "created_by": instance.created_by,
+            "updated_by": instance.updated_by,
+        },
     )
-    logger.info(f"Signal: Admission event - created={admission_created}, ID={admission_event.pk}")
-    
+    logger.info(
+        f"Signal: Admission event - created={admission_created}, ID={admission_event.pk}"
+    )
+
     if not admission_created:
         # Update existing admission event
         admission_event.event_datetime = instance.admission_datetime
-        admission_event.description = f"Admissão hospitalar - {instance.get_admission_type_display()}"
+        admission_event.description = (
+            f"Admissão hospitalar - {instance.get_admission_type_display()}"
+        )
         admission_event.updated_by = instance.updated_by
         admission_event.save()
         logger.info("Signal: Updated existing admission event")
-    
+
     # Handle discharge event
     if instance.discharge_datetime:
         logger.info("Signal: Creating/updating discharge event")
@@ -89,27 +98,35 @@ def create_admission_discharge_events(sender, instance, created, **kwargs):
         discharge_event, discharge_created = DischargeEvent.objects.get_or_create(
             admission=instance,
             defaults={
-                'patient': instance.patient,
-                'event_datetime': instance.discharge_datetime,
-                'description': f"Alta hospitalar - {instance.get_discharge_type_display()}",
-                'created_by': instance.created_by,
-                'updated_by': instance.updated_by,
-            }
+                "patient": instance.patient,
+                "event_datetime": instance.discharge_datetime,
+                "description": f"Alta hospitalar - {instance.get_discharge_type_display()}",
+                "created_by": instance.created_by,
+                "updated_by": instance.updated_by,
+            },
         )
-        logger.info(f"Signal: Discharge event - created={discharge_created}, ID={discharge_event.pk}")
-        
+        logger.info(
+            f"Signal: Discharge event - created={discharge_created}, ID={discharge_event.pk}"
+        )
+
         if not discharge_created:
             # Update existing discharge event
             discharge_event.event_datetime = instance.discharge_datetime
-            discharge_event.description = f"Alta hospitalar - {instance.get_discharge_type_display()}"
+            discharge_event.description = (
+                f"Alta hospitalar - {instance.get_discharge_type_display()}"
+            )
             discharge_event.updated_by = instance.updated_by
             discharge_event.save()
             logger.info("Signal: Updated existing discharge event")
     else:
-        logger.info("Signal: No discharge datetime, removing any existing discharge events")
+        logger.info(
+            "Signal: No discharge datetime, removing any existing discharge events"
+        )
         # Remove discharge event if discharge was cancelled
         delete_result = DischargeEvent.objects.filter(admission=instance).delete()
-        deleted_count = delete_result[0] if isinstance(delete_result, tuple) else delete_result
+        deleted_count = (
+            delete_result[0] if isinstance(delete_result, tuple) else delete_result
+        )
         logger.info(f"Signal: Deleted {deleted_count} discharge events")
 
 
@@ -128,16 +145,16 @@ def delete_admission_events(sender, instance, **kwargs):
 
 # Enhanced signal handlers for data consistency
 
+
 @receiver(pre_save, sender=PatientRecordNumber)
 def validate_record_number_change(sender, instance, **kwargs):
     """Validate record number changes before saving"""
     if instance.is_current:
         # Ensure only one current record per patient
         existing_current = PatientRecordNumber.objects.filter(
-            patient=instance.patient,
-            is_current=True
+            patient=instance.patient, is_current=True
         ).exclude(pk=instance.pk)
-        
+
         if existing_current.exists():
             # Auto-deactivate existing current record
             existing_current.update(is_current=False)
@@ -159,10 +176,9 @@ def validate_admission_change(sender, instance, **kwargs):
     if instance.is_active:
         # Ensure only one active admission per patient
         existing_active = PatientAdmission.objects.filter(
-            patient=instance.patient,
-            is_active=True
+            patient=instance.patient, is_active=True
         ).exclude(pk=instance.pk)
-        
+
         if existing_active.exists():
             raise ValidationError("Paciente já possui uma internação ativa")
 
@@ -172,34 +188,38 @@ def update_patient_admission_status(sender, instance, created, **kwargs):
     """Update patient status and denormalized fields after admission changes"""
     # Update patient denormalized fields
     patient = instance.patient
-    
+
     if instance.is_active:
         # Patient is being admitted
         updates = {
-            'status': Patient.Status.INPATIENT,
-            'current_admission_id': instance.id,
-            'last_admission_date': instance.admission_datetime.date(),
+            "status": Patient.Status.INPATIENT,
+            "current_admission_id": instance.id,
+            "last_admission_date": instance.admission_datetime.date(),
             # Keep patient location in sync with active admission
-            'ward': instance.ward,
+            "ward": instance.ward,
             # During an active admission, final_bed may hold the latest internal transfer bed.
-            'bed': instance.final_bed or instance.initial_bed,
+            "bed": instance.final_bed or instance.initial_bed,
         }
     else:
         # Patient is being discharged
         updates = {
-            'status': Patient.Status.OUTPATIENT,
-            'current_admission_id': None,
-            'last_discharge_date': instance.discharge_datetime.date() if instance.discharge_datetime else None,
-            'bed': "",
-            'ward': None,
+            "status": Patient.Status.OUTPATIENT,
+            "current_admission_id": None,
+            "last_discharge_date": instance.discharge_datetime.date()
+            if instance.discharge_datetime
+            else None,
+            "bed": "",
+            "ward": None,
         }
-    
+
     # Update admission count and total days
-    updates.update({
-        'total_admissions_count': patient.admissions.count(),
-        'total_inpatient_days': patient.calculate_total_hospital_days(),
-    })
-    
+    updates.update(
+        {
+            "total_admissions_count": patient.admissions.count(),
+            "total_inpatient_days": patient.calculate_total_hospital_days(),
+        }
+    )
+
     Patient.objects.filter(pk=patient.pk).update(**updates)
 
 
@@ -207,7 +227,7 @@ def update_patient_admission_status(sender, instance, created, **kwargs):
 def cleanup_patient_after_admission_delete(sender, instance, **kwargs):
     """Clean up patient data after admission deletion"""
     patient = instance.patient
-    
+
     # Check if this was the current admission
     if patient.current_admission_id == instance.id:
         # Find another active admission or clear current admission
@@ -220,9 +240,11 @@ def cleanup_patient_after_admission_delete(sender, instance, **kwargs):
             patient.current_admission_id = None
             patient.status = Patient.Status.OUTPATIENT
             patient.bed = ""
-        
-        patient.save(update_fields=['current_admission_id', 'status', 'bed', 'updated_at'])
-    
+
+        patient.save(
+            update_fields=["current_admission_id", "status", "bed", "updated_at"]
+        )
+
     # Refresh admission statistics
     patient.refresh_denormalized_fields()
 
@@ -233,23 +255,24 @@ def cleanup_patient_after_record_delete(sender, instance, **kwargs):
     if instance.is_current:
         patient = instance.patient
         # Find the most recent record number to make current
-        latest_record = patient.record_numbers.order_by('-effective_date').first()
+        latest_record = patient.record_numbers.order_by("-effective_date").first()
         if latest_record:
             latest_record.is_current = True
             latest_record.save()
             patient.current_record_number = latest_record.record_number
         else:
             patient.current_record_number = ""
-        
-        patient.save(update_fields=['current_record_number', 'updated_at'])
+
+        patient.save(update_fields=["current_record_number", "updated_at"])
 
 
 # Status change tracking signals
 
+
 @receiver(pre_save, sender=Patient)
 def track_status_changes(sender, instance, **kwargs):
     """Track patient status changes and store for post_save signal"""
-    
+
     if instance.pk:  # Only for existing patients
         try:
             old_instance = Patient.objects.get(pk=instance.pk)
@@ -259,7 +282,7 @@ def track_status_changes(sender, instance, **kwargs):
                 instance._old_status = old_instance.status
                 instance._new_status = instance.status
                 # Store the user who made the change (from request context)
-                instance._status_change_user = getattr(instance, 'updated_by', None)
+                instance._status_change_user = getattr(instance, "updated_by", None)
         except Patient.DoesNotExist:
             pass
 
@@ -267,19 +290,19 @@ def track_status_changes(sender, instance, **kwargs):
 @receiver(post_save, sender=Patient)
 def create_status_change_event(sender, instance, created, **kwargs):
     """Create timeline event for status changes"""
-    
-    if not created and getattr(instance, '_status_changed', False):
+
+    if not created and getattr(instance, "_status_changed", False):
         # Get the user who made the change
-        change_user = getattr(instance, '_status_change_user', None)
+        change_user = getattr(instance, "_status_change_user", None)
         if not change_user:
             # Fallback to updated_by if available
             change_user = instance.updated_by
-        
+
         # Determine reason based on status change
         old_status = instance._old_status
         new_status = instance._new_status
         reason = _get_status_change_reason(old_status, new_status)
-        
+
         # Create status change event
         StatusChangeEvent.objects.create(
             patient=instance,
@@ -293,13 +316,13 @@ def create_status_change_event(sender, instance, created, **kwargs):
             ward=instance.ward,
             bed=instance.bed,
         )
-        
+
         # Clean up temporary attributes
-        delattr(instance, '_status_changed')
-        delattr(instance, '_old_status')
-        delattr(instance, '_new_status')
-        if hasattr(instance, '_status_change_user'):
-            delattr(instance, '_status_change_user')
+        delattr(instance, "_status_changed")
+        delattr(instance, "_old_status")
+        delattr(instance, "_new_status")
+        if hasattr(instance, "_status_change_user"):
+            delattr(instance, "_status_change_user")
 
 
 # ---------------------------------------------------------------------------
@@ -308,28 +331,35 @@ def create_status_change_event(sender, instance, created, **kwargs):
 
 # Fields on Patient that should trigger a profile change event when modified.
 PROFILE_MONITORED_FIELDS = [
-    'name', 'birthday', 'gender',
-    'phone',
-    'address', 'city', 'state', 'zip_code',
-    'id_number', 'fiscal_number', 'healthcard_number',
+    "name",
+    "birthday",
+    "gender",
+    "phone",
+    "address",
+    "city",
+    "state",
+    "zip_code",
+    "id_number",
+    "fiscal_number",
+    "healthcard_number",
 ]
 
 # Human-readable labels for monitored fields.
 PROFILE_FIELD_LABELS = {
-    'name': 'Nome',
-    'birthday': 'Data de Nascimento',
-    'gender': 'Sexo',
-    'phone': 'Telefone',
-    'address': 'Endereço',
-    'city': 'Cidade',
-    'state': 'Estado',
-    'zip_code': 'Código Postal',
-    'id_number': 'Número de Identidade',
-    'fiscal_number': 'Número Fiscal',
-    'healthcard_number': 'Número do Cartão de Saúde',
+    "name": "Nome",
+    "birthday": "Data de Nascimento",
+    "gender": "Sexo",
+    "phone": "Telefone",
+    "address": "Endereço",
+    "city": "Cidade",
+    "state": "Estado",
+    "zip_code": "Código Postal",
+    "id_number": "Número de Identidade",
+    "fiscal_number": "Número Fiscal",
+    "healthcard_number": "Número do Cartão de Saúde",
 }
 
-PLACEHOLDER = '—'
+PLACEHOLDER = "—"
 
 
 def _normalize_field_value(field_name, value):
@@ -340,16 +370,16 @@ def _normalize_field_value(field_name, value):
     - birthday             → dd/mm/YYYY string
     - everything else      → str(value)
     """
-    if value is None or value == '':
+    if value is None or value == "":
         return PLACEHOLDER
 
-    if field_name == 'gender':
+    if field_name == "gender":
         gender_map = dict(Patient.GenderChoices.choices)
         return gender_map.get(value, str(value))
 
-    if field_name == 'birthday':
+    if field_name == "birthday":
         # value is a date object
-        return value.strftime('%d/%m/%Y')
+        return value.strftime("%d/%m/%Y")
 
     return str(value)
 
@@ -374,9 +404,9 @@ def track_profile_changes(sender, instance, **kwargs):
         new_val = getattr(instance, field)
         if old_val != new_val:
             changes[field] = {
-                'label': PROFILE_FIELD_LABELS.get(field, field),
-                'old': _normalize_field_value(field, old_val),
-                'new': _normalize_field_value(field, new_val),
+                "label": PROFILE_FIELD_LABELS.get(field, field),
+                "old": _normalize_field_value(field, old_val),
+                "new": _normalize_field_value(field, new_val),
             }
 
     instance._profile_changes = changes
@@ -388,28 +418,28 @@ def create_profile_change_event(sender, instance, created, **kwargs):
     if created:
         return
 
-    changes = getattr(instance, '_profile_changes', None)
+    changes = getattr(instance, "_profile_changes", None)
     if not changes:
         return
 
-    if not getattr(instance, 'updated_by', None):
+    if not getattr(instance, "updated_by", None):
         return
 
-    previous_values = {f: d['old'] for f, d in changes.items()}
-    new_values = {f: d['new'] for f, d in changes.items()}
-    changed_fields = ','.join(sorted(changes.keys()))
+    previous_values = {f: d["old"] for f, d in changes.items()}
+    new_values = {f: d["new"] for f, d in changes.items()}
+    changed_fields = ",".join(sorted(changes.keys()))
 
     # Build a human-readable summary (full, stored in change_summary text field)
     diff_lines = []
     for field in sorted(changes.keys()):
         d = changes[field]
         diff_lines.append(f"{d['label']}: {d['old']} → {d['new']}")
-    summary = '; '.join(diff_lines)
+    summary = "; ".join(diff_lines)
 
     # Build a short, bounded description guaranteed <= 255 chars.
     # Full details remain in change_summary and JSON fields.
     n = len(changes)
-    labels = sorted(changes[f]['label'] for f in changes)
+    labels = sorted(changes[f]["label"] for f in changes)
     if n == 1:
         description = f"Alteração de perfil: {labels[0]}"
     else:
@@ -436,7 +466,7 @@ def _get_status_change_reason(old_status, new_status):
     status_dict = dict(Patient.Status.choices)
     old_label = status_dict.get(old_status, "Desconhecido")
     new_label = status_dict.get(new_status, "Desconhecido")
-    
+
     # Generate appropriate reason based on transition
     if new_status == Patient.Status.INPATIENT:
         return "Paciente admitido para internação"

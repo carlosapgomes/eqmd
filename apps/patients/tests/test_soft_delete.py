@@ -17,30 +17,29 @@ class TestPatientSoftDelete(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            profession_type=0  # MEDICAL_DOCTOR
+            username="testuser",
+            email="test@example.com",
+            profession_type=0,  # MEDICAL_DOCTOR
         )
         self.admin = User.objects.create_superuser(
-            username='admin',
-            email='admin@example.com'
+            username="admin", email="admin@example.com"
         )
 
     def test_patient_soft_delete(self):
         """Test that patient soft delete works correctly."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         patient_id = patient.id
 
         # Soft delete the patient
-        patient.delete(deleted_by=self.user, reason='Test deletion')
+        patient.delete(deleted_by=self.user, reason="Test deletion")
 
         # Patient should not appear in normal queries
         self.assertEqual(Patient.objects.count(), 0)
@@ -54,27 +53,25 @@ class TestPatientSoftDelete(TestCase):
         deleted_patient = Patient.all_objects.get(id=patient_id)
         self.assertTrue(deleted_patient.is_deleted)
         self.assertEqual(deleted_patient.deleted_by, self.user)
-        self.assertEqual(deleted_patient.deletion_reason, 'Test deletion')
+        self.assertEqual(deleted_patient.deletion_reason, "Test deletion")
         self.assertIsNotNone(deleted_patient.deleted_at)
-        self.assertTrue(
-            deleted_patient.deleted_at <= timezone.now()
-        )
+        self.assertTrue(deleted_patient.deleted_at <= timezone.now())
 
     def test_patient_restore(self):
         """Test that patient restoration works correctly."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         patient_id = patient.id
 
         # Soft delete then restore
-        patient.delete(deleted_by=self.user, reason='Test deletion')
+        patient.delete(deleted_by=self.user, reason="Test deletion")
         patient.restore(restored_by=self.admin)
 
         # Patient should appear in normal queries again
@@ -86,18 +83,18 @@ class TestPatientSoftDelete(TestCase):
         self.assertFalse(restored_patient.is_deleted)
         self.assertIsNone(restored_patient.deleted_at)
         self.assertIsNone(restored_patient.deleted_by)
-        self.assertEqual(restored_patient.deletion_reason, '')
+        self.assertEqual(restored_patient.deletion_reason, "")
 
     def test_patient_hard_delete(self):
         """Test that hard delete permanently removes patient."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         patient_id = patient.id
 
@@ -115,13 +112,13 @@ class TestPatientSoftDelete(TestCase):
         patients = []
         for i in range(3):
             patient = Patient.objects.create(
-                name=f'Test Patient {i}',
-                birthday='1990-01-01',
-                fiscal_number=f'12345678{i}',
-                healthcard_number=f'H12345{i}',
+                name=f"Test Patient {i}",
+                birthday="1990-01-01",
+                fiscal_number=f"12345678{i}",
+                healthcard_number=f"H12345{i}",
                 status=Patient.Status.INPATIENT,
                 created_by=self.user,
-            updated_by=self.user
+                updated_by=self.user,
             )
             patients.append(patient)
 
@@ -141,25 +138,25 @@ class TestPatientSoftDelete(TestCase):
         """Test that queryset filters work correctly."""
         # Create mix of active and deleted patients
         active_patient = Patient.objects.create(
-            name='Active Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Active Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
+
         deleted_patient = Patient.objects.create(
-            name='Deleted Patient',
-            birthday='1990-01-01',
-            fiscal_number='987654321',
-            healthcard_number='H987654',
+            name="Deleted Patient",
+            birthday="1990-01-01",
+            fiscal_number="987654321",
+            healthcard_number="H987654",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        deleted_patient.delete(deleted_by=self.user, reason='Test')
+        deleted_patient.delete(deleted_by=self.user, reason="Test")
 
         # Test default manager (active only)
         self.assertEqual(Patient.objects.count(), 1)
@@ -186,74 +183,74 @@ class TestPatientSoftDelete(TestCase):
     def test_patient_str_method_with_deletion(self):
         """Test that __str__ method shows deletion status."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Active patient should not show deletion indicator
-        self.assertEqual(str(patient), 'Test Patient')
+        self.assertEqual(str(patient), "Test Patient")
 
         # Deleted patient should show deletion indicator
-        patient.delete(deleted_by=self.user, reason='Test')
+        patient.delete(deleted_by=self.user, reason="Test")
         deleted_patient = Patient.all_objects.get(id=patient.id)
-        self.assertEqual(str(deleted_patient), 'Test Patient [DELETED]')
+        self.assertEqual(str(deleted_patient), "Test Patient [DELETED]")
 
     def test_cascade_soft_delete_with_events(self):
         """Test that related objects handle patient soft deletes properly."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Create related event
         Event.objects.create(
             event_datetime=timezone.now(),
             patient=patient,
-            description='Test event',
+            description="Test event",
             event_type=1,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Soft delete patient
-        patient.delete(deleted_by=self.user, reason='Test deletion')
+        patient.delete(deleted_by=self.user, reason="Test deletion")
 
         # Event should still exist and reference the patient
         self.assertEqual(Event.objects.count(), 1)
         retrieved_event = Event.objects.first()
         self.assertEqual(retrieved_event.patient, patient)
-        
+
         # We should be able to access the patient through the event
         # even though the patient is soft deleted
-        self.assertEqual(retrieved_event.patient.name, 'Test Patient')
+        self.assertEqual(retrieved_event.patient.name, "Test Patient")
         self.assertTrue(retrieved_event.patient.is_deleted)
 
     def test_multiple_delete_restore_cycles(self):
         """Test that multiple delete/restore cycles work correctly."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Delete and restore multiple times
         for i in range(3):
             # Delete
-            patient.delete(deleted_by=self.user, reason=f'Test deletion {i}')
+            patient.delete(deleted_by=self.user, reason=f"Test deletion {i}")
             self.assertTrue(Patient.all_objects.get(id=patient.id).is_deleted)
             self.assertEqual(Patient.objects.count(), 0)
 
@@ -265,13 +262,13 @@ class TestPatientSoftDelete(TestCase):
     def test_delete_without_reason(self):
         """Test that deletion works without a reason."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Delete without reason
@@ -279,27 +276,27 @@ class TestPatientSoftDelete(TestCase):
 
         deleted_patient = Patient.all_objects.get(id=patient.id)
         self.assertTrue(deleted_patient.is_deleted)
-        self.assertEqual(deleted_patient.deletion_reason, '')
+        self.assertEqual(deleted_patient.deletion_reason, "")
 
     def test_delete_without_user(self):
         """Test that deletion works without specifying deleted_by user."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Delete without user
-        patient.delete(reason='System deletion')
+        patient.delete(reason="System deletion")
 
         deleted_patient = Patient.all_objects.get(id=patient.id)
         self.assertTrue(deleted_patient.is_deleted)
         self.assertIsNone(deleted_patient.deleted_by)
-        self.assertEqual(deleted_patient.deletion_reason, 'System deletion')
+        self.assertEqual(deleted_patient.deletion_reason, "System deletion")
 
 
 class TestAllowedTagSoftDelete(TestCase):
@@ -307,22 +304,18 @@ class TestAllowedTagSoftDelete(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_superuser(
-            username='admin',
-            email='admin@example.com'
+            username="admin", email="admin@example.com"
         )
 
     def test_allowed_tag_soft_delete(self):
         """Test that AllowedTag soft delete works correctly."""
         tag = AllowedTag.objects.create(
-            name='Test Tag',
-            color='#FF0000',
-            created_by=self.user,
-            updated_by=self.user
+            name="Test Tag", color="#FF0000", created_by=self.user, updated_by=self.user
         )
         tag_id = tag.id
 
         # Soft delete the tag
-        tag.delete(deleted_by=self.user, reason='Test deletion')
+        tag.delete(deleted_by=self.user, reason="Test deletion")
 
         # Tag should not appear in normal queries
         self.assertEqual(AllowedTag.objects.count(), 0)
@@ -337,14 +330,11 @@ class TestAllowedTagSoftDelete(TestCase):
     def test_allowed_tag_restore(self):
         """Test that AllowedTag restoration works correctly."""
         tag = AllowedTag.objects.create(
-            name='Test Tag',
-            color='#FF0000',
-            created_by=self.user,
-            updated_by=self.user
+            name="Test Tag", color="#FF0000", created_by=self.user, updated_by=self.user
         )
 
         # Soft delete then restore
-        tag.delete(deleted_by=self.user, reason='Test deletion')
+        tag.delete(deleted_by=self.user, reason="Test deletion")
         tag.restore(restored_by=self.user)
 
         # Tag should appear in normal queries again
@@ -359,45 +349,45 @@ class TestSoftDeleteEdgeCases(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            profession_type=0  # MEDICAL_DOCTOR
+            username="testuser",
+            email="test@example.com",
+            profession_type=0,  # MEDICAL_DOCTOR
         )
 
     def test_delete_already_deleted_patient(self):
         """Test deleting an already deleted patient."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Delete once
-        patient.delete(deleted_by=self.user, reason='First deletion')
+        patient.delete(deleted_by=self.user, reason="First deletion")
         first_deleted_at = Patient.all_objects.get(id=patient.id).deleted_at
 
         # Delete again
-        patient.delete(deleted_by=self.user, reason='Second deletion')
-        
+        patient.delete(deleted_by=self.user, reason="Second deletion")
+
         # Should update the deletion info
         deleted_patient = Patient.all_objects.get(id=patient.id)
-        self.assertEqual(deleted_patient.deletion_reason, 'Second deletion')
+        self.assertEqual(deleted_patient.deletion_reason, "Second deletion")
         self.assertGreaterEqual(deleted_patient.deleted_at, first_deleted_at)
 
     def test_restore_non_deleted_patient(self):
         """Test restoring a patient that wasn't deleted."""
         patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1990-01-01',
-            fiscal_number='123456789',
-            healthcard_number='H123456',
+            name="Test Patient",
+            birthday="1990-01-01",
+            fiscal_number="123456789",
+            healthcard_number="H123456",
             status=Patient.Status.INPATIENT,
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
         # Restore without deleting first
@@ -415,19 +405,19 @@ class TestSoftDeleteEdgeCases(TestCase):
         patients = []
         for i in range(100):
             patient = Patient.objects.create(
-                name=f'Patient {i}',
-                birthday='1990-01-01',
-                fiscal_number=f'12345{i:04d}',
-                healthcard_number=f'H{i:05d}',
+                name=f"Patient {i}",
+                birthday="1990-01-01",
+                fiscal_number=f"12345{i:04d}",
+                healthcard_number=f"H{i:05d}",
                 status=Patient.Status.INPATIENT,
                 created_by=self.user,
-            updated_by=self.user
+                updated_by=self.user,
             )
             patients.append(patient)
 
         # Soft delete half of them
         for i in range(0, 100, 2):
-            patients[i].delete(deleted_by=self.user, reason=f'Deletion {i}')
+            patients[i].delete(deleted_by=self.user, reason=f"Deletion {i}")
 
         # Verify counts
         self.assertEqual(Patient.objects.count(), 50)  # Active patients
@@ -437,7 +427,7 @@ class TestSoftDeleteEdgeCases(TestCase):
         # Test that queries still work efficiently
         active_patients = list(Patient.objects.all())
         self.assertEqual(len(active_patients), 50)
-        
+
         # All active patients should not be deleted
         for patient in active_patients:
             self.assertFalse(patient.is_deleted)

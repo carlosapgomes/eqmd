@@ -20,30 +20,30 @@ class TagManagementErrorHandlingTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.doctor = create_navigation_user(
-            username='doctor',
-            email='doctor@example.com',
-            password='testpass123',
+            username="doctor",
+            email="doctor@example.com",
+            password="testpass123",
         )
-        change_perm = Permission.objects.get(codename='change_patient')
+        change_perm = Permission.objects.get(codename="change_patient")
         cls.doctor.user_permissions.add(change_perm)
 
         cls.patient = Patient.objects.create(
-            name='Test Patient',
+            name="Test Patient",
             birthday=timezone.now().date() - timedelta(days=365 * 30),
             status=Patient.Status.OUTPATIENT,
             created_by=cls.doctor,
             updated_by=cls.doctor,
         )
         cls.other_patient = Patient.objects.create(
-            name='Other Patient',
+            name="Other Patient",
             birthday=timezone.now().date() - timedelta(days=365 * 30),
             status=Patient.Status.OUTPATIENT,
             created_by=cls.doctor,
             updated_by=cls.doctor,
         )
         cls.tag = AllowedTag.objects.create(
-            name='Test Tag',
-            color='#007bff',
+            name="Test Tag",
+            color="#007bff",
             is_active=True,
             created_by=cls.doctor,
             updated_by=cls.doctor,
@@ -54,27 +54,27 @@ class TagManagementErrorHandlingTests(TestCase):
 
     def _add_url(self):
         return reverse(
-            'patients:patient_tag_add',
-            kwargs={'patient_id': self.patient.id},
+            "patients:patient_tag_add",
+            kwargs={"patient_id": self.patient.id},
         )
 
     def test_add_tag_to_nonexistent_patient(self):
         """Adding a tag to an unknown patient UUID is a 404."""
         url = reverse(
-            'patients:patient_tag_add',
-            kwargs={'patient_id': '00000000-0000-0000-0000-000000000000'},
+            "patients:patient_tag_add",
+            kwargs={"patient_id": "00000000-0000-0000-0000-000000000000"},
         )
-        response = self.client.post(url, {'tag_id': str(self.tag.id)})
+        response = self.client.post(url, {"tag_id": str(self.tag.id)})
 
         self.assertEqual(response.status_code, 404)
 
     def test_remove_tag_from_nonexistent_patient(self):
         """Removing a tag from an unknown patient UUID is a 404."""
         url = reverse(
-            'patients:patient_tag_remove',
+            "patients:patient_tag_remove",
             kwargs={
-                'patient_id': '00000000-0000-0000-0000-000000000000',
-                'tag_id': '00000000-0000-0000-0000-000000000001',
+                "patient_id": "00000000-0000-0000-0000-000000000000",
+                "tag_id": "00000000-0000-0000-0000-000000000001",
             },
         )
         response = self.client.post(url)
@@ -84,7 +84,7 @@ class TagManagementErrorHandlingTests(TestCase):
     def test_add_nonexistent_tag(self):
         """An AllowedTag id that no longer exists is a domain 404."""
         dummy = AllowedTag.objects.create(
-            name='Dummy Tag',
+            name="Dummy Tag",
             created_by=self.doctor,
             updated_by=self.doctor,
         )
@@ -93,7 +93,7 @@ class TagManagementErrorHandlingTests(TestCase):
 
         response = self.client.post(
             self._add_url(),
-            {'tag_id': str(missing_id)},
+            {"tag_id": str(missing_id)},
         )
 
         self.assertEqual(response.status_code, 404)
@@ -101,10 +101,10 @@ class TagManagementErrorHandlingTests(TestCase):
     def test_remove_nonexistent_tag(self):
         """Removing a tag UUID that matches nothing is a 404."""
         url = reverse(
-            'patients:patient_tag_remove',
+            "patients:patient_tag_remove",
             kwargs={
-                'patient_id': self.patient.id,
-                'tag_id': '00000000-0000-0000-0000-000000000001',
+                "patient_id": self.patient.id,
+                "tag_id": "00000000-0000-0000-0000-000000000001",
             },
         )
         response = self.client.post(url)
@@ -121,10 +121,10 @@ class TagManagementErrorHandlingTests(TestCase):
         )
         tag_instance = self.other_patient.patient_tags.get(allowed_tag=self.tag)
         url = reverse(
-            'patients:patient_tag_remove',
+            "patients:patient_tag_remove",
             kwargs={
-                'patient_id': self.patient.id,
-                'tag_id': tag_instance.id,
+                "patient_id": self.patient.id,
+                "tag_id": tag_instance.id,
             },
         )
         response = self.client.post(url)
@@ -138,13 +138,13 @@ class TagManagementErrorHandlingTests(TestCase):
 
         response = self.client.post(
             self._add_url(),
-            {'tag_id': str(self.tag.id)},
+            {"tag_id": str(self.tag.id)},
         )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            response.json()['error'],
-            'Não é possível adicionar esta tag ao paciente',
+            response.json()["error"],
+            "Não é possível adicionar esta tag ao paciente",
         )
 
     def test_add_duplicate_tag(self):
@@ -158,27 +158,27 @@ class TagManagementErrorHandlingTests(TestCase):
 
         response = self.client.post(
             self._add_url(),
-            {'tag_id': str(self.tag.id)},
+            {"tag_id": str(self.tag.id)},
         )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            response.json()['error'],
-            'Não é possível adicionar esta tag ao paciente',
+            response.json()["error"],
+            "Não é possível adicionar esta tag ao paciente",
         )
 
     def test_bulk_remove_no_tags(self):
         """Bulk remove with zero tags is a domain 400 with exact payload."""
         url = reverse(
-            'patients:patient_tag_remove_all',
-            kwargs={'patient_id': self.patient.id},
+            "patients:patient_tag_remove_all",
+            kwargs={"patient_id": self.patient.id},
         )
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            response.json()['error'],
-            'Nenhuma tag para remover',
+            response.json()["error"],
+            "Nenhuma tag para remover",
         )
 
     def test_bulk_remove_with_tags_success(self):
@@ -190,22 +190,22 @@ class TagManagementErrorHandlingTests(TestCase):
             updated_by=self.doctor,
         )
         url = reverse(
-            'patients:patient_tag_remove_all',
-            kwargs={'patient_id': self.patient.id},
+            "patients:patient_tag_remove_all",
+            kwargs={"patient_id": self.patient.id},
         )
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertTrue(data['success'])
-        self.assertEqual(data['tags'], [])
+        self.assertTrue(data["success"])
+        self.assertEqual(data["tags"], [])
         self.assertFalse(self.patient.patient_tags.exists())
 
     def test_add_tag_without_ajax_succeeds(self):
         """The add endpoint has no AJAX gate: plain POSTs succeed."""
         response = self.client.post(
             self._add_url(),
-            {'tag_id': str(self.tag.id)},
+            {"tag_id": str(self.tag.id)},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -220,10 +220,10 @@ class TagManagementErrorHandlingTests(TestCase):
         )
         tag_instance = self.patient.patient_tags.get(allowed_tag=self.tag)
         url = reverse(
-            'patients:patient_tag_remove',
+            "patients:patient_tag_remove",
             kwargs={
-                'patient_id': self.patient.id,
-                'tag_id': tag_instance.id,
+                "patient_id": self.patient.id,
+                "tag_id": tag_instance.id,
             },
         )
         response = self.client.post(url)
@@ -233,26 +233,26 @@ class TagManagementErrorHandlingTests(TestCase):
     def test_permission_denied_error_format(self):
         """Without change_patient the request fails with 403 before the view."""
         no_permission_user = create_navigation_user(
-            username='noperm',
-            email='noperm@example.com',
-            password='testpass123',
+            username="noperm",
+            email="noperm@example.com",
+            password="testpass123",
         )
         self.client.force_login(no_permission_user)
 
         response = self.client.post(
             self._add_url(),
-            {'tag_id': str(self.tag.id)},
+            {"tag_id": str(self.tag.id)},
         )
 
         self.assertEqual(response.status_code, 403)
         # PermissionRequiredMixin raises before JSON handling: HTML body.
-        self.assertIn('text/html', response['Content-Type'])
+        self.assertIn("text/html", response["Content-Type"])
 
     def test_api_invalid_patient_id(self):
         """The tags API for an unknown patient UUID is a 404."""
         url = reverse(
-            'patients:patient_tags_api',
-            kwargs={'patient_id': '00000000-0000-0000-0000-000000000000'},
+            "patients:patient_tags_api",
+            kwargs={"patient_id": "00000000-0000-0000-0000-000000000000"},
         )
         response = self.client.get(url)
 
@@ -263,21 +263,21 @@ class TagManagementErrorHandlingTests(TestCase):
         original_create = Tag.objects.create
 
         def mock_create(*args, **kwargs):
-            raise RuntimeError('Database connection error')
+            raise RuntimeError("Database connection error")
 
         Tag.objects.create = mock_create
         try:
             response = self.client.post(
                 self._add_url(),
-                {'tag_id': str(self.tag.id)},
+                {"tag_id": str(self.tag.id)},
             )
         finally:
             Tag.objects.create = original_create
 
         self.assertEqual(response.status_code, 500)
         self.assertEqual(
-            response.json()['error'],
-            'Erro interno do servidor',
+            response.json()["error"],
+            "Erro interno do servidor",
         )
 
     def test_event_creation_failure(self):
@@ -285,21 +285,21 @@ class TagManagementErrorHandlingTests(TestCase):
         original_create = TagAddedEvent.objects.create
 
         def mock_create(*args, **kwargs):
-            raise RuntimeError('Event creation failed')
+            raise RuntimeError("Event creation failed")
 
         TagAddedEvent.objects.create = mock_create
         try:
             response = self.client.post(
                 self._add_url(),
-                {'tag_id': str(self.tag.id)},
+                {"tag_id": str(self.tag.id)},
             )
         finally:
             TagAddedEvent.objects.create = original_create
 
         self.assertEqual(response.status_code, 500)
         self.assertEqual(
-            response.json()['error'],
-            'Erro interno do servidor',
+            response.json()["error"],
+            "Erro interno do servidor",
         )
 
     def test_missing_tag_id_parameter(self):
@@ -308,6 +308,6 @@ class TagManagementErrorHandlingTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            response.json()['error'],
-            'ID da tag é obrigatório',
+            response.json()["error"],
+            "ID da tag é obrigatório",
         )

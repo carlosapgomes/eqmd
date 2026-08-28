@@ -1,10 +1,11 @@
-from django.test import TestCase
-from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.test import TestCase
+from django.urls import reverse
 
 from apps.accounts.tests.helpers import create_navigation_user
+
 from ..models import Patient, PatientRecordNumber
 
 User = get_user_model()
@@ -15,9 +16,9 @@ class PatientViewTests(TestCase):
     def setUpTestData(cls):
         # Create test user with lifecycle gates cleared
         cls.user = create_navigation_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpassword',
+            username="testuser",
+            email="test@example.com",
+            password="testpassword",
             profession_type=0,  # MEDICAL_DOCTOR — needed for PatientDeleteView
         )
 
@@ -28,67 +29,70 @@ class PatientViewTests(TestCase):
 
         # Create test data
         cls.patient = Patient.objects.create(
-            name='Test Patient',
-            birthday='1980-01-01',
+            name="Test Patient",
+            birthday="1980-01-01",
             status=Patient.Status.OUTPATIENT,
             created_by=cls.user,
-            updated_by=cls.user
+            updated_by=cls.user,
         )
 
     def setUp(self):
-        self.client.login(username='testuser', password='testpassword')
+        self.client.login(username="testuser", password="testpassword")
 
     def test_patient_list_view(self):
-        response = self.client.get(reverse('patients:patient_list'))
+        response = self.client.get(reverse("patients:patient_list"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Test Patient')
-        self.assertTemplateUsed(response, 'patients/patient_list.html')
+        self.assertContains(response, "Test Patient")
+        self.assertTemplateUsed(response, "patients/patient_list.html")
 
     def test_patient_detail_view(self):
         response = self.client.get(
-            reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+            reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Test Patient')
-        self.assertTemplateUsed(response, 'patients/patient_detail.html')
+        self.assertContains(response, "Test Patient")
+        self.assertTemplateUsed(response, "patients/patient_detail.html")
 
     def test_patient_create_view(self):
-        response = self.client.get(reverse('patients:patient_create'))
+        response = self.client.get(reverse("patients:patient_create"))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'patients/patient_create.html')
-
-        # Test form submission
-        response = self.client.post(reverse('patients:patient_create'), {
-            'name': 'New Patient',
-            'birthday': '1990-01-01',
-            'gender': Patient.GenderChoices.FEMALE,
-            'initial_record_number': 'REC001',
-        })
-        self.assertEqual(Patient.objects.filter(name='New Patient').count(), 1)
-        
-        # Verify gender was saved correctly
-        new_patient = Patient.objects.get(name='New Patient')
-        self.assertEqual(new_patient.gender, Patient.GenderChoices.FEMALE)
-        self.assertEqual(new_patient.current_record_number, 'REC001')
-
-    def test_patient_update_view(self):
-        response = self.client.get(
-            reverse('patients:patient_update', kwargs={'pk': self.patient.pk})
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'patients/patient_update.html')
+        self.assertTemplateUsed(response, "patients/patient_create.html")
 
         # Test form submission
         response = self.client.post(
-            reverse('patients:patient_update', kwargs={'pk': self.patient.pk}),
+            reverse("patients:patient_create"),
             {
-                'name': 'Updated Patient',
-                'birthday': '1980-01-01',
-                'gender': Patient.GenderChoices.MALE,
-            }
+                "name": "New Patient",
+                "birthday": "1990-01-01",
+                "gender": Patient.GenderChoices.FEMALE,
+                "initial_record_number": "REC001",
+            },
+        )
+        self.assertEqual(Patient.objects.filter(name="New Patient").count(), 1)
+
+        # Verify gender was saved correctly
+        new_patient = Patient.objects.get(name="New Patient")
+        self.assertEqual(new_patient.gender, Patient.GenderChoices.FEMALE)
+        self.assertEqual(new_patient.current_record_number, "REC001")
+
+    def test_patient_update_view(self):
+        response = self.client.get(
+            reverse("patients:patient_update", kwargs={"pk": self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "patients/patient_update.html")
+
+        # Test form submission
+        response = self.client.post(
+            reverse("patients:patient_update", kwargs={"pk": self.patient.pk}),
+            {
+                "name": "Updated Patient",
+                "birthday": "1980-01-01",
+                "gender": Patient.GenderChoices.MALE,
+            },
         )
         self.patient.refresh_from_db()
-        self.assertEqual(self.patient.name, 'Updated Patient')
+        self.assertEqual(self.patient.name, "Updated Patient")
         self.assertEqual(self.patient.gender, Patient.GenderChoices.MALE)
 
     # --- Slice 02: initial_record_number view tests ---
@@ -97,20 +101,25 @@ class PatientViewTests(TestCase):
         """Creating a patient with initial_record_number succeeds and creates PatientRecordNumber"""
         initial_count = PatientRecordNumber.objects.count()
 
-        response = self.client.post(reverse('patients:patient_create'), {
-            'name': 'Record Number Patient',
-            'birthday': '1995-05-15',
-            'gender': Patient.GenderChoices.MALE,
-            'initial_record_number': 'REC123',
-        })
+        self.client.post(
+            reverse("patients:patient_create"),
+            {
+                "name": "Record Number Patient",
+                "birthday": "1995-05-15",
+                "gender": Patient.GenderChoices.MALE,
+                "initial_record_number": "REC123",
+            },
+        )
 
-        self.assertEqual(Patient.objects.filter(name='Record Number Patient').count(), 1)
-        new_patient = Patient.objects.get(name='Record Number Patient')
-        self.assertEqual(new_patient.current_record_number, 'REC123')
+        self.assertEqual(
+            Patient.objects.filter(name="Record Number Patient").count(), 1
+        )
+        new_patient = Patient.objects.get(name="Record Number Patient")
+        self.assertEqual(new_patient.current_record_number, "REC123")
         self.assertEqual(PatientRecordNumber.objects.count(), initial_count + 1)
         record = PatientRecordNumber.objects.get(patient=new_patient)
         self.assertTrue(record.is_current)
-        self.assertEqual(record.record_number, 'REC123')
+        self.assertEqual(record.record_number, "REC123")
 
     def test_patient_update_ignores_initial_record_number(self):
         """Updating a patient with unexpected initial_record_number does not create/change record number"""
@@ -118,19 +127,19 @@ class PatientViewTests(TestCase):
             patient=self.patient
         ).count()
 
-        response = self.client.post(
-            reverse('patients:patient_update', kwargs={'pk': self.patient.pk}),
+        self.client.post(
+            reverse("patients:patient_update", kwargs={"pk": self.patient.pk}),
             {
-                'name': 'Updated Record Patient',
-                'birthday': '1980-01-01',
-                'gender': Patient.GenderChoices.MALE,
-                'initial_record_number': 'EVIL999',
-            }
+                "name": "Updated Record Patient",
+                "birthday": "1980-01-01",
+                "gender": Patient.GenderChoices.MALE,
+                "initial_record_number": "EVIL999",
+            },
         )
 
         self.patient.refresh_from_db()
-        self.assertEqual(self.patient.name, 'Updated Record Patient')
-        self.assertNotEqual(self.patient.current_record_number, 'EVIL999')
+        self.assertEqual(self.patient.name, "Updated Record Patient")
+        self.assertNotEqual(self.patient.current_record_number, "EVIL999")
 
         record_count_after = PatientRecordNumber.objects.filter(
             patient=self.patient
@@ -139,8 +148,8 @@ class PatientViewTests(TestCase):
 
     def test_patient_delete_view(self):
         response = self.client.post(
-            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk}),
-            {'deletion_reason': 'Test deletion'}
+            reverse("patients:patient_delete", kwargs={"pk": self.patient.pk}),
+            {"deletion_reason": "Test deletion"},
         )
         # Soft delete redirects to list on success
         self.assertEqual(response.status_code, 302)
@@ -148,45 +157,48 @@ class PatientViewTests(TestCase):
 
     def test_permission_required(self):
         # Create a user without permissions (lifecycle gates cleared)
-        user_no_perms = create_navigation_user(
-            username='noperms',
-            email='noperms@example.com',
-            password='testpassword'
+        create_navigation_user(
+            username="noperms", email="noperms@example.com", password="testpassword"
         )
 
         # Log in as the user without permissions
         self.client.logout()
-        self.client.login(username='noperms', password='testpassword')
+        self.client.login(username="noperms", password="testpassword")
 
         # Test create view
-        response = self.client.get(reverse('patients:patient_create'))
+        response = self.client.get(reverse("patients:patient_create"))
         self.assertEqual(response.status_code, 403)  # Permission denied
 
         # Test update view
         response = self.client.get(
-            reverse('patients:patient_update', kwargs={'pk': self.patient.pk})
+            reverse("patients:patient_update", kwargs={"pk": self.patient.pk})
         )
         self.assertEqual(response.status_code, 403)  # Permission denied
 
         # Test delete view (POST-only; non-doctor should get 403)
         response = self.client.post(
-            reverse('patients:patient_delete', kwargs={'pk': self.patient.pk}),
-            {'deletion_reason': 'Test'}
+            reverse("patients:patient_delete", kwargs={"pk": self.patient.pk}),
+            {"deletion_reason": "Test"},
         )
         self.assertEqual(response.status_code, 403)  # Doctor required
 
     def test_patient_create_with_explicit_gender(self):
         """Test patient creation with explicit NOT_INFORMED gender"""
-        response = self.client.post(reverse('patients:patient_create'), {
-            'name': 'Default Gender Patient',
-            'birthday': '1990-01-01',
-            'gender': Patient.GenderChoices.NOT_INFORMED,
-            'initial_record_number': 'REC001',
-        })
-        self.assertEqual(Patient.objects.filter(name='Default Gender Patient').count(), 1)
-        
+        self.client.post(
+            reverse("patients:patient_create"),
+            {
+                "name": "Default Gender Patient",
+                "birthday": "1990-01-01",
+                "gender": Patient.GenderChoices.NOT_INFORMED,
+                "initial_record_number": "REC001",
+            },
+        )
+        self.assertEqual(
+            Patient.objects.filter(name="Default Gender Patient").count(), 1
+        )
+
         # Verify gender was saved correctly
-        patient = Patient.objects.get(name='Default Gender Patient')
+        patient = Patient.objects.get(name="Default Gender Patient")
         self.assertEqual(patient.gender, Patient.GenderChoices.NOT_INFORMED)
 
     def test_patient_create_with_all_gender_choices(self):
@@ -195,21 +207,26 @@ class PatientViewTests(TestCase):
             Patient.GenderChoices.MALE,
             Patient.GenderChoices.FEMALE,
             Patient.GenderChoices.OTHER,
-            Patient.GenderChoices.NOT_INFORMED
+            Patient.GenderChoices.NOT_INFORMED,
         ]
-        
+
         for i, gender in enumerate(gender_choices):
-            patient_name = f'Gender Test Patient {i}'
-            response = self.client.post(reverse('patients:patient_create'), {
-                'name': patient_name,
-                'birthday': '1990-01-01',
-                'gender': gender,
-                'initial_record_number': f'REC00{i+1}',
-            })
-            
+            patient_name = f"Gender Test Patient {i}"
+            self.client.post(
+                reverse("patients:patient_create"),
+                {
+                    "name": patient_name,
+                    # Distinct birthdays avoid the name-and-birthday advisory
+                    # review, keeping this test focused on gender storage.
+                    "birthday": f"1990-01-{i + 1:02d}",
+                    "gender": gender,
+                    "initial_record_number": f"REC00{i + 1}",
+                },
+            )
+
             # Check patient was created successfully
             self.assertEqual(Patient.objects.filter(name=patient_name).count(), 1)
-            
+
             # Verify gender was saved correctly
             patient = Patient.objects.get(name=patient_name)
             self.assertEqual(patient.gender, gender)
@@ -218,32 +235,32 @@ class PatientViewTests(TestCase):
         """Test updating patient gender"""
         # Start with default gender
         self.assertEqual(self.patient.gender, Patient.GenderChoices.NOT_INFORMED)
-        
+
         # Update to male
-        response = self.client.post(
-            reverse('patients:patient_update', kwargs={'pk': self.patient.pk}),
+        self.client.post(
+            reverse("patients:patient_update", kwargs={"pk": self.patient.pk}),
             {
-                'name': self.patient.name,
-                'birthday': self.patient.birthday,
-                'gender': Patient.GenderChoices.MALE,
-                'status': self.patient.status,
-            }
+                "name": self.patient.name,
+                "birthday": self.patient.birthday,
+                "gender": Patient.GenderChoices.MALE,
+                "status": self.patient.status,
+            },
         )
-        
+
         self.patient.refresh_from_db()
         self.assertEqual(self.patient.gender, Patient.GenderChoices.MALE)
-        
+
         # Update to female
-        response = self.client.post(
-            reverse('patients:patient_update', kwargs={'pk': self.patient.pk}),
+        self.client.post(
+            reverse("patients:patient_update", kwargs={"pk": self.patient.pk}),
             {
-                'name': self.patient.name,
-                'birthday': self.patient.birthday,
-                'gender': Patient.GenderChoices.FEMALE,
-                'status': self.patient.status,
-            }
+                "name": self.patient.name,
+                "birthday": self.patient.birthday,
+                "gender": Patient.GenderChoices.FEMALE,
+                "status": self.patient.status,
+            },
         )
-        
+
         self.patient.refresh_from_db()
         self.assertEqual(self.patient.gender, Patient.GenderChoices.FEMALE)
 
@@ -252,11 +269,11 @@ class PatientViewTests(TestCase):
         # Update patient to have a specific gender
         self.patient.gender = Patient.GenderChoices.MALE
         self.patient.save()
-        
+
         response = self.client.get(
-            reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+            reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
         )
         self.assertEqual(response.status_code, 200)
-        
+
         # Check that gender information is in the response
-        self.assertContains(response, 'Masculino')  # Portuguese label for male
+        self.assertContains(response, "Masculino")  # Portuguese label for male
