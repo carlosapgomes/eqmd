@@ -1,856 +1,641 @@
 """
 Integration tests for PhotoSeries and mediafiles functionality.
 
-Tests end-to-end workflows including:
-- Photo upload and processing
+Tests end-to-end workflows through the current views and forms:
+- FilePond photo upload and processing (through the HTTP view)
 - PhotoSeries creation and management
-- File deduplication workflows
+- MediaFile deduplication workflows (legacy model, still current)
 - Permission and access control
 - Error handling scenarios
+
+Fixtures use the current FilePond models; Hospital was removed in the
+single-hospital refactor.
 """
 
-import os
 import tempfile
-from django.test import TestCase, TransactionTestCase, Client, override_settings
-from django.core.files.uploadedfile import SimpleUploadedFile
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
-from django.conf import settings
 
-# Note: Hospital model removed after single-hospital refactor
-from apps.patients.models import Patient
 from apps.events.models import Event
-from ..models import MediaFile, Photo, PhotoSeries, PhotoSeriesFile
-from ..forms import PhotoCreateForm, PhotoSeriesCreateForm
+from apps.mediafiles.models import MediaFile, Photo, PhotoSeries, PhotoSeriesFile
+
+from .factories import (
+    create_patient,
+    create_photo_on_disk,
+    create_user,
+    load_test_image_bytes,
+    photo_original_dir,
+)
 
 User = get_user_model()
 
+# PhotoCreateFormNew builds paths with ``MEDIA_ROOT / "photos/..."``, so the
+# override must be a Path (the string MEDIA_ROOT in test_settings would fail).
+TEST_MEDIA_ROOT = Path(tempfile.mkdtemp(prefix="mediafiles_integration_"))
 
-@override_settings(
-    MEDIA_ROOT=tempfile.mkdtemp(),
-    MEDIA_USE_UUID_FILENAMES=True,
-    MEDIA_ENABLE_FILE_DEDUPLICATION=True
+LOGIN_URL = "/accounts/login/"
+
+FULL_EVENT_PERMS = (
+    "events.add_event",
+    "events.view_event",
+    "events.change_event",
+    "events.delete_event",
+    "patients.view_patient",
 )
+
+
+def grant_permissions(user, *names):
+    """Grant Django model permissions to a user (synthetic test fixture)."""
+    for name in names:
+        app_label, codename = name.split(".")
+        user.user_permissions.add(
+            Permission.objects.get(content_type__app_label=app_label, codename=codename)
+        )
+
+
+def past_datetime_str(hours=2):
+    """HTML5 ``datetime-local`` value for a recent past instant."""
+    return timezone.localtime(
+        timezone.now() - timezone.timedelta(hours=hours)
+    ).strftime("%Y-%m-%dT%H:%M")
+
+
+def create_temp_upload(filename, content=None, content_type="image/jpeg"):
+    """Create a FilePond TemporaryUpload row; return its upload_id."""
+    import shortuuid
+    from django_drf_filepond.models import TemporaryUpload
+
+    content = load_test_image_bytes() if content is None else content
+    upload_id = shortuuid.uuid()
+    TemporaryUpload.objects.create(
+        upload_id=upload_id,
+        upload_name=filename,
+        upload_type="F",
+        file=SimpleUploadedFile(filename, content, content_type=content_type),
+    )
+    return upload_id
+
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class PhotoUploadWorkflowTests(TransactionTestCase):
-    """Tests for complete photo upload workflow"""
-    
+    """Tests for the complete photo upload workflow through the view."""
+
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        self.user = User.objects.create_user(
-            username='doctor',
-            email='doctor@hospital.com',
-            password='testpass123'
-        )
-        
-        # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        self.patient = Patient.objects.create(
-            name="John Doe",
-            birthday="1980-05-15",
-            status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        # Load test image content
-        test_media_dir = os.path.join(os.path.dirname(__file__), 'test_media')
-        with open(os.path.join(test_media_dir, 'small_image.jpg'), 'rb') as f:
-            self.test_image_content = f.read()
-    
-    def create_test_image_file(self, filename='test.jpg', content=None):
-        """Create a test image file for testing."""
-        if content is None:
-            content = self.test_image_content
-        return SimpleUploadedFile(
-            filename,
-            content,
-            content_type='image/jpeg'
-        )
-    
+
+        self.user = create_user(username="doctor")
+        grant_permissions(self.user, *FULL_EVENT_PERMS)
+        self.patient = create_patient(self.user, name="John Doe")
+
+        self.client.force_login(self.user)
+
     def test_complete_photo_upload_workflow(self):
-        """Test complete photo upload from form to database"""
-        # Login user
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Prepare form data
-        uploaded_file = self.create_test_image_file('workflow_test.jpg')
-        form_data = {
-            'description': 'Workflow test photo',
-            'caption': 'Test caption'
-        }
-        
-        # Submit photo creation form
-        create_url = reverse('mediafiles:photo_create', kwargs={'patient_id': self.patient.id})
-        response = self.client.post(create_url, {
-            **form_data,
-            'image': uploaded_file,
-        })
-        
-        # Should redirect on success or show form errors
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 302:
-            # Check that photo was created
-            photos = Photo.objects.filter(patient=self.patient)
-            self.assertEqual(photos.count(), 1)
-            
-            photo = photos.first()
-            self.assertEqual(photo.description, 'Workflow test photo')
-            self.assertEqual(photo.created_by, self.user)
-            
-            # Check that MediaFile was created
-            self.assertIsNotNone(photo.media_file)
-            self.assertEqual(photo.media_file.original_filename, 'workflow-test.jpg')  # Normalized
-    
+        """Test complete photo upload from FilePond form to servable file"""
+        upload_id = create_temp_upload("workflow_test.jpg")
+
+        create_url = reverse(
+            "mediafiles:photo_create", kwargs={"patient_id": self.patient.id}
+        )
+        response = self.client.post(
+            create_url,
+            {
+                "description": "Workflow test photo",
+                "event_datetime": past_datetime_str(),
+                "caption": "Test caption",
+                "upload_id": upload_id,
+            },
+        )
+
+        # Redirect to the patient timeline on success
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            reverse(
+                "apps.patients:patient_events_timeline",
+                kwargs={"patient_id": self.patient.id},
+            ),
+        )
+
+        # Photo row with FilePond metadata
+        photo = Photo.objects.get(patient=self.patient)
+        self.assertEqual(photo.description, "Workflow test photo")
+        self.assertEqual(photo.created_by, self.user)
+        self.assertEqual(photo.original_filename, "workflow_test.jpg")
+        self.assertEqual(photo.event_type, Event.PHOTO_EVENT)
+
+        # Original file is stored under photos/YYYY/MM/originals/<file_id>.jpg
+        stored = (
+            Path(settings.MEDIA_ROOT)
+            / photo_original_dir(photo.created_at)
+            / f"{photo.file_id}.jpg"
+        )
+        self.assertTrue(stored.exists(), f"Original should exist at {stored}")
+
+        # The uploaded file is servable through the secure endpoint
+        serve_url = reverse("mediafiles:serve_file", kwargs={"file_id": photo.file_id})
+        serve_response = self.client.get(serve_url)
+        self.assertEqual(serve_response.status_code, 200)
+        self.assertEqual(serve_response["Content-Type"], "image/jpeg")
+
     def test_photo_viewing_workflow(self):
-        """Test photo viewing in detail view"""
-        # Create photo
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        photo = Photo.objects.create(
-            media_file=media_file,
-            description='View test photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user,
-            updated_by=self.user
+        """Test photo viewing in the detail view"""
+        photo = create_photo_on_disk(
+            self.patient, self.user, description="View test photo"
         )
-        
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Access photo detail view
-        detail_url = reverse('mediafiles:photo_detail', kwargs={'pk': photo.pk})
+
+        detail_url = reverse("mediafiles:photo_detail", kwargs={"pk": photo.pk})
         response = self.client.get(detail_url)
-        
-        # Should be accessible
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 200:
-            # Check that photo information is displayed
-            self.assertContains(response, photo.description)
-    
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, photo.description)
+        self.assertContains(
+            response,
+            reverse("mediafiles:serve_file", kwargs={"file_id": photo.file_id}),
+        )
+
     def test_photo_editing_workflow(self):
-        """Test photo editing workflow"""
-        # Create photo
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        photo = Photo.objects.create(
-            media_file=media_file,
-            description='Original description',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user,
-            updated_by=self.user
+        """Test photo editing workflow through the update view"""
+        photo = create_photo_on_disk(
+            self.patient, self.user, description="Original description"
         )
-        
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Access edit form
-        edit_url = reverse('mediafiles:photo_update', kwargs={'pk': photo.pk})
+
+        edit_url = reverse("mediafiles:photo_update", kwargs={"pk": photo.pk})
         response = self.client.get(edit_url)
-        
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 200:
-            # Submit updated data
-            response = self.client.post(edit_url, {
-                'description': 'Updated description',
-                'caption': 'Updated caption'
-            })
-            
-            # Should redirect on success
-            if response.status_code == 302:
-                photo.refresh_from_db()
-                self.assertEqual(photo.description, 'Updated description')
-    
-    def test_photo_deletion_workflow(self):
-        """Test photo deletion workflow with file cleanup"""
-        # Create photo
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        photo = Photo.objects.create(
-            media_file=media_file,
-            description='Delete test photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user,
-            updated_by=self.user
+        self.assertEqual(response.status_code, 200)
+
+        # Submit updated data (metadata only; the FilePond file is untouched)
+        response = self.client.post(
+            edit_url,
+            {
+                "description": "Updated description",
+                "event_datetime": timezone.localtime(photo.event_datetime).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "caption": "Updated caption",
+            },
         )
-        
+        self.assertEqual(response.status_code, 302)
+
+        photo.refresh_from_db()
+        self.assertEqual(photo.description, "Updated description")
+        self.assertEqual(photo.caption, "Updated caption")
+
+    def test_photo_deletion_workflow(self):
+        """Test photo deletion workflow (soft delete)"""
+        photo = create_photo_on_disk(
+            self.patient, self.user, description="Delete test photo"
+        )
         photo_id = photo.id
-        
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Access delete confirmation
-        delete_url = reverse('mediafiles:photo_delete', kwargs={'pk': photo.pk})
+
+        delete_url = reverse("mediafiles:photo_delete", kwargs={"pk": photo.pk})
         response = self.client.get(delete_url)
-        
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 200:
-            # Confirm deletion
-            response = self.client.post(delete_url)
-            
-            if response.status_code == 302:
-                # Check that photo was deleted
-                self.assertFalse(Photo.objects.filter(id=photo_id).exists())
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 302)
+
+        # The row is soft-deleted (is_deleted flag set)
+        self.assertTrue(Photo.objects.get(pk=photo_id).is_deleted)
 
 
-@override_settings(
-    MEDIA_ROOT=tempfile.mkdtemp(),
-    MEDIA_USE_UUID_FILENAMES=True,
-    MEDIA_ENABLE_FILE_DEDUPLICATION=True
-)
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class PhotoSeriesWorkflowTests(TransactionTestCase):
-    """Tests for PhotoSeries workflow functionality"""
-    
+    """Tests for PhotoSeries workflows through the view."""
+
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        self.user = User.objects.create_user(
-            username='doctor',
-            email='doctor@hospital.com',
-            password='testpass123'
-        )
-        
-        # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        self.patient = Patient.objects.create(
-            name="Jane Doe",
-            birthday="1985-03-20",
-            status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        # Load test image content
-        test_media_dir = os.path.join(os.path.dirname(__file__), 'test_media')
-        with open(os.path.join(test_media_dir, 'small_image.jpg'), 'rb') as f:
-            self.test_image_content = f.read()
-    
-    def create_test_image_file(self, filename='test.jpg', content=None):
-        """Create a test image file for testing."""
-        if content is None:
-            content = self.test_image_content
-        return SimpleUploadedFile(
-            filename,
-            content,
-            content_type='image/jpeg'
-        )
-    
+
+        self.user = create_user(username="doctor")
+        grant_permissions(self.user, *FULL_EVENT_PERMS)
+        self.patient = create_patient(self.user, name="Jane Doe")
+
+        self.client.force_login(self.user)
+
     def test_complete_photoseries_upload_workflow(self):
-        """Test complete PhotoSeries upload from form to database"""
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Prepare form data
-        uploaded_file = self.create_test_image_file('series_test.jpg')
-        form_data = {
-            'description': 'Series workflow test',
-            'caption': 'Test series caption'
-        }
-        
-        # Submit series creation form
-        create_url = reverse('mediafiles:photoseries_create', kwargs={'patient_id': self.patient.id})
-        response = self.client.post(create_url, {
-            **form_data,
-            'images': uploaded_file,  # Note: Form expects 'images' field
-        })
-        
-        # Should redirect on success or show form errors
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 302:
-            # Check that series was created
-            series_list = PhotoSeries.objects.filter(patient=self.patient)
-            self.assertEqual(series_list.count(), 1)
-            
-            series = series_list.first()
-            self.assertEqual(series.description, 'Series workflow test')
-            self.assertEqual(series.created_by, self.user)
-    
+        """Test complete PhotoSeries upload through the FilePond view"""
+        upload_ids = ",".join(
+            [
+                create_temp_upload("series_1.jpg"),
+                create_temp_upload("series_2.jpg"),
+                create_temp_upload("series_3.jpg"),
+            ]
+        )
+
+        create_url = reverse(
+            "mediafiles:photoseries_create",
+            kwargs={"patient_id": self.patient.id},
+        )
+        response = self.client.post(
+            create_url,
+            {
+                "description": "Series workflow test",
+                "event_datetime": past_datetime_str(),
+                "caption": "Test series caption",
+                "upload_ids": upload_ids,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        series = PhotoSeries.objects.get(patient=self.patient)
+        self.assertEqual(series.description, "Series workflow test")
+        self.assertEqual(series.created_by, self.user)
+        self.assertEqual(series.event_type, Event.PHOTO_SERIES_EVENT)
+
+        # All files are stored in order with their own FilePond originals
+        series_files = series.get_ordered_photos()
+        self.assertEqual(series_files.count(), 3)
+        self.assertEqual([sf.order for sf in series_files], [1, 2, 3])
+
+        for series_file in series_files:
+            stored = (
+                Path(settings.MEDIA_ROOT)
+                / f"photo_series/{series.created_at.strftime('%Y/%m')}/originals"
+                / f"{series_file.file_id}.jpg"
+            )
+            self.assertTrue(stored.exists())
+            serve_url = reverse(
+                "mediafiles:serve_file",
+                kwargs={"file_id": series_file.file_id},
+            )
+            serve_response = self.client.get(serve_url)
+            self.assertEqual(serve_response.status_code, 200)
+            self.assertEqual(serve_response["Content-Type"], "image/jpeg")
+
     def test_photoseries_viewing_workflow(self):
-        """Test PhotoSeries viewing in detail view with carousel"""
-        # Create PhotoSeries with photos
+        """Test PhotoSeries viewing in the detail view"""
         series = PhotoSeries.objects.create(
-            description='View test series',
+            description="View test series",
             patient=self.patient,
-            event_datetime=timezone.now(),
+            event_datetime=timezone.now() - timezone.timedelta(hours=1),
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
-        # Add photos to series
-        for i in range(3):
-            uploaded_file = self.create_test_image_file(f'view_test_{i}.jpg')
-            media_file = MediaFile.objects.create_from_upload(uploaded_file)
-            series.add_photo(media_file, order=i+1, description=f'Photo {i+1}')
-        
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Access series detail view
-        detail_url = reverse('mediafiles:photoseries_detail', kwargs={'pk': series.pk})
+        PhotoSeriesFile.objects.create(
+            photo_series=series,
+            file_id="11111111-1111-1111-1111-111111111111",
+            original_filename="view_test_1.jpg",
+            file_size=100,
+            order=1,
+        )
+        PhotoSeriesFile.objects.create(
+            photo_series=series,
+            file_id="22222222-2222-2222-2222-222222222222",
+            original_filename="view_test_2.jpg",
+            file_size=100,
+            order=2,
+        )
+
+        detail_url = reverse("mediafiles:photoseries_detail", kwargs={"pk": series.pk})
         response = self.client.get(detail_url)
-        
-        # Should be accessible
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 200:
-            # Check that series information is displayed
-            self.assertContains(response, series.description)
-            # Check that photos are included
-            photos = series.get_ordered_photos()
-            self.assertEqual(len(photos), 3)
-    
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, series.description)
+        # The gallery renders the series files in order
+        self.assertEqual(series.get_ordered_photos().count(), 2)
+
     def test_photoseries_editing_workflow(self):
-        """Test PhotoSeries editing workflow (limited editing per requirements)"""
-        # Create PhotoSeries
+        """Test PhotoSeries editing workflow (metadata only)"""
         series = PhotoSeries.objects.create(
-            description='Original series description',
+            description="Original series description",
             patient=self.patient,
-            event_datetime=timezone.now(),
+            event_datetime=timezone.now() - timezone.timedelta(hours=1),
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Access edit form
-        edit_url = reverse('mediafiles:photoseries_update', kwargs={'pk': series.pk})
+
+        edit_url = reverse("mediafiles:photoseries_update", kwargs={"pk": series.pk})
         response = self.client.get(edit_url)
-        
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 200:
-            # Submit updated data
-            response = self.client.post(edit_url, {
-                'description': 'Updated series description',
-                'caption': 'Updated series caption'
-            })
-            
-            # Should redirect on success
-            if response.status_code == 302:
-                series.refresh_from_db()
-                self.assertEqual(series.description, 'Updated series description')
-    
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(
+            edit_url,
+            {
+                "description": "Updated series description",
+                "event_datetime": timezone.localtime(series.event_datetime).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "caption": "Updated series caption",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        series.refresh_from_db()
+        self.assertEqual(series.description, "Updated series description")
+        self.assertEqual(series.caption, "Updated series caption")
+
     def test_photoseries_deletion_workflow(self):
-        """Test PhotoSeries deletion workflow with batch file cleanup"""
-        # Create PhotoSeries with photos
+        """Test PhotoSeries deletion workflow (soft delete)"""
         series = PhotoSeries.objects.create(
-            description='Delete test series',
+            description="Delete test series",
             patient=self.patient,
-            event_datetime=timezone.now(),
+            event_datetime=timezone.now() - timezone.timedelta(hours=1),
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
-        # Add photos to series
-        for i in range(2):
-            uploaded_file = self.create_test_image_file(f'delete_test_{i}.jpg')
-            media_file = MediaFile.objects.create_from_upload(uploaded_file)
-            series.add_photo(media_file, order=i+1)
-        
         series_id = series.id
-        
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Access delete confirmation
-        delete_url = reverse('mediafiles:photoseries_delete', kwargs={'pk': series.pk})
+
+        delete_url = reverse("mediafiles:photoseries_delete", kwargs={"pk": series.pk})
         response = self.client.get(delete_url)
-        
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 200:
-            # Confirm deletion
-            response = self.client.post(delete_url)
-            
-            if response.status_code == 302:
-                # Check that series was deleted
-                self.assertFalse(PhotoSeries.objects.filter(id=series_id).exists())
-    
-    def test_photoseries_zip_download_workflow(self):
-        """Test ZIP download functionality for PhotoSeries"""
-        # Create PhotoSeries with photos
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(delete_url)
+        self.assertEqual(response.status_code, 302)
+
+        # The row is soft-deleted (is_deleted flag set)
+        self.assertTrue(PhotoSeries.objects.get(pk=series_id).is_deleted)
+
+    def test_photoseries_zip_download_current_contract(self):
+        """ZIP download follows the current FilePond behavior (302 redirect).
+
+        ``photoseries_download`` still reads the removed
+        ``PhotoSeriesFile.media_file`` relation; the exception path redirects
+        to the series detail page. Pinned as the current contract; the
+        FilePond ZIP implementation is a production-gap candidate for the
+        planner (no production edit without approval).
+        """
         series = PhotoSeries.objects.create(
-            description='Download test series',
+            description="Download test series",
             patient=self.patient,
-            event_datetime=timezone.now(),
+            event_datetime=timezone.now() - timezone.timedelta(hours=1),
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
-        # Add photos to series
-        for i in range(3):
-            uploaded_file = self.create_test_image_file(f'download_test_{i}.jpg')
-            media_file = MediaFile.objects.create_from_upload(uploaded_file)
-            series.add_photo(media_file, order=i+1)
-        
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Request ZIP download
-        download_url = reverse('mediafiles:photoseries_download', kwargs={'pk': series.pk})
+        PhotoSeriesFile.objects.create(
+            photo_series=series,
+            file_id="33333333-3333-3333-3333-333333333333",
+            original_filename="download_test_1.jpg",
+            file_size=100,
+            order=1,
+        )
+
+        download_url = reverse(
+            "mediafiles:photoseries_download", kwargs={"pk": series.pk}
+        )
         response = self.client.get(download_url)
-        
-        # Should provide ZIP file or redirect
-        self.assertIn(response.status_code, [200, 302])
-        
-        if response.status_code == 200:
-            self.assertEqual(response['Content-Type'], 'application/zip')
-            self.assertIn('attachment', response['Content-Disposition'])
-    
-    def test_photoseries_timeline_integration(self):
-        """Test PhotoSeries integration with patient timeline"""
-        # Create PhotoSeries
-        series = PhotoSeries.objects.create(
-            description='Timeline test series',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user,
-            updated_by=self.user
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            reverse("mediafiles:photoseries_detail", kwargs={"pk": series.pk}),
         )
-        
-        # Add photo to series
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        series.add_photo(media_file, order=1)
-        
-        # Check that series appears in patient events
+
+    def test_photoseries_timeline_integration(self):
+        """Test PhotoSeries integration with the patient timeline"""
+        series = PhotoSeries.objects.create(
+            description="Timeline test series",
+            patient=self.patient,
+            event_datetime=timezone.now() - timezone.timedelta(hours=1),
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        # Series appears as an event with the correct type
         events = Event.objects.filter(patient=self.patient)
         self.assertTrue(events.filter(id=series.id).exists())
-        
-        # Check event type
         series_event = events.get(id=series.id)
         self.assertEqual(series_event.event_type, Event.PHOTO_SERIES_EVENT)
 
+        # And the timeline page renders the series description
+        timeline_url = reverse(
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.patient.pk},
+        )
+        response = self.client.get(timeline_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Timeline test series")
 
-@override_settings(
-    MEDIA_ROOT=tempfile.mkdtemp(),
-    MEDIA_USE_UUID_FILENAMES=True,
-    MEDIA_ENABLE_FILE_DEDUPLICATION=True
-)
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class FileDeduplicationIntegrationTests(TestCase):
-    """Tests for file deduplication functionality"""
-    
+    """Tests for MediaFile deduplication (legacy model, still current)."""
+
     def setUp(self):
         """Set up test data"""
-        self.user = User.objects.create_user(
-            username='doctor',
-            email='doctor@hospital.com',
-            password='testpass123'
-        )
-        
-        # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        self.patient = Patient.objects.create(
-            name="Test Patient",
-            birthday="1990-01-01",
-            status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        # Load test image content
-        test_media_dir = os.path.join(os.path.dirname(__file__), 'test_media')
-        with open(os.path.join(test_media_dir, 'small_image.jpg'), 'rb') as f:
-            self.test_image_content = f.read()
-    
-    def create_test_image_file(self, filename='test.jpg', content=None):
-        """Create a test image file for testing."""
-        if content is None:
-            content = self.test_image_content
-        return SimpleUploadedFile(
-            filename,
-            content,
-            content_type='image/jpeg'
-        )
-    
+        self.user = create_user(username="doctor")
+        self.patient = create_patient(self.user)
+
     def test_duplicate_file_deduplication_workflow(self):
-        """Test that duplicate files are deduplicated"""
-        # Create first photo
-        file1 = self.create_test_image_file('duplicate1.jpg')
+        """Test that identical files are deduplicated to one MediaFile"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        content = load_test_image_bytes()
+        file1 = SimpleUploadedFile("duplicate1.jpg", content, content_type="image/jpeg")
         media_file1 = MediaFile.objects.create_from_upload(file1)
-        photo1 = Photo.objects.create(
-            media_file=media_file1,
-            description='First photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        # Create second photo with same content but unique filename
-        file2 = self.create_test_image_file('duplicate2.jpg', content=self.test_image_content + b'\x00')  # Make content slightly different
+
+        file2 = SimpleUploadedFile("duplicate2.jpg", content, content_type="image/jpeg")
         media_file2 = MediaFile.objects.create_from_upload(file2)
-        photo2 = Photo.objects.create(
-            media_file=media_file2,
-            description='Second photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        # Should have different hashes due to different content
-        self.assertNotEqual(media_file1.file_hash, media_file2.file_hash)
-        
-        # Should be different MediaFile instances with different files
-        self.assertNotEqual(media_file1.id, media_file2.id)
-    
+
+        # Same SHA-256 hash -> same MediaFile row (deduplication contract)
+        self.assertEqual(media_file1.file_hash, media_file2.file_hash)
+        self.assertEqual(media_file1.id, media_file2.id)
+
     def test_unique_files_no_deduplication(self):
-        """Test that unique files are not deduplicated"""
-        # Create first photo
-        file1 = self.create_test_image_file('unique1.jpg', b'unique content 1')
-        media_file1 = MediaFile.objects.create_from_upload(file1)
-        
-        # Create second photo with different content
-        file2 = self.create_test_image_file('unique2.jpg', b'unique content 2')
-        media_file2 = MediaFile.objects.create_from_upload(file2)
-        
-        # Should have different hashes
-        self.assertNotEqual(media_file1.file_hash, media_file2.file_hash)
-    
-    def test_deduplication_with_deletion_workflow(self):
-        """Test file deletion behavior for different photos"""
-        # Create two photos with different content
-        file1 = self.create_test_image_file('shared1.jpg')
-        media_file1 = MediaFile.objects.create_from_upload(file1)
-        photo1 = Photo.objects.create(
-            media_file=media_file1,
-            description='First photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user,
-            updated_by=self.user
+        """Test that files with different content are not deduplicated"""
+        from io import BytesIO
+
+        from PIL import Image
+
+        def jpeg_bytes(color):
+            buffer = BytesIO()
+            Image.new("RGB", (10, 10), color).save(buffer, "JPEG")
+            return buffer.getvalue()
+
+        media_file1 = MediaFile.objects.create_from_upload(
+            SimpleUploadedFile(
+                "unique1.jpg", jpeg_bytes("red"), content_type="image/jpeg"
+            )
         )
-        
-        file2 = self.create_test_image_file('shared2.jpg', content=self.test_image_content + b'\x01')  # Different content
-        media_file2 = MediaFile.objects.create_from_upload(file2)
-        photo2 = Photo.objects.create(
-            media_file=media_file2,
-            description='Second photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user,
-            updated_by=self.user
+        media_file2 = MediaFile.objects.create_from_upload(
+            SimpleUploadedFile(
+                "unique2.jpg", jpeg_bytes("blue"), content_type="image/jpeg"
+            )
         )
-        
-        # Verify they have different hashes
+
         self.assertNotEqual(media_file1.file_hash, media_file2.file_hash)
-        
-        # Delete first photo
-        photo1.delete()
-        
-        # Second photo should still be accessible
-        self.assertTrue(Photo.objects.filter(id=photo2.id).exists())
-        
-        # MediaFile2 should still exist
-        self.assertTrue(MediaFile.objects.filter(id=media_file2.id).exists())
-        
-        # MediaFile1 should be deleted due to cascade
-        self.assertFalse(MediaFile.objects.filter(id=media_file1.id).exists())
+        self.assertNotEqual(media_file1.id, media_file2.id)
+
+    def test_media_file_and_photo_rows_are_independent(self):
+        """Photo rows are independent of MediaFile rows (FilePond contract).
+
+        The FilePond migration removed the Photo.media_file FK, so deleting a
+        MediaFile row never affects Photo rows and vice versa.
+        """
+        photo = create_photo_on_disk(self.patient, self.user)
+        media_file = MediaFile.objects.create(
+            original_filename="legacy.jpg",
+            file_size=100,
+            mime_type="image/jpeg",
+            file_hash="a" * 64,
+        )
+
+        photo.delete()
+        self.assertTrue(MediaFile.objects.filter(pk=media_file.pk).exists())
+
+        media_file.delete()
+        self.assertTrue(Photo.objects.filter(pk=photo.pk).exists())
 
 
-@override_settings(
-    MEDIA_ROOT=tempfile.mkdtemp(),
-    MEDIA_USE_UUID_FILENAMES=True
-)
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class PermissionIntegrationTests(TestCase):
-    """Tests for permission-based access control"""
-    
+    """Tests for permission-based access control."""
+
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        # Create two users
-        self.user1 = User.objects.create_user(
-            username='doctor1',
-            email='doctor1@hospital.com',
-            password='testpass123'
-        )
-        
-        self.user2 = User.objects.create_user(
-            username='doctor2',
-            email='doctor2@hospital.com',
-            password='testpass123'
-        )
-        
-        # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            created_by=self.user1,
-            updated_by=self.user1
-        )
-        
-        # Create patient associated with user1
-        self.patient = Patient.objects.create(
-            name="Private Patient",
-            birthday="1975-08-10",
-            status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
-            created_by=self.user1,
-            updated_by=self.user1
-        )
-        
-        # Load test image content
-        test_media_dir = os.path.join(os.path.dirname(__file__), 'test_media')
-        with open(os.path.join(test_media_dir, 'small_image.jpg'), 'rb') as f:
-            self.test_image_content = f.read()
-    
-    def create_test_image_file(self, filename='test.jpg', content=None):
-        """Create a test image file for testing."""
-        if content is None:
-            content = self.test_image_content
-        return SimpleUploadedFile(
-            filename,
-            content,
-            content_type='image/jpeg'
-        )
-    
+
+        # Create two users (lifecycle-navigation-ready)
+        self.user1 = create_user(username="doctor1")
+        self.user2 = create_user(username="doctor2")
+
+        self.patient = create_patient(self.user1, name="Private Patient")
+
     def test_authorized_access_workflow(self):
         """Test that authorized users can access photos"""
-        # Create photo with user1
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        photo = Photo.objects.create(
-            media_file=media_file,
-            description='Authorized test photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user1,
-            updated_by=self.user1
-        )
-        
-        # Login as user1 (authorized)
-        self.client.login(username='doctor1', password='testpass123')
-        
-        # Access photo detail
-        detail_url = reverse('mediafiles:photo_detail', kwargs={'pk': photo.pk})
+        grant_permissions(self.user1, *FULL_EVENT_PERMS)
+        photo = create_photo_on_disk(self.patient, self.user1)
+
+        self.client.force_login(self.user1)
+
+        detail_url = reverse("mediafiles:photo_detail", kwargs={"pk": photo.pk})
         response = self.client.get(detail_url)
-        
-        # Should be accessible
-        self.assertIn(response.status_code, [200, 302])
-    
+        self.assertEqual(response.status_code, 200)
+
     def test_unauthorized_access_prevention(self):
-        """Test that unauthorized users cannot access photos"""
-        # Create photo with user1
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        photo = Photo.objects.create(
-            media_file=media_file,
-            description='Private test photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user1,
-            updated_by=self.user1
-        )
-        
-        # Login as user2 (unauthorized)
-        self.client.login(username='doctor2', password='testpass123')
-        
-        # Try to access photo detail
-        detail_url = reverse('mediafiles:photo_detail', kwargs={'pk': photo.pk})
+        """Test that users without view_event cannot access photos"""
+        grant_permissions(self.user1, *FULL_EVENT_PERMS)
+        photo = create_photo_on_disk(self.patient, self.user1)
+
+        # user2 has no events permission -> 403 (not a redirect, not 200)
+        self.client.force_login(self.user2)
+        detail_url = reverse("mediafiles:photo_detail", kwargs={"pk": photo.pk})
         response = self.client.get(detail_url)
-        
-        # Should be denied or redirected
-        self.assertIn(response.status_code, [403, 404, 302])
-    
+        self.assertEqual(response.status_code, 403)
+
     def test_unauthenticated_access_prevention(self):
         """Test that unauthenticated users cannot access photos"""
-        # Create photo
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        photo = Photo.objects.create(
-            media_file=media_file,
-            description='Public test photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user1,
-            updated_by=self.user1
-        )
-        
-        # Don't login - access as anonymous user
-        detail_url = reverse('mediafiles:photo_detail', kwargs={'pk': photo.pk})
+        grant_permissions(self.user1, *FULL_EVENT_PERMS)
+        photo = create_photo_on_disk(self.patient, self.user1)
+
+        # Anonymous request -> redirect to login
+        detail_url = reverse("mediafiles:photo_detail", kwargs={"pk": photo.pk})
         response = self.client.get(detail_url)
-        
-        # Should redirect to login
         self.assertEqual(response.status_code, 302)
-    
+        self.assertIn(LOGIN_URL, response.url)
+
     def test_edit_permission_workflow(self):
-        """Test edit permission enforcement"""
-        # Create photo with user1
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        photo = Photo.objects.create(
-            media_file=media_file,
-            description='Edit test photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user1,
-            updated_by=self.user1
-        )
-        
-        # Login as user1 (creator)
-        self.client.login(username='doctor1', password='testpass123')
-        
-        # Access edit form
-        edit_url = reverse('mediafiles:photo_update', kwargs={'pk': photo.pk})
+        """Test edit permission enforcement (creator only, 24h window)"""
+        grant_permissions(self.user1, *FULL_EVENT_PERMS)
+        grant_permissions(self.user2, *FULL_EVENT_PERMS)
+        photo = create_photo_on_disk(self.patient, self.user1)
+
+        # Creator can open the edit form
+        self.client.force_login(self.user1)
+        edit_url = reverse("mediafiles:photo_update", kwargs={"pk": photo.pk})
         response = self.client.get(edit_url)
-        
-        # Should be accessible to creator
-        self.assertIn(response.status_code, [200, 302])
-        
-        # Login as user2 (not creator)
-        self.client.login(username='doctor2', password='testpass123')
-        
-        # Try to access edit form
+        self.assertEqual(response.status_code, 200)
+
+        # Non-creator is denied even with the change_event permission
+        self.client.force_login(self.user2)
         response = self.client.get(edit_url)
-        
-        # Should be denied to non-creator
-        self.assertIn(response.status_code, [403, 404, 302])
-    
+        self.assertEqual(response.status_code, 403)
+
     def test_delete_permission_workflow(self):
-        """Test delete permission enforcement"""
-        # Create photo with user1
-        uploaded_file = self.create_test_image_file()
-        media_file = MediaFile.objects.create_from_upload(uploaded_file)
-        photo = Photo.objects.create(
-            media_file=media_file,
-            description='Delete test photo',
-            patient=self.patient,
-            event_datetime=timezone.now(),
-            created_by=self.user1,
-            updated_by=self.user1
-        )
-        
-        # Login as user2 (not creator)
-        self.client.login(username='doctor2', password='testpass123')
-        
-        # Try to access delete form
-        delete_url = reverse('mediafiles:photo_delete', kwargs={'pk': photo.pk})
+        """Test delete permission enforcement (creator only)"""
+        grant_permissions(self.user1, *FULL_EVENT_PERMS)
+        grant_permissions(self.user2, *FULL_EVENT_PERMS)
+        photo = create_photo_on_disk(self.patient, self.user1)
+
+        self.client.force_login(self.user2)
+        delete_url = reverse("mediafiles:photo_delete", kwargs={"pk": photo.pk})
         response = self.client.get(delete_url)
-        
-        # Should be denied
-        self.assertIn(response.status_code, [403, 404, 302])
+        self.assertEqual(response.status_code, 403)
 
 
-@override_settings(
-    MEDIA_ROOT=tempfile.mkdtemp(),
-    MEDIA_USE_UUID_FILENAMES=True
-)
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class ErrorHandlingIntegrationTests(TestCase):
-    """Tests for error handling in integration scenarios"""
-    
+    """Tests for error handling in integration scenarios."""
+
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        
-        self.user = User.objects.create_user(
-            username='doctor',
-            email='doctor@hospital.com',
-            password='testpass123'
-        )
-        
-        # Create test hospital
-        self.hospital = Hospital.objects.create(
-            name='Test Hospital',
-            short_name='TH',
-            address='Test Address',
-            created_by=self.user,
-            updated_by=self.user
-        )
-        
-        self.patient = Patient.objects.create(
-            name="Error Test Patient",
-            birthday="1980-12-25",
-            status=Patient.Status.OUTPATIENT,
-            current_hospital=self.hospital,
-            created_by=self.user,
-            updated_by=self.user
-        )
-    
+
+        self.user = create_user(username="doctor")
+        grant_permissions(self.user, *FULL_EVENT_PERMS)
+        self.patient = create_patient(self.user, name="Error Test Patient")
+
+        self.client.force_login(self.user)
+
     def test_invalid_file_upload_error_handling(self):
-        """Test error handling for invalid file uploads"""
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Try to upload invalid file
-        invalid_file = SimpleUploadedFile(
-            'invalid.txt',
-            b'This is not an image',
-            content_type='text/plain'
+        """A non-image FilePond upload keeps the form with errors"""
+        upload_id = create_temp_upload("invalid.txt")
+
+        create_url = reverse(
+            "mediafiles:photo_create", kwargs={"patient_id": self.patient.id}
         )
-        
-        create_url = reverse('mediafiles:photo_create', kwargs={'patient_id': self.patient.id})
-        response = self.client.post(create_url, {
-            'image': invalid_file,
-            'description': 'Invalid file test',
-        })
-        
-        # Should return form with errors, not crash
+        response = self.client.post(
+            create_url,
+            {
+                "description": "Invalid file test",
+                "event_datetime": past_datetime_str(),
+                "caption": "",
+                "upload_id": upload_id,
+            },
+        )
+
+        # Form errors, no crash, no photo created
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'error', status_code=200)
-    
+        self.assertTrue(response.context["form"].errors)
+        self.assertFalse(Photo.objects.filter(patient=self.patient).exists())
+
     def test_missing_file_error_handling(self):
-        """Test error handling when no file is uploaded"""
-        self.client.login(username='doctor', password='testpass123')
-        
-        create_url = reverse('mediafiles:photo_create', kwargs={'patient_id': self.patient.id})
-        response = self.client.post(create_url, {
-            'description': 'Missing file test',
-        })
-        
-        # Should return form with errors
+        """A missing FilePond upload id keeps the form with errors"""
+        create_url = reverse(
+            "mediafiles:photo_create", kwargs={"patient_id": self.patient.id}
+        )
+        response = self.client.post(
+            create_url,
+            {
+                "description": "Missing file test",
+                "event_datetime": past_datetime_str(),
+                "caption": "",
+            },
+        )
+
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'required', status_code=200)
-    
+        self.assertTrue(response.context["form"].errors)
+        self.assertIn("upload_id", response.context["form"].errors)
+
     def test_nonexistent_photo_error_handling(self):
         """Test error handling for nonexistent photos"""
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Try to access non-existent photo
-        fake_uuid = '11111111-1111-1111-1111-111111111111'
-        detail_url = reverse('mediafiles:photo_detail', kwargs={'pk': fake_uuid})
+        fake_uuid = "11111111-1111-1111-1111-111111111111"
+        detail_url = reverse("mediafiles:photo_detail", kwargs={"pk": fake_uuid})
         response = self.client.get(detail_url)
-        
-        # Should return 404
+
         self.assertEqual(response.status_code, 404)
-    
+
+    def test_nonexistent_series_error_handling(self):
+        """Test error handling for nonexistent photo series"""
+        fake_uuid = "11111111-1111-1111-1111-111111111111"
+        detail_url = reverse("mediafiles:photoseries_detail", kwargs={"pk": fake_uuid})
+        response = self.client.get(detail_url)
+
+        self.assertEqual(response.status_code, 404)
+
     def test_file_serving_error_handling(self):
         """Test error handling for file serving"""
-        self.client.login(username='doctor', password='testpass123')
-        
-        # Try to access non-existent file
-        fake_uuid = '11111111-1111-1111-1111-111111111111'
-        file_url = reverse('mediafiles:serve_file', kwargs={'file_id': fake_uuid})
+        fake_uuid = "11111111-1111-1111-1111-111111111111"
+        file_url = reverse("mediafiles:serve_file", kwargs={"file_id": fake_uuid})
         response = self.client.get(file_url)
-        
-        # Should return 404
+
+        # Unknown file id is a plain 404 (no info leakage)
         self.assertEqual(response.status_code, 404)
