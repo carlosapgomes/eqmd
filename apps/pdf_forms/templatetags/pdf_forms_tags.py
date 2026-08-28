@@ -4,16 +4,24 @@ from django.conf import settings
 register = template.Library()
 
 
+def _pdf_forms_config():
+    """Return PDF_FORMS_CONFIG when it is a dict, otherwise an empty dict."""
+    config = getattr(settings, "PDF_FORMS_CONFIG", None)
+    return config if isinstance(config, dict) else {}
+
+
 @register.filter
 def get_item(dictionary, key):
-    """Get item from dictionary by key.""" 
-    return dictionary.get(key)
+    """Get item from dictionary by key; missing or invalid input renders empty."""
+    if not isinstance(dictionary, dict):
+        return ""
+    return dictionary.get(key, "")
 
 
 @register.simple_tag
 def pdf_forms_enabled():
     """Check if PDF forms are enabled for this hospital."""
-    return getattr(settings, 'PDF_FORMS_CONFIG', {}).get('enabled', False)
+    return _pdf_forms_config().get("enabled", False)
 
 
 @register.filter
@@ -22,7 +30,7 @@ def filesizeformat(bytes_value):
     try:
         bytes_value = int(bytes_value)
     except (ValueError, TypeError):
-        return '0 bytes'
+        return "0 bytes"
 
     if bytes_value < 1024:
         return f"{bytes_value} bytes"
@@ -34,13 +42,13 @@ def filesizeformat(bytes_value):
         return f"{bytes_value / (1024 * 1024 * 1024):.1f} GB"
 
 
-@register.inclusion_tag('pdf_forms/partials/pdf_forms_menu.html', takes_context=True)
+@register.inclusion_tag("pdf_forms/partials/pdf_forms_menu.html", takes_context=True)
 def pdf_forms_menu(context):
     """Render PDF forms menu items."""
-    request = context['request']
+    request = context.get("request")
     return {
-        'user': request.user,
-        'enabled': pdf_forms_enabled(),
+        "user": request.user if request is not None else None,
+        "enabled": pdf_forms_enabled(),
     }
 
 
@@ -48,13 +56,16 @@ def pdf_forms_menu(context):
 def get_pdf_form_count():
     """Get count of active PDF form templates."""
     from apps.pdf_forms.models import PDFFormTemplate
-    return PDFFormTemplate.objects.filter(is_active=True, hospital_specific=True).count()
+
+    return PDFFormTemplate.objects.filter(
+        is_active=True, hospital_specific=True
+    ).count()
 
 
-@register.simple_tag  
+@register.simple_tag
 def pdf_forms_config(key=None):
     """Get PDF forms configuration value."""
-    config = getattr(settings, 'PDF_FORMS_CONFIG', {})
+    config = _pdf_forms_config()
     if key:
         return config.get(key)
     return config
@@ -63,7 +74,7 @@ def pdf_forms_config(key=None):
 @register.simple_tag
 def pdf_forms_max_file_size():
     """Get maximum file size for PDF forms."""
-    return getattr(settings, 'PDF_FORMS_CONFIG', {}).get('max_file_size', 10 * 1024 * 1024)
+    return _pdf_forms_config().get("max_file_size", 10 * 1024 * 1024)
 
 
 @register.filter
@@ -82,36 +93,38 @@ def lookup(form, field_name):
         return None
 
 
-@register.inclusion_tag('pdf_forms/partials/form_field.html')
+@register.inclusion_tag("pdf_forms/partials/form_field.html")
 def render_form_field(field):
     """Render a single form field with consistent styling."""
-    return {'field': field}
+    return {"field": field}
 
 
-@register.inclusion_tag('pdf_forms/partials/form_section.html')
+@register.inclusion_tag("pdf_forms/partials/form_section.html")
 def render_form_section(section_key, section_data, form):
     """Render a complete form section with accordion styling."""
     return {
-        'section_key': section_key,
-        'section_info': section_data['info'],
-        'field_names': section_data['fields'],
-        'form': form
+        "section_key": section_key,
+        "section_info": section_data["info"],
+        "field_names": section_data["fields"],
+        "form": form,
     }
 
 
 @register.filter
 def has_sections(form):
     """Check if form has section-based organization."""
-    return getattr(form, '_has_sections', False)
+    return getattr(form, "_has_sections", False)
 
 
 @register.filter
 def get_sections_metadata(form):
     """Get sections metadata from form."""
-    return getattr(form, '_sections_metadata', {'sections': {}, 'unsectioned_fields': []})
+    return getattr(
+        form, "_sections_metadata", {"sections": {}, "unsectioned_fields": []}
+    )
 
 
 @register.filter
 def get_unsectioned_fields(form):
     """Get list of unsectioned fields from form."""
-    return getattr(form, '_unsectioned_fields', [])
+    return getattr(form, "_unsectioned_fields", [])
