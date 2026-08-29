@@ -1,10 +1,10 @@
 from django import forms
 from django.utils import timezone
 
-from .models import HistoryAndPhysical
-from apps.patients.models import Patient
 from apps.core.permissions import can_access_patient
 from apps.events.models import Event
+
+from .models import HistoryAndPhysical
 
 
 class HistoryAndPhysicalForm(forms.ModelForm):
@@ -15,8 +15,8 @@ class HistoryAndPhysicalForm(forms.ModelForm):
 
     class Meta:
         model = HistoryAndPhysical
-        fields = ["event_datetime", "content"]
-        widgets = {
+        fields = ["event_datetime", "content"]  # noqa: RUF012 — declarative ModelForm Meta attribute.
+        widgets = {  # noqa: RUF012 — declarative ModelForm Meta attribute.
             "event_datetime": forms.DateTimeInput(
                 attrs={"type": "datetime-local", "class": "form-control"},
                 format="%Y-%m-%dT%H:%M",
@@ -55,8 +55,6 @@ class HistoryAndPhysicalForm(forms.ModelForm):
             )
             self.fields["event_datetime"].initial = dt.strftime("%Y-%m-%dT%H:%M")
 
-        print(self.fields["event_datetime"].initial)
-
         # Configure field properties
         self.fields[
             "content"
@@ -75,11 +73,10 @@ class HistoryAndPhysicalForm(forms.ModelForm):
     def clean_patient(self):
         """Validate that user can access the selected patient."""
         patient = self.cleaned_data.get("patient")
-        if patient and self.user:
-            if not can_access_patient(self.user, patient):
-                raise forms.ValidationError(
-                    "Você não tem permissão para criar anamneses e exames físicos para este paciente."
-                )
+        if patient and self.user and not can_access_patient(self.user, patient):
+            raise forms.ValidationError(
+                "Você não tem permissão para criar anamneses e exames físicos para este paciente."
+            )
         return patient
 
     def clean_content(self):
@@ -90,10 +87,13 @@ class HistoryAndPhysicalForm(forms.ModelForm):
         return content
 
     def save(self, commit=True):
-        """Override save to set created_by and updated_by fields."""
+        """Override save to set canonical description and audit ownership."""
         instance = super().save(commit=False)
 
-        self.description = Event.EVENT_TYPE_CHOICES[Event.HISTORY_AND_PHYSICAL_EVENT][1]
+        # Persist the canonical event description on the instance (spec:
+        # week2-historyandphysicals-hardening). Setting it on the form would
+        # never reach the database.
+        instance.description = Event.EVENT_TYPE_CHOICES[Event.HISTORY_AND_PHYSICAL_EVENT][1]
         if self.user:
             if not instance.pk:  # New instance
                 instance.created_by = self.user

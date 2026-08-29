@@ -1,11 +1,13 @@
-from datetime import date, datetime, timedelta
-from django.test import TestCase, Client
-from django.urls import reverse
+from datetime import date, timedelta
+
 from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
+from django.urls import reverse
 from django.utils import timezone
-from apps.patients.models import Patient
+
 from apps.dailynotes.models import DailyNote
 from apps.dischargereports.models import DischargeReport
+from apps.patients.models import Patient
 
 User = get_user_model()
 
@@ -200,13 +202,14 @@ class DischargeReportIntegrationTests(TestCase):
         response = self.client.post(delete_url)
         self.assertEqual(response.status_code, 302)
 
-        # Verify draft is deleted
-        self.assertFalse(DischargeReport.all_objects.filter(pk=report.pk).exists())
+        # Verify draft is deleted (soft delete): hidden from the default manager,
+        # retained in all_objects for audit/retention.
+        self.assertFalse(DischargeReport.objects.filter(pk=report.pk).exists())
 
     def test_unauthorized_user_cannot_edit(self):
         """Test that unauthorized users cannot edit reports"""
         # Create another user
-        other_user = User.objects.create_user(
+        User.objects.create_user(
             username='otheruser',
             email='other@example.com',
             password='otherpass123',
@@ -269,7 +272,7 @@ class DischargeReportIntegrationTests(TestCase):
         self.client.login(username='testuser', password='testpass123')
 
         # Create discharge report
-        report = DischargeReport.objects.create(
+        DischargeReport.objects.create(
             patient=self.patient,
             event_datetime=timezone.now(),
             description='Timeline test report',

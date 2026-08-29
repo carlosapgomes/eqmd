@@ -2,21 +2,27 @@
 Views for Matrix binding management and OIDC authorization.
 """
 
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.shortcuts import redirect, get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, TemplateView, ListView, DetailView, View
-from django.http import HttpResponseBadRequest
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    TemplateView,
+    View,
+)
 from oidc_provider.views import AuthorizeView as BaseAuthorizeView
 
-from .models import MatrixUserBinding
-from .services import MatrixBindingService
 from .forms import MatrixBindingForm
+from .models import MatrixUserBinding
 from .promotion_service import DraftPromotionService
+from .services import MatrixBindingService
 
 
 class MatrixBindingCreateView(LoginRequiredMixin, CreateView):
@@ -36,7 +42,7 @@ class MatrixBindingCreateView(LoginRequiredMixin, CreateView):
     
     def form_valid(self, form):
         try:
-            binding, created = MatrixBindingService.create_binding(
+            _binding, created = MatrixBindingService.create_binding(
                 user=self.request.user,
                 matrix_id=form.cleaned_data['matrix_id'],
                 request=self.request
@@ -73,7 +79,7 @@ class MatrixBindingVerifyView(TemplateView):
     
     def get(self, request, token):
         try:
-            binding = MatrixBindingService.verify_binding(token, request)
+            MatrixBindingService.verify_binding(token, request)
             messages.success(request, 'Vinculação Matrix verificada com sucesso!')
             return redirect('botauth:binding_status')
         except ValueError as e:
@@ -110,7 +116,7 @@ class MyDraftsView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         from apps.events.models import Event
-        return Event.all_objects.filter(
+        return Event.objects.with_drafts().filter(
             is_draft=True,
             draft_delegated_by=self.request.user,
             draft_expires_at__gt=timezone.now()
@@ -125,7 +131,7 @@ class DraftDetailView(LoginRequiredMixin, DetailView):
     
     def get_queryset(self):
         from apps.events.models import Event
-        return Event.all_objects.filter(
+        return Event.objects.with_drafts().filter(
             is_draft=True,
             draft_delegated_by=self.request.user
         ).select_subclasses()
@@ -138,7 +144,7 @@ class DraftPromoteView(LoginRequiredMixin, View):
         from apps.events.models import Event
         
         draft = get_object_or_404(
-            Event.all_objects.filter(is_draft=True).select_subclasses(),
+            Event.objects.with_drafts().filter(is_draft=True).select_subclasses(),
             pk=pk
         )
         
@@ -164,7 +170,7 @@ class DraftRejectView(LoginRequiredMixin, View):
         from apps.events.models import Event
         
         draft = get_object_or_404(
-            Event.all_objects.filter(is_draft=True).select_subclasses(),
+            Event.objects.with_drafts().filter(is_draft=True).select_subclasses(),
             pk=pk
         )
         

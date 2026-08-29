@@ -1,12 +1,13 @@
-from datetime import date, datetime, timedelta
-from django.test import TestCase, Client
-from django.urls import reverse
+from datetime import date, timedelta
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.test import Client, TestCase
+from django.urls import reverse
 from django.utils import timezone
-from django.core.exceptions import PermissionDenied
-from apps.patients.models import Patient
+
 from apps.dischargereports.models import DischargeReport
+from apps.patients.models import Patient
 
 User = get_user_model()
 
@@ -369,7 +370,7 @@ class DischargeReportViewTests(TestCase):
     def test_list_view_shows_reports(self):
         """Test that list view shows reports"""
         self.client.login(username='testuser', password='testpass123')
-        report = DischargeReport.objects.create(
+        DischargeReport.objects.create(
             patient=self.patient,
             event_datetime=timezone.now(),
             description='Test report',
@@ -488,5 +489,6 @@ class DischargeReportViewTests(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
 
-        # Verify report is deleted
-        self.assertFalse(DischargeReport.all_objects.filter(pk=report.pk).exists())
+        # Verify report is deleted (soft delete): hidden from the default
+        # manager, retained in all_objects for audit/retention.
+        self.assertFalse(DischargeReport.objects.filter(pk=report.pk).exists())

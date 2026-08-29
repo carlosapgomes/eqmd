@@ -3,8 +3,10 @@ Management command to clean up expired drafts.
 """
 
 import logging
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+
 from apps.events.models import Event
 
 logger = logging.getLogger('apps.events')
@@ -23,7 +25,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         
-        expired_drafts = Event.all_objects.filter(
+        expired_drafts = Event.objects.with_drafts().filter(
             is_draft=True,
             draft_expires_at__lt=timezone.now()
         ).select_subclasses()
