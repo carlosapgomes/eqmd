@@ -5,7 +5,6 @@ from django.utils import timezone
 
 from apps.patients.models import Patient, PatientAdmission, Ward
 
-
 User = get_user_model()
 
 
@@ -16,12 +15,18 @@ class TransferPatientViewTests(TestCase):
             email="transfer@example.com",
             password="testpassword",
             profession_type=0,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.user.password_change_required = False
         self.user.terms_accepted = True
         self.user.terms_accepted_at = timezone.now()
         self.user.save(
-            update_fields=["password_change_required", "terms_accepted", "terms_accepted_at"]
+            update_fields=[
+                "password_change_required",
+                "terms_accepted",
+                "terms_accepted_at",
+            ]
         )
         self.client = Client()
         self.client.force_login(self.user)

@@ -1,14 +1,15 @@
 import io
 from contextlib import redirect_stdout
 
-from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.utils import timezone
 
 from apps.events.models import Event
 from apps.patients.models import Patient
-from ..models import SimpleNote
+
 from ..forms import SimpleNoteForm
+from ..models import SimpleNote
 
 User = get_user_model()
 
@@ -23,7 +24,9 @@ class SimpleNoteModelTests(TestCase):
             email="test@example.com",
             password="testpass123",
             first_name="Test",
-            last_name="User"
+            last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.patient = Patient.objects.create(
             name="Test Patient",
@@ -31,7 +34,7 @@ class SimpleNoteModelTests(TestCase):
             status=1,
             fiscal_number="12345678901",
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
     def test_create_simple_note(self):
@@ -42,9 +45,9 @@ class SimpleNoteModelTests(TestCase):
             content="Test simple note content",
             event_datetime=timezone.now(),
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
+
         self.assertEqual(simple_note.patient, self.patient)
         self.assertEqual(simple_note.content, "Test simple note content")
         self.assertEqual(simple_note.created_by, self.user)
@@ -58,9 +61,9 @@ class SimpleNoteModelTests(TestCase):
             content="Test content",
             event_datetime=timezone.now(),
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
+
         expected_str = f"Nota - {self.patient.name} - {simple_note.event_datetime.strftime('%d/%m/%Y %H:%M')}"
         self.assertEqual(str(simple_note), expected_str)
 
@@ -72,7 +75,7 @@ class SimpleNoteModelTests(TestCase):
             content="First note",
             event_datetime=timezone.now() - timezone.timedelta(hours=1),
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
         note2 = SimpleNote.objects.create(
             patient=self.patient,
@@ -80,9 +83,9 @@ class SimpleNoteModelTests(TestCase):
             content="Second note",
             event_datetime=timezone.now(),
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
-        
+
         notes = list(SimpleNote.objects.all())
         self.assertEqual(notes[0], note2)  # Most recent first
         self.assertEqual(notes[1], note1)
@@ -98,7 +101,9 @@ class SimpleNoteFormTests(TestCase):
             email="test@example.com",
             password="testpass123",
             first_name="Test",
-            last_name="User"
+            last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.patient = Patient.objects.create(
             name="Test Patient",
@@ -106,38 +111,35 @@ class SimpleNoteFormTests(TestCase):
             status=1,
             fiscal_number="12345678901",
             created_by=self.user,
-            updated_by=self.user
+            updated_by=self.user,
         )
 
     def test_valid_form(self):
         """Test form with valid data."""
         form_data = {
-            'event_datetime': timezone.now(),
-            'content': 'This is a valid simple note content with more than 10 characters.'
+            "event_datetime": timezone.now(),
+            "content": "This is a valid simple note content with more than 10 characters.",
         }
         form = SimpleNoteForm(data=form_data, user=self.user)
         self.assertTrue(form.is_valid())
 
     def test_content_too_short(self):
         """Test form validation with content too short."""
-        form_data = {
-            'event_datetime': timezone.now(),
-            'content': 'Too short'
-        }
+        form_data = {"event_datetime": timezone.now(), "content": "Too short"}
         form = SimpleNoteForm(data=form_data, user=self.user)
         self.assertFalse(form.is_valid())
-        self.assertIn('content', form.errors)
+        self.assertIn("content", form.errors)
 
     def test_future_datetime(self):
         """Test form validation with future datetime."""
         future_datetime = timezone.now() + timezone.timedelta(days=1)
         form_data = {
-            'event_datetime': future_datetime,
-            'content': 'Valid content with enough characters to pass validation.'
+            "event_datetime": future_datetime,
+            "content": "Valid content with enough characters to pass validation.",
         }
         form = SimpleNoteForm(data=form_data, user=self.user)
         self.assertFalse(form.is_valid())
-        self.assertIn('event_datetime', form.errors)
+        self.assertIn("event_datetime", form.errors)
 
     def test_form_save_sets_canonical_description(self):
         """Form save should persist canonical simple note description."""

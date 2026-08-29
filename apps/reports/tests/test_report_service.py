@@ -1,14 +1,15 @@
 """Tests for the report service."""
-from datetime import date, datetime
-from django.test import TestCase
+
+from datetime import UTC, date, datetime
+
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.utils import timezone
 
-from apps.patients.models import Patient, Ward, PatientAdmission
-from apps.reports.models import ReportTemplate, Report
+from apps.patients.models import Patient, PatientAdmission, Ward
+from apps.reports.models import Report, ReportTemplate
 from apps.reports.services.report_service import (
     create_report_from_template,
-    ReportServiceError,
 )
 
 User = get_user_model()
@@ -25,6 +26,8 @@ class TestReportService(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="Doctor",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.user.profile.display_name = "Dr. Test Doctor"
         self.user.profile.save()
@@ -92,7 +95,7 @@ class TestReportService(TestCase):
             template=self.template,
             patient=new_patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             created_by=self.user,
         )
 
@@ -116,19 +119,20 @@ class TestReportService(TestCase):
             template=template_with_break,
             patient=self.patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             created_by=self.user,
         )
 
         # Check page break was rendered
         from apps.reports.services.renderer import PAGE_BREAK_TOKEN
+
         self.assertIn(PAGE_BREAK_TOKEN, report.content)
 
     def test_report_service_renders_current_admission_date_placeholder(self):
         """Test that report service renders current admission date when patient is admitted."""
         PatientAdmission.objects.create(
             patient=self.patient,
-            admission_datetime=timezone.make_aware(datetime(2026, 1, 12, 8, 15)),
+            admission_datetime=datetime(2026, 1, 12, 8, 15, tzinfo=UTC),
             admission_type=PatientAdmission.AdmissionType.SCHEDULED,
             initial_bed="A1",
             ward=self.ward,
@@ -147,7 +151,7 @@ class TestReportService(TestCase):
             template=template,
             patient=self.patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             created_by=self.user,
         )
 
@@ -159,7 +163,7 @@ class TestReportService(TestCase):
             template=self.template,
             patient=self.patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             created_by=self.user,
         )
 
@@ -167,12 +171,12 @@ class TestReportService(TestCase):
 
     def test_report_service_sets_event_datetime(self):
         """Test that report service sets event_datetime to document_date with current time."""
-        from unittest.mock import patch
         from datetime import datetime
+        from unittest.mock import patch
 
-        fixed_now = timezone.make_aware(datetime(2026, 1, 15, 10, 30, 0))
+        fixed_now = datetime(2026, 1, 15, 10, 30, 0, tzinfo=UTC)
 
-        with patch('django.utils.timezone.now', return_value=fixed_now):
+        with patch("django.utils.timezone.now", return_value=fixed_now):
             report = create_report_from_template(
                 template=self.template,
                 patient=self.patient,
@@ -189,7 +193,7 @@ class TestReportService(TestCase):
             template=self.template,
             patient=self.patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             created_by=self.user,
             title="Custom Report Title",
         )
@@ -202,7 +206,7 @@ class TestReportService(TestCase):
             template=self.template,
             patient=self.patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             created_by=self.user,
         )
 

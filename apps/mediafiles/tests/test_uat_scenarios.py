@@ -84,7 +84,11 @@ class MedicalProfessionalWorkflowTests(TransactionTestCase):
         # Create medical professional user with the events permissions the
         # current views enforce
         self.doctor = create_user(
-            username="dr_smith", first_name="John", last_name="Smith"
+            username="dr_smith",
+            first_name="John",
+            last_name="Smith",
+            password_change_required=False,
+            terms_accepted=True,
         )
         grant_permissions(self.doctor, *FULL_EVENT_PERMS)
 
@@ -424,7 +428,9 @@ class MedicalProfessionalWorkflowTests(TransactionTestCase):
         self.assertContains(response, photo.description)
 
         # Step 4: A second doctor cannot edit the photo (creator-only)
-        other_doctor = create_user(username="dr_other")
+        other_doctor = create_user(
+            username="dr_other", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(other_doctor, *FULL_EVENT_PERMS)
         self.client.force_login(other_doctor)
         response = self.client.get(edit_url)
@@ -438,7 +444,11 @@ class SystemIntegrationUATTests(TestCase):
 
     def setUp(self):
         """Set up integration test data"""
-        self.doctor = create_user(username="integration_doctor")
+        self.doctor = create_user(
+            username="integration_doctor",
+            password_change_required=False,
+            terms_accepted=True,
+        )
         grant_permissions(self.doctor, *FULL_EVENT_PERMS)
         self.patient = create_patient(self.doctor, name="Integration Test Patient")
 
@@ -496,10 +506,14 @@ class SystemIntegrationUATTests(TestCase):
         access controls as other patient data to maintain consistent security.
         """
         # Create two doctors
-        doctor1 = create_user(username="doctor1_perm")
+        doctor1 = create_user(
+            username="doctor1_perm", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(doctor1, *FULL_EVENT_PERMS)
 
-        doctor2 = create_user(username="doctor2_perm")
+        doctor2 = create_user(
+            username="doctor2_perm", password_change_required=False, terms_accepted=True
+        )
 
         # Doctor1 creates a photo
         self.client.force_login(doctor1)
@@ -546,6 +560,8 @@ class PhotoSeriesUATTests(TransactionTestCase):
             username="dr_photoseries",
             first_name="Sarah",
             last_name="Johnson",
+            password_change_required=False,
+            terms_accepted=True,
         )
         grant_permissions(self.doctor, *FULL_EVENT_PERMS)
 

@@ -1,22 +1,30 @@
 from datetime import date
+
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from django.contrib.auth import get_user_model
-from apps.patients.models import Patient
-from apps.consentforms.models import ConsentTemplate, ConsentForm, ConsentAttachment
+
+from apps.consentforms.models import ConsentAttachment, ConsentForm, ConsentTemplate
 from apps.events.models import Event
+from apps.patients.models import Patient
 
 
-def create_user(username="user", is_staff=False, is_superuser=False):
+def create_user(username="user", is_staff=False, is_superuser=False, **kwargs):
     User = get_user_model()
+    # Lifecycle flags are forced below; accept-and-drop caller passes.
+    kwargs.pop("password_change_required", None)
+    kwargs.pop("terms_accepted", None)
     user = User.objects.create_user(
         username=username,
         email=f"{username}@example.com",
         password="testpass123",
         is_staff=is_staff,
         is_superuser=is_superuser,
+        password_change_required=False,
+        terms_accepted=True,
+        **kwargs,
     )
     user.terms_accepted = True
     user.password_change_required = False
@@ -26,7 +34,13 @@ def create_user(username="user", is_staff=False, is_superuser=False):
 
 class ConsentFormViewTests(TestCase):
     def setUp(self):
-        self.user = create_user("admin", is_staff=True, is_superuser=True)
+        self.user = create_user(
+            "admin",
+            is_staff=True,
+            is_superuser=True,
+            password_change_required=False,
+            terms_accepted=True,
+        )
         self.client.force_login(self.user)
         self.patient = Patient.objects.create(
             name="Paciente Teste",
@@ -47,7 +61,9 @@ class ConsentFormViewTests(TestCase):
         )
 
     def test_create_consent_form(self):
-        url = reverse("consentforms:consentform_create", kwargs={"patient_pk": self.patient.pk})
+        url = reverse(
+            "consentforms:consentform_create", kwargs={"patient_pk": self.patient.pk}
+        )
         response = self.client.post(
             url,
             {
@@ -104,7 +120,9 @@ class ConsentFormViewTests(TestCase):
         data = {"attachments": [image1, image2]}
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(ConsentAttachment.objects.filter(consent_form=consent).count(), 2)
+        self.assertEqual(
+            ConsentAttachment.objects.filter(consent_form=consent).count(), 2
+        )
 
     def test_attachment_upload_too_many_images(self):
         consent = ConsentForm.objects.create(
@@ -123,14 +141,18 @@ class ConsentFormViewTests(TestCase):
         url = reverse("consentforms:consentform_update", kwargs={"pk": consent.pk})
         images = [
             SimpleUploadedFile(
-                f"page{i}.jpg", b"\xff\xd8\xff\xe0" + bytes([i]) * 200, content_type="image/jpeg"
+                f"page{i}.jpg",
+                b"\xff\xd8\xff\xe0" + bytes([i]) * 200,
+                content_type="image/jpeg",
             )
             for i in range(9)
         ]
         data = {"attachments": images}
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(ConsentAttachment.objects.filter(consent_form=consent).count(), 0)
+        self.assertEqual(
+            ConsentAttachment.objects.filter(consent_form=consent).count(), 0
+        )
 
     def test_attachment_zip_download(self):
         consent = ConsentForm.objects.create(
@@ -171,14 +193,18 @@ class ConsentFormViewTests(TestCase):
             order=2,
         )
 
-        url = reverse("consentforms:consentform_attachments_zip", kwargs={"pk": consent.pk})
+        url = reverse(
+            "consentforms:consentform_attachments_zip", kwargs={"pk": consent.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/zip")
         self.assertTrue(response.content.startswith(b"PK"))
 
     def test_non_creator_cannot_edit_attachments(self):
-        creator = create_user("creator")
+        creator = create_user(
+            "creator", password_change_required=False, terms_accepted=True
+        )
         consent = ConsentForm.objects.create(
             template=self.template,
             patient=self.patient,
@@ -192,7 +218,9 @@ class ConsentFormViewTests(TestCase):
             description="Termo de Consentimento - Template",
             event_type=Event.CONSENT_FORM_EVENT,
         )
-        other_user = create_user("other")
+        other_user = create_user(
+            "other", password_change_required=False, terms_accepted=True
+        )
         self.client.force_login(other_user)
         url = reverse("consentforms:consentform_update", kwargs={"pk": consent.pk})
         response = self.client.get(url)

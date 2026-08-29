@@ -10,15 +10,16 @@ Tests comprehensive permission system integration including:
 Aligned to simplified permission model (no Hospital/current_hospital).
 """
 
-from django.test import TestCase, Client
-from django.contrib.auth import get_user_model
-from django.urls import reverse
-from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import patch
 
-from apps.dailynotes.models import DailyNote
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
+from django.urls import reverse
+from django.utils import timezone
+
 from apps.dailynotes.forms import DailyNoteForm
+from apps.dailynotes.models import DailyNote
 from apps.patients.models import Patient
 
 User = get_user_model()
@@ -34,18 +35,24 @@ class DailyNotePermissionTestMixin:
             email="doctor@test.com",
             password="testpass123",
             profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
         )
         cls.nurse = User.objects.create_user(
             username="nurse",
             email="nurse@test.com",
             password="testpass123",
             profession_type=User.NURSE,
+            password_change_required=False,
+            terms_accepted=True,
         )
         cls.student = User.objects.create_user(
             username="student",
             email="student@test.com",
             password="testpass123",
             profession_type=User.STUDENT,
+            password_change_required=False,
+            terms_accepted=True,
         )
         # Clear password-change-required flag and terms acceptance
         User.objects.filter(
@@ -54,6 +61,7 @@ class DailyNotePermissionTestMixin:
 
         # Grant event permissions to doctor and nurse
         from django.contrib.auth.models import Permission
+
         event_permissions = Permission.objects.filter(
             codename__in=["view_event", "add_event", "change_event", "delete_event"]
         )
@@ -87,7 +95,9 @@ class DailyNoteFormPermissionTests(DailyNotePermissionTestMixin, TestCase):
     def test_form_valid_data(self):
         """Form is valid with correct data."""
         form_data = {
-            "event_datetime": timezone.localtime(timezone.now() - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"),
+            "event_datetime": timezone.localtime(
+                timezone.now() - timedelta(hours=1)
+            ).strftime("%Y-%m-%dT%H:%M"),
             "content": "Test content with enough characters.",
         }
         form = DailyNoteForm(data=form_data, user=self.doctor)
@@ -108,7 +118,9 @@ class DailyNoteFormPermissionTests(DailyNotePermissionTestMixin, TestCase):
     def test_form_rejects_short_content(self):
         """Form rejects content shorter than 10 characters."""
         form_data = {
-            "event_datetime": timezone.localtime(timezone.now() - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"),
+            "event_datetime": timezone.localtime(
+                timezone.now() - timedelta(hours=1)
+            ).strftime("%Y-%m-%dT%H:%M"),
             "content": "Short",
         }
         form = DailyNoteForm(data=form_data, user=self.doctor)
@@ -118,7 +130,9 @@ class DailyNoteFormPermissionTests(DailyNotePermissionTestMixin, TestCase):
     def test_form_save_sets_created_by(self):
         """Form save sets created_by and updated_by from user."""
         form_data = {
-            "event_datetime": timezone.localtime(timezone.now() - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"),
+            "event_datetime": timezone.localtime(
+                timezone.now() - timedelta(hours=1)
+            ).strftime("%Y-%m-%dT%H:%M"),
             "content": "Test content with enough characters for save.",
         }
         form = DailyNoteForm(data=form_data, user=self.doctor)
@@ -284,6 +298,8 @@ class DailyNoteUnauthenticatedAccessTests(TestCase):
             username="testuser",
             email="test@example.com",
             password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
         User.objects.filter(pk=cls.user.pk).update(
             password_change_required=False, terms_accepted=True

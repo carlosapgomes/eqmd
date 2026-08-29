@@ -14,36 +14,46 @@ class TemplatePermissionsTest(TestCase):
     def setUp(self):
         """Set up test users with different roles."""
         self.admin_user = EqmdCustomUser.objects.create_user(
-            username='admin',
-            email='admin@test.com',
-            password='testpass123',
+            username="admin",
+            email="admin@test.com",
+            password="testpass123",
             is_staff=True,
-            is_superuser=False
+            is_superuser=False,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.superuser = EqmdCustomUser.objects.create_user(
-            username='superuser',
-            email='superuser@test.com',
-            password='testpass123',
+            username="superuser",
+            email="superuser@test.com",
+            password="testpass123",
             is_staff=True,
-            is_superuser=True
+            is_superuser=True,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.doctor = EqmdCustomUser.objects.create_user(
-            username='doctor',
-            email='doctor@test.com',
-            password='testpass123',
-            profession_type=EqmdCustomUser.MEDICAL_DOCTOR
+            username="doctor",
+            email="doctor@test.com",
+            password="testpass123",
+            profession_type=EqmdCustomUser.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.resident = EqmdCustomUser.objects.create_user(
-            username='resident',
-            email='resident@test.com',
-            password='testpass123',
-            profession_type=EqmdCustomUser.RESIDENT
+            username="resident",
+            email="resident@test.com",
+            password="testpass123",
+            profession_type=EqmdCustomUser.RESIDENT,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.nurse = EqmdCustomUser.objects.create_user(
-            username='nurse',
-            email='nurse@test.com',
-            password='testpass123',
-            profession_type=EqmdCustomUser.NURSE
+            username="nurse",
+            email="nurse@test.com",
+            password="testpass123",
+            profession_type=EqmdCustomUser.NURSE,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.anonymous_user = None
 

@@ -50,7 +50,10 @@ class SourceTrackingTest(TestCase):
 
         # Create imported template (public so any doctor/resident can see it)
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         DrugTemplate.objects.create(
             name="Imported Drug",
@@ -76,7 +79,10 @@ class SourceTrackingTest(TestCase):
         """
 
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_template = DrugTemplate.objects.create(
             name="Imported Drug",
@@ -102,7 +108,10 @@ class SourceTrackingTest(TestCase):
         # This will fail until edit permission logic is implemented
 
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_template = DrugTemplate.objects.create(
             name="Imported Drug",
@@ -140,7 +149,10 @@ class SourceTrackingTest(TestCase):
 
         # Create imported template
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         DrugTemplate.objects.create(
             name="Admin Test Drug",
@@ -207,7 +219,10 @@ class SourceTrackingTest(TestCase):
 
         # Create imported template
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_template = DrugTemplate.objects.create(
             name="Imported Drug",
@@ -236,7 +251,10 @@ class SourceTrackingTest(TestCase):
         # This will fail until API is updated (if API exists)
 
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_template = DrugTemplate.objects.create(
             name="API Test Drug",
@@ -284,7 +302,10 @@ class SourceTrackingTest(TestCase):
         )
 
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         DrugTemplate.objects.create(
             name="Searchable Imported Drug",
@@ -330,7 +351,10 @@ class SourceTrackingTest(TestCase):
         )
 
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_template = DrugTemplate.objects.create(
             name="Imported Template",

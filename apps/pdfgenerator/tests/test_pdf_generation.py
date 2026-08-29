@@ -22,7 +22,11 @@ class PDFGeneratorTestCase(TestCase):
         """Set up test data"""
         # Create test user
         self.user = User.objects.create_user(
-            username="testdoctor", email="test@example.com", password="testpass123"
+            username="testdoctor",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test patient

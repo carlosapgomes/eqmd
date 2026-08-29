@@ -20,6 +20,8 @@ class TestPatientSoftDelete(TestCase):
             username="testuser",
             email="test@example.com",
             profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.admin = User.objects.create_superuser(
             username="admin", email="admin@example.com"
@@ -352,6 +354,8 @@ class TestSoftDeleteEdgeCases(TestCase):
             username="testuser",
             email="test@example.com",
             profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_delete_already_deleted_patient(self):

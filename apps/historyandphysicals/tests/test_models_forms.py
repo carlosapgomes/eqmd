@@ -19,7 +19,11 @@ class HistoryAndPhysicalModelTest(TestCase):
     def setUpTestData(cls):
         """Set up test data."""
         cls.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(
@@ -123,7 +127,11 @@ class HistoryAndPhysicalFormTest(TestCase):
     def setUpTestData(cls):
         """Set up test data."""
         cls.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(

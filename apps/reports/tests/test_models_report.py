@@ -1,12 +1,14 @@
 """Tests for the Report model."""
+
 from datetime import date
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.utils import timezone
 
-from apps.patients.models import Patient, Ward
 from apps.events.models import Event
-from apps.reports.models import ReportTemplate, Report
+from apps.patients.models import Patient, Ward
+from apps.reports.models import Report, ReportTemplate
 
 User = get_user_model()
 
@@ -22,6 +24,8 @@ class TestReportModel(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="Doctor",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.ward = Ward.objects.create(
             name="Test Ward",
@@ -56,7 +60,7 @@ class TestReportModel(TestCase):
             description="Test Report",
             event_datetime=timezone.now(),
             content="Test content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             template=self.template,
         )
         report.save()
@@ -73,7 +77,7 @@ class TestReportModel(TestCase):
             description="Test Report",
             event_datetime=timezone.now(),
             content="Test content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             template=self.template,
         )
         report_id = report.pk
@@ -95,7 +99,7 @@ class TestReportModel(TestCase):
             description="My Test Report",
             event_datetime=timezone.now(),
             content="Test content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
         self.assertEqual(str(report), "My Test Report")
 
@@ -108,7 +112,7 @@ class TestReportModel(TestCase):
             description="Report with title",
             event_datetime=timezone.now(),
             content="Test content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
             title="Custom Title",
         )
         self.assertEqual(report_with_title.title, "Custom Title")
@@ -120,7 +124,7 @@ class TestReportModel(TestCase):
             description="Report without title",
             event_datetime=timezone.now(),
             content="Test content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
         self.assertEqual(report_without_title.title, "")
 
@@ -134,7 +138,7 @@ class TestReportModel(TestCase):
             description="Test Report",
             event_datetime=timezone.now(),
             content=content,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
         self.assertEqual(report.content, content)
 
@@ -163,7 +167,7 @@ class TestReportModel(TestCase):
             description="Test Report",
             event_datetime=timezone.now(),
             content="Test content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
         self.assertIsInstance(report.id, uuid.UUID)
 
@@ -176,7 +180,7 @@ class TestReportModel(TestCase):
             description="Test Report",
             event_datetime=timezone.now(),
             content="Test content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
         # Should be retrievable through Event.objects
         event = Event.objects.get(pk=report.pk)
@@ -191,7 +195,7 @@ class TestReportModel(TestCase):
             description="Test Report",
             event_datetime=timezone.now(),
             content="Test content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
         # New reports should be editable
         self.assertTrue(report.can_be_edited)
@@ -205,6 +209,6 @@ class TestReportModel(TestCase):
             description="Manual Report",
             event_datetime=timezone.now(),
             content="Manually created content",
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
         self.assertIsNone(report_without_template.template)

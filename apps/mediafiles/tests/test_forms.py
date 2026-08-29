@@ -26,7 +26,11 @@ class PhotoUploadFormTests(TestCase):
         """Set up test data"""
         # Create test user
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test hospital
@@ -160,7 +164,11 @@ class PhotoUpdateFormTests(TestCase):
         """Set up test data"""
         # Create test user
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test hospital
@@ -253,7 +261,11 @@ class PhotoSeriesUploadFormTests(TestCase):
         """Set up test data"""
         # Create test user
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test hospital
@@ -301,7 +313,11 @@ class VideoUploadFormTests(TestCase):
         """Set up test data"""
         # Create test user
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test hospital
@@ -353,7 +369,11 @@ class DateTimeFormattingTests(TestCase):
         """Set up test data"""
         # Create test user
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test hospital
@@ -505,7 +525,11 @@ class OriginalIssueRegressionTests(TestCase):
         """Set up test data"""
         # Create test user
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test hospital
@@ -635,7 +659,11 @@ class FormIntegrationTests(TestCase):
         """Set up test data"""
         # Create test user
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test hospital

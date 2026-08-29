@@ -287,7 +287,11 @@ class StatusChangeEventTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpassword"
+            username="testuser",
+            email="test@example.com",
+            password="testpassword",
+            password_change_required=False,
+            terms_accepted=True,
         )
         cls.patient = Patient.objects.create(
             name="Test Patient",

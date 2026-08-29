@@ -12,20 +12,22 @@ User = get_user_model()
 class AdmissionSignalSyncsPatientLocationTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username='signal_user',
-            email='signal_user@example.com',
-            password='testpassword',
+            username="signal_user",
+            email="signal_user@example.com",
+            password="testpassword",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.patient = Patient.objects.create(
-            name='Paciente Sinal',
-            birthday='1980-01-01',
+            name="Paciente Sinal",
+            birthday="1980-01-01",
             status=Patient.Status.OUTPATIENT,
             created_by=self.user,
             updated_by=self.user,
         )
         self.ward = Ward.objects.create(
-            name='UTI Sinais',
-            abbreviation='UTIS',
+            name="UTI Sinais",
+            abbreviation="UTIS",
             created_by=self.user,
             updated_by=self.user,
         )
@@ -36,7 +38,7 @@ class AdmissionSignalSyncsPatientLocationTests(TestCase):
             admission_datetime=timezone.now() - timedelta(hours=1),
             admission_type=PatientAdmission.AdmissionType.EMERGENCY,
             ward=self.ward,
-            initial_bed='A101',
+            initial_bed="A101",
             created_by=self.user,
             updated_by=self.user,
         )
@@ -46,4 +48,4 @@ class AdmissionSignalSyncsPatientLocationTests(TestCase):
         self.assertEqual(self.patient.status, Patient.Status.INPATIENT)
         self.assertEqual(self.patient.current_admission_id, admission.id)
         self.assertEqual(self.patient.ward, self.ward)
-        self.assertEqual(self.patient.bed, 'A101')
+        self.assertEqual(self.patient.bed, "A101")

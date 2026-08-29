@@ -37,6 +37,8 @@ class DrugTemplateModelTest(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_drug_template_creation(self):
@@ -283,6 +285,8 @@ class DrugTemplateFormTest(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_drug_template_form_valid_data(self):
@@ -432,6 +436,8 @@ class PrescriptionTemplateModelTest(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_prescription_template_creation(self):
@@ -538,6 +544,8 @@ class PrescriptionTemplateItemModelTest(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.prescription_template = PrescriptionTemplate.objects.create(
             name="Template de Hipertensão", creator=self.user
@@ -738,6 +746,8 @@ class PrescriptionTemplateIntegrationTest(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_prescription_template_with_multiple_items(self):

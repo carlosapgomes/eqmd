@@ -216,12 +216,11 @@ jobs:
 
           uv run ruff format --check $CHANGED_PY_FILES
 
-  full-suite-informative:
-    name: Full test suite (informative)
+  full-suite:
+    name: Full test suite (blocking)
     runs-on: ubuntu-latest
     needs: quality-gates
     if: needs.quality-gates.outputs.docs_only != 'true'
-    continue-on-error: true
 
     services:
       postgres:

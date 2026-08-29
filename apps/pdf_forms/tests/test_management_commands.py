@@ -20,6 +20,8 @@ class CreateSamplePDFFormsCommandTests(TestCase):
             password="testpass123",
             is_superuser=True,
             is_staff=True,
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_command_handle_no_superuser(self):
@@ -176,6 +178,8 @@ class CreateSamplePDFFormsCommandTests(TestCase):
             password="testpass123",
             is_superuser=True,
             is_staff=True,
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Delete the original superuser from setUp

@@ -27,6 +27,8 @@ class MedicationImportCommandTest(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Create test CSV content

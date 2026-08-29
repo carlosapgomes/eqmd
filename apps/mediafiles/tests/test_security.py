@@ -55,7 +55,9 @@ class MediaFileSecurityTestCase(TestCase):
         self.client = Client()
 
         # Create test user (lifecycle-navigation-ready for view requests)
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
 
         # Create test patient (Hospital was removed in the single-hospital
         # refactor; the patient no longer carries a hospital FK)
@@ -241,7 +243,9 @@ class FileAccessControlTests(MediaFileSecurityTestCase):
 
         # Create unauthorized user (lifecycle-navigation-ready so the core
         # middleware does not redirect before the access checks)
-        create_user(username="unauthorized")
+        create_user(
+            username="unauthorized", password_change_required=False, terms_accepted=True
+        )
 
         # Try to access file without authentication
         file_url = reverse("mediafiles:serve_file", kwargs={"file_id": file_id})
@@ -311,7 +315,9 @@ class PhotoSeriesSecurityTests(MediaFileSecurityTestCase):
         series = self.make_series()
 
         # Create unauthorized user (lifecycle-navigation-ready)
-        create_user(username="unauthorized")
+        create_user(
+            username="unauthorized", password_change_required=False, terms_accepted=True
+        )
 
         # Test unauthorized access to detail view (needs events.view_event)
         self.client.login(username="unauthorized", password="testpass123")
@@ -873,7 +879,9 @@ class VideoStreamingSecurityTests(MediaFileSecurityTestCase):
         )
 
         # Create unauthorized user (lifecycle-navigation-ready)
-        create_user(username="unauthorized")
+        create_user(
+            username="unauthorized", password_change_required=False, terms_accepted=True
+        )
 
         # Try to access video without authentication
         video_url = reverse("mediafiles:serve_file", kwargs={"file_id": clip.file_id})
