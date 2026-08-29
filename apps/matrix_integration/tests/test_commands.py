@@ -35,6 +35,7 @@ class MatrixProvisionRoomsCommandTests(TestCase):
             oidc_provider_id="equipemed",
             bot_user_id="@bot:matrix.test",
             bot_access_token="bot-token",
+            bot_display_name="RZero",
             global_room_name="EquipeMed",
         )
         from_env.return_value = config
