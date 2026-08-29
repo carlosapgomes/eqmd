@@ -2,7 +2,10 @@
 
 ## Status
 
-Proposed
+Accepted (2026-08-29) — implementada e verificada: lock/runtime paritários
+(Django 5.2.1), tooling fail-closed, guard rail de lifecycle enforce em zero
+(`max_allowed=0` com teste negativo) e CI full-suite bloqueante
+(slice 018C).
 
 ## Contexto
 
@@ -137,3 +140,6 @@ dados neste ADR.
 - 2026-08-23: ADR criada com status Proposed.
 - 2026-08-24: contexto corrigido e contrato OIDC AutoField incorporado após
   evidência do slice 001.
+- 2026-08-29: status alterado para Accepted — evidência de implementação
+  completa (slices 001-018C de
+  `restore-green-development-quality-gates`; verificação de terceiro LLM).
