@@ -20,12 +20,16 @@ class PatientStatusTemplateTagsTests(TestCase):
             email="doctor@example.com",
             password="testpassword",
             profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
         cls.nurse = User.objects.create_user(
             username="nurse",
             email="nurse@example.com",
             password="testpassword",
             profession_type=2,  # NURSE
+            password_change_required=False,
+            terms_accepted=True,
         )
         cls.patient = Patient.objects.create(
             name="Test Patient",

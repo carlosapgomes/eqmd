@@ -120,7 +120,9 @@ class MediaFileServingViewTests(TestCase):
     def setUp(self):
         """Set up test data"""
         self.client = Client()
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         self.patient = create_patient(self.user)
         self.client.force_login(self.user)
 
@@ -229,7 +231,9 @@ class PhotoViewTests(TestCase):
         self.client = Client()
 
         # Create test user with permissions
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(self.user, *FULL_EVENT_PERMS)
 
         self.patient = create_patient(self.user)
@@ -482,7 +486,9 @@ class PhotoViewTests(TestCase):
     def test_photo_views_require_permissions(self):
         """Test that photo views return 403 without the events permissions"""
         # Create user without permissions (lifecycle-navigation-ready)
-        no_perms_user = create_user(username="noperms")
+        no_perms_user = create_user(
+            username="noperms", password_change_required=False, terms_accepted=True
+        )
         self.client.force_login(no_perms_user)
 
         photo = create_photo_on_disk(self.patient, self.user)
@@ -504,7 +510,9 @@ class PhotoViewTests(TestCase):
 
     def test_photo_edit_delete_restricted_to_creator(self):
         """Non-creators with change/delete perms are denied edit/delete."""
-        other_user = create_user(username="other")
+        other_user = create_user(
+            username="other", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(other_user, *FULL_EVENT_PERMS)
         photo = create_photo_on_disk(self.patient, self.user)
 
@@ -518,7 +526,9 @@ class PhotoViewTests(TestCase):
 
     def test_photo_detail_cross_user_view_allowed(self):
         """Every authenticated user with view_event may view a photo."""
-        other_user = create_user(username="viewer")
+        other_user = create_user(
+            username="viewer", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(other_user, "events.view_event")
         photo = create_photo_on_disk(self.patient, self.user)
 
@@ -556,7 +566,9 @@ class PhotoSeriesViewTests(TestCase):
         """Set up test data"""
         self.client = Client()
 
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(self.user, *FULL_EVENT_PERMS)
 
         self.patient = create_patient(self.user)
@@ -768,7 +780,9 @@ class PhotoSeriesViewTests(TestCase):
 
     def test_photo_series_views_require_permissions(self):
         """Photo series views return 403 without the events permissions"""
-        no_perms_user = create_user(username="noperms")
+        no_perms_user = create_user(
+            username="noperms", password_change_required=False, terms_accepted=True
+        )
         self.client.force_login(no_perms_user)
 
         series = create_series_with_file_on_disk(self.patient, self.user)
@@ -796,7 +810,9 @@ class VideoClipViewTests(TestCase):
         """Set up test data"""
         self.client = Client()
 
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(self.user, *FULL_EVENT_PERMS)
 
         self.patient = create_patient(self.user)
@@ -943,7 +959,9 @@ class VideoClipViewTests(TestCase):
 
     def test_video_views_require_permissions(self):
         """Video views return 403 without the events permissions"""
-        no_perms_user = create_user(username="noperms")
+        no_perms_user = create_user(
+            username="noperms", password_change_required=False, terms_accepted=True
+        )
         self.client.force_login(no_perms_user)
 
         clip = create_videoclip_on_disk(self.patient, self.user)
@@ -971,8 +989,12 @@ class SecurityViewTests(TestCase):
         self.client = Client()
 
         # Create test users (lifecycle-navigation-ready)
-        self.user1 = create_user(username="user1")
-        self.user2 = create_user(username="user2")
+        self.user1 = create_user(
+            username="user1", password_change_required=False, terms_accepted=True
+        )
+        self.user2 = create_user(
+            username="user2", password_change_required=False, terms_accepted=True
+        )
 
         self.patient1 = create_patient(self.user1, name="Patient 1")
         self.patient2 = create_patient(self.user2, name="Patient 2")
@@ -1036,7 +1058,9 @@ class PhotoEventCardTemplateTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         self.patient = create_patient(self.user)
 
     def test_photo_event_card_template_renders(self):

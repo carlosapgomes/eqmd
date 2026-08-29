@@ -63,6 +63,8 @@ class DailyNotePDFGeneratorTestCase(TestCase):
             first_name="João",
             last_name="Silva",
             professional_registration_number="12345",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.patient = Patient.objects.create(
             name="Maria Oliveira Santos",

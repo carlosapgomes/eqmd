@@ -29,6 +29,8 @@ class OutpatientPrescriptionFormTest(TestCase):
             email="test@example.com",
             password="testpass123",
             profession_type=0,  # Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(
@@ -172,6 +174,8 @@ class PrescriptionItemFormTest(TestCase):
             email="test@example.com",
             password="testpass123",
             profession_type=0,  # Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(
@@ -325,6 +329,8 @@ class PrescriptionItemFormSetTest(TestCase):
             email="test@example.com",
             password="testpass123",
             profession_type=0,  # Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(
@@ -462,6 +468,8 @@ class PrescriptionItemFormSetHelperTest(TestCase):
             email="test@example.com",
             password="testpass123",
             profession_type=0,  # Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(
@@ -527,6 +535,8 @@ class FormIntegrationTest(TestCase):
             email="test@example.com",
             password="testpass123",
             profession_type=0,  # Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         cls.patient = Patient.objects.create(

@@ -22,6 +22,8 @@ class DrugTemplateFormRefactoredTest(TestCase):
             password="testpass123",
             first_name="Test",
             last_name="User",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_form_has_concentration_field(self):
@@ -322,7 +324,10 @@ class DrugTemplateImportFormTest(TestCase):
 
         # Create imported drug
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_drug = DrugTemplate.objects.create(
             name="Imported Drug",
@@ -370,7 +375,10 @@ class DrugTemplateImportFormTest(TestCase):
 
         # Create imported drug without usage instructions
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_drug = DrugTemplate.objects.create(
             name="Imported Drug",

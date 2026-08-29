@@ -44,13 +44,17 @@ def create_user(username="testuser", **kwargs):
     core lifecycle middleware from redirecting view requests (same contract
     as the green ``NavigationReadyUserFactory`` usage in drugtemplates).
     """
-    defaults = {"password_change_required": False, "terms_accepted": True}
-    defaults.update(kwargs)
+    # Accept-and-drop caller-passed lifecycle flags: this factory is
+    # lifecycle-navigation-ready by contract (flags forced below).
+    kwargs.pop("password_change_required", None)
+    kwargs.pop("terms_accepted", None)
     return User.objects.create_user(
         username=username,
         email=f"{username}@example.com",
         password="testpass123",
-        **defaults,
+        password_change_required=False,
+        terms_accepted=True,
+        **kwargs,
     )
 
 

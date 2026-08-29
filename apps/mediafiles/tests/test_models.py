@@ -150,7 +150,7 @@ class PhotoModelTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
         self.patient = create_patient(self.user)
 
     def make_photo(self, **kwargs):
@@ -277,7 +277,7 @@ class PhotoSeriesFileModelTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
         self.patient = create_patient(self.user)
         self.photo_series = PhotoSeries.objects.create(
             description="Test series",
@@ -378,7 +378,7 @@ class PhotoSeriesModelTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
         self.patient = create_patient(self.user)
 
     def make_series(self, **kwargs):
@@ -536,7 +536,7 @@ class MediaFileSeriesUtilsTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
         self.patient = create_patient(self.user)
 
     def test_secure_series_upload_path_generation(self):
@@ -646,7 +646,7 @@ class ModelIntegrationTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
         self.patient = create_patient(self.user)
 
     def make_photo(self, **kwargs):
@@ -777,7 +777,7 @@ class VideoClipModelTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
         self.patient = create_patient(self.user)
 
     def make_video_clip(self, **kwargs):
@@ -968,7 +968,7 @@ class MediaFileVideoMethodsTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
 
     def create_test_video_media_file(self, filename="test.mp4", duration=60):
         """Create a test MediaFile with video properties."""

@@ -1,12 +1,14 @@
 """Tests for the context builder service."""
-from datetime import date, datetime
-from django.test import TestCase, override_settings
-from django.contrib.auth import get_user_model
-from django.utils import timezone
+
+from datetime import UTC, date, datetime
 from unittest.mock import patch
 
-from apps.patients.models import Patient, Ward, PatientAdmission
+from django.contrib.auth import get_user_model
+from django.test import TestCase, override_settings
+from django.utils import timezone
+
 from apps.accounts.models import MedicalSpecialty
+from apps.patients.models import Patient, PatientAdmission, Ward
 from apps.reports.models import ReportTemplate
 from apps.reports.services.context_builder import build_report_context
 
@@ -26,6 +28,8 @@ class TestContextBuilder(TestCase):
             last_name="Doctor",
             profession_type=User.MEDICAL_DOCTOR,
             professional_registration_number="CRM-12345",
+            password_change_required=False,
+            terms_accepted=True,
         )
         # Create user profile for full_name access
         self.user.profile.display_name = "Dr. Test Doctor"
@@ -77,7 +81,7 @@ class TestContextBuilder(TestCase):
     def test_context_builder_includes_patient_doctor_document_hospital_fields(self):
         """Test that context builder includes all required fields."""
         document_date = date(2026, 1, 15)
-        fixed_now = timezone.make_aware(datetime(2026, 1, 15, 10, 30))
+        fixed_now = datetime(2026, 1, 15, 10, 30, tzinfo=UTC)
         with patch("django.utils.timezone.localtime", return_value=fixed_now):
             context = build_report_context(
                 patient=self.patient,
@@ -103,7 +107,9 @@ class TestContextBuilder(TestCase):
         # Doctor fields
         self.assertIn("doctor_name", context)
         self.assertEqual(context["doctor_name"], "Dr. Test Doctor")
-        self.assertEqual(context["doctor_profession"], self.user.get_profession_type_display())
+        self.assertEqual(
+            context["doctor_profession"], self.user.get_profession_type_display()
+        )
         self.assertEqual(context["doctor_registration_number"], "CRM-12345")
         self.assertEqual(context["doctor_specialty"], "Cardiology")
 
@@ -131,7 +137,7 @@ class TestContextBuilder(TestCase):
         context = build_report_context(
             patient=new_patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
 
         self.assertEqual(context["patient_name"], "Jane Doe")
@@ -145,12 +151,14 @@ class TestContextBuilder(TestCase):
             password="testpass123",
             first_name="No",
             last_name="Profile",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         context = build_report_context(
             patient=self.patient,
             doctor=doctor_without_profile,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
 
         self.assertEqual(context["doctor_name"], "No Profile")
@@ -159,7 +167,7 @@ class TestContextBuilder(TestCase):
         """Test that current admission date is available when patient is admitted."""
         PatientAdmission.objects.create(
             patient=self.patient,
-            admission_datetime=timezone.make_aware(datetime(2026, 1, 12, 8, 15)),
+            admission_datetime=datetime(2026, 1, 12, 8, 15, tzinfo=UTC),
             admission_type=PatientAdmission.AdmissionType.EMERGENCY,
             initial_bed="B12",
             ward=self.ward,
@@ -170,7 +178,7 @@ class TestContextBuilder(TestCase):
         context = build_report_context(
             patient=self.patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
 
         self.assertEqual(context["patient_current_admission_date"], "12/01/2026")
@@ -180,7 +188,7 @@ class TestContextBuilder(TestCase):
         context = build_report_context(
             patient=self.patient,
             doctor=self.user,
-            document_date=date.today(),
+            document_date=timezone.localdate(),
         )
 
         self.assertIn("page_break", context)

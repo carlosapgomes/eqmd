@@ -38,7 +38,10 @@ class DrugTemplateAdminTest(TestCase):
 
         # Create test template
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         DrugTemplate.objects.create(
             name="Test Drug",
@@ -71,6 +74,8 @@ class DrugTemplateAdminTest(TestCase):
             username="testuser",
             email="test@example.com",
             password="testpass",
+            password_change_required=False,
+            terms_accepted=True,
         )
         DrugTemplate.objects.create(
             name="User Filter Drug",
@@ -100,7 +105,10 @@ class DrugTemplateAdminTest(TestCase):
 
         # Create test templates
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         DrugTemplate.objects.create(
             name="Searchable Drug",
@@ -153,7 +161,10 @@ class DrugTemplateAdminTest(TestCase):
         # This will fail until admin readonly logic is implemented
 
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_drug = DrugTemplate.objects.create(
             name="Imported Drug",
@@ -208,7 +219,10 @@ class DrugTemplateAdminTest(TestCase):
 
         # Test with imported drug
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_drug = DrugTemplate.objects.create(
             name="Import Test",
@@ -227,7 +241,11 @@ class DrugTemplateAdminTest(TestCase):
 
         # Test with user-created drug
         user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass"
+            username="testuser",
+            email="test@example.com",
+            password="testpass",
+            password_change_required=False,
+            terms_accepted=True,
         )
         user_drug = DrugTemplate.objects.create(
             name="User Test",
@@ -283,7 +301,11 @@ class DrugTemplateAdminTest(TestCase):
 
         # Create mixed templates
         user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass"
+            username="testuser",
+            email="test@example.com",
+            password="testpass",
+            password_change_required=False,
+            terms_accepted=True,
         )
         user_template = DrugTemplate.objects.create(
             name="User Template",
@@ -294,7 +316,10 @@ class DrugTemplateAdminTest(TestCase):
         )
 
         system_user = User.objects.create_user(
-            username="system", email="system@hospital.internal"
+            username="system",
+            email="system@hospital.internal",
+            password_change_required=False,
+            terms_accepted=True,
         )
         imported_template = DrugTemplate.objects.create(
             name="Imported Template",

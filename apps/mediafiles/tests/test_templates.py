@@ -53,7 +53,9 @@ class VideoClipTemplateTests(MediaTemplatePermissionMixin, TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         self.grant_event_permissions(self.user)
 
         self.patient = create_patient(self.user)
@@ -238,7 +240,9 @@ class VideoClipTemplateTagTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         self.patient = create_patient(self.user)
         self.videoclip = create_videoclip_on_disk(
             self.patient, self.user, description="Tag test clip"
@@ -291,7 +295,9 @@ class VideoClipCSSJSTests(MediaTemplatePermissionMixin, TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         self.grant_event_permissions(self.user)
         self.patient = create_patient(self.user)
 
@@ -360,7 +366,9 @@ class PhotoCardRenderTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
         self.patient = create_patient(self.user)
 
     def test_photo_event_card_renders_secure_urls(self):

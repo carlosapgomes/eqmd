@@ -1,21 +1,29 @@
 from datetime import date
+
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
-from django.contrib.auth import get_user_model
-from apps.patients.models import Patient
-from apps.consentforms.models import ConsentTemplate, ConsentForm
+
+from apps.consentforms.models import ConsentForm, ConsentTemplate
 from apps.events.models import Event
+from apps.patients.models import Patient
 
 
-def create_user(username="user", is_staff=False, is_superuser=False):
+def create_user(username="user", is_staff=False, is_superuser=False, **kwargs):
     User = get_user_model()
+    # Lifecycle flags are forced below; accept-and-drop caller passes.
+    kwargs.pop("password_change_required", None)
+    kwargs.pop("terms_accepted", None)
     user = User.objects.create_user(
         username=username,
         email=f"{username}@example.com",
         password="testpass123",
         is_staff=is_staff,
         is_superuser=is_superuser,
+        password_change_required=False,
+        terms_accepted=True,
+        **kwargs,
     )
     user.terms_accepted = True
     user.password_change_required = False
@@ -25,7 +33,7 @@ def create_user(username="user", is_staff=False, is_superuser=False):
 
 class ConsentTemplateModelTests(TestCase):
     def setUp(self):
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
 
     def test_template_requires_placeholders(self):
         template = ConsentTemplate(
@@ -50,7 +58,7 @@ class ConsentTemplateModelTests(TestCase):
 
 class ConsentFormImmutabilityTests(TestCase):
     def setUp(self):
-        self.user = create_user()
+        self.user = create_user(password_change_required=False, terms_accepted=True)
         self.patient = Patient.objects.create(
             name="Paciente Teste",
             birthday=date(1980, 1, 1),

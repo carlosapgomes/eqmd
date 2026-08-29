@@ -15,6 +15,7 @@ Run:
 
 import ast
 import os
+import tempfile
 import textwrap
 import unittest
 from pathlib import Path
@@ -46,16 +47,16 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 # AST helpers
 # ---------------------------------------------------------------------------
 
+
 def _is_create_user_call(node: ast.Call) -> bool:
     """Return True if *node* is a ``<something>.create_user(...)`` call."""
     # Match ``*.create_user(...)`` — handles User.objects.create_user,
     # EqmdCustomUser.objects.create_user, etc.
-    if isinstance(node.func, ast.Attribute) and node.func.attr == "create_user":
-        return True
-    # Also match bare ``create_user(...)`` (unlikely but possible via import)
-    if isinstance(node.func, ast.Name) and node.func.id == "create_user":
-        return True
-    return False
+    return (
+        (isinstance(node.func, ast.Attribute) and node.func.attr == "create_user")
+        # Also match bare ``create_user(...)`` (unlikely but possible via import)
+        or (isinstance(node.func, ast.Name) and node.func.id == "create_user")
+    )
 
 
 def _keyword_value(kw: ast.keyword):
@@ -143,6 +144,7 @@ def scan_test_files() -> list[str]:
 # Tests
 # ---------------------------------------------------------------------------
 
+
 class LifecycleGuardRailHelperTest(unittest.TestCase):
     """Unit tests for AST helper functions."""
 
@@ -222,20 +224,20 @@ class LifecycleGuardRailHelperTest(unittest.TestCase):
         violations = _extract_create_user_violations(source, "broken.py")
         self.assertEqual(len(violations), 0)
 
+
 class LifecycleGuardRailScanTest(unittest.TestCase):
     """Integration test: full scan of the codebase.
 
-    This test reports the current violation count but does NOT fail
-    (the codebase has pre-existing violations that will be migrated
-    incrementally).  It serves as a living audit and ensures the scanner
-    itself runs without error.
-
-    To enforce zero violations in CI, change ``max_allowed`` below to 0.
+    Enforced at zero: any bare ``create_user`` call in a non-allowlisted
+    test module fails this rail. Fixtures must set
+    ``password_change_required=False, terms_accepted=True`` (or use
+    ``NavigationReadyUserFactory`` / ``SuperUserFactory``); modules that
+    genuinely test lifecycle behaviour belong in ``ALLOWLIST`` (expansion
+    requires planner approval).
     """
 
-    # Maximum number of violations tolerated.
-    # Decrease this as migration slices progress; target is 0.
-    max_allowed: int = 9999
+    # Enforced: zero unapproved violations.
+    max_allowed: int = 0
 
     def test_scan_runs_and_reports_violations(self):
         violations = scan_test_files()
@@ -266,4 +268,30 @@ class LifecycleGuardRailScanTest(unittest.TestCase):
             self.max_allowed,
             f"Guard rail: {len(violations)} violations exceed max_allowed="
             f"{self.max_allowed}. See report above.",
+        )
+
+
+class LifecycleGuardRailEnforcementTest(unittest.TestCase):
+    """Negative test: a synthetic violating file would FAIL the rail.
+
+    Proves the ``max_allowed=0`` enforcement is real: a probe module with a
+    bare ``create_user`` call is written into the scanned tree, detected by
+    ``scan_test_files()``, and removed. If the probe were ever left behind
+    (or a real violating file landed), ``LifecycleGuardRailScanTest`` fails.
+    """
+
+    def test_synthetic_violating_file_is_detected(self):
+        probe_dir = Path(__file__).resolve().parent  # apps/core/tests (scanned)
+        fd, path = tempfile.mkstemp(
+            prefix="_guardrail_negative_probe_", suffix=".py", dir=probe_dir
+        )
+        self.addCleanup(os.remove, path)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write("User.objects.create_user(username='probe', password='pw')\n")
+
+        rel = os.path.relpath(path, PROJECT_ROOT)
+        violations = scan_test_files()
+        self.assertTrue(
+            any(rel in v for v in violations),
+            f"expected probe {rel} to be flagged; got: {violations}",
         )

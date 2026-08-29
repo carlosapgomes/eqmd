@@ -1,6 +1,6 @@
-from django.test import TestCase
-from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.test import TestCase
 
 User = get_user_model()
 
@@ -13,7 +13,9 @@ class TestReportTemplateModel(TestCase):
         self.user = User.objects.create_user(
             username="testuser",
             email="test@example.com",
-            password="testpass123"
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_reporttemplate_valid_placeholders_saves(self):
@@ -33,7 +35,7 @@ class TestReportTemplateModel(TestCase):
         self.assertEqual(saved_template.name, "Valid Template")
         self.assertEqual(
             saved_template.markdown_body,
-            "Patient: {{patient_name}}, Doctor: {{doctor_name}}"
+            "Patient: {{patient_name}}, Doctor: {{doctor_name}}",
         )
         self.assertTrue(saved_template.is_active)
 
@@ -209,8 +211,9 @@ class TestReportTemplateModel(TestCase):
 
     def test_reporttemplate_has_uuid_pk(self):
         """Test that the primary key is a UUID."""
-        from apps.reports.models import ReportTemplate
         import uuid
+
+        from apps.reports.models import ReportTemplate
 
         template = ReportTemplate(
             name="UUID Template",

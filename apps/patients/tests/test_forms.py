@@ -25,7 +25,11 @@ class PatientFormTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpassword"
+            username="testuser",
+            email="test@example.com",
+            password="testpassword",
+            password_change_required=False,
+            terms_accepted=True,
         )
         cls.ward = Ward.objects.create(
             name="Test Ward",
@@ -259,7 +263,11 @@ class StatusChangeFormTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpassword"
+            username="testuser",
+            email="test@example.com",
+            password="testpassword",
+            password_change_required=False,
+            terms_accepted=True,
         )
         cls.ward = Ward.objects.create(
             name="Test Ward",

@@ -6,16 +6,19 @@ Ensures that a single `save()` on Patient that modifies both a profile field
 and the status field generates **two independent events**: one
 `StatusChangeEvent` and one `PatientProfileChangeEvent`.
 """
-from django.test import TestCase
-from django.contrib.auth import get_user_model
+
 from datetime import date
 
-from ..models import Patient
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+
 from apps.events.models import (
     Event,
-    StatusChangeEvent,
     PatientProfileChangeEvent,
+    StatusChangeEvent,
 )
+
+from ..models import Patient
 
 User = get_user_model()
 
@@ -25,15 +28,17 @@ class ProfileChangeAndStatusCoexistenceTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123',
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.patient = Patient.objects.create(
-            name='João Silva',
+            name="João Silva",
             birthday=date(1990, 5, 15),
             gender=Patient.GenderChoices.MALE,
-            phone='(11) 99999-0000',
+            phone="(11) 99999-0000",
             created_by=self.user,
             updated_by=self.user,
             status=Patient.Status.OUTPATIENT,
@@ -48,13 +53,14 @@ class ProfileChangeAndStatusCoexistenceTests(TestCase):
         one StatusChangeEvent and one PatientProfileChangeEvent."""
         # Change both status and a profile field in one save
         self.patient.status = Patient.Status.INPATIENT
-        self.patient.name = 'João Silva Jr.'
+        self.patient.name = "João Silva Jr."
         self.patient.save()
 
         # Expect exactly one status change event
         status_events = StatusChangeEvent.objects.filter(patient=self.patient)
         self.assertEqual(
-            status_events.count(), 1,
+            status_events.count(),
+            1,
             f"Expected 1 StatusChangeEvent, got {status_events.count()}",
         )
         status_event = status_events.first()
@@ -66,15 +72,15 @@ class ProfileChangeAndStatusCoexistenceTests(TestCase):
             patient=self.patient,
         )
         self.assertEqual(
-            profile_events.count(), 1,
+            profile_events.count(),
+            1,
             f"Expected 1 PatientProfileChangeEvent, got {profile_events.count()}",
         )
         profile_event = profile_events.first()
-        self.assertEqual(profile_event.event_type,
-                         Event.PATIENT_PROFILE_CHANGE_EVENT)
-        self.assertIn('name', profile_event.previous_values)
-        self.assertEqual(profile_event.previous_values['name'], 'João Silva')
-        self.assertEqual(profile_event.new_values['name'], 'João Silva Jr.')
+        self.assertEqual(profile_event.event_type, Event.PATIENT_PROFILE_CHANGE_EVENT)
+        self.assertIn("name", profile_event.previous_values)
+        self.assertEqual(profile_event.previous_values["name"], "João Silva")
+        self.assertEqual(profile_event.new_values["name"], "João Silva Jr.")
 
         # Confirm they are distinct event instances
         self.assertNotEqual(status_event.pk, profile_event.pk)
@@ -96,7 +102,7 @@ class ProfileChangeAndStatusCoexistenceTests(TestCase):
         choice_labels = {value: label for value, label in Event.EVENT_TYPE_CHOICES}
         self.assertEqual(
             choice_labels[Event.PATIENT_PROFILE_CHANGE_EVENT],
-            'Alteração de Perfil',
+            "Alteração de Perfil",
         )
 
     # ------------------------------------------------------------------
@@ -106,7 +112,7 @@ class ProfileChangeAndStatusCoexistenceTests(TestCase):
         """A queryset filtered by PATIENT_PROFILE_CHANGE_EVENT should return
         the created profile change event."""
         # Create a profile change event
-        self.patient.name = 'Maria Oliveira'
+        self.patient.name = "Maria Oliveira"
         self.patient.save()
 
         # Filter events by the new event type

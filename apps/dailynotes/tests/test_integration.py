@@ -6,20 +6,21 @@ print features, and core CRUD flows — aligned to the current
 domain model (Ward, simplified permissions, actual URL routes).
 """
 
-from django.test import TestCase, Client, RequestFactory
-from django.urls import reverse
-from django.contrib.auth import get_user_model
-from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import patch
 
-from apps.patients.models import Patient
+from django.contrib.auth import get_user_model
+from django.test import Client, RequestFactory, TestCase
+from django.urls import reverse
+from django.utils import timezone
+
 from apps.dailynotes.models import DailyNote
 from apps.dailynotes.templatetags.dailynote_tags import (
-    recent_dailynotes_widget,
     dailynotes_count_today,
     dailynotes_count_week,
+    recent_dailynotes_widget,
 )
+from apps.patients.models import Patient
 
 User = get_user_model()
 
@@ -39,12 +40,16 @@ class DailyNoteIntegrationTestCase(TestCase):
             profession_type=User.MEDICAL_DOCTOR,
             first_name="Dr.",
             last_name="Test",
+            password_change_required=False,
+            terms_accepted=True,
         )
         cls.nurse = User.objects.create_user(
             username="nurse",
             email="nurse@test.com",
             password="testpass123",
             profession_type=User.NURSE,
+            password_change_required=False,
+            terms_accepted=True,
         )
 
         # Clear password-change-required flag and terms acceptance
@@ -131,10 +136,13 @@ class PatientDailyNoteCreateTests(DailyNoteIntegrationTestCase):
         )
         # Use localtime to match form's timezone interpretation
         past_dt = timezone.localtime(timezone.now() - timedelta(hours=1))
-        response = self.client.post(url, {
-            "event_datetime": past_dt.strftime("%Y-%m-%dT%H:%M"),
-            "content": "New evolution note with enough characters.",
-        })
+        response = self.client.post(
+            url,
+            {
+                "event_datetime": past_dt.strftime("%Y-%m-%dT%H:%M"),
+                "content": "New evolution note with enough characters.",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
             DailyNote.objects.filter(

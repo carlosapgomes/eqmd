@@ -91,7 +91,9 @@ class PhotoUploadWorkflowTests(TransactionTestCase):
         """Set up test data"""
         self.client = Client()
 
-        self.user = create_user(username="doctor")
+        self.user = create_user(
+            username="doctor", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(self.user, *FULL_EVENT_PERMS)
         self.patient = create_patient(self.user, name="John Doe")
 
@@ -214,7 +216,9 @@ class PhotoSeriesWorkflowTests(TransactionTestCase):
         """Set up test data"""
         self.client = Client()
 
-        self.user = create_user(username="doctor")
+        self.user = create_user(
+            username="doctor", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(self.user, *FULL_EVENT_PERMS)
         self.patient = create_patient(self.user, name="Jane Doe")
 
@@ -421,7 +425,9 @@ class FileDeduplicationIntegrationTests(TestCase):
 
     def setUp(self):
         """Set up test data"""
-        self.user = create_user(username="doctor")
+        self.user = create_user(
+            username="doctor", password_change_required=False, terms_accepted=True
+        )
         self.patient = create_patient(self.user)
 
     def test_duplicate_file_deduplication_workflow(self):
@@ -494,8 +500,12 @@ class PermissionIntegrationTests(TestCase):
         self.client = Client()
 
         # Create two users (lifecycle-navigation-ready)
-        self.user1 = create_user(username="doctor1")
-        self.user2 = create_user(username="doctor2")
+        self.user1 = create_user(
+            username="doctor1", password_change_required=False, terms_accepted=True
+        )
+        self.user2 = create_user(
+            username="doctor2", password_change_required=False, terms_accepted=True
+        )
 
         self.patient = create_patient(self.user1, name="Private Patient")
 
@@ -569,7 +579,9 @@ class ErrorHandlingIntegrationTests(TestCase):
         """Set up test data"""
         self.client = Client()
 
-        self.user = create_user(username="doctor")
+        self.user = create_user(
+            username="doctor", password_change_required=False, terms_accepted=True
+        )
         grant_permissions(self.user, *FULL_EVENT_PERMS)
         self.patient = create_patient(self.user, name="Error Test Patient")
 

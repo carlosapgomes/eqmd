@@ -39,7 +39,9 @@ class FileUploadFixTestCase(TestCase):
 
     def setUp(self):
         """Set up test data."""
-        self.user = create_user(username="testuser")
+        self.user = create_user(
+            username="testuser", password_change_required=False, terms_accepted=True
+        )
 
         self.patient = create_patient(self.user)
 

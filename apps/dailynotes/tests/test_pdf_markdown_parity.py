@@ -10,8 +10,8 @@ import io
 from datetime import date
 
 import pypdf
-from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.utils import timezone
 
 from apps.dailynotes.models import DailyNote
@@ -62,6 +62,8 @@ class PDFMarkdownParityTestCase(TestCase):
             first_name="Ana",
             last_name="Costa",
             professional_registration_number="98765",
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.patient = Patient.objects.create(
             name="Carlos Mendes",
@@ -179,7 +181,9 @@ class TestPDFPreservesInlineSemanticsForSupportedConstructs(PDFMarkdownParityTes
         self.assertIn("protocolo", text)
 
 
-class TestPDFHandlesTablesBlockquotesAndCodeWithDefinedFallbacks(PDFMarkdownParityTestCase):
+class TestPDFHandlesTablesBlockquotesAndCodeWithDefinedFallbacks(
+    PDFMarkdownParityTestCase
+):
     """test_pdf_handles_tables_blockquotes_and_code_with_defined_fallbacks"""
 
     def test_table_fallback_preserves_cell_content(self):
@@ -201,11 +205,7 @@ class TestPDFHandlesTablesBlockquotesAndCodeWithDefinedFallbacks(PDFMarkdownPari
 
     def test_blockquote_fallback_preserves_quoted_content(self):
         """Blockquotes must render with content preserved."""
-        markdown = (
-            "## Avaliação\n\n"
-            "> Paciente em melhora.\n"
-            "> Continuar plano atual.\n"
-        )
+        markdown = "## Avaliação\n\n> Paciente em melhora.\n> Continuar plano atual.\n"
         note = _make_dailynote(self.user, self.patient, content=markdown)
         pdf_buffer = self.generator.generate_from_dailynote(note)
         text = _extract_pdf_text(pdf_buffer)
@@ -216,11 +216,7 @@ class TestPDFHandlesTablesBlockquotesAndCodeWithDefinedFallbacks(PDFMarkdownPari
     def test_code_block_fallback_preserves_code_content(self):
         """Code blocks must render with content preserved."""
         markdown = (
-            "## Observações\n\n"
-            "```text\n"
-            "Linha 1 do código\n"
-            "Linha 2 do código\n"
-            "```\n"
+            "## Observações\n\n```text\nLinha 1 do código\nLinha 2 do código\n```\n"
         )
         note = _make_dailynote(self.user, self.patient, content=markdown)
         pdf_buffer = self.generator.generate_from_dailynote(note)
@@ -264,11 +260,7 @@ class TestTaskListDeterministicRepresentation(PDFMarkdownParityTestCase):
     def test_task_list_items_appear_with_status(self):
         """Checked and unchecked task items must be present in PDF text."""
         markdown = (
-            "## Checklists\n\n"
-            "- [x] Hemograma\n"
-            "- [ ] ECG\n"
-            "- [ ] Raio-X\n"
-            "- [x] Urina\n"
+            "## Checklists\n\n- [x] Hemograma\n- [ ] ECG\n- [ ] Raio-X\n- [x] Urina\n"
         )
         note = _make_dailynote(self.user, self.patient, content=markdown)
         pdf_buffer = self.generator.generate_from_dailynote(note)
@@ -334,6 +326,7 @@ class TestSharedPipelineIntegration(PDFMarkdownParityTestCase):
         note = _make_dailynote(self.user, self.patient, content=markdown)
 
         from unittest.mock import patch
+
         with patch(
             "apps.dailynotes.services.pdf_generator.render_markdown_pdf_flowables"
         ) as mock_render:
