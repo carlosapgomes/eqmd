@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.template.loader import get_template
 from django.template import Context, Template
 from django.contrib.auth import get_user_model
-from apps.accounts.tests.factories import UserFactory
+from apps.accounts.tests.factories import NavigationReadyUserFactory
 
 User = get_user_model()
 
@@ -17,7 +17,7 @@ class TemplateTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        self.user = UserFactory(password='testpass123')
+        self.user = NavigationReadyUserFactory(password='testpass123')
 
     def test_landing_page_template_exists(self):
         """Test that landing page template exists and can be loaded."""
@@ -59,7 +59,7 @@ class TemplateTestCase(TestCase):
         self.assertContains(response, 'Entrar')
         
         # Should contain custom content block
-        self.assertContains(response, 'Conecte sua equipe médica')
+        self.assertContains(response, 'Sistema de Informação Clínica')
 
     def test_dashboard_template_blocks(self):
         """Test that dashboard template properly uses template blocks."""
@@ -125,7 +125,7 @@ class TemplateTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         
         # Should contain hero content
-        self.assertContains(response, 'Conecte sua equipe médica')
+        self.assertContains(response, 'Sistema de Informação Clínica')
         self.assertContains(response, 'display-4')
         self.assertContains(response, 'btn-medical-primary')
 
@@ -146,7 +146,7 @@ class TemplateTestCase(TestCase):
         
         # Should contain CTA buttons
         self.assertContains(response, 'Acessar Plataforma')
-        self.assertContains(response, 'Começar Agora')
+        self.assertContains(response, 'Entrar')
 
     def test_dashboard_welcome_section(self):
         """Test that dashboard contains welcome section."""

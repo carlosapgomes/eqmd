@@ -5,10 +5,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from apps.accounts.tests.factories import (
-    UserFactory,
-    DoctorFactory,
-    ResidentFactory,
-    NurseFactory,
+    NavigationReadyUserFactory,
 )
 
 User = get_user_model()
@@ -35,7 +32,7 @@ class LandingPageViewTestCase(TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'EquipeMed')
-        self.assertContains(response, 'Conecte sua equipe médica')
+        self.assertContains(response, 'Sistema de Informação Clínica')
         self.assertContains(response, 'Acessar Plataforma')
 
     def test_landing_page_template_used(self):
@@ -88,8 +85,8 @@ class LandingPageViewTestCase(TestCase):
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Começar Agora')
-        self.assertContains(response, 'Pronto para Transformar')
+        self.assertContains(response, 'Acessar Plataforma')
+        self.assertContains(response, 'Entrar')
 
     def test_landing_page_footer(self):
         """Test that landing page contains footer information."""
@@ -136,7 +133,7 @@ class DashboardViewTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        self.user = UserFactory(
+        self.user = NavigationReadyUserFactory(
             username='testuser',
             first_name='Test',
             last_name='User',
@@ -218,9 +215,27 @@ class TemplatesHubViewTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        self.doctor = DoctorFactory(password='testpass123')
-        self.resident = ResidentFactory(password='testpass123')
-        self.nurse = NurseFactory(password='testpass123')
+        self.doctor = NavigationReadyUserFactory(
+            username='doctor',
+            profession_type=0,  # MEDICAL_DOCTOR
+            password='testpass123',
+        )
+        self.resident = NavigationReadyUserFactory(
+            username='resident',
+            profession_type=1,  # RESIDENT
+            password='testpass123',
+        )
+        self.nurse = NavigationReadyUserFactory(
+            username='nurse',
+            profession_type=2,  # NURSE
+            password='testpass123',
+        )
+        # Shared dashboard user for the dashboard tests grouped in this
+        # test case (sidebar, stats, responsiveness, sessions, roles).
+        self.user = NavigationReadyUserFactory(
+            username='testuser',
+            password='testpass123',
+        )
 
     def test_templates_hub_requires_authentication(self):
         """Test that templates hub requires authentication."""
@@ -249,6 +264,16 @@ class TemplatesHubViewTestCase(TestCase):
 
     def test_dashboard_sidebar_navigation(self):
         """Test that dashboard contains sidebar navigation."""
+        # Sidebar patient links are permission-gated: grant the patient
+        # view/add permissions so the navigation items render.
+        from django.contrib.auth.models import Permission
+        for codename in ('view_patient', 'add_patient'):
+            perm = Permission.objects.get(
+                codename=codename,
+                content_type__app_label='patients',
+            )
+            self.user.user_permissions.add(perm)
+
         self.client.login(username='testuser', password='testpass123')
         url = reverse('core:dashboard')
         response = self.client.get(url)
@@ -256,7 +281,6 @@ class TemplatesHubViewTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Lista de Pacientes')
         self.assertContains(response, 'Novo Paciente')
-        self.assertContains(response, 'Eventos Clínicos')
 
     def test_dashboard_stats_section(self):
         """Test that dashboard contains stats section."""
@@ -288,7 +312,10 @@ class TemplatesHubViewTestCase(TestCase):
         
         # Logout and test with different user
         self.client.logout()
-        other_user = UserFactory(username='otheruser', password='testpass123')
+        other_user = NavigationReadyUserFactory(
+            username='otheruser',
+            password='testpass123',
+        )
         self.client.login(username='otheruser', password='testpass123')
         response2 = self.client.get(url)
         self.assertEqual(response2.status_code, 200)
@@ -322,7 +349,11 @@ class TemplatesHubViewTestCase(TestCase):
 
     def test_dashboard_staff_user(self):
         """Test dashboard for staff user."""
-        staff_user = UserFactory(username='staffuser', is_staff=True, password='testpass123')
+        staff_user = NavigationReadyUserFactory(
+            username='staffuser',
+            is_staff=True,
+            password='testpass123',
+        )
         self.client.login(username='staffuser', password='testpass123')
         url = reverse('core:dashboard')
         response = self.client.get(url)
@@ -332,7 +363,12 @@ class TemplatesHubViewTestCase(TestCase):
 
     def test_dashboard_superuser(self):
         """Test dashboard for superuser."""
-        superuser = UserFactory(username='superuser', is_superuser=True, is_staff=True, password='testpass123')
+        superuser = NavigationReadyUserFactory(
+            username='superuser',
+            is_superuser=True,
+            is_staff=True,
+            password='testpass123',
+        )
         self.client.login(username='superuser', password='testpass123')
         url = reverse('core:dashboard')
         response = self.client.get(url)

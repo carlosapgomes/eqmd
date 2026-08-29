@@ -1,39 +1,52 @@
 """
 Tests for hospital membership functionality.
+
+These tests are deprecated after the single-hospital refactor and are
+skipped as a whole; the module is kept so the deprecation intent is
+preserved and the import remains unittest-compatible.
 """
 
-import pytest
+import unittest
 
-pytest.skip(
-    "Hospital membership tests are deprecated after the single-hospital refactor.",
-    allow_module_level=True,
-)
-
-import uuid
-from django.test import TestCase, RequestFactory
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.test import RequestFactory, TestCase
 
-from apps.hospitals.models import Hospital, Ward
-from apps.hospitals.middleware import HospitalContextMiddleware
-from apps.patients.models import Patient
-from apps.core.permissions.utils import (
-    is_hospital_member,
-    has_any_hospital_membership,
-    get_user_accessible_patients,
-    can_access_patient,
-    can_change_patient_personal_data,
-    can_change_patient_status,
-    can_create_event_type,
-)
-from apps.core.permissions.constants import MEDICAL_DOCTOR, NURSE, STUDENT, INPATIENT, OUTPATIENT
+# The single-hospital refactor removed the hospitals models, so these
+# imports are only available on trees that still carry the old app. The
+# whole module is deprecated and skipped, so a missing hospitals app must
+# not break unittest discovery.
+try:
+    from apps.core.permissions.utils import (
+        can_access_patient,
+        can_change_patient_personal_data,
+        can_change_patient_status,
+        can_create_event_type,
+        get_user_accessible_patients,
+        has_any_hospital_membership,
+        is_hospital_member,
+    )
+    from apps.hospitals.middleware import HospitalContextMiddleware
+    from apps.hospitals.models import Hospital, Ward
+    from apps.patients.models import Patient
+except ImportError:
+    pass
 
 
 User = get_user_model()
 
 
+@unittest.skip(
+    "Hospital membership tests are deprecated after the single-hospital refactor."
+)
 class HospitalMembershipTestCase(TestCase):
-    """Test hospital membership functionality."""
+    """Test hospital membership functionality.
+
+    Deprecated after the single-hospital refactor: the class is skipped as a
+    whole, so its setUp (which references the removed hospitals models) never
+    runs. On trees without the old hospitals app the guarded imports above
+    simply stay unresolved.
+    """
 
     def setUp(self):
         """Set up test data."""
@@ -58,21 +71,29 @@ class HospitalMembershipTestCase(TestCase):
         self.doctor = User.objects.create_user(
             username='doctor',
             email='doctor@test.com',
-            profession_type=User.MEDICAL_DOCTOR
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.nurse = User.objects.create_user(
             username='nurse',
             email='nurse@test.com', 
-            profession_type=User.NURSE
+            profession_type=User.NURSE,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.student = User.objects.create_user(
             username='student',
             email='student@test.com',
-            profession_type=User.STUDENT
+            profession_type=User.STUDENT,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.superuser = User.objects.create_superuser(
             username='admin',
-            email='admin@test.com'
+            email='admin@test.com',
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         # Assign doctor to hospital1, nurse to both hospitals

@@ -45,41 +45,57 @@ class SimplifiedPermissionSystemIntegrationTest(TestCase):
         
         # Create test users with different professions
         self.doctor = User.objects.create_user(
+            username='doctor',
             email='doctor@test.com',
             password='testpass123',
-            profession_type=User.MEDICAL_DOCTOR
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.resident = User.objects.create_user(
+            username='resident',
             email='resident@test.com',
             password='testpass123',
-            profession_type=User.RESIDENT
+            profession_type=User.RESIDENT,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.nurse = User.objects.create_user(
+            username='nurse',
             email='nurse@test.com',
             password='testpass123',
-            profession_type=User.NURSE
+            profession_type=User.NURSE,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.physiotherapist = User.objects.create_user(
+            username='physio',
             email='physio@test.com',
             password='testpass123',
-            profession_type=User.PHYSIOTERAPIST
+            profession_type=User.PHYSIOTERAPIST,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.student = User.objects.create_user(
+            username='student',
             email='student@test.com',
             password='testpass123',
-            profession_type=User.STUDENT
+            profession_type=User.STUDENT,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
-        # Create test groups
-        self.doctor_group = Group.objects.create(name='Medical Doctors')
-        self.resident_group = Group.objects.create(name='Residents')
-        self.nurse_group = Group.objects.create(name='Nurses')
-        self.physio_group = Group.objects.create(name='Physiotherapists')
-        self.student_group = Group.objects.create(name='Students')
+        # Create test groups (signals already create/assign profession groups
+        # on user creation, so get_or_create tolerates that)
+        self.doctor_group, _ = Group.objects.get_or_create(name='Medical Doctors')
+        self.resident_group, _ = Group.objects.get_or_create(name='Residents')
+        self.nurse_group, _ = Group.objects.get_or_create(name='Nurses')
+        self.physio_group, _ = Group.objects.get_or_create(name='Physiotherapists')
+        self.student_group, _ = Group.objects.get_or_create(name='Students')
         
         # Assign users to groups
         self.doctor.groups.add(self.doctor_group)
@@ -101,12 +117,13 @@ class SimplifiedPermissionSystemIntegrationTest(TestCase):
         self.emergency_patient.id = 'patient-3'
         self.emergency_patient.status = EMERGENCY
         
-        # Create mock event
+        # Create mock event (created 1 hour ago, inside the edit window)
+        from django.utils import timezone
+        from datetime import timedelta
         self.event = Mock()
         self.event.id = 'event-1'
         self.event.created_by = self.doctor
-        self.event.created_at = Mock()
-        self.event.created_at.total_seconds.return_value = 3600  # 1 hour ago
+        self.event.created_at = timezone.now() - timedelta(hours=1)
     
     def test_complete_patient_access_workflow_simplified(self):
         """Test complete patient access workflow for simplified system."""
@@ -150,11 +167,11 @@ class SimplifiedPermissionSystemIntegrationTest(TestCase):
     @patch('django.utils.timezone.now')
     def test_event_management_workflow(self, mock_now):
         """Test event management workflow with time restrictions."""
-        from django.utils import timezone
-        from datetime import timedelta
-        
-        # Mock current time
-        current_time = timezone.now()
+        from datetime import UTC, datetime, timedelta
+
+        # Mock current time with a real datetime (timezone.now is patched,
+        # so build the anchor from datetime directly)
+        current_time = datetime.now(UTC)
         mock_now.return_value = current_time
         
         # Set event creation time to 1 hour ago (within 24-hour limit)
@@ -259,8 +276,11 @@ class SimplifiedPermissionSystemIntegrationTest(TestCase):
         
         # Test with user without profession type
         user_no_profession = User.objects.create_user(
+            username='noprofession',
             email='noprofession@test.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         # In simplified system, users without profession should still be able to access patients
         self.assertTrue(can_access_patient(user_no_profession, self.inpatient))
@@ -299,10 +319,9 @@ class SimplifiedPermissionSystemIntegrationTest(TestCase):
         
         # 5. Doctor creates and edits medical events within time limit
         with patch('django.utils.timezone.now') as mock_now:
-            from django.utils import timezone
-            from datetime import timedelta
-            
-            current_time = timezone.now()
+            from datetime import UTC, datetime, timedelta
+
+            current_time = datetime.now(UTC)
             mock_now.return_value = current_time
             self.event.created_at = current_time - timedelta(hours=1)
             

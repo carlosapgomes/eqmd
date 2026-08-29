@@ -20,11 +20,15 @@ class TestSoftDeleteEdgeCases(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            profession_type=0  # MEDICAL_DOCTOR
+            profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.admin = User.objects.create_superuser(
             username='admin',
-            email='admin@example.com'
+            email='admin@example.com',
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_delete_with_invalid_user(self):
@@ -468,7 +472,9 @@ class TestSoftDeleteErrorHandling(TestCase):
         self.user = User.objects.create_user(
             username='erroruser',
             email='error@example.com',
-            profession_type=0  # MEDICAL_DOCTOR
+            profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_delete_method_parameter_validation(self):

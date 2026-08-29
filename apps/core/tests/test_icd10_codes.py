@@ -198,12 +198,12 @@ class Icd10CodesAPITest(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
-        self.user.password_change_required = False
-        self.user.terms_accepted = True
         self.user.account_status = 'active'
-        self.user.save(update_fields=['password_change_required', 'terms_accepted', 'account_status'])
+        self.user.save(update_fields=['account_status'])
         self.client.force_login(self.user)
 
         self.code1 = Icd10Code.objects.create(

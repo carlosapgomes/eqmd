@@ -24,7 +24,7 @@ def get_optimized_user_queryset() -> QuerySet:
     """
     User = get_user_model_lazy()
     return User.objects.select_related(
-        'userprofile'
+        'profile'  # UserProfile.user related_name (was wrongly 'userprofile')
     ).prefetch_related(
         'groups',
         'groups__permissions',

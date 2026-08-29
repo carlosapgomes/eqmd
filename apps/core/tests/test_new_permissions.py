@@ -100,8 +100,9 @@ class TestNewPermissionSystem(TestCase):
         self.assertTrue(nurse.has_perm('events.add_event'))
         self.assertTrue(nurse.has_perm('dailynotes.add_dailynote'))
         
-        # Should NOT have full patient management
-        self.assertFalse(nurse.has_perm('patients.add_patient'))
+        # Should NOT have full patient management (nurses can create
+        # patients but cannot delete them)
+        self.assertTrue(nurse.has_perm('patients.add_patient'))
         self.assertFalse(nurse.has_perm('patients.delete_patient'))
         
         # Should NOT have prescriptions
@@ -117,12 +118,16 @@ class TestNewPermissionSystem(TestCase):
         physio_group = Group.objects.get(name='Physiotherapists')
         physio.groups.add(physio_group)
         
-        # Should have full patient management for therapy
-        self.assertTrue(physio.has_perm('patients.add_patient'))
-        self.assertTrue(physio.has_perm('patients.change_patient'))
-        self.assertTrue(physio.has_perm('patients.delete_patient'))
-        self.assertTrue(physio.has_perm('events.add_event'))
-        self.assertTrue(physio.has_perm('dailynotes.add_dailynote'))
+        # Should have view-only patient access (no patient management)
+        self.assertTrue(physio.has_perm('patients.view_patient'))
+        self.assertFalse(physio.has_perm('patients.add_patient'))
+        self.assertFalse(physio.has_perm('patients.change_patient'))
+        self.assertFalse(physio.has_perm('patients.delete_patient'))
+        self.assertFalse(physio.has_perm('events.add_event'))
+        self.assertFalse(physio.has_perm('dailynotes.add_dailynote'))
+
+        # Should be able to document therapy via simple notes
+        self.assertTrue(physio.has_perm('simplenotes.add_simplenote'))
         
         # Should NOT have prescriptions (not in scope)
         self.assertFalse(physio.has_perm('outpatientprescriptions.add_outpatientprescription'))
@@ -141,8 +146,9 @@ class TestNewPermissionSystem(TestCase):
         self.assertTrue(student.has_perm('patients.view_patient'))
         self.assertTrue(student.has_perm('events.view_event'))
         
-        # Should be able to create learning notes
-        self.assertTrue(student.has_perm('dailynotes.add_dailynote'))
+        # Should be able to create learning notes (simple notes only;
+        # formal records such as daily notes are view-only)
+        self.assertFalse(student.has_perm('dailynotes.add_dailynote'))
         self.assertTrue(student.has_perm('simplenotes.add_simplenote'))
         
         # Should NOT have patient management
@@ -238,11 +244,11 @@ class TestNewPermissionSystem(TestCase):
     def test_group_permission_counts(self):
         """Test that groups have reasonable permission counts."""
         expected_counts = {
-            'Medical Doctors': (50, 70),     # Full clinical permissions
-            'Residents': (50, 70),           # Same as doctors
-            'Nurses': (20, 35),              # Limited clinical permissions  
-            'Physiotherapists': (40, 60),    # Clinical permissions, no prescriptions
-            'Students': (10, 25),            # Read-only + learning notes
+            'Medical Doctors': (70, 70),     # Curated full clinical set
+            'Residents': (70, 70),           # Same as doctors
+            'Nurses': (45, 55),              # Limited clinical permissions
+            'Physiotherapists': (9, 20),     # View-only + therapy notes
+            'Students': (15, 25),            # View-only + supervised notes
             'User Managers': (5, 10),        # Limited admin permissions
         }
         

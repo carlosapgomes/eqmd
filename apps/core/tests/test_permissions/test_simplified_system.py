@@ -48,42 +48,54 @@ class SimplifiedPermissionSystemTests(TestCase):
             username='doctor',
             email='doctor@test.com',
             password='testpass123',
-            profession_type=User.MEDICAL_DOCTOR
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.resident = User.objects.create_user(
             username='resident',
             email='resident@test.com',
             password='testpass123',
-            profession_type=User.RESIDENT
+            profession_type=User.RESIDENT,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.nurse = User.objects.create_user(
             username='nurse',
             email='nurse@test.com',
             password='testpass123',
-            profession_type=User.NURSE
+            profession_type=User.NURSE,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.physiotherapist = User.objects.create_user(
             username='physio',
             email='physio@test.com',
             password='testpass123',
-            profession_type=User.PHYSIOTERAPIST
+            profession_type=User.PHYSIOTERAPIST,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.student = User.objects.create_user(
             username='student',
             email='student@test.com',
             password='testpass123',
-            profession_type=User.STUDENT
+            profession_type=User.STUDENT,
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         # Create user without profession type
         self.no_profession_user = User.objects.create_user(
             username='noprof',
             email='noprof@test.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         # Create mock patients with all status types
