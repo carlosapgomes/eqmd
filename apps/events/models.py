@@ -1,4 +1,5 @@
 import uuid
+from typing import ClassVar
 
 from django.conf import settings
 from django.db import models
@@ -10,14 +11,14 @@ from apps.core.models.soft_delete import SoftDeleteInheritanceQuerySet, SoftDele
 
 class SoftDeleteInheritanceManager(InheritanceManager):
     """Manager that combines InheritanceManager with soft delete functionality."""
-    
+
     def get_queryset(self):
         return SoftDeleteInheritanceQuerySet(self.model, using=self._db).active()
-    
+
     def all_with_deleted(self):
         """Get all objects including soft-deleted ones."""
         return SoftDeleteInheritanceQuerySet(self.model, using=self._db)
-    
+
     def deleted_only(self):
         """Get only soft-deleted objects."""
         return SoftDeleteInheritanceQuerySet(self.model, using=self._db).deleted()
@@ -56,21 +57,26 @@ class SoftDeleteAllInheritanceManager(InheritanceManager):
 
 class EventManager(SoftDeleteInheritanceManager):
     """Manager that excludes drafts by default."""
-    
+
     def get_queryset(self):
         return super().get_queryset().filter(is_draft=False)
-    
+
     def with_drafts(self):
         """Include drafts in queryset."""
         return SoftDeleteInheritanceQuerySet(self.model, using=self._db).active()
-    
+
     def drafts_only(self):
         """Get only drafts."""
-        return SoftDeleteInheritanceQuerySet(self.model, using=self._db).active().filter(is_draft=True)
-    
+        return (
+            SoftDeleteInheritanceQuerySet(self.model, using=self._db)
+            .active()
+            .filter(is_draft=True)
+        )
+
     def expired_drafts(self):
         """Get expired drafts for cleanup."""
         from django.utils import timezone
+
         return self.drafts_only().filter(draft_expires_at__lt=timezone.now())
 
 
@@ -88,17 +94,17 @@ class Event(SoftDeleteModel):
     VIDEO_CLIP_EVENT = 10
     PDF_FORM_EVENT = 11
     RECORD_NUMBER_CHANGE_EVENT = 12  # NEW
-    ADMISSION_EVENT = 13             # NEW
-    DISCHARGE_EVENT = 14             # NEW
-    STATUS_CHANGE_EVENT = 15         # NEW
-    EMERGENCY_ADMISSION_EVENT = 16   # NEW
-    TRANSFER_EVENT = 17              # NEW
-    DEATH_DECLARATION_EVENT = 18     # NEW
-    OUTPATIENT_STATUS_EVENT = 19     # NEW
-    TAG_ADDED_EVENT = 20              # NEW
-    TAG_REMOVED_EVENT = 21            # NEW
-    TAG_BULK_REMOVE_EVENT = 22        # NEW
-    CONSENT_FORM_EVENT = 23           # NEW
+    ADMISSION_EVENT = 13  # NEW
+    DISCHARGE_EVENT = 14  # NEW
+    STATUS_CHANGE_EVENT = 15  # NEW
+    EMERGENCY_ADMISSION_EVENT = 16  # NEW
+    TRANSFER_EVENT = 17  # NEW
+    DEATH_DECLARATION_EVENT = 18  # NEW
+    OUTPATIENT_STATUS_EVENT = 19  # NEW
+    TAG_ADDED_EVENT = 20  # NEW
+    TAG_REMOVED_EVENT = 21  # NEW
+    TAG_BULK_REMOVE_EVENT = 22  # NEW
+    CONSENT_FORM_EVENT = 23  # NEW
     PATIENT_PROFILE_CHANGE_EVENT = 24  # NEW
 
     EVENT_TYPE_CHOICES = (
@@ -115,38 +121,50 @@ class Event(SoftDeleteModel):
         (VIDEO_CLIP_EVENT, "Vídeo Curto"),
         (PDF_FORM_EVENT, "Formulário PDF"),
         (RECORD_NUMBER_CHANGE_EVENT, "Alteração de Prontuário"),  # NEW
-        (ADMISSION_EVENT, "Admissão Hospitalar"),                 # NEW
-        (DISCHARGE_EVENT, "Alta Hospitalar"),                     # NEW
-        (STATUS_CHANGE_EVENT, "Alteração de Status"),             # NEW
-        (EMERGENCY_ADMISSION_EVENT, "Admissão de Emergência"),    # NEW
-        (TRANSFER_EVENT, "Transferência"),                        # NEW
-        (DEATH_DECLARATION_EVENT, "Declaração de Óbito"),         # NEW
-        (OUTPATIENT_STATUS_EVENT, "Status Ambulatorial"),         # NEW
-        (TAG_ADDED_EVENT, "Tag Adicionada"),                      # NEW
-        (TAG_REMOVED_EVENT, "Tag Removida"),                      # NEW
-        (TAG_BULK_REMOVE_EVENT, "Tags Removidas em Lote"),        # NEW
-        (CONSENT_FORM_EVENT, "Termo de Consentimento"),           # NEW
-        (PATIENT_PROFILE_CHANGE_EVENT, "Alteração de Perfil"),     # NEW
+        (ADMISSION_EVENT, "Admissão Hospitalar"),  # NEW
+        (DISCHARGE_EVENT, "Alta Hospitalar"),  # NEW
+        (STATUS_CHANGE_EVENT, "Alteração de Status"),  # NEW
+        (EMERGENCY_ADMISSION_EVENT, "Admissão de Emergência"),  # NEW
+        (TRANSFER_EVENT, "Transferência"),  # NEW
+        (DEATH_DECLARATION_EVENT, "Declaração de Óbito"),  # NEW
+        (OUTPATIENT_STATUS_EVENT, "Status Ambulatorial"),  # NEW
+        (TAG_ADDED_EVENT, "Tag Adicionada"),  # NEW
+        (TAG_REMOVED_EVENT, "Tag Removida"),  # NEW
+        (TAG_BULK_REMOVE_EVENT, "Tags Removidas em Lote"),  # NEW
+        (CONSENT_FORM_EVENT, "Termo de Consentimento"),  # NEW
+        (PATIENT_PROFILE_CHANGE_EVENT, "Alteração de Perfil"),  # NEW
     )
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event_type = models.PositiveSmallIntegerField(
-        choices=EVENT_TYPE_CHOICES, verbose_name="Tipo de Evento"
+    id: ClassVar[models.UUIDField] = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
     )
-    event_datetime = models.DateTimeField(verbose_name="Data e Hora do Evento")
-    description = models.CharField(max_length=255, verbose_name="Descrição")
-    patient = models.ForeignKey(
+    event_type: ClassVar[models.PositiveSmallIntegerField] = (
+        models.PositiveSmallIntegerField(
+            choices=EVENT_TYPE_CHOICES, verbose_name="Tipo de Evento"
+        )
+    )
+    event_datetime: ClassVar[models.DateTimeField] = models.DateTimeField(
+        verbose_name="Data e Hora do Evento"
+    )
+    description: ClassVar[models.CharField] = models.CharField(
+        max_length=255, verbose_name="Descrição"
+    )
+    patient: ClassVar[models.ForeignKey] = models.ForeignKey(
         "patients.Patient", on_delete=models.PROTECT, verbose_name="Paciente"
     )
-    created_by = models.ForeignKey(
+    created_by: ClassVar[models.ForeignKey] = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="event_set",
         verbose_name="Criado por",
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
-    updated_by = models.ForeignKey(
+    created_at: ClassVar[models.DateTimeField] = models.DateTimeField(
+        auto_now_add=True, verbose_name="Criado em"
+    )
+    updated_at: ClassVar[models.DateTimeField] = models.DateTimeField(
+        auto_now=True, verbose_name="Atualizado em"
+    )
+    updated_by: ClassVar[models.ForeignKey] = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="event_updated",
@@ -154,51 +172,53 @@ class Event(SoftDeleteModel):
     )
 
     # Draft fields for bot-created content
-    is_draft = models.BooleanField(
+    is_draft: ClassVar[models.BooleanField] = models.BooleanField(
         default=False,
         verbose_name="É Rascunho",
-        help_text="Indica se este evento é um rascunho criado por bot"
+        help_text="Indica se este evento é um rascunho criado por bot",
     )
-    draft_created_by_bot = models.CharField(
+    draft_created_by_bot: ClassVar[models.CharField] = models.CharField(
         max_length=255,
         blank=True,
         verbose_name="Criado por Bot",
-        help_text="Client ID do bot que criou o rascunho"
+        help_text="Client ID do bot que criou o rascunho",
     )
-    draft_delegated_by = models.ForeignKey(
+    draft_delegated_by: ClassVar[models.ForeignKey] = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="delegated_drafts",
         verbose_name="Delegado por",
-        help_text="Usuário que delegou permissão ao bot"
+        help_text="Usuário que delegou permissão ao bot",
     )
-    draft_expires_at = models.DateTimeField(
+    draft_expires_at: ClassVar[models.DateTimeField] = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Expira em",
-        help_text="Quando o rascunho expira automaticamente"
+        help_text="Quando o rascunho expira automaticamente",
     )
-    
-    draft_promoted_at = models.DateTimeField(
-        null=True, blank=True,
+
+    draft_promoted_at: ClassVar[models.DateTimeField] = models.DateTimeField(
+        null=True,
+        blank=True,
         verbose_name="Promovido em",
-        help_text="Data/hora em que o rascunho foi promovido a definitivo"
+        help_text="Data/hora em que o rascunho foi promovido a definitivo",
     )
-    
-    draft_promoted_by = models.ForeignKey(
+
+    draft_promoted_by: ClassVar[models.ForeignKey] = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='promoted_drafts',
+        null=True,
+        blank=True,
+        related_name="promoted_drafts",
         verbose_name="Promovido por",
-        help_text="Usuário que promoveu este rascunho a definitivo"
+        help_text="Usuário que promoveu este rascunho a definitivo",
     )
 
     objects = EventManager()
     all_objects = SoftDeleteAllInheritanceManager()
-    
+
     # History tracking
     history = HistoricalRecords(
         history_change_reason_field=models.TextField(null=True),
@@ -249,7 +269,7 @@ class Event(SoftDeleteModel):
             21: "bg-warning",  # Tag Removed
             22: "bg-danger",  # Tag Bulk Remove
             23: "bg-medical-primary",  # Consent Form
-            24: "bg-info",              # Profile Change
+            24: "bg-info",  # Profile Change
         }
         return badge_classes.get(self.event_type, "bg-secondary")
 
@@ -279,8 +299,8 @@ class Event(SoftDeleteModel):
             20: "bi-tag-fill",  # Tag Added
             21: "bi-tag",  # Tag Removed
             22: "bi-tags",  # Tag Bulk Remove
-            23: "bi-pen",              # Consent Form
-            24: "bi-person-gear",        # Profile Change
+            23: "bi-pen",  # Consent Form
+            24: "bi-person-gear",  # Profile Change
         }
         return icon_classes.get(self.event_type, "bi-file-text")
 
@@ -310,8 +330,8 @@ class Event(SoftDeleteModel):
             20: "Tag +",  # Tag Adicionada
             21: "Tag -",  # Tag Removida
             22: "Tags --",  # Tags Removidas em Lote
-            23: "Termo",              # Termo de Consentimento
-            24: "Perfil",              # Alteração de Perfil
+            23: "Termo",  # Termo de Consentimento
+            24: "Perfil",  # Alteração de Perfil
         }
         return short_display_map.get(self.event_type, self.get_event_type_display())
 
@@ -322,11 +342,11 @@ class Event(SoftDeleteModel):
         """
         from django.core.exceptions import ImproperlyConfigured
         from django.urls import reverse
-        
+
         # Timeline-only events that don't have detail pages
         timeline_only_events = [
             self.TRANSFER_EVENT,
-            self.STATUS_CHANGE_EVENT, 
+            self.STATUS_CHANGE_EVENT,
             self.RECORD_NUMBER_CHANGE_EVENT,
             self.ADMISSION_EVENT,
             self.DISCHARGE_EVENT,
@@ -337,10 +357,13 @@ class Event(SoftDeleteModel):
             self.TAG_BULK_REMOVE_EVENT,
             self.PATIENT_PROFILE_CHANGE_EVENT,
         ]
-        
+
         if self.event_type in timeline_only_events:
             # Redirect to patient timeline for informational events
-            return reverse('apps.patients:patient_events_timeline', kwargs={'patient_id': self.patient.pk})
+            return reverse(
+                "apps.patients:patient_events_timeline",
+                kwargs={"patient_id": self.patient.pk},
+            )
 
         raise ImproperlyConfigured(
             f"The {self.__class__.__name__} model must define a get_absolute_url() method."
@@ -352,11 +375,11 @@ class Event(SoftDeleteModel):
         return None since they're typically not editable.
         """
         from django.core.exceptions import ImproperlyConfigured
-        
+
         # Timeline-only events that don't have edit pages
         timeline_only_events = [
             self.TRANSFER_EVENT,
-            self.STATUS_CHANGE_EVENT, 
+            self.STATUS_CHANGE_EVENT,
             self.RECORD_NUMBER_CHANGE_EVENT,
             self.ADMISSION_EVENT,
             self.DISCHARGE_EVENT,
@@ -367,7 +390,7 @@ class Event(SoftDeleteModel):
             self.TAG_BULK_REMOVE_EVENT,
             self.PATIENT_PROFILE_CHANGE_EVENT,
         ]
-        
+
         if self.event_type in timeline_only_events:
             # Timeline-only events are not editable
             return
@@ -389,7 +412,7 @@ class Event(SoftDeleteModel):
         return timezone.now() <= edit_deadline
 
     class Meta:
-        db_table = 'events_event'
+        db_table = "events_event"
         ordering = ["-created_at"]  # noqa: RUF012 — declarative Model Meta attribute.
         verbose_name = "Evento"
         verbose_name_plural = "Eventos"
@@ -398,8 +421,8 @@ class Event(SoftDeleteModel):
             ("delete_own_event_24h", "Can delete own events within 24 hours"),
         ]
         indexes = [  # noqa: RUF012 — declarative Model Meta attribute.
-            models.Index(fields=['is_deleted', 'patient', 'event_datetime']),
-            models.Index(fields=['is_deleted', 'created_by']),
+            models.Index(fields=["is_deleted", "patient", "event_datetime"]),
+            models.Index(fields=["is_deleted", "created_by"]),
             models.Index(
                 fields=["patient", "-event_datetime"], name="event_patient_dt_idx"
             ),
@@ -414,47 +437,47 @@ class Event(SoftDeleteModel):
                 fields=["patient", "event_type", "-event_datetime"],
                 name="event_pt_type_dt_idx",
             ),
-            models.Index(fields=["is_draft", "draft_expires_at"], name="event_draft_expires_idx"),
+            models.Index(
+                fields=["is_draft", "draft_expires_at"], name="event_draft_expires_idx"
+            ),
             models.Index(fields=["draft_created_by_bot"], name="event_draft_bot_idx"),
         ]
 
 
 class RecordNumberChangeEvent(Event):
     """Event for tracking record number changes in patient timeline"""
-    
-    record_change = models.OneToOneField(
-        'patients.PatientRecordNumber',
+
+    record_change: ClassVar[models.OneToOneField] = models.OneToOneField(
+        "patients.PatientRecordNumber",
         on_delete=models.CASCADE,
-        related_name='timeline_event',
-        verbose_name="Alteração de Prontuário"
+        related_name="timeline_event",
+        verbose_name="Alteração de Prontuário",
     )
-    
+
     # Denormalized fields for performance and display
-    old_record_number = models.CharField(
-        max_length=50, 
+    old_record_number: ClassVar[models.CharField] = models.CharField(
+        max_length=50,
         blank=True,
         verbose_name="Número Anterior",
-        help_text="Número de prontuário anterior"
+        help_text="Número de prontuário anterior",
     )
-    new_record_number = models.CharField(
-        max_length=50,
-        verbose_name="Novo Número",
-        help_text="Novo número de prontuário"
+    new_record_number: ClassVar[models.CharField] = models.CharField(
+        max_length=50, verbose_name="Novo Número", help_text="Novo número de prontuário"
     )
-    change_reason = models.TextField(
+    change_reason: ClassVar[models.TextField] = models.TextField(
         blank=True,
         verbose_name="Motivo da Alteração",
-        help_text="Razão para a mudança do número"
+        help_text="Razão para a mudança do número",
     )
-    
+
     class Meta:
         verbose_name = "Evento de Alteração de Prontuário"
         verbose_name_plural = "Eventos de Alteração de Prontuário"
-    
+
     def save(self, *args, **kwargs):
         """Override save to set event_type and sync with record_change"""
         self.event_type = self.RECORD_NUMBER_CHANGE_EVENT
-        
+
         # Sync data from related PatientRecordNumber if available
         if self.record_change_id:
             record = self.record_change
@@ -463,61 +486,68 @@ class RecordNumberChangeEvent(Event):
             self.change_reason = record.change_reason
             self.patient = record.patient
             self.event_datetime = record.effective_date
-        
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         if self.old_record_number:
             return f"Alteração de prontuário: {self.old_record_number} → {self.new_record_number}"
         return f"Novo prontuário: {self.new_record_number}"
-    
+
     def get_absolute_url(self):
         """Return URL to view record number change details"""
         from django.urls import reverse
-        return reverse('patients:api_patient_record_numbers', kwargs={'patient_id': self.patient.pk})
-    
+
+        return reverse(
+            "patients:api_patient_record_numbers",
+            kwargs={"patient_id": self.patient.pk},
+        )
+
     def get_edit_url(self):
         """Return URL to edit record number change"""
         from django.urls import reverse
-        return reverse('patients:record_number_update', kwargs={'pk': self.record_change.pk})
+
+        return reverse(
+            "patients:record_number_update", kwargs={"pk": self.record_change.pk}
+        )
 
 
 class AdmissionEvent(Event):
     """Event for tracking patient admissions in timeline"""
-    
-    admission = models.OneToOneField(
-        'patients.PatientAdmission',
+
+    admission: ClassVar[models.OneToOneField] = models.OneToOneField(
+        "patients.PatientAdmission",
         on_delete=models.CASCADE,
-        related_name='timeline_event',
-        verbose_name="Internação"
+        related_name="timeline_event",
+        verbose_name="Internação",
     )
-    
+
     # Denormalized fields for performance and display
-    admission_type = models.CharField(
+    admission_type: ClassVar[models.CharField] = models.CharField(
         max_length=20,
         verbose_name="Tipo de Admissão",
-        help_text="Tipo da admissão hospitalar"
+        help_text="Tipo da admissão hospitalar",
     )
-    initial_bed = models.CharField(
-        max_length=20, 
+    initial_bed: ClassVar[models.CharField] = models.CharField(
+        max_length=20,
         blank=True,
         verbose_name="Leito Inicial",
-        help_text="Leito/quarto inicial"
+        help_text="Leito/quarto inicial",
     )
-    admission_diagnosis = models.TextField(
+    admission_diagnosis: ClassVar[models.TextField] = models.TextField(
         blank=True,
         verbose_name="Diagnóstico de Admissão",
-        help_text="Diagnóstico principal na admissão"
+        help_text="Diagnóstico principal na admissão",
     )
-    
+
     class Meta:
         verbose_name = "Evento de Admissão"
         verbose_name_plural = "Eventos de Admissão"
-    
+
     def save(self, *args, **kwargs):
         """Override save to set event_type and sync with admission"""
         self.event_type = self.ADMISSION_EVENT
-        
+
         # Sync data from related PatientAdmission if available
         if self.admission_id:
             admission = self.admission
@@ -526,65 +556,67 @@ class AdmissionEvent(Event):
             self.admission_diagnosis = admission.admission_diagnosis
             self.patient = admission.patient
             self.event_datetime = admission.admission_datetime
-        
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return f"Admissão - {self.admission_type}"
-    
+
     def get_absolute_url(self):
         """Return URL to view admission details"""
         from django.urls import reverse
-        return reverse('patients:api_admission_detail', kwargs={'admission_id': self.admission.pk})
-    
+
+        return reverse(
+            "patients:api_admission_detail", kwargs={"admission_id": self.admission.pk}
+        )
+
     def get_edit_url(self):
         """Return URL to edit admission"""
         from django.urls import reverse
-        return reverse('patients:admission_update', kwargs={'pk': self.admission.pk})
+
+        return reverse("patients:admission_update", kwargs={"pk": self.admission.pk})
 
 
 class DischargeEvent(Event):
     """Event for tracking patient discharges in timeline"""
-    
-    admission = models.OneToOneField(
-        'patients.PatientAdmission',
+
+    admission: ClassVar[models.OneToOneField] = models.OneToOneField(
+        "patients.PatientAdmission",
         on_delete=models.CASCADE,
-        related_name='discharge_timeline_event',
-        verbose_name="Internação"
+        related_name="discharge_timeline_event",
+        verbose_name="Internação",
     )
-    
+
     # Denormalized fields for performance and display
-    discharge_type = models.CharField(
-        max_length=20,
-        verbose_name="Tipo de Alta",
-        help_text="Tipo da alta hospitalar"
+    discharge_type: ClassVar[models.CharField] = models.CharField(
+        max_length=20, verbose_name="Tipo de Alta", help_text="Tipo da alta hospitalar"
     )
-    final_bed = models.CharField(
-        max_length=20, 
+    final_bed: ClassVar[models.CharField] = models.CharField(
+        max_length=20,
         blank=True,
         verbose_name="Leito Final",
-        help_text="Último leito/quarto"
+        help_text="Último leito/quarto",
     )
-    discharge_diagnosis = models.TextField(
+    discharge_diagnosis: ClassVar[models.TextField] = models.TextField(
         blank=True,
         verbose_name="Diagnóstico de Alta",
-        help_text="Diagnóstico principal na alta"
+        help_text="Diagnóstico principal na alta",
     )
-    stay_duration_days = models.IntegerField(
-        null=True, 
+    stay_duration_days: ClassVar[models.IntegerField] = models.IntegerField(
+        null=True,
         blank=True,
         verbose_name="Duração da Internação (dias)",
-        help_text="Duração total em dias"
+        help_text="Duração total em dias",
     )
-    
+
     class Meta:
         verbose_name = "Evento de Alta"
         verbose_name_plural = "Eventos de Alta"
-    
+
     def save(self, *args, **kwargs):
         """Override save to set event_type and sync with admission"""
         self.event_type = self.DISCHARGE_EVENT
-        
+
         # Sync data from related PatientAdmission if available
         if self.admission_id:
             admission = self.admission
@@ -594,118 +626,127 @@ class DischargeEvent(Event):
             self.stay_duration_days = admission.stay_duration_days
             self.patient = admission.patient
             self.event_datetime = admission.discharge_datetime
-        
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
-        duration_text = f" ({self.stay_duration_days}d)" if self.stay_duration_days else ""
+        duration_text = (
+            f" ({self.stay_duration_days}d)" if self.stay_duration_days else ""
+        )
         return f"Alta - {self.discharge_type}{duration_text}"
-    
+
     def get_absolute_url(self):
         """Return URL to view discharge details"""
         from django.urls import reverse
-        return reverse('patients:api_admission_detail', kwargs={'admission_id': self.admission.pk})
-    
+
+        return reverse(
+            "patients:api_admission_detail", kwargs={"admission_id": self.admission.pk}
+        )
+
     def get_edit_url(self):
         """Return URL to edit discharge"""
         from django.urls import reverse
-        return reverse('patients:discharge_patient', kwargs={'pk': self.admission.pk})
+
+        return reverse("patients:discharge_patient", kwargs={"pk": self.admission.pk})
 
 
 class StatusChangeEvent(Event):
     """Event for tracking patient status changes in timeline"""
-    
-    previous_status = models.PositiveSmallIntegerField(
-        choices=None,  # Will be set in __init__
-        verbose_name="Status Anterior"
+
+    previous_status: ClassVar[models.PositiveSmallIntegerField] = (
+        models.PositiveSmallIntegerField(
+            choices=None,  # Will be set in __init__
+            verbose_name="Status Anterior",
+        )
     )
-    new_status = models.PositiveSmallIntegerField(
-        choices=None,  # Will be set in __init__
-        verbose_name="Novo Status"
+    new_status: ClassVar[models.PositiveSmallIntegerField] = (
+        models.PositiveSmallIntegerField(
+            choices=None,  # Will be set in __init__
+            verbose_name="Novo Status",
+        )
     )
-    reason = models.TextField(
-        blank=True,
-        verbose_name="Motivo da Alteração"
+    reason: ClassVar[models.TextField] = models.TextField(
+        blank=True, verbose_name="Motivo da Alteração"
     )
-    
+
     # Optional fields for specific status changes
-    ward = models.ForeignKey(
-        'patients.Ward',
+    ward: ClassVar[models.ForeignKey] = models.ForeignKey(
+        "patients.Ward",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name="Ala"
-    )
-    bed = models.CharField(
-        max_length=20, blank=True,
-        verbose_name="Leito"
-    )
-    discharge_reason = models.TextField(
+        null=True,
         blank=True,
-        verbose_name="Motivo da Alta"
+        verbose_name="Ala",
     )
-    death_time = models.DateTimeField(
-        null=True, blank=True,
-        verbose_name="Hora do Óbito"
+    bed: ClassVar[models.CharField] = models.CharField(
+        max_length=20, blank=True, verbose_name="Leito"
     )
-    
+    discharge_reason: ClassVar[models.TextField] = models.TextField(
+        blank=True, verbose_name="Motivo da Alta"
+    )
+    death_time: ClassVar[models.DateTimeField] = models.DateTimeField(
+        null=True, blank=True, verbose_name="Hora do Óbito"
+    )
+
     class Meta:
         verbose_name = "Evento de Alteração de Status"
         verbose_name_plural = "Eventos de Alteração de Status"
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Import here to avoid circular import
         from apps.patients.models import Patient
+
         # Set choices dynamically to avoid circular import
-        self._meta.get_field('previous_status').choices = Patient.Status.choices
-        self._meta.get_field('new_status').choices = Patient.Status.choices
-    
+        self._meta.get_field("previous_status").choices = Patient.Status.choices
+        self._meta.get_field("new_status").choices = Patient.Status.choices
+
     def save(self, *args, **kwargs):
         """Override save to set event_type"""
         self.event_type = self.STATUS_CHANGE_EVENT
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         from apps.patients.models import Patient
+
         status_dict = dict(Patient.Status.choices)
         prev_label = status_dict.get(self.previous_status, "Desconhecido")
         new_label = status_dict.get(self.new_status, "Desconhecido")
         return f"Status: {prev_label} → {new_label}"
-    
+
     def get_absolute_url(self):
         """Return URL to view status change details"""
         from django.urls import reverse
-        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
-    
+
+        return reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
+
     def get_edit_url(self):
         """Return URL to edit status change"""
         from django.urls import reverse
-        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+
+        return reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
 
 
 class TagAddedEvent(Event):
     """Event for tracking tag additions to patients in timeline"""
-    
-    tag_name = models.CharField(
-        max_length=100,
-        verbose_name="Nome da Tag",
-        help_text="Nome da tag adicionada"
+
+    tag_name: ClassVar[models.CharField] = models.CharField(
+        max_length=100, verbose_name="Nome da Tag", help_text="Nome da tag adicionada"
     )
-    tag_color = models.CharField(
+    tag_color: ClassVar[models.CharField] = models.CharField(
         max_length=7,
         verbose_name="Cor da Tag",
-        help_text="Cor da tag em formato hexadecimal"
+        help_text="Cor da tag em formato hexadecimal",
     )
-    tag_notes = models.TextField(
+    tag_notes: ClassVar[models.TextField] = models.TextField(
         blank=True,
         verbose_name="Observações da Tag",
-        help_text="Observações sobre a atribuição da tag"
+        help_text="Observações sobre a atribuição da tag",
     )
-    
+
     class Meta:
         verbose_name = "Evento de Tag Adicionada"
         verbose_name_plural = "Eventos de Tags Adicionadas"
-    
+
     def save(self, *args, **kwargs):
         """Override save to set event_type"""
         self.event_type = self.TAG_ADDED_EVENT
@@ -713,44 +754,46 @@ class TagAddedEvent(Event):
         if not self.description:
             self.description = f"Tag '{self.tag_name}' adicionada"
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return f"Tag adicionada: {self.tag_name}"
-    
+
     def get_absolute_url(self):
         """Return URL to view patient tags"""
         from django.urls import reverse
-        return reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
-    
+
+        return reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
+
     def get_edit_url(self):
         """Return URL to patient detail (tags can't be edited, only removed)"""
         from django.urls import reverse
-        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+
+        return reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
 
 
 class TagRemovedEvent(Event):
     """Event for tracking tag removals from patients in timeline"""
-    
-    tag_name = models.CharField(
-        max_length=100,
-        verbose_name="Nome da Tag",
-        help_text="Nome da tag removida"
+
+    tag_name: ClassVar[models.CharField] = models.CharField(
+        max_length=100, verbose_name="Nome da Tag", help_text="Nome da tag removida"
     )
-    tag_color = models.CharField(
+    tag_color: ClassVar[models.CharField] = models.CharField(
         max_length=7,
         verbose_name="Cor da Tag",
-        help_text="Cor da tag em formato hexadecimal"
+        help_text="Cor da tag em formato hexadecimal",
     )
-    tag_notes = models.TextField(
+    tag_notes: ClassVar[models.TextField] = models.TextField(
         blank=True,
         verbose_name="Observações da Tag",
-        help_text="Observações que a tag tinha antes da remoção"
+        help_text="Observações que a tag tinha antes da remoção",
     )
-    
+
     class Meta:
         verbose_name = "Evento de Tag Removida"
         verbose_name_plural = "Eventos de Tags Removidas"
-    
+
     def save(self, *args, **kwargs):
         """Override save to set event_type"""
         self.event_type = self.TAG_REMOVED_EVENT
@@ -758,37 +801,41 @@ class TagRemovedEvent(Event):
         if not self.description:
             self.description = f"Tag '{self.tag_name}' removida"
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return f"Tag removida: {self.tag_name}"
-    
+
     def get_absolute_url(self):
         """Return URL to view patient tags"""
         from django.urls import reverse
-        return reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
-    
+
+        return reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
+
     def get_edit_url(self):
         """Return URL to patient detail (removed tags can't be restored from timeline)"""
         from django.urls import reverse
-        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+
+        return reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
 
 
 class TagBulkRemoveEvent(Event):
     """Event for tracking bulk removal of tags from patients in timeline"""
-    
-    tag_count = models.PositiveIntegerField(
+
+    tag_count: ClassVar[models.PositiveIntegerField] = models.PositiveIntegerField(
         verbose_name="Quantidade de Tags",
-        help_text="Número de tags removidas na operação em lote"
+        help_text="Número de tags removidas na operação em lote",
     )
-    tag_names = models.TextField(
+    tag_names: ClassVar[models.TextField] = models.TextField(
         verbose_name="Nomes das Tags",
-        help_text="Lista de nomes das tags removidas, separados por vírgula"
+        help_text="Lista de nomes das tags removidas, separados por vírgula",
     )
-    
+
     class Meta:
         verbose_name = "Evento de Remoção em Lote de Tags"
         verbose_name_plural = "Eventos de Remoção em Lote de Tags"
-    
+
     def save(self, *args, **kwargs):
         """Override save to set event_type"""
         self.event_type = self.TAG_BULK_REMOVE_EVENT
@@ -796,19 +843,23 @@ class TagBulkRemoveEvent(Event):
         if not self.description:
             self.description = f"{self.tag_count} tag(s) removida(s) em lote"
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return f"Remoção em lote: {self.tag_count} tag(s)"
-    
+
     def get_absolute_url(self):
         """Return URL to view patient tags"""
         from django.urls import reverse
-        return reverse('patients:patient_tags_api', kwargs={'patient_id': self.patient.pk})
-    
+
+        return reverse(
+            "patients:patient_tags_api", kwargs={"patient_id": self.patient.pk}
+        )
+
     def get_edit_url(self):
         """Return URL to patient detail (bulk removed tags can't be restored from timeline)"""
         from django.urls import reverse
-        return reverse('patients:patient_detail', kwargs={'pk': self.patient.pk})
+
+        return reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
 
 
 class PatientProfileChangeEvent(Event):
@@ -818,14 +869,14 @@ class PatientProfileChangeEvent(Event):
     One event per save(), containing all changed fields.
     """
 
-    PLACEHOLDER = '—'
+    PLACEHOLDER = "—"
 
-    changed_fields = models.TextField(
+    changed_fields: ClassVar[models.TextField] = models.TextField(
         blank=True,
         verbose_name="Campos Alterados",
         help_text="Lista ordenada de campos alterados (nomes internos, separados por vírgula)",
     )
-    change_summary = models.TextField(
+    change_summary: ClassVar[models.TextField] = models.TextField(
         blank=True,
         verbose_name="Resumo da Alteração",
         help_text="Texto renderizável para fallback de card",
@@ -858,26 +909,27 @@ class PatientProfileChangeEvent(Event):
     def get_absolute_url(self):
         """Return URL to patient timeline."""
         from django.urls import reverse
+
         return reverse(
-            'apps.patients:patient_events_timeline',
-            kwargs={'patient_id': self.patient.pk},
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.patient.pk},
         )
 
     # Local label mapping — authoritative source for this event type.
     # Kept in sync with apps.patients.signals.PROFILE_FIELD_LABELS.
     # Declarative display map; not mutated at runtime.
     FIELD_LABELS = {  # noqa: RUF012
-        'name': 'Nome',
-        'birthday': 'Data de Nascimento',
-        'gender': 'Sexo',
-        'phone': 'Telefone',
-        'address': 'Endereço',
-        'city': 'Cidade',
-        'state': 'Estado',
-        'zip_code': 'Código Postal',
-        'id_number': 'Número de Identidade',
-        'fiscal_number': 'Número Fiscal',
-        'healthcard_number': 'Número do Cartão de Saúde',
+        "name": "Nome",
+        "birthday": "Data de Nascimento",
+        "gender": "Sexo",
+        "phone": "Telefone",
+        "address": "Endereço",
+        "city": "Cidade",
+        "state": "Estado",
+        "zip_code": "Código Postal",
+        "id_number": "Número de Identidade",
+        "fiscal_number": "Número Fiscal",
+        "healthcard_number": "Número do Cartão de Saúde",
     }
 
     @property
@@ -887,16 +939,18 @@ class PatientProfileChangeEvent(Event):
         Used by the timeline card template to render field-level diffs.
         """
         result = []
-        for field_name in self.changed_fields.split(','):
+        for field_name in self.changed_fields.split(","):
             field_name = field_name.strip()
             if not field_name:
                 continue
-            result.append({
-                'field': field_name,
-                'label': self.FIELD_LABELS.get(field_name, field_name),
-                'old_value': self.previous_values.get(field_name, self.PLACEHOLDER),
-                'new_value': self.new_values.get(field_name, self.PLACEHOLDER),
-            })
+            result.append(
+                {
+                    "field": field_name,
+                    "label": self.FIELD_LABELS.get(field_name, field_name),
+                    "old_value": self.previous_values.get(field_name, self.PLACEHOLDER),
+                    "new_value": self.new_values.get(field_name, self.PLACEHOLDER),
+                }
+            )
         return result
 
     def get_edit_url(self):

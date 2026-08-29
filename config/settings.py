@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -134,7 +135,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",  # Built-in history tracking
-    "apps.core.middleware.EnhancedHistoryMiddleware",      # Our IP tracking enhancement
+    "apps.core.middleware.EnhancedHistoryMiddleware",  # Our IP tracking enhancement
     "apps.core.middleware.PasswordChangeRequiredMiddleware",  # Force password change
     "apps.core.middleware.TermsAcceptanceRequiredMiddleware",  # Force terms acceptance
     "apps.core.middleware.UserLifecycleMiddleware",  # User lifecycle management
@@ -213,20 +214,20 @@ USE_TZ = True
 # Cache configuration
 # https://docs.djangoproject.com/en/5.2/topics/cache/
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'eqmd-cache',
-        'TIMEOUT': 300,  # 5 minutes default timeout
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-            'CULL_FREQUENCY': 3,
-        }
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "eqmd-cache",
+        "TIMEOUT": 300,  # 5 minutes default timeout
+        "OPTIONS": {
+            "MAX_ENTRIES": 1000,
+            "CULL_FREQUENCY": 3,
+        },
     }
 }
 
 # Session configuration to use cache
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
-SESSION_CACHE_ALIAS = 'default'
+SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+SESSION_CACHE_ALIAS = "default"
 
 
 # Static files (CSS, JavaScript, Images)
@@ -251,21 +252,25 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB for videos
 MEDIA_IMAGE_MAX_SIZE = 5 * 1024 * 1024  # 5MB
 MEDIA_VIDEO_MAX_SIZE = 50 * 1024 * 1024  # 50MB
 MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes in seconds
-MEDIA_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-MEDIA_ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
-MEDIA_ALLOWED_VIDEO_CODECS = ['h264', 'hevc', 'vp8', 'vp9', 'av1']
+MEDIA_ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
+MEDIA_ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"]
+MEDIA_ALLOWED_VIDEO_CODECS = ["h264", "hevc", "vp8", "vp9", "av1"]
 
 # Image storage configurations for FilePond
-DJANGO_DRF_FILEPOND_STORAGES_BACKEND_PHOTO = 'apps.mediafiles.storage.SecureImageStorage'
-DJANGO_DRF_FILEPOND_STORAGES_BACKEND_PHOTOSERIES = 'apps.mediafiles.storage.SecurePhotoSeriesStorage'
+DJANGO_DRF_FILEPOND_STORAGES_BACKEND_PHOTO = (
+    "apps.mediafiles.storage.SecureImageStorage"
+)
+DJANGO_DRF_FILEPOND_STORAGES_BACKEND_PHOTOSERIES = (
+    "apps.mediafiles.storage.SecurePhotoSeriesStorage"
+)
 
 # Image processing settings
 MEDIA_THUMBNAIL_SIZE = (300, 300)
 
 # Security settings for media files
-MEDIA_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
-MEDIA_ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov']
-MEDIA_ALLOWED_VIDEO_FORMATS = ['mp4', 'webm', 'mov']  # Container formats
+MEDIA_ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
+MEDIA_ALLOWED_VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov"]
+MEDIA_ALLOWED_VIDEO_FORMATS = ["mp4", "webm", "mov"]  # Container formats
 MEDIA_MAX_FILENAME_LENGTH = 100
 MEDIA_USE_UUID_FILENAMES = True  # Use UUID-based secure filenames
 MEDIA_ENABLE_FILE_DEDUPLICATION = True  # Enable SHA-256 hash deduplication
@@ -322,8 +327,8 @@ ACCOUNT_SIGNUP_ENABLED = False
 # Additional security measures
 ACCOUNT_PREVENT_ENUMERATION = True
 ACCOUNT_RATE_LIMITS = {
-    'login_failed': '5/m',
-    'signup': '0/m',  # Block all signup attempts
+    "login_failed": "5/m",
+    "signup": "0/m",  # Block all signup attempts
 }
 
 # Login and Logout Configuration
@@ -334,94 +339,95 @@ LOGIN_REDIRECT_URL = "core:dashboard"
 PASSWORD_RESET_TIMEOUT = 86400  # 24 hours (24 * 60 * 60 seconds)
 
 # FilePond Configuration - use media volume directories
-DJANGO_DRF_FILEPOND_UPLOAD_TMP = str(MEDIA_ROOT / 'videos' / 'tmp' / 'filepond_uploads')
-DJANGO_DRF_FILEPOND_FILE_STORE_PATH = str(MEDIA_ROOT / 'videos' / 'tmp' / 'filepond_stored')
+DJANGO_DRF_FILEPOND_UPLOAD_TMP = str(MEDIA_ROOT / "videos" / "tmp" / "filepond_uploads")
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = str(
+    MEDIA_ROOT / "videos" / "tmp" / "filepond_stored"
+)
 
 # Ensure directories exist with proper permissions
 os.makedirs(DJANGO_DRF_FILEPOND_UPLOAD_TMP, mode=0o755, exist_ok=True)
 os.makedirs(DJANGO_DRF_FILEPOND_FILE_STORE_PATH, mode=0o755, exist_ok=True)
 
 # Additional FilePond settings
-DJANGO_DRF_FILEPOND_UPLOAD_TMP = DJANGO_DRF_FILEPOND_UPLOAD_TMP  # String path required
-DJANGO_DRF_FILEPOND_FILE_STORE_PATH = DJANGO_DRF_FILEPOND_FILE_STORE_PATH  # String path required
+# DJANGO_DRF_FILEPOND_UPLOAD_TMP / DJANGO_DRF_FILEPOND_FILE_STORE_PATH are
+# already str() above; filepond requires string paths.
 
 # Video processing settings
 MEDIA_VIDEO_CONVERSION_ENABLED = True
-MEDIA_VIDEO_OUTPUT_FORMAT = 'mp4'
-MEDIA_VIDEO_CODEC = 'libx264'
-MEDIA_VIDEO_PRESET = 'medium'  # Single quality preset
+MEDIA_VIDEO_OUTPUT_FORMAT = "mp4"
+MEDIA_VIDEO_CODEC = "libx264"
+MEDIA_VIDEO_PRESET = "medium"  # Single quality preset
 MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes
 MEDIA_VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB input limit
 
 # Django REST Framework settings for FilePond
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'apps.botauth.authentication.DelegatedJWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "apps.botauth.authentication.DelegatedJWTAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
     ],
 }
 
 # FilePond upload field name configuration
-DJANGO_DRF_FILEPOND_UPLOAD_FIELD_NAME = 'file'
-DJANGO_DRF_FILEPOND_FILE_FIELD_NAME = 'file'
+DJANGO_DRF_FILEPOND_UPLOAD_FIELD_NAME = "file"
+DJANGO_DRF_FILEPOND_FILE_FIELD_NAME = "file"
 
 # Default field name (try both possible setting names)
-DJANGO_DRF_FILEPOND_FIELD_NAME = 'file'
+DJANGO_DRF_FILEPOND_FIELD_NAME = "file"
 
 # Hospital Configuration
 HOSPITAL_CONFIG = {
-    'name': os.getenv('HOSPITAL_NAME', 'Medical Center'),
-    'address': os.getenv('HOSPITAL_ADDRESS', '123 Medical Street, Medical City'),
-    'city': os.getenv('HOSPITAL_CITY', ''),
-    'state_full': os.getenv('HOSPITAL_STATE_FULL', ''),
-    'phone': os.getenv('HOSPITAL_PHONE', '+1 (555) 123-4567'),
-    'email': os.getenv('HOSPITAL_EMAIL', 'info@medicalcenter.com'),
-    'website': os.getenv('HOSPITAL_WEBSITE', ''),
-    'logo_path': os.getenv('HOSPITAL_LOGO_PATH', 'static/images/hospital-logo.png'),
-    'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
+    "name": os.getenv("HOSPITAL_NAME", "Medical Center"),
+    "address": os.getenv("HOSPITAL_ADDRESS", "123 Medical Street, Medical City"),
+    "city": os.getenv("HOSPITAL_CITY", ""),
+    "state_full": os.getenv("HOSPITAL_STATE_FULL", ""),
+    "phone": os.getenv("HOSPITAL_PHONE", "+1 (555) 123-4567"),
+    "email": os.getenv("HOSPITAL_EMAIL", "info@medicalcenter.com"),
+    "website": os.getenv("HOSPITAL_WEBSITE", ""),
+    "logo_path": os.getenv("HOSPITAL_LOGO_PATH", "static/images/hospital-logo.png"),
+    "logo_url": os.getenv("HOSPITAL_LOGO_URL", ""),
     # Hospital short identifier for PWA
-    'short_identifier': os.getenv('HOSPITAL_SHORT_ID', ''),
+    "short_identifier": os.getenv("HOSPITAL_SHORT_ID", ""),
     # Brazilian hospital identifiers
-    'cnes': os.getenv('HOSPITAL_CNES', ''),
-    'cnpj': os.getenv('HOSPITAL_CNPJ', ''),
+    "cnes": os.getenv("HOSPITAL_CNES", ""),
+    "cnpj": os.getenv("HOSPITAL_CNPJ", ""),
 }
 
 # PDF Forms Configuration
 PDF_FORMS_CONFIG = {
-    'enabled': os.getenv('HOSPITAL_PDF_FORMS_ENABLED', 'false').lower() == 'true',
-    'templates_path': os.getenv('HOSPITAL_PDF_FORMS_PATH', ''),
-    'max_file_size': int(os.getenv('PDF_FORMS_MAX_FILE_SIZE', 10 * 1024 * 1024)),  # 10MB
-    'allowed_extensions': ['.pdf'],
-    'require_form_validation': os.getenv('PDF_FORMS_REQUIRE_VALIDATION', 'true').lower() == 'true',
+    "enabled": os.getenv("HOSPITAL_PDF_FORMS_ENABLED", "false").lower() == "true",
+    "templates_path": os.getenv("HOSPITAL_PDF_FORMS_PATH", ""),
+    "max_file_size": int(
+        os.getenv("PDF_FORMS_MAX_FILE_SIZE", str(10 * 1024 * 1024))
+    ),  # 10MB
+    "allowed_extensions": [".pdf"],
+    "require_form_validation": os.getenv("PDF_FORMS_REQUIRE_VALIDATION", "true").lower()
+    == "true",
 }
 
 # File upload settings for PDF forms
-if PDF_FORMS_CONFIG['enabled']:
+if PDF_FORMS_CONFIG["enabled"]:
     # Ensure media directories exist
-    PDF_FORMS_MEDIA_ROOT = MEDIA_ROOT / 'pdf_forms'
+    PDF_FORMS_MEDIA_ROOT = MEDIA_ROOT / "pdf_forms"
     PDF_FORMS_MEDIA_ROOT.mkdir(exist_ok=True)
-    (PDF_FORMS_MEDIA_ROOT / 'templates').mkdir(exist_ok=True)
-    (PDF_FORMS_MEDIA_ROOT / 'completed').mkdir(exist_ok=True)
+    (PDF_FORMS_MEDIA_ROOT / "templates").mkdir(exist_ok=True)
+    (PDF_FORMS_MEDIA_ROOT / "completed").mkdir(exist_ok=True)
 
 # PDF Generation Settings
 PDF_CONFIG = {
-    'page_size': 'A4',
-    'orientation': 'portrait',
-    'margins': {
-        'top': 2.5,    # cm
-        'bottom': 3.0, # cm  
-        'left': 2.0,   # cm
-        'right': 2.0   # cm
+    "page_size": "A4",
+    "orientation": "portrait",
+    "margins": {
+        "top": 2.5,  # cm
+        "bottom": 3.0,  # cm
+        "left": 2.0,  # cm
+        "right": 2.0,  # cm
     },
-    'max_content_length': 50000,  # characters
-    'fonts': {
-        'default': 'Times-Roman',
-        'bold': 'Times-Bold',
-        'italic': 'Times-Italic'
-    }
+    "max_content_length": 50000,  # characters
+    "fonts": {"default": "Times-Roman", "bold": "Times-Bold", "italic": "Times-Italic"},
 }
 
 # Django Simple History Configuration
@@ -430,46 +436,46 @@ SIMPLE_HISTORY_EDIT = True
 
 # User Lifecycle Management (Simplified)
 USER_LIFECYCLE_CONFIG = {
-    'ENABLE_ACTIVITY_TRACKING': True,
-    'ENABLE_AUTO_STATUS_UPDATES': True,
-    'INACTIVITY_THRESHOLD_DAYS': 90,
-    'EXPIRATION_WARNING_DAYS': [30, 14, 7, 3, 1],
+    "ENABLE_ACTIVITY_TRACKING": True,
+    "ENABLE_AUTO_STATUS_UPDATES": True,
+    "INACTIVITY_THRESHOLD_DAYS": 90,
+    "EXPIRATION_WARNING_DAYS": [30, 14, 7, 3, 1],
 }
 
 # Logging for lifecycle events
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
         },
-        'matrix_bot_audit': {
-            'level': 'INFO',
-            '()': 'config.logging_handlers.safe_timed_rotating_file_handler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'matrix_bot_audit.log'),
-            'when': 'D',
-            'interval': 1,
-            'backupCount': 60,
-            'encoding': 'utf-8',
+        "matrix_bot_audit": {
+            "level": "INFO",
+            "()": "config.logging_handlers.safe_timed_rotating_file_handler",
+            "filename": os.path.join(BASE_DIR, "logs", "matrix_bot_audit.log"),
+            "when": "D",
+            "interval": 1,
+            "backupCount": 60,
+            "encoding": "utf-8",
         },
     },
-    'loggers': {
-        'security.password_change': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
+    "loggers": {
+        "security.password_change": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         },
-        'security.user_lifecycle': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
+        "security.user_lifecycle": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         },
-        'matrix.bot.audit': {
-            'handlers': ['matrix_bot_audit'],
-            'level': 'INFO',
-            'propagate': False,
+        "matrix.bot.audit": {
+            "handlers": ["matrix_bot_audit"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
@@ -480,73 +486,64 @@ LOGGING = {
 
 OIDC_PROVIDER = {
     # Issuer identifier - must match what's in JWTs
-    'OIDC_ISSUER': os.getenv('OIDC_ISSUER', 'https://eqmd.local'),
-    
+    "OIDC_ISSUER": os.getenv("OIDC_ISSUER", "https://eqmd.local"),
     # Token expiration (these are defaults, delegation endpoint overrides)
-    'OIDC_TOKEN_EXPIRE': 600,  # 10 minutes max for delegated tokens
-    'OIDC_CODE_EXPIRE': 60,    # 1 minute for auth codes (not used for bots)
-    
+    "OIDC_TOKEN_EXPIRE": 600,  # 10 minutes max for delegated tokens
+    "OIDC_CODE_EXPIRE": 60,  # 1 minute for auth codes (not used for bots)
     # ID Token expiration
-    'OIDC_IDTOKEN_EXPIRE': 600,
-    'OIDC_IDTOKEN_INCLUDE_CLAIMS': True,
-    'OIDC_IDTOKEN_SUB_GENERATOR': 'apps.botauth.claims.eqmd_sub_generator',
-    
+    "OIDC_IDTOKEN_EXPIRE": 600,
+    "OIDC_IDTOKEN_INCLUDE_CLAIMS": True,
+    "OIDC_IDTOKEN_SUB_GENERATOR": "apps.botauth.claims.eqmd_sub_generator",
     # Disable refresh tokens for bot clients
-    'OIDC_TOKEN_INTROSPECTION_ENABLED': True,
-    
+    "OIDC_TOKEN_INTROSPECTION_ENABLED": True,
     # Custom claims (we'll add physician info)
-    'OIDC_EXTRA_SCOPE_CLAIMS': 'apps.botauth.claims.EqmdScopeClaims',
-    
+    "OIDC_EXTRA_SCOPE_CLAIMS": "apps.botauth.claims.EqmdScopeClaims",
     # Session management (disabled for bots)
-    'OIDC_SESSION_MANAGEMENT_ENABLE': False,
-    
+    "OIDC_SESSION_MANAGEMENT_ENABLE": False,
     # Custom authorization view for access control
-    'OIDC_AUTHORIZE_VIEW': 'apps.botauth.views.AuthorizeView',
-    
+    "OIDC_AUTHORIZE_VIEW": "apps.botauth.views.AuthorizeView",
     # Grant types allowed
-    'OIDC_GRANT_TYPE_SUPPORTED': [
-        'client_credentials',  # For bot authentication
-        'authorization_code',  # For Synapse SSO
+    "OIDC_GRANT_TYPE_SUPPORTED": [
+        "client_credentials",  # For bot authentication
+        "authorization_code",  # For Synapse SSO
     ],
-    
     # Response types (minimal for our use case)
-    'OIDC_RESPONSE_TYPES_SUPPORTED': [
-        'code',  # For authorization_code grant (preferred)
-        'token',  # Keep for existing bot usage if needed
+    "OIDC_RESPONSE_TYPES_SUPPORTED": [
+        "code",  # For authorization_code grant (preferred)
+        "token",  # Keep for existing bot usage if needed
     ],
-    
     # Scopes we support
-    'OIDC_SCOPES': {
-        'openid': 'OpenID Connect scope',
-        'profile': 'Basic profile claims',
-        'email': 'Email address',
-        'patient:read': 'Read patient demographics and status',
-        'exam:read': 'Read exam results',
-        'dailynote:draft': 'Create daily note drafts',
-        'dischargereport:draft': 'Create discharge report drafts',
-        'prescription:draft': 'Create prescription drafts',
-        'summary:generate': 'Generate summaries from existing data',
+    "OIDC_SCOPES": {
+        "openid": "OpenID Connect scope",
+        "profile": "Basic profile claims",
+        "email": "Email address",
+        "patient:read": "Read patient demographics and status",
+        "exam:read": "Read exam results",
+        "dailynote:draft": "Create daily note drafts",
+        "dischargereport:draft": "Create discharge report drafts",
+        "prescription:draft": "Create prescription drafts",
+        "summary:generate": "Generate summaries from existing data",
     },
 }
 
 # Bridge OIDC_PROVIDER into django-oidc-provider settings (library reads top-level values).
 # Keep OIDC_PROVIDER for project-specific usage.
-OIDC_TOKEN_EXPIRE = OIDC_PROVIDER['OIDC_TOKEN_EXPIRE']
-OIDC_CODE_EXPIRE = OIDC_PROVIDER['OIDC_CODE_EXPIRE']
-OIDC_IDTOKEN_EXPIRE = OIDC_PROVIDER['OIDC_IDTOKEN_EXPIRE']
-OIDC_IDTOKEN_INCLUDE_CLAIMS = OIDC_PROVIDER['OIDC_IDTOKEN_INCLUDE_CLAIMS']
-OIDC_IDTOKEN_SUB_GENERATOR = OIDC_PROVIDER['OIDC_IDTOKEN_SUB_GENERATOR']
-OIDC_EXTRA_SCOPE_CLAIMS = OIDC_PROVIDER['OIDC_EXTRA_SCOPE_CLAIMS']
-OIDC_SESSION_MANAGEMENT_ENABLE = OIDC_PROVIDER['OIDC_SESSION_MANAGEMENT_ENABLE']
-OIDC_AUTHORIZE_VIEW = OIDC_PROVIDER['OIDC_AUTHORIZE_VIEW']
-OIDC_GRANT_TYPE_SUPPORTED = OIDC_PROVIDER['OIDC_GRANT_TYPE_SUPPORTED']
-OIDC_RESPONSE_TYPES_SUPPORTED = OIDC_PROVIDER['OIDC_RESPONSE_TYPES_SUPPORTED']
-OIDC_SCOPES = OIDC_PROVIDER['OIDC_SCOPES']
+OIDC_TOKEN_EXPIRE = OIDC_PROVIDER["OIDC_TOKEN_EXPIRE"]
+OIDC_CODE_EXPIRE = OIDC_PROVIDER["OIDC_CODE_EXPIRE"]
+OIDC_IDTOKEN_EXPIRE = OIDC_PROVIDER["OIDC_IDTOKEN_EXPIRE"]
+OIDC_IDTOKEN_INCLUDE_CLAIMS = OIDC_PROVIDER["OIDC_IDTOKEN_INCLUDE_CLAIMS"]
+OIDC_IDTOKEN_SUB_GENERATOR = OIDC_PROVIDER["OIDC_IDTOKEN_SUB_GENERATOR"]
+OIDC_EXTRA_SCOPE_CLAIMS = OIDC_PROVIDER["OIDC_EXTRA_SCOPE_CLAIMS"]
+OIDC_SESSION_MANAGEMENT_ENABLE = OIDC_PROVIDER["OIDC_SESSION_MANAGEMENT_ENABLE"]
+OIDC_AUTHORIZE_VIEW = OIDC_PROVIDER["OIDC_AUTHORIZE_VIEW"]
+OIDC_GRANT_TYPE_SUPPORTED = OIDC_PROVIDER["OIDC_GRANT_TYPE_SUPPORTED"]
+OIDC_RESPONSE_TYPES_SUPPORTED = OIDC_PROVIDER["OIDC_RESPONSE_TYPES_SUPPORTED"]
+OIDC_SCOPES = OIDC_PROVIDER["OIDC_SCOPES"]
 
 # JWT signing key configuration for delegated tokens
 # Using HS256 for HMAC-based security (appropriate for delegated tokens)
-DELEGATED_TOKEN_SECRET = os.getenv('DELEGATED_TOKEN_SECRET', SECRET_KEY)
-DELEGATED_TOKEN_ALGORITHM = 'HS256'  # HMAC-SHA256 for delegated tokens
-DELEGATED_TOKEN_ISSUER = os.getenv('OIDC_ISSUER', 'eqmd')
-DELEGATED_TOKEN_AUDIENCE = 'eqmd-api'
+DELEGATED_TOKEN_SECRET = os.getenv("DELEGATED_TOKEN_SECRET", SECRET_KEY)
+DELEGATED_TOKEN_ALGORITHM = "HS256"  # HMAC-SHA256 for delegated tokens
+DELEGATED_TOKEN_ISSUER = os.getenv("OIDC_ISSUER", "eqmd")
+DELEGATED_TOKEN_AUDIENCE = "eqmd-api"
 DELEGATED_TOKEN_LIFETIME_SECONDS = 600  # 10 minutes max
