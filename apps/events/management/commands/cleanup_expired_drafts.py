@@ -9,43 +9,46 @@ from django.utils import timezone
 
 from apps.events.models import Event
 
-logger = logging.getLogger('apps.events')
+logger = logging.getLogger("apps.events")
 
 
 class Command(BaseCommand):
-    help = 'Clean up expired draft events'
-    
+    help = "Clean up expired draft events"
+
     def add_arguments(self, parser):
         parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Show what would be deleted without actually deleting'
+            "--dry-run",
+            action="store_true",
+            help="Show what would be deleted without actually deleting",
         )
-    
+
     def handle(self, *args, **options):
-        dry_run = options['dry_run']
-        
-        expired_drafts = Event.objects.with_drafts().filter(
-            is_draft=True,
-            draft_expires_at__lt=timezone.now()
-        ).select_subclasses()
-        
+        dry_run = options["dry_run"]
+
+        expired_drafts = (
+            Event.objects.with_drafts()
+            .filter(is_draft=True, draft_expires_at__lt=timezone.now())
+            .select_subclasses()
+        )
+
         count = expired_drafts.count()
-        
+
         if count == 0:
-            self.stdout.write('No expired drafts found.')
+            self.stdout.write("No expired drafts found.")
             return
-        
+
         if dry_run:
-            self.stdout.write(f'Would delete {count} expired draft(s):')
+            self.stdout.write(f"Would delete {count} expired draft(s):")
             for draft in expired_drafts[:20]:
-                self.stdout.write(f'  - {draft.id}: {draft.description} (expired {draft.draft_expires_at})')
+                self.stdout.write(
+                    f"  - {draft.id}: {draft.description} (expired {draft.draft_expires_at})"
+                )
             if count > 20:
-                self.stdout.write(f'  ... and {count - 20} more')
+                self.stdout.write(f"  ... and {count - 20} more")
         else:
             # Hard delete expired drafts
             deleted_count = expired_drafts.delete()
             self.stdout.write(
-                self.style.SUCCESS(f'Deleted {deleted_count} expired draft(s)')
+                self.style.SUCCESS(f"Deleted {deleted_count} expired draft(s)")
             )
-            logger.info(f'Cleaned up {deleted_count} expired drafts')
+            logger.info(f"Cleaned up {deleted_count} expired drafts")

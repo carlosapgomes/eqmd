@@ -58,7 +58,9 @@ class HistoryAndPhysicalForm(forms.ModelForm):
         # Configure field properties
         self.fields[
             "content"
-        ].help_text = "Conteúdo detalhado da anamnese e exame físico (suporte a Markdown)"
+        ].help_text = (
+            "Conteúdo detalhado da anamnese e exame físico (suporte a Markdown)"
+        )
         self.fields["content"].required = False
 
     def clean_event_datetime(self):
@@ -93,7 +95,9 @@ class HistoryAndPhysicalForm(forms.ModelForm):
         # Persist the canonical event description on the instance (spec:
         # week2-historyandphysicals-hardening). Setting it on the form would
         # never reach the database.
-        instance.description = Event.EVENT_TYPE_CHOICES[Event.HISTORY_AND_PHYSICAL_EVENT][1]
+        instance.description = Event.EVENT_TYPE_CHOICES[
+            Event.HISTORY_AND_PHYSICAL_EVENT
+        ][1]
         if self.user:
             if not instance.pk:  # New instance
                 instance.created_by = self.user

@@ -34,12 +34,12 @@ def can_edit_discharge_report(user, report):
     """
     if not can_access_patient(user, report.patient):
         return False
-    
+
     # If it's a draft, any doctor/resident can edit
     if report.is_draft:
-        user_profession = getattr(user, 'profession', None)
+        user_profession = getattr(user, "profession", None)
         return user_profession in [MEDICAL_DOCTOR, RESIDENT]
-    
+
     # If it's final, follow system standards
     return can_edit_event(user, report)
 
@@ -52,60 +52,73 @@ def can_delete_discharge_report(user, report):
     """
     if not can_access_patient(user, report.patient):
         return False
-    
+
     # If it's a draft, allow creator or delete permission
     if report.is_draft:
-        return report.created_by == user or user.has_perm('events.delete_event')
+        return report.created_by == user or user.has_perm("events.delete_event")
 
     # If it's final, follow system standards or delete permission override
-    return can_delete_event(user, report) or user.has_perm('events.delete_event')
+    return can_delete_event(user, report) or user.has_perm("events.delete_event")
 
 
 class DischargeReportListView(LoginRequiredMixin, ListView):
     """List all discharge reports"""
+
     model = DischargeReport
-    template_name = 'dischargereports/dischargereport_list.html'
-    context_object_name = 'reports'
+    template_name = "dischargereports/dischargereport_list.html"
+    context_object_name = "reports"
     paginate_by = 20
 
     def get_queryset(self):
         # with_drafts(): drafts are visible in the UI, but soft-deleted reports
         # must stay hidden (soft-delete retention contract).
-        return DischargeReport.objects.with_drafts().select_related('patient').order_by('-created_at')
+        return (
+            DischargeReport.objects.with_drafts()
+            .select_related("patient")
+            .order_by("-created_at")
+        )
 
 
 class DischargeReportDetailView(LoginRequiredMixin, DetailView):
     """View discharge report details"""
+
     model = DischargeReport
-    template_name = 'dischargereports/dischargereport_detail.html'
-    context_object_name = 'report'
+    template_name = "dischargereports/dischargereport_detail.html"
+    context_object_name = "report"
 
     def get_queryset(self):
-        return DischargeReport.objects.with_drafts().select_related('patient', 'created_by', 'updated_by')
+        return DischargeReport.objects.with_drafts().select_related(
+            "patient", "created_by", "updated_by"
+        )
 
     def get_context_data(self, **kwargs):
         """Add additional context data including permission checks."""
         context = super().get_context_data(**kwargs)
 
         # Add permission context for template use
-        context["can_edit_report"] = can_edit_discharge_report(self.request.user, self.object)
-        context["can_delete_report"] = can_delete_discharge_report(self.request.user, self.object)
+        context["can_edit_report"] = can_edit_discharge_report(
+            self.request.user, self.object
+        )
+        context["can_delete_report"] = can_delete_discharge_report(
+            self.request.user, self.object
+        )
 
         return context
 
 
 class DischargeReportCreateView(LoginRequiredMixin, CreateView):
     """Create new discharge report for a specific patient"""
+
     model = DischargeReport
     form_class = DischargeReportCreateForm
-    template_name = 'dischargereports/dischargereport_create.html'
+    template_name = "dischargereports/dischargereport_create.html"
 
     def dispatch(self, request, *args, **kwargs):
         """Get patient and check permissions before processing request."""
         from django.shortcuts import get_object_or_404
 
         from apps.patients.models import Patient
-        
+
         self.patient = get_object_or_404(Patient, pk=kwargs["patient_id"])
 
         # Check if user can access this patient
@@ -137,13 +150,19 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """Handle successful form submission."""
-        is_draft = 'save_final' not in self.request.POST
+        is_draft = "save_final" not in self.request.POST
 
         # Handle draft vs final save
         if is_draft:
-            messages.success(self.request, f'Relatório de alta para {self.patient.name} salvo como rascunho.')
+            messages.success(
+                self.request,
+                f"Relatório de alta para {self.patient.name} salvo como rascunho.",
+            )
         else:
-            messages.success(self.request, f'Relatório de alta para {self.patient.name} salvo definitivamente.')
+            messages.success(
+                self.request,
+                f"Relatório de alta para {self.patient.name} salvo definitivamente.",
+            )
 
         self.object = form.save(commit=False)
         self.object.patient = self.patient
@@ -158,27 +177,32 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
 
 class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
     """Update discharge report - separate template"""
+
     model = DischargeReport
     form_class = DischargeReportUpdateForm
-    template_name = 'dischargereports/dischargereport_update.html'
-    context_object_name = 'report'
+    template_name = "dischargereports/dischargereport_update.html"
+    context_object_name = "report"
 
     def get_queryset(self):
-        return DischargeReport.objects.with_drafts().select_related('patient', 'created_by', 'updated_by')
+        return DischargeReport.objects.with_drafts().select_related(
+            "patient", "created_by", "updated_by"
+        )
 
     def get_object(self):
         obj = super().get_object()
         # Check if user can edit this specific report
         if not obj.can_be_edited_by_user(self.request.user):
             if obj.is_draft:
-                raise PermissionDenied("Você não tem permissão para editar este rascunho.")
+                raise PermissionDenied(
+                    "Você não tem permissão para editar este rascunho."
+                )
             else:
                 raise PermissionDenied("Este relatório não pode mais ser editado.")
         return obj
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['can_finalize'] = self.object.is_draft
+        context["can_finalize"] = self.object.is_draft
         return context
 
     def get_success_url(self):
@@ -192,14 +216,14 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
         is_draft = self.object.is_draft
 
         # Handle draft vs final save
-        if 'save_final' in self.request.POST and self.object.is_draft:
+        if "save_final" in self.request.POST and self.object.is_draft:
             is_draft = False
-            messages.success(self.request, 'Relatório de alta finalizado com sucesso.')
-        elif 'save_draft' in self.request.POST:
+            messages.success(self.request, "Relatório de alta finalizado com sucesso.")
+        elif "save_draft" in self.request.POST:
             is_draft = True
-            messages.success(self.request, 'Rascunho do relatório atualizado.')
+            messages.success(self.request, "Rascunho do relatório atualizado.")
         else:
-            messages.success(self.request, 'Relatório de alta atualizado.')
+            messages.success(self.request, "Relatório de alta atualizado.")
 
         self.object = form.save(commit=False)
         self.object.updated_by = self.request.user
@@ -211,12 +235,15 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
 
 class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
     """Delete discharge report when permitted."""
+
     model = DischargeReport
-    template_name = 'dischargereports/dischargereport_confirm_delete.html'
-    context_object_name = 'report'
+    template_name = "dischargereports/dischargereport_confirm_delete.html"
+    context_object_name = "report"
 
     def get_queryset(self):
-        return DischargeReport.objects.with_drafts().select_related('patient', 'created_by', 'updated_by')
+        return DischargeReport.objects.with_drafts().select_related(
+            "patient", "created_by", "updated_by"
+        )
 
     def get_object(self):
         obj = super().get_object()
@@ -232,7 +259,7 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
         )
 
     def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Relatório de alta excluído com sucesso.')
+        messages.success(request, "Relatório de alta excluído com sucesso.")
         return super().delete(request, *args, **kwargs)
 
 
@@ -241,10 +268,14 @@ class DischargeReportPDFView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         try:
-            report = get_object_or_404(DischargeReport.objects.with_drafts(), pk=kwargs["pk"])
+            report = get_object_or_404(
+                DischargeReport.objects.with_drafts(), pk=kwargs["pk"]
+            )
 
             if not can_access_patient(request.user, report.patient):
-                raise PermissionDenied("You don't have permission to access this patient")
+                raise PermissionDenied(
+                    "You don't have permission to access this patient"
+                )
 
             pdf_generator = DischargeReportPDFGenerator()
             pdf_buffer = pdf_generator.generate_from_report(report)
