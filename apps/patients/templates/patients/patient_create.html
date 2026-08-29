@@ -252,6 +252,78 @@
                 </div>
 
 
+                <!-- Duplicate Review Panel -->
+                {% if form.duplicate_candidates %}
+                <div class="alert alert-warning border-warning" role="alert">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Possível duplicata detectada</strong>
+                    </div>
+                    <p class="mb-2">
+                        Encontramos pacientes com nome e data de nascimento
+                        iguais ou semelhantes. Revise antes de criar o
+                        paciente.
+                    </p>
+                    {% if perms.patients.view_patient %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle mb-2">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Nome</th>
+                                    <th scope="col">Nascimento</th>
+                                    <th scope="col">Prontuário</th>
+                                    <th scope="col">Estado</th>
+                                    <th scope="col">Evidência</th>
+                                    <th scope="col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for candidate in form.duplicate_candidates %}
+                                <tr>
+                                    <td>{{ candidate.name }}</td>
+                                    <td>{{ candidate.birthday|date:"d/m/Y" }}</td>
+                                    <td>{{ candidate.current_record_number|default:"—" }}</td>
+                                    <td>
+                                        {% if candidate.is_deleted %}
+                                        <span class="badge bg-danger">Excluído</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Ativo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if candidate.evidence_type == "exact" %}
+                                        Nome exato
+                                        {% else %}
+                                        Nome semelhante
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not candidate.is_deleted or user.is_superuser %}
+                                        <a href="{% url 'patients:patient_detail' pk=candidate.patient_id %}"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            Revisar
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1"
+                               name="duplicate_review_confirmed"
+                               id="duplicate-review-confirm">
+                        <label class="form-check-label" for="duplicate-review-confirm">
+                            Confirmo que revisei os candidatos acima e desejo
+                            criar o paciente mesmo assim.
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+
                 <!-- Form Actions -->
                 <div class="row">
                     <div class="col-12">
