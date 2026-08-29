@@ -1,32 +1,33 @@
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Q, Prefetch, Count
-from django.views.generic import ListView
-from django.core.exceptions import PermissionDenied
-from django.utils import timezone
+from datetime import date, timedelta
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.views.decorators.cache import cache_page
-from django.utils.decorators import method_decorator
+from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from functools import lru_cache
-from datetime import datetime, timedelta
-import re
-from .models import Event
-from apps.patients.models import Patient
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.http import require_http_methods
+from django.views.generic import ListView
+
 from apps.core.permissions.utils import (
-    can_access_patient, 
-    can_edit_event,
+    can_access_patient,
+    can_cancel_discharge,
     can_delete_event,
+    can_discharge_patient,
     can_edit_admission_data,
     can_edit_discharge_data,
-    can_cancel_discharge,
-    can_discharge_patient
+    can_edit_event,
 )
+from apps.patients.models import Patient
 from apps.pdf_forms.services.duplication import can_duplicate_pdf_submission
+
+from .models import Event
 
 User = get_user_model()
 
@@ -76,8 +77,14 @@ class PatientEventsTimelineView(ListView):
     paginate_orphans = 5
 
     def _get_timeline_base_queryset(self):
-        """Base timeline queryset including finalized events and discharge report drafts."""
-        return Event.all_objects.filter(
+        """Base timeline queryset including finalized events and discharge report drafts.
+
+        Uses ``with_drafts()`` (active events, drafts included) instead of
+        ``all_objects``: the patient timeline must never surface soft-deleted
+        events (soft-delete retention contract), while discharge report drafts
+        remain visible.
+        """
+        return Event.objects.with_drafts().filter(
             patient=self.patient
         ).filter(
             Q(is_draft=False) | Q(event_type=Event.DISCHARGE_REPORT_EVENT)
@@ -119,14 +126,14 @@ class PatientEventsTimelineView(ListView):
         
         if date_from:
             try:
-                date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+                date_from = date.fromisoformat(date_from)
                 queryset = queryset.filter(created_at__date__gte=date_from)
             except ValueError:
                 pass
                 
         if date_to:
             try:
-                date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+                date_to = date.fromisoformat(date_to)
                 queryset = queryset.filter(created_at__date__lte=date_to)
             except ValueError:
                 pass

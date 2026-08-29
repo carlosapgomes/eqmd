@@ -1,12 +1,13 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.core.exceptions import ValidationError
 from django import forms
-from apps.patients.models import Patient
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.utils import timezone
+
 from apps.events.models import Event
-from ..models import HistoryAndPhysical
+from apps.patients.models import Patient
+
 from ..forms import HistoryAndPhysicalForm
+from ..models import HistoryAndPhysical
 
 User = get_user_model()
 
@@ -175,10 +176,32 @@ class HistoryAndPhysicalFormTest(TestCase):
         form = HistoryAndPhysicalForm(data=form_data, user=self.user)
         self.assertTrue(form.is_valid())
 
+        # patient is assigned by the create view before save; the form has no
+        # patient field (see PatientHistoryAndPhysicalCreateView.form_valid).
+        form.instance.patient = self.patient
         historyandphysical = form.save()
         self.assertEqual(historyandphysical.created_by, self.user)
         self.assertEqual(historyandphysical.updated_by, self.user)
+        # Spec (week2-historyandphysicals-hardening): the form persists the
+        # canonical event description.
+        self.assertEqual(
+            historyandphysical.description,
+            Event.EVENT_TYPE_CHOICES[Event.HISTORY_AND_PHYSICAL_EVENT][1],
+        )
 
+    def test_form_init_emits_no_stdout_debug(self):
+        """Test that form initialization does not emit debug stdout output.
+
+        Spec (week2-historyandphysicals-hardening): 'Form initialization has no
+        stdout debug output'.
+        """
+        import io
+        from contextlib import redirect_stdout
+
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            HistoryAndPhysicalForm(user=self.user)
+        self.assertEqual(buffer.getvalue(), "")
 
     def test_form_field_configuration(self):
         """Test form field configuration."""

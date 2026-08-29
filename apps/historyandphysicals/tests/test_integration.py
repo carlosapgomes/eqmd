@@ -1,12 +1,28 @@
-from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
+
 from apps.patients.models import Patient
-# Note: Hospital model removed after single-hospital refactor
+
+# Hospital model removed after single-hospital refactor
 from ..models import HistoryAndPhysical
 
 User = get_user_model()
+
+
+def grant_event_permissions(user, *codenames):
+    """Grant the given events app permissions to a user.
+
+    The test database does not seed the profession groups' permissions, so
+    view tests must grant the exact Django permissions enforced by
+    PermissionRequiredMixin on the create/update/delete views.
+    """
+    perms = Permission.objects.filter(
+        content_type__app_label="events", codename__in=codenames
+    )
+    user.user_permissions.add(*perms)
 
 
 class HistoryAndPhysicalIntegrationTest(TestCase):
@@ -15,26 +31,29 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
     def setUp(self):
         """Set up test data for each test method."""
         self.client = Client()
-        
-        # Create test user
+
+        # Create test user with lifecycle gates cleared (NavigationReadyUserFactory
+        # contract) and the events permissions required by the views.
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
-        
-        # Create test hospital
-        
+        grant_event_permissions(
+            self.user, "view_event", "add_event", "change_event", "delete_event"
+        )
+
         # Create test patient
         self.patient = Patient.objects.create(
             name='Test Patient',
             birthday='1990-01-01',
             status=1,  # inpatient
-            
             created_by=self.user,
             updated_by=self.user
         )
-        
+
         # Create test history and physical
         self.historyandphysical = HistoryAndPhysical.objects.create(
             event_datetime=timezone.now(),
@@ -44,7 +63,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
-        
+
         # Log in the user
         self.client.login(username='testuser', password='testpass123')
 
@@ -70,7 +89,9 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
         
         # POST request to create history and physical
         form_data = {
-            'event_datetime': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+            'event_datetime': timezone.localtime(
+                timezone.now() - timezone.timedelta(hours=1)
+            ).strftime('%Y-%m-%dT%H:%M'),
             'content': 'This is a new test history and physical content with enough characters.'
         }
         
@@ -99,10 +120,13 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.historyandphysical.content)
         
-        # POST request to update history and physical
+        # POST request to update history and physical (localtime so the
+        # form's not-in-the-future validation sees the same instant)
         updated_content = 'This is updated history and physical content with enough characters.'
         form_data = {
-            'event_datetime': self.historyandphysical.event_datetime.strftime('%Y-%m-%dT%H:%M'),
+            'event_datetime': timezone.localtime(
+                self.historyandphysical.event_datetime
+            ).strftime('%Y-%m-%dT%H:%M'),
             'content': updated_content
         }
         
@@ -128,7 +152,9 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
         
         # POST request to duplicate history and physical
         form_data = {
-            'event_datetime': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+            'event_datetime': timezone.localtime(
+                timezone.now() - timezone.timedelta(hours=1)
+            ).strftime('%Y-%m-%dT%H:%M'),
             'content': self.historyandphysical.content  # Content should be pre-populated
         }
         
@@ -179,21 +205,21 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
 
     def test_historyandphysical_access_permissions(self):
         """Test that users can only access history and physicals they have permission for."""
-        # Create another user
+        # Create another user (lifecycle gates cleared so the denial below
+        # comes from the missing events permission, not the middleware)
         other_user = User.objects.create_user(
             username='otheruser',
             email='other@example.com',
-            password='otherpass123'
+            password='otherpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         
-        # Create another hospital
-        
-        # Create patient in other hospital
+        # Create patient
         other_patient = Patient.objects.create(
             name='Other Patient',
             birthday='1985-01-01',
             status=1,
-            
             created_by=other_user,
             updated_by=other_user
         )
@@ -208,7 +234,10 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
             updated_by=other_user
         )
         
-        # Try to access other user's history and physical
+        # Try to access other user's history and physical (login as the
+        # unprivileged user so the denial comes from the missing
+        # events.view_event permission)
+        self.client.login(username='otheruser', password='otherpass123')
         url = reverse('apps.historyandphysicals:historyandphysical_detail',
                      kwargs={'pk': other_historyandphysical.pk})
         

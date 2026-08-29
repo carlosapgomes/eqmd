@@ -1,10 +1,11 @@
 import uuid
-from django.db import models
+
 from django.conf import settings
+from django.db import models
 from model_utils.managers import InheritanceManager
 from simple_history.models import HistoricalRecords
 
-from apps.core.models.soft_delete import SoftDeleteModel, SoftDeleteInheritanceQuerySet
+from apps.core.models.soft_delete import SoftDeleteInheritanceQuerySet, SoftDeleteModel
 
 
 class SoftDeleteInheritanceManager(InheritanceManager):
@@ -20,6 +21,37 @@ class SoftDeleteInheritanceManager(InheritanceManager):
     def deleted_only(self):
         """Get only soft-deleted objects."""
         return SoftDeleteInheritanceQuerySet(self.model, using=self._db).deleted()
+
+
+class SoftDeleteAllInheritanceManager(InheritanceManager):
+    """Manager that returns ALL objects (including soft-deleted) with inheritance support.
+
+    Mirrors ``SoftDeleteModel.all_objects`` (``AllObjectsManager``) semantics for the
+    Event hierarchy, which requires an ``InheritanceQuerySet`` so that
+    ``select_subclasses()`` keeps working on ``all_objects``. The default manager
+    (``EventManager``) still hides soft-deleted rows and drafts; this manager is
+    used only where audit/retention access to soft-deleted rows is required
+    (admin restore, cleanup commands, soft-delete contract).
+    """
+
+    def get_queryset(self):
+        return SoftDeleteInheritanceQuerySet(self.model, using=self._db)
+
+    def all_with_deleted(self):
+        """Get all objects including soft-deleted ones."""
+        return self.get_queryset()
+
+    def active(self):
+        """Return only non-deleted objects."""
+        return self.get_queryset().active()
+
+    def deleted(self):
+        """Return only soft-deleted objects."""
+        return self.get_queryset().deleted()
+
+    def deleted_only(self):
+        """Get only soft-deleted objects."""
+        return self.get_queryset().deleted()
 
 
 class EventManager(SoftDeleteInheritanceManager):
@@ -165,7 +197,7 @@ class Event(SoftDeleteModel):
     )
 
     objects = EventManager()
-    all_objects = SoftDeleteInheritanceManager()
+    all_objects = SoftDeleteAllInheritanceManager()
     
     # History tracking
     history = HistoricalRecords(
@@ -288,8 +320,8 @@ class Event(SoftDeleteModel):
         Should be overridden by derived classes. For timeline-only events,
         returns the patient timeline URL as a fallback.
         """
-        from django.urls import reverse
         from django.core.exceptions import ImproperlyConfigured
+        from django.urls import reverse
         
         # Timeline-only events that don't have detail pages
         timeline_only_events = [
@@ -319,7 +351,6 @@ class Event(SoftDeleteModel):
         Should be overridden by derived classes. Timeline-only events
         return None since they're typically not editable.
         """
-        from django.urls import reverse
         from django.core.exceptions import ImproperlyConfigured
         
         # Timeline-only events that don't have edit pages
@@ -339,7 +370,7 @@ class Event(SoftDeleteModel):
         
         if self.event_type in timeline_only_events:
             # Timeline-only events are not editable
-            return None
+            return
 
         raise ImproperlyConfigured(
             f"The {self.__class__.__name__} model must define a get_edit_url() method."
@@ -351,6 +382,7 @@ class Event(SoftDeleteModel):
         if not self.created_at:
             return False
         from datetime import timedelta
+
         from django.utils import timezone
 
         edit_deadline = self.created_at + timedelta(hours=24)
@@ -358,14 +390,14 @@ class Event(SoftDeleteModel):
 
     class Meta:
         db_table = 'events_event'
-        ordering = ["-created_at"]
+        ordering = ["-created_at"]  # noqa: RUF012 — declarative Model Meta attribute.
         verbose_name = "Evento"
         verbose_name_plural = "Eventos"
-        permissions = [
+        permissions = [  # noqa: RUF012 — declarative Model Meta attribute.
             ("edit_own_event_24h", "Can edit own events within 24 hours"),
             ("delete_own_event_24h", "Can delete own events within 24 hours"),
         ]
-        indexes = [
+        indexes = [  # noqa: RUF012 — declarative Model Meta attribute.
             models.Index(fields=['is_deleted', 'patient', 'event_datetime']),
             models.Index(fields=['is_deleted', 'created_by']),
             models.Index(
@@ -833,7 +865,8 @@ class PatientProfileChangeEvent(Event):
 
     # Local label mapping — authoritative source for this event type.
     # Kept in sync with apps.patients.signals.PROFILE_FIELD_LABELS.
-    FIELD_LABELS = {
+    # Declarative display map; not mutated at runtime.
+    FIELD_LABELS = {  # noqa: RUF012
         'name': 'Nome',
         'birthday': 'Data de Nascimento',
         'gender': 'Sexo',
@@ -868,4 +901,4 @@ class PatientProfileChangeEvent(Event):
 
     def get_edit_url(self):
         """Profile change events are not editable."""
-        return None
+        return

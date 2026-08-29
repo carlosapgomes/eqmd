@@ -1,19 +1,27 @@
 import logging
 
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import View
-from django.views.generic import CreateView, UpdateView, DetailView, ListView, DeleteView
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    UpdateView,
+)
+
+from apps.core.permissions import can_access_patient, can_delete_event, can_edit_event
+from apps.core.permissions.constants import MEDICAL_DOCTOR, RESIDENT
+
+from .forms import DischargeReportCreateForm, DischargeReportUpdateForm
 from .models import DischargeReport
 from .services.pdf_generator import DischargeReportPDFGenerator
-from .forms import DischargeReportCreateForm, DischargeReportUpdateForm
-from apps.core.permissions import can_edit_event, can_delete_event, can_access_patient
-from apps.core.permissions.constants import MEDICAL_DOCTOR, RESIDENT
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +69,9 @@ class DischargeReportListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return DischargeReport.all_objects.select_related('patient').order_by('-created_at')
+        # with_drafts(): drafts are visible in the UI, but soft-deleted reports
+        # must stay hidden (soft-delete retention contract).
+        return DischargeReport.objects.with_drafts().select_related('patient').order_by('-created_at')
 
 
 class DischargeReportDetailView(LoginRequiredMixin, DetailView):
@@ -71,7 +81,7 @@ class DischargeReportDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'report'
 
     def get_queryset(self):
-        return DischargeReport.all_objects.select_related('patient', 'created_by', 'updated_by')
+        return DischargeReport.objects.with_drafts().select_related('patient', 'created_by', 'updated_by')
 
     def get_context_data(self, **kwargs):
         """Add additional context data including permission checks."""
@@ -93,6 +103,7 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
     def dispatch(self, request, *args, **kwargs):
         """Get patient and check permissions before processing request."""
         from django.shortcuts import get_object_or_404
+
         from apps.patients.models import Patient
         
         self.patient = get_object_or_404(Patient, pk=kwargs["patient_id"])
@@ -153,7 +164,7 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
     context_object_name = 'report'
 
     def get_queryset(self):
-        return DischargeReport.all_objects.select_related('patient', 'created_by', 'updated_by')
+        return DischargeReport.objects.with_drafts().select_related('patient', 'created_by', 'updated_by')
 
     def get_object(self):
         obj = super().get_object()
@@ -205,7 +216,7 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
     context_object_name = 'report'
 
     def get_queryset(self):
-        return DischargeReport.all_objects.select_related('patient', 'created_by', 'updated_by')
+        return DischargeReport.objects.with_drafts().select_related('patient', 'created_by', 'updated_by')
 
     def get_object(self):
         obj = super().get_object()
@@ -230,7 +241,7 @@ class DischargeReportPDFView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         try:
-            report = get_object_or_404(DischargeReport.all_objects, pk=kwargs["pk"])
+            report = get_object_or_404(DischargeReport.objects.with_drafts(), pk=kwargs["pk"])
 
             if not can_access_patient(request.user, report.patient):
                 raise PermissionDenied("You don't have permission to access this patient")
@@ -249,5 +260,5 @@ class DischargeReportPDFView(LoginRequiredMixin, View):
         except PermissionDenied:
             raise
         except Exception as exc:
-            logger.error("Discharge report PDF generation error: %s", str(exc), exc_info=True)
-            return HttpResponse(f"Erro ao gerar PDF: {str(exc)}", status=500)
+            logger.exception("Discharge report PDF generation error")
+            return HttpResponse(f"Erro ao gerar PDF: {exc!s}", status=500)
