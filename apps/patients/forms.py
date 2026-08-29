@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -12,6 +14,7 @@ from .models import (
     PatientRecordNumber,
     Ward,
 )
+from .services.patient_identity import DuplicateCandidate, find_duplicate_candidates
 from .validators import validate_record_number_format
 
 
@@ -50,6 +53,12 @@ class PatientForm(forms.ModelForm):
             attrs={"class": "form-control", "placeholder": "Ex: REC001, 123456, etc."}
         ),
     )
+    duplicate_review_confirmed = forms.BooleanField(
+        required=False,
+        widget=forms.HiddenInput(),
+        label="Revisão de duplicata confirmada",
+    )
+
     class Meta:
         model = Patient
         fields = [
@@ -169,6 +178,8 @@ class PatientForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.duplicate_candidates: list[DuplicateCandidate] = []
+
         # Set input formats for birthday field
         self.fields["birthday"].input_formats = [
             "%Y-%m-%d",  # HTML5 date format
@@ -236,11 +247,20 @@ class PatientForm(forms.ModelForm):
             ),
         ]
 
-    def clean(self):
-        """Custom validation for patient data"""
-        cleaned_data = super().clean()
-        # Note: Status field removed from form - status changes now handled
-        # through dedicated status change actions in patient detail page
+    def clean(self) -> dict[str, Any]:
+        """Require explicit review when advisory duplicate candidates exist."""
+        cleaned_data: dict[str, Any] = super().clean() or {}
+        name = cleaned_data.get("name")
+        birthday = cleaned_data.get("birthday")
+        if name and birthday:
+            self.duplicate_candidates = find_duplicate_candidates(name, birthday)
+            confirmed = cleaned_data.get("duplicate_review_confirmed")
+            if self.duplicate_candidates and not confirmed:
+                self.add_error(
+                    None,
+                    "Possível duplicata encontrada: revise os candidatos "
+                    "abaixo antes de criar o paciente.",
+                )
         return cleaned_data
 
     def is_valid(self):
