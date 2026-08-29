@@ -66,8 +66,15 @@ def procedures_search(request):
         else:
             base_qs = MedicalProcedure.objects.all()
         
-        # Try PostgreSQL full-text search first, fallback to simple search
+        # Try PostgreSQL full-text search first, fallback to simple search.
+        # The fallback also triggers when no search vectors have been indexed
+        # yet (procedures created outside the import command carry NULL
+        # vectors), matching the ICD-10 sibling API contract.
         try:
+            has_search_vectors = base_qs.filter(search_vector__isnull=False).exists()
+            if not has_search_vectors:
+                raise RuntimeError('No search vectors indexed yet')
+
             if active_only:
                 procedures = MedicalProcedure.search(query)[:limit]
             else:

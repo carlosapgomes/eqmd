@@ -27,19 +27,25 @@ class PermissionDecoratorsTestCase(TestCase):
             username='doctor',
             email='doctor@test.com',
             password='testpass123',
-            profession_type=User.MEDICAL_DOCTOR
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.nurse = User.objects.create_user(
             username='nurse',
             email='nurse@test.com',
             password='testpass123',
-            profession_type=User.NURSE
+            profession_type=User.NURSE,
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.student = User.objects.create_user(
             username='student',
             email='student@test.com',
             password='testpass123',
-            profession_type=User.STUDENT
+            profession_type=User.STUDENT,
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_patient_access_required_decorator_allowed(self):

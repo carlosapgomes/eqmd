@@ -22,6 +22,19 @@ import csv
 User = get_user_model()
 
 
+class MockMessagesStorage:
+    """Messages storage stub for admin action tests."""
+    def __init__(self):
+        self.messages = []
+
+    def add(self, level, message, extra_tags=''):
+        self.messages.append({
+            'level': level,
+            'message': message,
+            'extra_tags': extra_tags,
+        })
+
+
 class MedicalProcedureModelTest(TestCase):
     """Test MedicalProcedure model functionality."""
 
@@ -242,7 +255,9 @@ class ProceduresAPITest(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.client.login(username='testuser', password='testpass123')
         
@@ -395,11 +410,13 @@ class MedicalProcedureAdminTest(TestCase):
 
     def test_short_description_display(self):
         """Test short_description_display method."""
-        # Test with long description
+        # Test with long description: admin truncates at 60 chars and
+        # exposes the full text through a title tooltip.
         display = self.admin.short_description_display(self.procedure)
-        self.assertTrue(len(display) < len(self.procedure.description))
         self.assertIn('title=', display)  # Should have tooltip
-        
+        self.assertIn(self.procedure.description, display)
+        self.assertIn('...', display)  # Truncation marker present
+
         # Test with short description
         short_procedure = MedicalProcedure.objects.create(
             code='SHORT001',
@@ -420,9 +437,10 @@ class MedicalProcedureAdminTest(TestCase):
         
         queryset = MedicalProcedure.objects.filter(id=inactive.id)
         
-        # Mock request
+        # Mock request with messages storage (admin actions call message_user)
         class MockRequest:
-            pass
+            def __init__(self):
+                self._messages = MockMessagesStorage()
         request = MockRequest()
         
         # Execute action
@@ -437,7 +455,8 @@ class MedicalProcedureAdminTest(TestCase):
         queryset = MedicalProcedure.objects.filter(id=self.procedure.id)
         
         class MockRequest:
-            pass
+            def __init__(self):
+                self._messages = MockMessagesStorage()
         request = MockRequest()
         
         self.admin.deactivate_procedures(request, queryset)
@@ -504,7 +523,9 @@ class MedicalProcedureIntegrationTest(TestCase):
         self.user = User.objects.create_user(
             username='integrationuser',
             email='integration@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.client = Client()
         self.client.login(username='integrationuser', password='testpass123')
@@ -545,9 +566,8 @@ class MedicalProcedureIntegrationTest(TestCase):
         
     def test_error_handling(self):
         """Test error handling across the system."""
-        # Test API with invalid UUID
-        url = reverse('apps.core:procedure_detail_api', args=['invalid-uuid'])
-        # This should raise a URL resolution error, so we'll test with a valid UUID format
+        # The detail URL pattern only accepts UUIDs, so an unknown but
+        # well-formed UUID must yield a 404 with an error payload.
         fake_uuid = uuid.uuid4()
         url = reverse('apps.core:procedure_detail_api', args=[fake_uuid])
         response = self.client.get(url)

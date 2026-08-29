@@ -42,13 +42,17 @@ class TestSoftDeleteAdminInterface(TestCase):
         self.admin_user = User.objects.create_superuser(
             username='admin',
             email='admin@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.regular_user = User.objects.create_user(
             username='doctor',
             email='doctor@example.com',
             profession_type=0,  # MEDICAL_DOCTOR
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.client = Client()
         self.client.login(username='admin', password='testpass123')
@@ -268,7 +272,9 @@ class TestSoftDeleteAdminViews(TestCase):
         self.admin_user = User.objects.create_superuser(
             username='admin',
             email='admin@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.client = Client()
         self.client.login(username='admin', password='testpass123')
@@ -405,7 +411,9 @@ class TestSoftDeleteAdminPermissions(TestCase):
         self.superuser = User.objects.create_superuser(
             username='superuser',
             email='super@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         self.staff_user = User.objects.create_user(
@@ -413,7 +421,9 @@ class TestSoftDeleteAdminPermissions(TestCase):
             email='staff@example.com',
             is_staff=True,
             profession_type=0,  # MEDICAL_DOCTOR
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_superuser_can_access_all_admin_features(self):
@@ -466,7 +476,9 @@ class TestSoftDeleteAdminEdgeCases(TestCase):
         self.admin_user = User.objects.create_superuser(
             username='admin',
             email='admin@example.com',
-            password='testpass123'
+            password='testpass123',
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.client = Client()
         self.client.login(username='admin', password='testpass123')

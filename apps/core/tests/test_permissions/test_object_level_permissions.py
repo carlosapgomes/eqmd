@@ -71,7 +71,11 @@ class TestCanChangePatientPersonalData(TestCase):
         self.assertTrue(result)
     
     def test_doctor_cannot_change_inpatient_data_different_hospital(self):
-        """Test that doctors cannot change inpatient data in different hospital."""
+        """Test that doctors can change inpatient data regardless of hospital.
+
+        The single-hospital refactor (f210bc5) removed hospital-membership
+        rules: personal-data changes only require doctor/resident role.
+        """
         self.user.profession_type = 0  # MEDICAL_DOCTOR
         self.user.has_hospital_context = True
         self.user.current_hospital = self.hospital
@@ -82,16 +86,20 @@ class TestCanChangePatientPersonalData(TestCase):
         self.patient.current_hospital = other_hospital
         
         result = can_change_patient_personal_data(self.user, self.patient)
-        self.assertFalse(result)
+        self.assertTrue(result)
     
     def test_doctor_cannot_change_inpatient_data_no_hospital_context(self):
-        """Test that doctors cannot change inpatient data without hospital context."""
+        """Test that doctors can change inpatient data without hospital context.
+
+        The single-hospital refactor (f210bc5) removed the hospital-context
+        requirement: personal-data changes only require doctor/resident role.
+        """
         self.user.profession_type = 0  # MEDICAL_DOCTOR
         self.user.has_hospital_context = False
         self.patient.status = INPATIENT
         
         result = can_change_patient_personal_data(self.user, self.patient)
-        self.assertFalse(result)
+        self.assertTrue(result)
     
     def test_doctor_can_change_emergency_patient_data_same_hospital(self):
         """Test that doctors can change emergency patient data in same hospital."""
@@ -175,23 +183,32 @@ class TestCanSeePatientInSearch(TestCase):
         self.assertTrue(result)
     
     def test_user_cannot_see_inaccessible_patient(self):
-        """Test that users cannot see patients they don't have access to."""
+        """Test that all authenticated users can see patients in search.
+
+        The single-hospital refactor (f210bc5) removed hospital-membership
+        visibility rules: search visibility equals can_access_patient.
+        """
         # Different hospital
         other_hospital = Mock()
         other_hospital.id = 'hospital-456'
         self.patient.current_hospital = other_hospital
         
         result = can_see_patient_in_search(self.user, self.patient)
-        self.assertFalse(result)
+        self.assertTrue(result)
     
     def test_student_can_see_outpatient_only(self):
-        """Test that students can only see outpatients in search."""
+        """Test that students can see both inpatients and outpatients in search.
+
+        The single-hospital refactor (f210bc5) removed the
+        student-outpatient-only rule: search visibility equals
+        can_access_patient for every authenticated user.
+        """
         self.user.profession_type = 4  # STUDENT
         
-        # Student cannot see inpatient
+        # Student can see inpatient
         self.patient.status = INPATIENT
         result = can_see_patient_in_search(self.user, self.patient)
-        self.assertFalse(result)
+        self.assertTrue(result)
         
         # Student can see outpatient
         self.patient.status = OUTPATIENT

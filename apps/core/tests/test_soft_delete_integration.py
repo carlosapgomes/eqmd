@@ -19,11 +19,15 @@ class TestSoftDeleteCascadeBehavior(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            profession_type=0  # MEDICAL_DOCTOR
+            profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.admin = User.objects.create_superuser(
             username='admin',
-            email='admin@example.com'
+            email='admin@example.com',
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_patient_with_events_soft_delete(self):
@@ -442,7 +446,9 @@ class TestSoftDeletePerformance(TestCase):
         self.user = User.objects.create_user(
             username='perfuser',
             email='perf@example.com',
-            profession_type=0  # MEDICAL_DOCTOR
+            profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_query_performance_with_large_dataset(self):

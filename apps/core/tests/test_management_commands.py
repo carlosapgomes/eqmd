@@ -71,16 +71,47 @@ class SetupGroupsCommandTestCase(TestCase):
         self.assertIn('Removed group: Medical Doctors', output)
 
     def test_setup_groups_assigns_permissions_to_medical_doctors(self):
-        """Test that Medical Doctors group gets all permissions"""
+        """Test that Medical Doctors group gets clinical permissions only.
+
+        Since the security refactor, medical staff receive ONLY the curated
+        clinical permission set: key clinical permissions are granted and no
+        ADMIN_ONLY_PERMISSIONS entry leaks into the group.
+        """
+        from apps.core.permissions.permission_categories import is_admin_permission
+
         call_command('setup_groups', verbosity=0)
         
         medical_doctors_group = Group.objects.get(name='Medical Doctors')
         
-        # Medical doctors should have all permissions
-        total_permissions = Permission.objects.count()
-        group_permissions = medical_doctors_group.permissions.count()
-        
-        self.assertEqual(group_permissions, total_permissions)
+        # Medical doctors should have full clinical permissions
+        clinical_codenames = {
+            'patients.add_patient',
+            'patients.change_patient',
+            'patients.delete_patient',
+            'events.add_event',
+            'events.change_event',
+            'dailynotes.add_dailynote',
+            'historyandphysicals.add_historyandphysical',
+            'outpatientprescriptions.add_outpatientprescription',
+            'mediafiles.add_photo',
+            'pdf_forms.add_pdfformsubmission',
+        }
+        group_codenames = {
+            f'{perm.content_type.app_label}.{perm.codename}'
+            for perm in medical_doctors_group.permissions.all()
+        }
+        self.assertTrue(
+            clinical_codenames.issubset(group_codenames),
+            f'Missing clinical permissions: {clinical_codenames - group_codenames}'
+        )
+
+        # No administrative permission may be assigned to medical staff
+        for perm in medical_doctors_group.permissions.all():
+            perm_codename = f'{perm.content_type.app_label}.{perm.codename}'
+            self.assertFalse(
+                is_admin_permission(perm_codename),
+                f'Medical Doctors has admin permission: {perm_codename}'
+            )
 
     def test_setup_groups_assigns_limited_permissions_to_students(self):
         """Test that Students group gets only view permissions"""
@@ -96,12 +127,23 @@ class SetupGroupsCommandTestCase(TestCase):
             medical_doctors_group.permissions.count()
         )
         
-        # All student permissions should be view permissions
+        # All student permissions should be view permissions, except the
+        # documented supervised-learning additions (simple notes and wound/
+        # surgery media documentation) granted by setup_groups.
+        allowed_non_view = {
+            'add_simplenote',
+            'change_simplenote',
+            'add_photo',
+            'add_photoseries',
+        }
         student_permissions = students_group.permissions.all()
         for permission in student_permissions:
+            codename = permission.codename
+            if codename in allowed_non_view:
+                continue
             self.assertTrue(
-                permission.codename.startswith('view_'),
-                f"Student has non-view permission: {permission.codename}"
+                codename.startswith('view_'),
+                f"Student has non-view permission: {codename}"
             )
 
     def test_setup_groups_handles_missing_apps(self):

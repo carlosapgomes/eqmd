@@ -18,11 +18,15 @@ class TestSoftDeleteHistoryIntegration(TestCase):
         self.user = User.objects.create_user(
             username='historyuser',
             email='history@example.com',
-            profession_type=0  # MEDICAL_DOCTOR
+            profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
         self.admin = User.objects.create_superuser(
             username='historyadmin',
-            email='historyadmin@example.com'
+            email='historyadmin@example.com',
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_patient_soft_delete_creates_history_record(self):
@@ -383,6 +387,11 @@ class TestSoftDeleteHistoryIntegration(TestCase):
             history_count = patient.history.count()
             self.assertGreater(history_count, 0)
 
+            # The profile-change signal creates PatientProfileChangeEvents
+            # that reference the patient through a PROTECT foreign key, so
+            # they must be hard-deleted first (protected-FK contract).
+            Event.all_objects.filter(patient=patient).hard_delete()
+
             # Hard delete the patient
             patient.hard_delete()
 
@@ -431,7 +440,9 @@ class TestSoftDeleteHistoryPerformance(TestCase):
         self.user = User.objects.create_user(
             username='perfuser',
             email='perf@example.com',
-            profession_type=0  # MEDICAL_DOCTOR
+            profession_type=0,  # MEDICAL_DOCTOR
+            password_change_required=False,
+            terms_accepted=True,
         )
 
     def test_bulk_operations_history_performance(self):

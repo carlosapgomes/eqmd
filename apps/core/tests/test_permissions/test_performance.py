@@ -5,12 +5,14 @@ This module tests the performance improvements from caching and query optimizati
 """
 
 import time
+from datetime import timedelta
 from unittest.mock import Mock, patch
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import connection
 from django.test.utils import override_settings
+from django.utils import timezone
 
 from apps.core.permissions import (
     can_access_patient,
@@ -37,9 +39,12 @@ class PermissionCacheTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         self.user = User.objects.create_user(
+            username='perfuser',
             email='test@example.com',
             password='testpass123',
-            profession_type=0  # Medical Doctor
+            profession_type=0,  # Medical Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         # Clear cache before each test
@@ -120,26 +125,31 @@ class PermissionQueryOptimizationTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         self.user = User.objects.create_user(
+            username='perfuser',
             email='test@example.com',
             password='testpass123',
-            profession_type=0  # Medical Doctor
+            profession_type=0,  # Medical Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
     
     def test_optimized_user_queryset(self):
         """Test optimized user queryset reduces database queries."""
-        with self.assertNumQueries(3):  # Should be optimized to minimal queries
+        # 4 queries: user+profile (select_related), groups, group
+        # permissions and user permissions (prefetch_related).
+        with self.assertNumQueries(4):
             queryset = get_optimized_user_queryset()
             user = queryset.get(id=self.user.id)
             
             # Access related data that should be prefetched
             list(user.groups.all())
-            if hasattr(user, 'userprofile'):
-                str(user.userprofile)
+            str(user.profile)
     
     def test_permission_summary_optimization(self):
         """Test permission summary uses optimized queries."""
-        # Count queries for permission summary
-        with self.assertNumQueries(5):  # Should be optimized
+        # 6 queries: the optimized user queryset (4) plus the two
+        # permission-count lookups (user and group permissions).
+        with self.assertNumQueries(6):  # Should be optimized
             summary = get_permission_summary_optimized(self.user)
             
             self.assertIsInstance(summary, dict)
@@ -149,7 +159,9 @@ class PermissionQueryOptimizationTestCase(TestCase):
     
     def test_count_user_permissions_optimization(self):
         """Test user permission counting is optimized."""
-        with self.assertNumQueries(3):  # Should use optimized user queryset
+        # 4 queries: the optimized user queryset (user+profile, groups,
+        # group permissions, user permissions) with no extra lookups.
+        with self.assertNumQueries(4):
             counts = count_user_permissions(self.user)
             
             self.assertIsInstance(counts, dict)
@@ -165,9 +177,12 @@ class PermissionPerformanceTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         self.user = User.objects.create_user(
+            username='perfuser',
             email='test@example.com',
             password='testpass123',
-            profession_type=0  # Medical Doctor
+            profession_type=0,  # Medical Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
         
         # Create mock objects for testing
@@ -179,7 +194,7 @@ class PermissionPerformanceTestCase(TestCase):
         self.mock_event = Mock()
         self.mock_event.pk = 'test-event-id'
         self.mock_event.created_by = self.user
-        self.mock_event.created_at = time.time()
+        self.mock_event.created_at = timezone.now() - timedelta(hours=1)
     
     def test_permission_check_performance(self):
         """Test that permission checks are reasonably fast."""
@@ -252,22 +267,20 @@ class PermissionPerformanceTestCase(TestCase):
     
     def test_memory_usage_reasonable(self):
         """Test that permission system doesn't use excessive memory."""
-        import psutil
-        import os
+        import tracemalloc
         
-        process = psutil.Process(os.getpid())
-        initial_memory = process.memory_info().rss
+        tracemalloc.start()
         
         # Perform many permission operations
         for i in range(1000):
             can_access_patient(self.user, self.mock_patient)
             can_manage_patients(self.user)
         
-        final_memory = process.memory_info().rss
-        memory_increase = final_memory - initial_memory
+        current_memory, _peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
         
         # Memory increase should be reasonable (less than 10MB)
-        self.assertLess(memory_increase, 10 * 1024 * 1024)
+        self.assertLess(current_memory, 10 * 1024 * 1024)
 
 
 class PermissionTemplateTagPerformanceTestCase(TestCase):
@@ -276,9 +289,12 @@ class PermissionTemplateTagPerformanceTestCase(TestCase):
     def setUp(self):
         """Set up test data."""
         self.user = User.objects.create_user(
+            username='perfuser',
             email='test@example.com',
             password='testpass123',
-            profession_type=0  # Medical Doctor
+            profession_type=0,  # Medical Doctor
+            password_change_required=False,
+            terms_accepted=True,
         )
     
     def test_template_tag_performance(self):
