@@ -5,6 +5,7 @@ from typing import ClassVar
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
+from django.db.models.functions import Lower, Trim
 from django.urls import reverse
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
@@ -270,7 +271,13 @@ class PatientRecordNumber(models.Model):
                 fields=["patient"],
                 condition=models.Q(is_current=True),
                 name="unique_current_record_per_patient",
-            )
+            ),
+            # Lifetime reservation (slice 004): the canonical number is unique
+            # across every retained row, whatever the patient or current state.
+            models.UniqueConstraint(
+                Lower(Trim("record_number")),
+                name="unique_patient_record_number_lifetime",
+            ),
         ]
         indexes: ClassVar[list[models.Index]] = [
             models.Index(fields=["patient", "is_current"]),
