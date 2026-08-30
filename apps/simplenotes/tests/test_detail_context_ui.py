@@ -102,7 +102,9 @@ class SimpleNoteDetailContextUITests(TestCase):
         content = response.content.decode()
 
         # Event datetime formatted in the breadcrumb or header
-        expected_dt = self.simplenote.event_datetime.strftime('%d/%m/%Y')
+        expected_dt = timezone.localtime(
+            self.simplenote.event_datetime
+        ).strftime('%d/%m/%Y')
         self.assertIn(expected_dt, content)
 
         # Print action
@@ -153,7 +155,9 @@ class SimpleNoteDetailContextUITests(TestCase):
         self.assertIn('João Souza', content)
 
         # Event datetime visible
-        expected_dt = self.simplenote.event_datetime.strftime('%d/%m/%Y')
+        expected_dt = timezone.localtime(
+            self.simplenote.event_datetime
+        ).strftime('%d/%m/%Y')
         self.assertIn(expected_dt, content)
 
         # Page-specific metadata: description

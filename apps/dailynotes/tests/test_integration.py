@@ -83,26 +83,28 @@ class DailyNoteIntegrationTestCase(TestCase):
 
     def setUp(self):
         """Set up per-test data."""
-        now = timezone.now()
+        local_midnight = timezone.localtime().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
         self.dailynote1 = DailyNote.objects.create(
             patient=self.patient1,
             content="Patient is stable. No major changes.",
-            event_datetime=now - timedelta(hours=2),
+            event_datetime=local_midnight,
             created_by=self.doctor,
             updated_by=self.doctor,
         )
         self.dailynote2 = DailyNote.objects.create(
             patient=self.patient2,
             content="Patient improving. Continue treatment.",
-            event_datetime=now - timedelta(hours=1),
+            event_datetime=local_midnight + timedelta(minutes=30),
             created_by=self.nurse,
             updated_by=self.nurse,
         )
         self.dailynote3 = DailyNote.objects.create(
             patient=self.patient1,
             content="Patient condition worsened. Adjust medication.",
-            event_datetime=now - timedelta(days=1),
+            event_datetime=local_midnight - timedelta(seconds=1),
             created_by=self.doctor,
             updated_by=self.doctor,
         )

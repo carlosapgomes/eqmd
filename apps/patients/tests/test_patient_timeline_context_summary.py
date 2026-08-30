@@ -332,7 +332,7 @@ class PatientTimelineExpandableDetailsTests(TestCase):
         details_section = content[details_start:details_start + 2000]
 
         # Admission date rendered as "Internado em dd/mm/yyyy"
-        adm_date_str = adm_datetime.strftime('%d/%m/%Y')
+        adm_date_str = timezone.localtime(adm_datetime).strftime('%d/%m/%Y')
         self.assertIn(f'Internado em {adm_date_str}', details_section)
 
         # Duration icon must be present (the actual text varies with
