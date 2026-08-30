@@ -64,6 +64,7 @@ from .models import (
     Tag,
     Ward,
 )
+from .services.patient_identity import RECORD_NUMBER_DELETE_MESSAGE
 
 
 class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -272,7 +273,11 @@ class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
         # Store user for tag creation
         form.current_user = self.request.user
 
-        response = super().form_valid(form)
+        try:
+            response = super().form_valid(form)
+        except ValidationError as exc:
+            form.add_error(None, str(exc))
+            return self.form_invalid(form)
 
         # Add simple success message
         messages.success(
@@ -500,9 +505,11 @@ class PatientRecordNumberDeleteView(
         context["patient"] = self.object.patient
         return context
 
-    def get_success_url(self):
-        messages.success(self.request, "Número de prontuário removido com sucesso.")
-        return reverse("patients:patient_detail", kwargs={"pk": self.object.patient.pk})
+    def post(self, request, *args, **kwargs):
+        """Reject deletion: persisted assignments are immutable history."""
+        record = self.get_object()
+        messages.error(request, RECORD_NUMBER_DELETE_MESSAGE)
+        return redirect("patients:patient_detail", pk=record.patient.pk)
 
 
 class QuickRecordNumberUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):

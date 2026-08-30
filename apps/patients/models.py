@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.urls import reverse
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
@@ -887,21 +887,39 @@ class Patient(SoftDeleteModel):
     def update_current_record_number(
         self, record_number, user, reason="", effective_date=None
     ):
-        """Update patient's current record number and create history entry"""
+        """Atomically replace the current record, preserving the old on failure.
+
+        The conflict recheck, deactivation, creation, and denormalization run
+        in one transaction; a known lifetime-constraint violation becomes a
+        domain ValidationError after rollback while unrelated integrity
+        errors are re-raised.
+        """
+        from .services.patient_identity import (
+            RECORD_NUMBER_CONFLICT_MESSAGE,
+            is_record_constraint_violation,
+        )
+
         if effective_date is None:
             effective_date = timezone.now()
+        try:
+            with transaction.atomic():
+                return self._replace_current_record(
+                    record_number, user, reason, effective_date
+                )
+        except IntegrityError as exc:
+            if is_record_constraint_violation(exc):
+                raise ValidationError(RECORD_NUMBER_CONFLICT_MESSAGE) from exc
+            raise
 
-        # Get current record for history
+    def _replace_current_record(self, record_number, user, reason, effective_date):
+        """Recheck, then persist deactivation, creation, and denormalization."""
+        self._reject_record_conflict(record_number)
         current_record = self.record_numbers.filter(is_current=True).first()
         previous_number = current_record.record_number if current_record else ""
-
-        # Deactivate current record
         if current_record:
             current_record.is_current = False
             current_record.updated_by = user
             current_record.save()
-
-        # Create new current record
         new_record = PatientRecordNumber.objects.create(
             patient=self,
             record_number=record_number,
@@ -912,13 +930,20 @@ class Patient(SoftDeleteModel):
             created_by=user,
             updated_by=user,
         )
-
-        # Update denormalized field
         self.current_record_number = record_number
         self.updated_by = user
         self.save(update_fields=["current_record_number", "updated_by", "updated_at"])
-
         return new_record
+
+    def _reject_record_conflict(self, record_number) -> None:
+        """Raise when the canonical number is already retained anywhere."""
+        from .services.patient_identity import (
+            RECORD_NUMBER_CONFLICT_MESSAGE,
+            find_record_number_conflict,
+        )
+
+        if find_record_number_conflict(record_number) is not None:
+            raise ValidationError(RECORD_NUMBER_CONFLICT_MESSAGE)
 
     def admit_patient(self, admission_datetime, admission_type, user, **kwargs):
         """Admit patient and create admission record"""

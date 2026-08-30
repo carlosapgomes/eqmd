@@ -87,8 +87,8 @@ class PatientProfileUpdatePreservesLocationTests(TestCase):
                 "state": "SP",
                 "zip_code": "01000-000",
                 "id_number": "RG123",
-                "fiscal_number": "123.456.789-00",
-                "healthcard_number": "SUS123",
+                "fiscal_number": "123.456.789-09",
+                "healthcard_number": "100 0000 0008 0001",
             },
         )
 
