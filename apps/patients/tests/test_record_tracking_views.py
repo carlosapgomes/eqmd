@@ -144,8 +144,8 @@ class RecordNumberViewTests(TestCase):
         self.patient.refresh_from_db()
         self.assertEqual(self.patient.current_record_number, "QUICK123")
 
-    def test_record_number_update_view(self):
-        """Test updating existing record number"""
+    def test_record_number_update_view_allows_metadata_edit_only(self):
+        """A persisted assignment number is immutable; metadata edits remain."""
         # Create initial record
         record = PatientRecordNumber.objects.create(
             patient=self.patient,
@@ -161,7 +161,8 @@ class RecordNumberViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "REC001")
 
-        # POST request should update record
+        # POST request trying to change the number is rejected (controlled
+        # form error), and the stored assignment stays unchanged
         data = {
             "record_number": "REC001_UPDATED",
             "change_reason": "Updated reason",
@@ -170,19 +171,24 @@ class RecordNumberViewTests(TestCase):
             ),
         }
         response = self.client.post(url, data)
-
-        # Should redirect to patient detail
-        self.assertRedirects(
-            response, reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
-        )
-
-        # Check record was updated
+        self.assertEqual(response.status_code, 200)
         record.refresh_from_db()
-        self.assertEqual(record.record_number, "REC001_UPDATED")
+        self.assertEqual(record.record_number, "REC001")
+        self.assertEqual(record.change_reason, "")
+
+        # A metadata-only edit (same number) still succeeds
+        data["record_number"] = "REC001"
+        response = self.client.post(url, data)
+        self.assertRedirects(
+            response,
+            reverse("patients:patient_detail", kwargs={"pk": self.patient.pk}),
+        )
+        record.refresh_from_db()
+        self.assertEqual(record.record_number, "REC001")
         self.assertEqual(record.change_reason, "Updated reason")
 
-    def test_record_number_delete_view(self):
-        """Test deleting record number"""
+    def test_record_number_delete_view_is_rejected(self):
+        """Ordinary delete is rejected without removing the row."""
         # Create record
         record = PatientRecordNumber.objects.create(
             patient=self.patient,
@@ -199,16 +205,13 @@ class RecordNumberViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Confirmar Exclusão")
 
-        # POST request should delete record
+        # POST request must reject deletion and keep the row
         response = self.client.post(url)
-
-        # Should redirect to patient detail
         self.assertRedirects(
-            response, reverse("patients:patient_detail", kwargs={"pk": self.patient.pk})
+            response,
+            reverse("patients:patient_detail", kwargs={"pk": self.patient.pk}),
         )
-
-        # Check record was deleted
-        self.assertFalse(PatientRecordNumber.objects.filter(pk=record.pk).exists())
+        self.assertTrue(PatientRecordNumber.objects.filter(pk=record.pk).exists())
 
 
 class AdmissionViewTests(TestCase):

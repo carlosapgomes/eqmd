@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from .models import (
@@ -14,8 +15,61 @@ from .models import (
     PatientRecordNumber,
     Ward,
 )
-from .services.patient_identity import DuplicateCandidate, find_duplicate_candidates
-from .validators import validate_record_number_format
+from .services.patient_identity import (
+    EVIDENCE_CNS,
+    EVIDENCE_CPF,
+    RECORD_NUMBER_CHANGE_MESSAGE,
+    RECORD_NUMBER_CONFLICT_MESSAGE,
+    DuplicateCandidate,
+    find_duplicate_candidates,
+    find_record_number_conflict,
+    find_strong_identifier_conflicts,
+    is_record_constraint_violation,
+    normalize_record_number,
+)
+from .validators import (
+    normalize_cns,
+    normalize_cpf,
+    validate_cns,
+    validate_cpf,
+    validate_record_number_format,
+)
+
+STRONG_CPF_MESSAGE = (
+    "CPF já cadastrado para outro paciente. "
+    "Revise o paciente existente antes de continuar."
+)
+STRONG_CNS_MESSAGE = (
+    "CNS já cadastrado para outro paciente. "
+    "Revise o paciente existente antes de continuar."
+)
+
+
+def _clean_identifier(
+    raw_value: str,
+    stored_value: str,
+    normalize: Callable[[str], str],
+    validate: Callable[[str], None],
+) -> str:
+    """Return a canonical identifier, preserving an unchanged legacy value."""
+    if not raw_value:
+        return ""
+    if normalize(raw_value) == normalize(stored_value or ""):
+        return raw_value
+    canonical = normalize(raw_value)
+    validate(canonical)
+    return canonical
+
+
+def _add_strong_conflict_errors(
+    form: forms.ModelForm, conflicts: list[DuplicateCandidate]
+) -> None:
+    """Attach field-specific errors for each strong identifier conflict."""
+    for conflict in conflicts:
+        if conflict.evidence_type == EVIDENCE_CPF:
+            form.add_error("fiscal_number", STRONG_CPF_MESSAGE)
+        elif conflict.evidence_type == EVIDENCE_CNS:
+            form.add_error("healthcard_number", STRONG_CNS_MESSAGE)
 
 
 class FormSection:
@@ -118,8 +172,8 @@ class PatientForm(forms.ModelForm):
             "healthcard_number": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-medical",
-                    "placeholder": "Número da carteirinha do plano de saúde",
-                    "aria-label": "Cartão de Saúde",
+                    "placeholder": "Número do Cartão Nacional de Saúde",
+                    "aria-label": "CNS",
                 }
             ),
             "phone": forms.TextInput(
@@ -179,6 +233,7 @@ class PatientForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.duplicate_candidates: list[DuplicateCandidate] = []
+        self.strong_conflicts: list[DuplicateCandidate] = []
 
         # Set input formats for birthday field
         self.fields["birthday"].input_formats = [
@@ -248,7 +303,7 @@ class PatientForm(forms.ModelForm):
         ]
 
     def clean(self) -> dict[str, Any]:
-        """Require explicit review when advisory duplicate candidates exist."""
+        """Require advisory review and block strong identifier conflicts."""
         cleaned_data: dict[str, Any] = super().clean() or {}
         name = cleaned_data.get("name")
         birthday = cleaned_data.get("birthday")
@@ -261,43 +316,79 @@ class PatientForm(forms.ModelForm):
                     "Possível duplicata encontrada: revise os candidatos "
                     "abaixo antes de criar o paciente.",
                 )
+        self.strong_conflicts = find_strong_identifier_conflicts(
+            cpf=cleaned_data.get("fiscal_number", ""),
+            cns=cleaned_data.get("healthcard_number", ""),
+        )
+        _add_strong_conflict_errors(self, self.strong_conflicts)
         return cleaned_data
+
+    def clean_fiscal_number(self):
+        """Validate a new CPF and return its canonical digit-only form."""
+        return _clean_identifier(
+            raw_value=self.cleaned_data.get("fiscal_number", ""),
+            stored_value=self.instance.fiscal_number,
+            normalize=normalize_cpf,
+            validate=validate_cpf,
+        )
+
+    def clean_healthcard_number(self):
+        """Validate a new CNS and return its canonical digit-only form."""
+        return _clean_identifier(
+            raw_value=self.cleaned_data.get("healthcard_number", ""),
+            stored_value=self.instance.healthcard_number,
+            normalize=normalize_cns,
+            validate=validate_cns,
+        )
 
     def is_valid(self):
         """Standard form validation"""
         return super().is_valid()
 
-    def clean_initial_record_number(self):
-        record_number = self.cleaned_data.get("initial_record_number")
+    def clean_initial_record_number(self) -> str:
+        record_number = self.cleaned_data.get("initial_record_number") or ""
         if record_number:
             validate_record_number_format(record_number)
+            if find_record_number_conflict(record_number) is not None:
+                raise ValidationError(RECORD_NUMBER_CONFLICT_MESSAGE)
         return record_number
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         if commit:
-            with transaction.atomic():
-                instance.save()
+            try:
+                with transaction.atomic():
+                    instance.save()
 
-                # Create initial PatientRecordNumber
-                initial_record_number = self.cleaned_data.get("initial_record_number")
-                current_user = getattr(self, "current_user", instance.updated_by)
-                PatientRecordNumber.objects.create(
-                    patient=instance,
-                    record_number=initial_record_number,
-                    is_current=True,
-                    change_reason="Número inicial do prontuário",
-                    effective_date=timezone.now(),
-                    created_by=current_user,
-                    updated_by=current_user,
-                )
+                    # Create initial PatientRecordNumber
+                    initial_record_number = self.cleaned_data.get(
+                        "initial_record_number"
+                    )
+                    current_user = getattr(self, "current_user", instance.updated_by)
+                    PatientRecordNumber.objects.create(
+                        patient=instance,
+                        record_number=initial_record_number,
+                        is_current=True,
+                        change_reason="Número inicial do prontuário",
+                        effective_date=timezone.now(),
+                        created_by=current_user,
+                        updated_by=current_user,
+                    )
 
-                # Update denormalized field on Patient
-                instance.current_record_number = initial_record_number
-                instance.updated_by = current_user
-                instance.save(
-                    update_fields=["current_record_number", "updated_by", "updated_at"]
-                )
+                    # Update denormalized field on Patient
+                    instance.current_record_number = initial_record_number
+                    instance.updated_by = current_user
+                    instance.save(
+                        update_fields=[
+                            "current_record_number",
+                            "updated_by",
+                            "updated_at",
+                        ]
+                    )
+            except IntegrityError as exc:
+                if is_record_constraint_violation(exc):
+                    raise ValidationError(RECORD_NUMBER_CONFLICT_MESSAGE) from exc
+                raise
 
         return instance
 
@@ -362,8 +453,8 @@ class PatientProfileForm(forms.ModelForm):
             "healthcard_number": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-medical",
-                    "placeholder": "Número da carteirinha do plano de saúde",
-                    "aria-label": "Cartão de Saúde",
+                    "placeholder": "Número do Cartão Nacional de Saúde",
+                    "aria-label": "CNS",
                 }
             ),
             "phone": forms.TextInput(
@@ -419,6 +510,36 @@ class PatientProfileForm(forms.ModelForm):
                 "%Y-%m-%d"
             )
 
+    def clean(self):
+        """Block assigning another patient's valid CPF/CNS to this profile."""
+        cleaned_data = super().clean()
+        if cleaned_data and self.instance.pk:
+            conflicts = find_strong_identifier_conflicts(
+                cpf=cleaned_data.get("fiscal_number", ""),
+                cns=cleaned_data.get("healthcard_number", ""),
+                exclude_patient_id=self.instance.pk,
+            )
+            _add_strong_conflict_errors(self, conflicts)
+        return cleaned_data
+
+    def clean_fiscal_number(self):
+        """Validate a changed CPF, preserving an unchanged legacy value."""
+        return _clean_identifier(
+            raw_value=self.cleaned_data.get("fiscal_number", ""),
+            stored_value=self.instance.fiscal_number,
+            normalize=normalize_cpf,
+            validate=validate_cpf,
+        )
+
+    def clean_healthcard_number(self):
+        """Validate a changed CNS, preserving an unchanged legacy value."""
+        return _clean_identifier(
+            raw_value=self.cleaned_data.get("healthcard_number", ""),
+            stored_value=self.instance.healthcard_number,
+            normalize=normalize_cns,
+            validate=validate_cns,
+        )
+
 
 class AllowedTagForm(forms.ModelForm):
     class Meta:
@@ -473,10 +594,17 @@ class PatientRecordNumberForm(forms.ModelForm):
         if not self.instance.pk:
             self.fields["effective_date"].initial = timezone.now()
 
-    def clean_record_number(self):
-        record_number = self.cleaned_data.get("record_number")
-        if record_number:
-            validate_record_number_format(record_number)
+    def clean_record_number(self) -> str:
+        record_number = self.cleaned_data.get("record_number") or ""
+        if not record_number:
+            return record_number
+        validate_record_number_format(record_number)
+        if not self.instance._state.adding:
+            canonical = normalize_record_number(record_number)
+            if canonical != normalize_record_number(self.instance.record_number):
+                raise ValidationError(RECORD_NUMBER_CHANGE_MESSAGE)
+        elif find_record_number_conflict(record_number) is not None:
+            raise ValidationError(RECORD_NUMBER_CONFLICT_MESSAGE)
         return record_number
 
     def clean_effective_date(self):
@@ -525,10 +653,12 @@ class QuickRecordNumberUpdateForm(forms.Form):
         ),
     )
 
-    def clean_record_number(self):
-        record_number = self.cleaned_data.get("record_number")
+    def clean_record_number(self) -> str:
+        record_number = self.cleaned_data.get("record_number") or ""
         if record_number:
             validate_record_number_format(record_number)
+            if find_record_number_conflict(record_number) is not None:
+                raise ValidationError(RECORD_NUMBER_CONFLICT_MESSAGE)
         return record_number
 
 

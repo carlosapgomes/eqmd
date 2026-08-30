@@ -126,7 +126,7 @@ class PatientRecordNumberAdmin(admin.ModelAdmin):
     list_filter = ['is_current', 'effective_date', 'created_at']
     search_fields = ['patient__name', 'record_number', 'previous_record_number']
     readonly_fields = ['created_at', 'updated_at']
-    
+
     fieldsets = (
         ('Informações do Prontuário', {
             'fields': ('patient', 'record_number', 'is_current')
@@ -139,6 +139,17 @@ class PatientRecordNumberAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        """Freeze the assigned number on persisted assignments (R6)."""
+        readonly = list(self.readonly_fields)
+        if obj is not None:
+            readonly.append("record_number")
+        return readonly
+
+    def has_delete_permission(self, request, obj=None):
+        """Persisted assignments are immutable history: no admin delete (R7)."""
+        return False
 
     def save_model(self, request, obj, form, change):
         if not change:  # If creating a new object
