@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
     """Preflight (abort on collisions), then the functional unique constraint."""
 
     dependencies: ClassVar[list[tuple[str, str]]] = [
-        ("patients", "0001_initial"),
+        ("patients", "0002_widen_record_number_column"),
     ]
 
     operations: ClassVar[list[migrations.RunPython | migrations.AddConstraint]] = [

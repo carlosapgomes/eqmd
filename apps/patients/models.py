@@ -218,7 +218,7 @@ class PatientRecordNumber(models.Model):
 
     # Record number tracking
     record_number = models.CharField(
-        max_length=50,
+        max_length=120,
         verbose_name="Número do Prontuário",
         help_text="Número do prontuário do paciente no hospital",
     )

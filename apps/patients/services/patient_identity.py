@@ -1,7 +1,9 @@
-"""Advisory patient-identity review for duplicate prevention (slice 001).
+"""Patient-identity service: duplicate review and record-number collisions.
 
-This service owns name normalization, candidate search, threshold, ordering,
-and result shaping. It never persists, merges, updates, or deletes patients.
+This module owns name normalization and candidate search for duplicate
+prevention, plus the canonical record-number lookup and collision-group
+discovery. Plan-driven consolidation lives in
+``patient_record_consolidation``; this module never merges or deletes.
 """
 
 import re
@@ -13,7 +15,7 @@ from uuid import UUID
 from django.contrib.postgres.lookups import Unaccent
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db import IntegrityError
-from django.db.models import QuerySet
+from django.db.models import Count, QuerySet
 from django.db.models.functions import Lower, Trim
 
 from apps.patients.models import Patient, PatientRecordNumber
@@ -33,6 +35,9 @@ EVIDENCE_CNS = "cns"
 
 # Planned slice-004 functional constraint over Lower(Trim(record_number)).
 RECORD_CONSTRAINT_NAME = "unique_patient_record_number_lifetime"
+# Single-source canonical expression shared by lookup, discovery, and
+# grouping (the migration keeps its own serialized copy by design).
+CANONICAL_NUMBER_EXPRESSION = Lower(Trim("record_number"))
 RECORD_NUMBER_CONFLICT_MESSAGE = (
     "Este número de prontuário já está reservado (atual ou histórico). "
     "Escolha um número diferente."
@@ -90,7 +95,7 @@ def find_record_number_conflict(record_number: str) -> PatientRecordNumber | Non
         return None
     return (
         PatientRecordNumber.objects.annotate(
-            canonical_number=Lower(Trim("record_number")),
+            canonical_number=CANONICAL_NUMBER_EXPRESSION,
         )
         .filter(canonical_number=canonical)
         .first()
@@ -100,6 +105,73 @@ def find_record_number_conflict(record_number: str) -> PatientRecordNumber | Non
 def is_record_constraint_violation(error: IntegrityError) -> bool:
     """True when the integrity error names the planned lifetime constraint."""
     return RECORD_CONSTRAINT_NAME in str(error)
+
+
+@dataclass(frozen=True)
+class RecordNumberCollisionGroup:
+    """Id-only references for one canonical record-number collision group."""
+
+    canonical: str
+    assignment_ids: list[UUID]
+    patient_ids: list[UUID]
+
+    @property
+    def row_count(self) -> int:
+        """Number of retained rows sharing the canonical number."""
+        return len(self.assignment_ids)
+
+
+@dataclass(frozen=True)
+class RecordNumberCollisionSummary:
+    """Aggregate-only collision counts (no values, no identifiers)."""
+
+    group_count: int
+    involved_rows: int
+
+
+def find_record_number_collision_groups() -> list[RecordNumberCollisionGroup]:
+    """Group retained rows by canonical number where at least two collide."""
+    return [_collision_group(canonical) for canonical in _colliding_canonicals()]
+
+
+def summarize_record_number_collisions() -> RecordNumberCollisionSummary:
+    """Aggregate collision counts only (no values, no identifiers)."""
+    groups = find_record_number_collision_groups()
+    return RecordNumberCollisionSummary(
+        group_count=len(groups),
+        involved_rows=sum(group.row_count for group in groups),
+    )
+
+
+def _colliding_canonicals() -> list[str]:
+    """Canonical values retained by more than one row, ordered."""
+    rows = (
+        PatientRecordNumber.objects.annotate(
+            canonical_number=CANONICAL_NUMBER_EXPRESSION,
+        )
+        .values("canonical_number")
+        .annotate(row_count=Count("id"))
+        .filter(row_count__gt=1)
+        .order_by("canonical_number")
+    )
+    return [row["canonical_number"] for row in rows]
+
+
+def _collision_group(canonical: str) -> RecordNumberCollisionGroup:
+    """Collect id-only references for one canonical collision group."""
+    rows = list(
+        PatientRecordNumber.objects.annotate(
+            canonical_number=CANONICAL_NUMBER_EXPRESSION,
+        )
+        .filter(canonical_number=canonical)
+        .order_by("id")
+        .values_list("id", "patient_id")
+    )
+    return RecordNumberCollisionGroup(
+        canonical=canonical,
+        assignment_ids=[assignment_id for assignment_id, _ in rows],
+        patient_ids=sorted({patient_id for _, patient_id in rows}),
+    )
 
 
 def find_duplicate_candidates(name: str, birthday: date) -> list[DuplicateCandidate]:
