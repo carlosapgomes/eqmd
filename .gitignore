@@ -67,3 +67,4 @@ prompts/
 *.secret
 openspec/changes/*/
 !openspec/changes/archive/
+.claude/
