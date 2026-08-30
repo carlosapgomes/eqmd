@@ -57,7 +57,7 @@ def simplenotes_count_today(context):
     user = request.user
     
     # Get today's simple notes
-    today = timezone.now().date()
+    today = timezone.localdate()
     queryset = SimpleNote.objects.filter(
         created_at__date=today
     )

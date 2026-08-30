@@ -57,7 +57,7 @@ def historyandphysicals_count_today(context):
     user = request.user
     
     # Get today's history and physicals
-    today = timezone.now().date()
+    today = timezone.localdate()
     queryset = HistoryAndPhysical.objects.filter(
         created_at__date=today
     )

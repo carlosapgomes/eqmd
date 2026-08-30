@@ -54,7 +54,7 @@ def dailynotes_count_today(context):
     user = request.user
     
     # Get today's daily notes with optimized query
-    today = timezone.now().date()
+    today = timezone.localdate()
     
     # Since can_access_patient currently returns True for all users (per docs/permissions/),
     # we can simply count all daily notes for performance

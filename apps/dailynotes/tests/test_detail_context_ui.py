@@ -99,7 +99,9 @@ class DailyNoteDetailContextUITests(TestCase):
         content = response.content.decode()
 
         # Event datetime formatted in the breadcrumb or header
-        expected_dt = self.dailynote.event_datetime.strftime('%d/%m/%Y')
+        expected_dt = timezone.localtime(
+            self.dailynote.event_datetime
+        ).strftime('%d/%m/%Y')
         self.assertIn(expected_dt, content)
 
         # PDF action is present
@@ -160,7 +162,9 @@ class DailyNoteDetailContextUITests(TestCase):
         self.assertIn('Maria da Silva', content)
 
         # Event datetime visible
-        expected_dt = self.dailynote.event_datetime.strftime('%d/%m/%Y')
+        expected_dt = timezone.localtime(
+            self.dailynote.event_datetime
+        ).strftime('%d/%m/%Y')
         self.assertIn(expected_dt, content)
 
         # Page-specific metadata: description
