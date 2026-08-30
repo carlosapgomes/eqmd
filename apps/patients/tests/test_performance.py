@@ -200,12 +200,14 @@ class DatabaseQueryTests(TestCase):
             updated_by=self.user,
         )
 
-        # Add record number history
+        # Add record number history (distinct prefix: the lifetime constraint
+        # reserves canonical numbers, so this history must not collide with
+        # the per-test REC### numbers created below)
         for i in range(3):
             is_current = i == 2  # Last one is current
             PatientRecordNumber.objects.create(
                 patient=self.patient,
-                record_number=f"REC{i:03d}",
+                record_number=f"HIST-REC{i:03d}",
                 is_current=is_current,
                 created_by=self.user,
                 updated_by=self.user,
