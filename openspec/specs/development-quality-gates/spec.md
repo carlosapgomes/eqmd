@@ -126,7 +126,8 @@ MUST NOT increase or gain new unexplained failure IDs.
 ### Requirement: Enforced green repository baseline
 
 The repository SHALL require green static, migration, lifecycle-fixture, and
-full-test gates before blocked critical clinical changes resume.
+full-test gates before blocked critical clinical changes resume, and the
+full-test gate SHALL be wall-clock independent.
 
 #### Scenario: Full quality baseline is restored
 
@@ -145,6 +146,23 @@ full-test gates before blocked critical clinical changes resume.
 - **THEN** all original slice gates must pass without a baseline waiver
 - **AND** only then may tasks 1.1-1.5 be marked complete
 - **AND** slice 002 remains blocked until third-LLM approval of that rerun
+
+#### Scenario: Full suite is wall-clock independent
+
+- **GIVEN** day-scoped dashboard tags and date-rendering assertions share the
+  active timezone basis
+- **WHEN** the full test suite runs at any wall-clock time
+- **THEN** `./scripts/test.sh` exits 0 with zero failures and errors
+- **AND** no date-boundary failure appears during the local late-evening or
+  post-midnight window
+
+#### Scenario: Divergent timezone does not break date assertions
+
+- **GIVEN** the timezone-consistent tag and assertion anchors are in place
+- **WHEN** the date-boundary-affected test modules run under a divergent
+  `TIME_ZONE` whose local clock sits in the late-evening window
+- **THEN** every module passes with zero failures
+- **AND** the same modules also pass under the project `TIME_ZONE`
 
 ### Requirement: Aggregate and synthetic evidence only
 

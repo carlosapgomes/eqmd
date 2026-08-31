@@ -47,8 +47,8 @@ Implemented at the owner's direct request; gates below.
 
 - [x] 4.1 Add `build_collision_review` (name, birthday, current flag,
       likely-same-person marker per row) and the plan-scaffold builder
-      to the consolidation service *(planner-implemented 2026-08-30 at
-      the owner's request; see slice-03 report)*
+      to the consolidation service _(planner-implemented 2026-08-30 at
+      the owner's request; see slice-03 report)_
 - [x] 4.2 Add `--show-patients` and `--emit-skeleton <path>` to the
       command (operator console only; CPF/CNS never printed)
 - [x] 4.3 Add `apps/patients/tests/test_consolidation_review.py`
@@ -56,8 +56,8 @@ Implemented at the owner's direct request; gates below.
       `/tmp/consolidate-historical-record-number-collisions-slice-03-report.md`
 - [x] 4.4 Add `services/consolidation_prefill.py` (same-person
       criterion drafting: keep rule, `DUP-####` series with database
-      uniqueness, void/renumber routing) *(planner-implemented
-      2026-08-30 under the owner's authorized criterion)*
+      uniqueness, void/renumber routing) _(planner-implemented
+      2026-08-30 under the owner's authorized criterion)_
 - [x] 4.5 Add `--prefill` to `--emit-skeleton` (decided-group count in
       output; `--prefill` without `--emit-skeleton` fails closed) and
       document it in the runbook step 3
@@ -66,14 +66,19 @@ Implemented at the owner's direct request; gates below.
 
 ## Closure (project owner + third LLM; not an implementer slice)
 
-- [ ] 3.1 Operator executes the reviewed plan against the restored dev
+- [x] 3.1 Operator executes the reviewed plan against the restored dev
       database and applies `0002` only after the aggregate count is zero
-      *(deferred by owner decision 2026-08-30, ADR-0002: deploy ships with
-      patients migrations held at `0001_initial`; 35/40 groups decided in
-      `~/consolidacao/plan-completo.json`, 5 mixed groups pending in
-      `decidir-grupos.json`; re-audit and plan regeneration required if the
-      database changes meanwhile)*
-- [ ] 3.2 Third LLM re-verifies the aggregate audit (zero), migration
+      _(closed 2026-08-31 in PRODUCTION (owner decision: production is
+      the authoritative run): plan 'fix-2026-08-31' over 43 groups / 92
+      rows with 49 actions, single transaction, post-check zero; 3 new
+      groups had appeared since the 40/86 restore via then-unprotected
+      write paths — all resolved; `0003` applied right after with its
+      preflight re-verifying zero; dev-restored copy intentionally left
+      unconsolidated)_
+- [x] 3.2 Third LLM re-verifies the aggregate audit (zero), migration
       state (`0002` applied on dev), and the full suite, then marks
       `harden-patient-identity-and-duplicate-prevention` tasks 5.1-5.5
-      *(awaits 3.1; identity tasks 5.3-5.5 verified and closed 2026-08-30)*
+      _(closed 2026-08-31: operator-supplied production artifacts
+      accepted — re-audit "0 groups / 0 rows" + showmigrations
+      0001/0002/0003 all [X]; identity tasks 5.1-5.5 closed with this
+      evidence; suite green in CI on every push)_
