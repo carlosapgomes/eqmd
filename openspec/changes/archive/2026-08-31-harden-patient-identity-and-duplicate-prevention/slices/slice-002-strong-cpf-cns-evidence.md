@@ -42,7 +42,7 @@ push.
    unrelated pre-existing changes. Stop if an expected file has unreviewed
    edits.
 2. Before editing, run full `./scripts/test.sh`. Record exit code, `Ran N
-   tests`, failures/errors/skips. Stop before code changes unless exit code is
+tests`, failures/errors/skips. Stop before code changes unless exit code is
    0 with zero failures/errors.
 3. Verify `ruff` and `mypy` already exist inside `eqmd_dev`; never install
    packages during the slice.

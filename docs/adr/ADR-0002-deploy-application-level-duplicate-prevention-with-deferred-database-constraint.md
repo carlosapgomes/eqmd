@@ -4,6 +4,13 @@
 
 Accepted (decisão do owner, 2026-08-30)
 
+> **Transição encerrada em 2026-08-31**: consolidação executada na
+> produção pelo owner (plano `fix-2026-08-31`, 43 grupos / 92 linhas /
+> 49 ações, pós-checagem zero); `0003` aplicada com preflight
+> re-verificando; as três camadas de proteção estão ativas. O script
+> `upgrade-rootless-transition.sh` pode ser aposentado no próximo
+> upgrade (ele mesmo detectará o zero e executará migrate completo).
+
 ## Contexto
 
 O change `harden-patient-identity-and-duplicate-prevention` entregou

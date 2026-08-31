@@ -26,7 +26,7 @@ Current code facts to verify before planning:
   (`Lower(Trim(record_number))`, all retained rows), and the
   `RECORD_NUMBER_*` message constants.
 - `Patient.update_current_record_number(record_number, user, reason,
-  effective_date=None)` is the audited append flow (transaction, recheck,
+effective_date=None)` is the audited append flow (transaction, recheck,
   deactivation, new row, denormalized sync).
 - `PatientRecordNumber` has `change_reason`, `updated_by`,
   `effective_date`, `previous_record_number`; it is NOT simple-history

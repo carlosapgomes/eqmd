@@ -61,7 +61,7 @@
 - **D3 - Current numbers go through the append flow.** When the erroneous
   assignment is the patient's current number, the service calls the
   existing audited `update_current_record_number(new_number, user,
-  reason)` first (new current row, old row deactivated), then voids the
+reason)` first (new current row, old row deactivated), then voids the
   deactivated old row with the D2 marker. Purely historical erroneous
   rows are voided directly.
 - **D4 - One transaction, post-verified.** `--execute` wraps the whole
