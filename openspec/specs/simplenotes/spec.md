@@ -1,4 +1,12 @@
-## ADDED Requirements
+# simplenotes Specification
+
+## Purpose
+
+Define behavior for `SimpleNote` clinical notes: canonical event
+description persisted by the form, audit ownership, and the essential
+create/update/delete flow with its permission gates.
+
+## Requirements
 
 ### Requirement: SimpleNote form MUST persist canonical event description
 

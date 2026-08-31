@@ -250,7 +250,6 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB for videos
 
 # Media-specific settings
 MEDIA_IMAGE_MAX_SIZE = 5 * 1024 * 1024  # 5MB
-MEDIA_VIDEO_MAX_SIZE = 50 * 1024 * 1024  # 50MB
 MEDIA_VIDEO_MAX_DURATION = 120  # 2 minutes in seconds
 MEDIA_ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
 MEDIA_ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"]

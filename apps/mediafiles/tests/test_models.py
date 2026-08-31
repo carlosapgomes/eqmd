@@ -1119,8 +1119,8 @@ class MediaFileVideoMethodsTests(TestCase):
         # Test valid video
         video_file.validate_video_security()  # Should not raise
 
-        # Test oversized video: the effective limit is 100MB (the later
-        # MEDIA_VIDEO_MAX_SIZE override in config/settings.py wins).
+        # Test oversized video: the effective limit is 100MB
+        # (MEDIA_VIDEO_MAX_SIZE, defined once in config/settings.py).
         video_file.file_size = 150 * 1024 * 1024  # 150MB
         with self.assertRaises(ValidationError):
             video_file.validate_video_security()

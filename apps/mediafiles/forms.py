@@ -1044,7 +1044,7 @@ class VideoClipCreateFormOld(BaseMediaForm, forms.ModelForm):
         from .utils import validate_video_file
 
         # Validate file size
-        max_size = getattr(settings, 'MEDIA_VIDEO_MAX_SIZE', 50 * 1024 * 1024)  # 50MB
+        max_size = getattr(settings, 'MEDIA_VIDEO_MAX_SIZE', 100 * 1024 * 1024)  # 100MB
         if video.size > max_size:
             raise ValidationError(f"Arquivo muito grande. Tamanho máximo: {max_size // (1024 * 1024)}MB")
 

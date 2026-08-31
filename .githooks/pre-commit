@@ -21,9 +21,11 @@ if [ ${#staged_md[@]} -eq 0 ]; then
 fi
 
 echo "[pre-commit] Formatando e validando markdown staged..."
-npx --yes prettier --write "${staged_md[@]}"
-npx --yes markdownlint-cli --fix "${staged_md[@]}"
-npx --yes markdownlint-cli "${staged_md[@]}"
-git add "${staged_md[@]}"
+npx --yes prettier@3.6.2 --write "${staged_md[@]}"
+npx --yes markdownlint-cli2@0.22.1 --fix "${staged_md[@]}"
+npx --yes markdownlint-cli2@0.22.1 "${staged_md[@]}"
+# -f e obrigatoria: paths gitignored (ex.: openspec/changes/) entram via
+# `git add -f` pelo operador e precisam ser re-staged pelo mesmo caminho.
+git add -f -- "${staged_md[@]}"
 
 echo "[pre-commit] Markdown OK."

@@ -584,7 +584,7 @@ class MediaFile(models.Model):
             return
 
         # File size validation
-        max_size = getattr(settings, 'MEDIA_VIDEO_MAX_SIZE', 50 * 1024 * 1024)  # 50MB
+        max_size = getattr(settings, 'MEDIA_VIDEO_MAX_SIZE', 100 * 1024 * 1024)  # 100MB
         if self.file_size > max_size:
             raise ValidationError(f"Video file size ({self.get_display_size()}) exceeds maximum allowed ({max_size // (1024 * 1024)}MB)")
 
