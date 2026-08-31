@@ -63,7 +63,7 @@ class FileSecurityValidator:
         if file_type == 'image':
             max_size = getattr(settings, 'MEDIA_IMAGE_MAX_SIZE', 5 * 1024 * 1024)
         elif file_type == 'video':
-            max_size = getattr(settings, 'MEDIA_VIDEO_MAX_SIZE', 50 * 1024 * 1024)
+            max_size = getattr(settings, 'MEDIA_VIDEO_MAX_SIZE', 100 * 1024 * 1024)
         else:
             raise ValidationError("Invalid file type specified")
         
