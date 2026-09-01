@@ -9,9 +9,13 @@ Registros de decisões arquiteturais importantes do projeto.
 - [ADR-0002 — Deploy application-level duplicate prevention with
   deferred database constraint][adr-0002]
   — _Accepted (2026-08-30)_
+- [ADR-0003 — Manter cadastros duplicados separados, sem merge
+  clínico][adr-0003]
+  — _Accepted (2026-09-01)_
 
 [adr-0001]: ADR-0001-deterministic-development-quality-gates.md
 [adr-0002]: ADR-0002-deploy-application-level-duplicate-prevention-with-deferred-database-constraint.md
+[adr-0003]: ADR-0003-keep-duplicate-patients-separate-no-merge-tooling.md
 
 ## Como criar nova ADR
 
