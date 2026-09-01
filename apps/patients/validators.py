@@ -39,6 +39,23 @@ def validate_record_number_format(record_number):
     # e.g., regex patterns, check digits, etc.
 
 
+TEMPORARY_RECORD_NUMBER_MESSAGE = (
+    "Números iniciados em TMP- são reservados para registros temporários "
+    "gerados pelo sistema."
+)
+
+
+def validate_permanent_record_number(record_number):
+    """Reject manually typed numbers that use the reserved TMP- prefix.
+
+    Pure prefix gate, separate from ``validate_record_number_format``:
+    generated temporaries satisfy the base format, so only the manual
+    write doors call this validation.
+    """
+    if record_number.strip().upper().startswith(TEMPORARY_RECORD_PREFIX):
+        raise ValidationError(TEMPORARY_RECORD_NUMBER_MESSAGE)
+
+
 def validate_admission_datetime(admission_datetime):
     """Validate admission datetime"""
     if not admission_datetime:

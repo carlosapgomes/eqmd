@@ -33,6 +33,7 @@ from .validators import (
     normalize_cpf,
     validate_cns,
     validate_cpf,
+    validate_permanent_record_number,
     validate_record_number_format,
 )
 
@@ -385,6 +386,7 @@ class PatientForm(forms.ModelForm):
             return ""
         if record_number:
             validate_record_number_format(record_number)
+            validate_permanent_record_number(record_number)
             if find_record_number_conflict(record_number) is not None:
                 raise ValidationError(RECORD_NUMBER_CONFLICT_MESSAGE)
         return record_number
@@ -644,6 +646,7 @@ class PatientRecordNumberForm(forms.ModelForm):
         if not record_number:
             return record_number
         validate_record_number_format(record_number)
+        validate_permanent_record_number(record_number)
         if not self.instance._state.adding:
             canonical = normalize_record_number(record_number)
             if canonical != normalize_record_number(self.instance.record_number):
@@ -702,6 +705,7 @@ class QuickRecordNumberUpdateForm(forms.Form):
         record_number = self.cleaned_data.get("record_number") or ""
         if record_number:
             validate_record_number_format(record_number)
+            validate_permanent_record_number(record_number)
             if find_record_number_conflict(record_number) is not None:
                 raise ValidationError(RECORD_NUMBER_CONFLICT_MESSAGE)
         return record_number
