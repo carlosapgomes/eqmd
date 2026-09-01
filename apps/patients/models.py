@@ -15,6 +15,7 @@ from apps.core.models.soft_delete import SoftDeleteModel
 from .validators import (
     validate_admission_datetime,
     validate_discharge_datetime,
+    validate_permanent_record_number,
     validate_record_number_format,
 )
 
@@ -838,6 +839,13 @@ class Patient(SoftDeleteModel):
         """Get current record number object from related model"""
         return self.record_numbers.filter(is_current=True).first()
 
+    @property
+    def is_temporary_record(self) -> bool:
+        """True while the current number is a system-generated temporary."""
+        from .services.temporary_record import is_temporary_record_number
+
+        return is_temporary_record_number(self.current_record_number)
+
     def get_current_admission(self):
         """Get current active admission"""
         if self.current_admission_id:
@@ -910,6 +918,9 @@ class Patient(SoftDeleteModel):
         # (managed UI, consolidation executor, future imports) shares the
         # same rule as forms and model clean().
         validate_record_number_format(record_number)
+        # The TMP- prefix is reserved for server-generated temporaries;
+        # manual writes through this door must never set one.
+        validate_permanent_record_number(record_number)
 
         if effective_date is None:
             effective_date = timezone.now()
