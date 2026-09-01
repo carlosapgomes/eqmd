@@ -27,6 +27,7 @@ from .services.patient_identity import (
     is_record_constraint_violation,
     normalize_record_number,
 )
+from .services.temporary_record import generate_temporary_record_number
 from .validators import (
     normalize_cns,
     normalize_cpf,
@@ -98,13 +99,30 @@ class TagCreationForm(forms.Form):
 
 class PatientForm(forms.ModelForm):
     # Add record number field to patient form
+    use_temporary_record = forms.BooleanField(
+        required=False,
+        label="Paciente sem número de registro definitivo",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     initial_record_number = forms.CharField(
         max_length=50,
-        required=True,
+        required=False,
         label="Número do Prontuário",
         help_text="Número inicial do prontuário (pode ser alterado posteriormente)",
         widget=forms.TextInput(
             attrs={"class": "form-control", "placeholder": "Ex: REC001, 123456, etc."}
+        ),
+    )
+    temporary_record_reason = forms.CharField(
+        max_length=500,
+        required=False,
+        label="Motivo do registro temporário",
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 2,
+                "placeholder": "Explique por que o número definitivo não está disponível...",
+            }
         ),
     )
     duplicate_review_confirmed = forms.BooleanField(
@@ -303,8 +321,10 @@ class PatientForm(forms.ModelForm):
         ]
 
     def clean(self) -> dict[str, Any]:
-        """Require advisory review and block strong identifier conflicts."""
+        """Require advisory review, block strong identifier conflicts, and
+        enforce the temporary/definitive record-number rules."""
         cleaned_data: dict[str, Any] = super().clean() or {}
+        self._enforce_record_number_mode(cleaned_data)
         name = cleaned_data.get("name")
         birthday = cleaned_data.get("birthday")
         if name and birthday:
@@ -345,8 +365,24 @@ class PatientForm(forms.ModelForm):
         """Standard form validation"""
         return super().is_valid()
 
+    def _enforce_record_number_mode(self, cleaned_data: dict[str, Any]) -> None:
+        """Require exactly one of: typed number or temporary reason."""
+        if cleaned_data.get("use_temporary_record"):
+            if not (cleaned_data.get("temporary_record_reason") or "").strip():
+                self.add_error(
+                    "temporary_record_reason",
+                    "Informe o motivo do registro temporário.",
+                )
+        elif not cleaned_data.get("initial_record_number"):
+            self.add_error(
+                "initial_record_number",
+                self.fields["initial_record_number"].error_messages["required"],
+            )
+
     def clean_initial_record_number(self) -> str:
         record_number = self.cleaned_data.get("initial_record_number") or ""
+        if self.cleaned_data.get("use_temporary_record"):
+            return ""
         if record_number:
             validate_record_number_format(record_number)
             if find_record_number_conflict(record_number) is not None:
@@ -360,16 +396,25 @@ class PatientForm(forms.ModelForm):
                 with transaction.atomic():
                     instance.save()
 
-                    # Create initial PatientRecordNumber
-                    initial_record_number = self.cleaned_data.get(
-                        "initial_record_number"
-                    )
+                    # Create initial PatientRecordNumber (server-generated
+                    # when the temporary flow is selected)
+                    if self.cleaned_data.get("use_temporary_record"):
+                        initial_record_number = generate_temporary_record_number()
+                        change_reason = (
+                            "Registro temporário: "
+                            + (self.cleaned_data.get("temporary_record_reason") or "")
+                        )
+                    else:
+                        initial_record_number = self.cleaned_data[
+                            "initial_record_number"
+                        ]
+                        change_reason = "Número inicial do prontuário"
                     current_user = getattr(self, "current_user", instance.updated_by)
                     PatientRecordNumber.objects.create(
                         patient=instance,
                         record_number=initial_record_number,
                         is_current=True,
-                        change_reason="Número inicial do prontuário",
+                        change_reason=change_reason,
                         effective_date=timezone.now(),
                         created_by=current_user,
                         updated_by=current_user,

@@ -13,6 +13,11 @@ _CNS_PROVISORY_WEIGHTS = (4, 3, 2, 7, 6, 5, 4, 3, 2, 7, 6, 5, 4, 3, 2)
 _CNS_DEFINITIVE_SUFFIX = "0001"
 _NON_DIGIT = re.compile(r"\D")
 
+# Reserved prefix for server-generated temporary record numbers. Defined in
+# this import-free base module so services, forms and models share one
+# constant without import cycles.
+TEMPORARY_RECORD_PREFIX = "TMP-"
+
 
 def validate_record_number_format(record_number):
     """Validate record number format (customize based on hospital requirements)"""

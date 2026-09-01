@@ -165,6 +165,24 @@
                             </div>
                         </div>
                     </div>
+                    <div class="form-check mb-3">
+                        {{ form.use_temporary_record }}
+                        <label class="form-check-label" for="{{ form.use_temporary_record.id_for_label }}">
+                            {{ form.use_temporary_record.label }}
+                        </label>
+                    </div>
+                    <div id="temporary-record-reason-wrapper" class="d-none mb-3">
+                        <label for="{{ form.temporary_record_reason.id_for_label }}" class="form-label">
+                            <i class="bi bi-clock-history me-1 text-medical-deep-blue"></i>
+                            Motivo do registro temporário <span class="text-danger">*</span>
+                        </label>
+                        {{ form.temporary_record_reason }}
+                        {% if form.temporary_record_reason.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.temporary_record_reason.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <!-- Contact Information Section -->
@@ -558,6 +576,24 @@ window.addEventListener('DOMContentLoaded', function() {
         phoneInput.addEventListener('input', function(e) {
             e.target.value = formatPhone(e.target.value);
         });
+    }
+
+    // Toggle between definitive number and temporary record flow
+    var useTemporary = document.getElementById('id_use_temporary_record');
+    var numberInput = document.getElementById('id_initial_record_number');
+    var reasonWrapper = document.getElementById('temporary-record-reason-wrapper');
+
+    if (useTemporary && numberInput && reasonWrapper) {
+        var numberWrapper = numberInput.closest('.mb-3');
+        var syncTemporaryRecordFields = function() {
+            var temporary = useTemporary.checked;
+            if (numberWrapper) {
+                numberWrapper.classList.toggle('d-none', temporary);
+            }
+            reasonWrapper.classList.toggle('d-none', !temporary);
+        };
+        useTemporary.addEventListener('change', syncTemporaryRecordFields);
+        syncTemporaryRecordFields();
     }
 });
 </script>
