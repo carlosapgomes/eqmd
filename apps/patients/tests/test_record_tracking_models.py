@@ -46,6 +46,21 @@ class PatientRecordNumberModelTests(TestCase):
         self.assertEqual(record.patient, self.patient)
         self.assertIsNotNone(record.id)
 
+    def test_update_current_record_number_rejects_placeholder_before_writing(self):
+        """Managed flow refuses placeholder-only values without any write"""
+        self.patient.update_current_record_number("REC001", self.user, "setup")
+
+        with self.assertRaisesMessage(ValidationError, "ao menos uma letra"):
+            self.patient.update_current_record_number("---", self.user, "junk")
+
+        # Nothing was written: same single current row, denormalized value intact
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.current_record_number, "REC001")
+        rows = list(self.patient.record_numbers.order_by("id"))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].record_number, "REC001")
+        self.assertTrue(rows[0].is_current)
+
     def test_unique_current_record_constraint(self):
         """Test that only one current record can exist per patient"""
         # Create first current record

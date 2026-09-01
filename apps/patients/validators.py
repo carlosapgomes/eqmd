@@ -23,6 +23,13 @@ def validate_record_number_format(record_number):
     if len(record_number.strip()) < 3:
         raise ValidationError("Número do prontuário deve ter pelo menos 3 caracteres")
 
+    # Placeholder-only values (e.g. "---") carry no identity and must never
+    # become a record number on any write path.
+    if not any(character.isalnum() for character in record_number.strip()):
+        raise ValidationError(
+            "Número do prontuário deve conter ao menos uma letra ou número"
+        )
+
     # Add more specific validation rules as needed
     # e.g., regex patterns, check digits, etc.
 

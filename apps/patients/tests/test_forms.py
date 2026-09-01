@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -14,11 +15,37 @@ from ..forms import (
     TransferPatientForm,
 )
 from ..models import Patient, PatientAdmission, PatientRecordNumber, Ward
+from ..validators import validate_record_number_format
 
 User = get_user_model()
 
 
 VALID_RECORD_NUMBER = "REC001"
+
+
+class RecordNumberFormatValidatorTests(TestCase):
+    """Direct unit tests for validate_record_number_format (placeholder rule)."""
+
+    def test_placeholder_only_values_are_rejected(self):
+        """Values without any letter or digit are invalid record numbers"""
+        for value in ("---", "...", "___", "- - -"):
+            with (
+                self.subTest(value=value),
+                self.assertRaisesMessage(ValidationError, "ao menos uma letra"),
+            ):
+                validate_record_number_format(value)
+
+    def test_values_with_alphanumerics_are_accepted(self):
+        """Legitimate formats keep passing after the placeholder rule"""
+        for value in ("123456", "PRONT-001", "12.345-6", "REC 007"):
+            with self.subTest(value=value):
+                validate_record_number_format(value)  # must not raise
+
+    def test_empty_and_short_values_are_still_rejected(self):
+        """Pre-existing rules (empty, <3 chars) are preserved"""
+        for value in ("", "   ", "AB"):
+            with self.subTest(value=value), self.assertRaises(ValidationError):
+                validate_record_number_format(value)
 
 
 class PatientFormTests(TestCase):
@@ -179,6 +206,19 @@ class PatientFormTests(TestCase):
                 "birthday": "1990-01-01",
                 "gender": Patient.GenderChoices.MALE,
                 "initial_record_number": "AB",  # fewer than 3 chars
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("initial_record_number", form.errors)
+
+    def test_patient_form_rejects_placeholder_initial_record_number(self):
+        """Form is invalid when initial_record_number is placeholder-only (e.g. '---')"""
+        form = PatientForm(
+            {
+                "name": "Test Patient",
+                "birthday": "1990-01-01",
+                "gender": Patient.GenderChoices.MALE,
+                "initial_record_number": "---",
             }
         )
         self.assertFalse(form.is_valid())

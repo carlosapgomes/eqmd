@@ -906,6 +906,11 @@ class Patient(SoftDeleteModel):
             is_record_constraint_violation,
         )
 
+        # Format gate runs before any write so every programmatic caller
+        # (managed UI, consolidation executor, future imports) shares the
+        # same rule as forms and model clean().
+        validate_record_number_format(record_number)
+
         if effective_date is None:
             effective_date = timezone.now()
         try:

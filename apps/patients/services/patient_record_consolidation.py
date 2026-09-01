@@ -15,6 +15,7 @@ from json import JSONDecodeError
 from uuid import UUID
 
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.core.exceptions import ValidationError
 
 from apps.patients.models import PatientRecordNumber
 from apps.patients.services.patient_identity import (
@@ -24,6 +25,7 @@ from apps.patients.services.patient_identity import (
     normalize_name,
     summarize_record_number_collisions,
 )
+from apps.patients.validators import validate_record_number_format
 
 # Audited consolidation decision constants (design D2/D3).
 VOID_MARKER = "::voided::"
@@ -264,11 +266,19 @@ def _parse_plan_action(raw: object) -> PlanAction:
     action = raw.get("action")
     if action not in (ACTION_VOID, ACTION_RENUMBER):
         raise ConsolidationPlanError(f"unsupported action: {action!r}")
+    assignment_id = _parse_uuid(raw.get("assignment"), "action assignment")
     new_number = raw.get("new_record_number", "")
     if action == ACTION_RENUMBER:
         _require_non_empty_str(new_number, "renumber new_record_number")
+        try:
+            validate_record_number_format(new_number)
+        except ValidationError as exc:
+            raise ConsolidationPlanError(
+                f"renumber for assignment {assignment_id} targets an invalid "
+                f"record number: {exc.messages[0]}"
+            ) from exc
     return PlanAction(
-        assignment_id=_parse_uuid(raw.get("assignment"), "action assignment"),
+        assignment_id=assignment_id,
         action=action,
         rationale=_require_non_empty_str(raw.get("rationale"), "rationale"),
         new_record_number=new_number,
