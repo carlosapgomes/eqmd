@@ -361,6 +361,31 @@ class PlanValidationRefusalTests(PlanFileMixin, TestCase):
         plan = _plan([_group("rec100", self.keep_row, action)])
         self.assertRunRefused(plan, self.operator, "is historical")
 
+    def test_renumber_to_placeholder_target_is_refused(self):
+        """R3: plan renumbering to a junk number is refused at parse time"""
+        current_keep, current_error = _create_collision_pair(
+            self.operator, "REC600", error_is_current=True
+        )
+        action = [_renumber_action(current_error, "---")]
+        plan = _two_group_plan(
+            _group("rec100", self.keep_row, [_void_action(self.error_row)]),
+            _group("rec600", current_keep, action),
+        )
+        self.assertRunRefused(
+            plan, self.operator, "targets an invalid record number"
+        )
+
+    def test_renumber_to_placeholder_is_refused_even_in_single_group_plan(self):
+        """R3: refusal is independent of plan size; assignment is named"""
+        current_keep, current_error = _create_collision_pair(
+            self.operator, "REC700", error_is_current=True
+        )
+        action = [_renumber_action(current_error, "___")]
+        plan = _plan([_group("rec700", current_keep, action)])
+        self.assertRunRefused(
+            plan, self.operator, f"assignment {current_error.pk}"
+        )
+
     def test_execute_requires_an_explicit_operator_user(self):
         plan = _void_plan("rec100", self.keep_row, self.error_row)
         self.assertRunRefused(plan, None, "--user", execute=True)
