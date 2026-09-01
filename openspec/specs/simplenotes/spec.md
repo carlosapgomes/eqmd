@@ -2,17 +2,17 @@
 
 ## Purpose
 
-Define behavior for `SimpleNote` clinical notes: canonical event
-description persisted by the form, audit ownership, and the essential
-create/update/delete flow with its permission gates.
+Define behavior for `SimpleNote` clinical notes: canonical event description
+persisted by the form, audit ownership, and the essential create/update/delete
+flow with its permission gates.
 
 ## Requirements
 
 ### Requirement: SimpleNote form MUST persist canonical event description
 
 The system SHALL persist a canonical description for `SimpleNote` events when
-saving through `SimpleNoteForm`, without requiring manual description
-assignment in the view layer.
+saving through `SimpleNoteForm`, without requiring manual description assignment
+in the view layer.
 
 #### Scenario: Form save sets canonical description
 

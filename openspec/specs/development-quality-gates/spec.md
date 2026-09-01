@@ -48,8 +48,8 @@ framework-upgrade change supersedes this decision.
 ### Requirement: Reproducible non-mutating development tools
 
 Ruff, Mypy, and their declared configuration SHALL be installed from committed
-dependency metadata during environment construction. Quality scripts SHALL
-never install or upgrade packages in a running container.
+dependency metadata during environment construction. Quality scripts SHALL never
+install or upgrade packages in a running container.
 
 #### Scenario: Required tool is available in a built development environment
 
@@ -141,8 +141,8 @@ full-test gate SHALL be wall-clock independent.
 #### Scenario: Patient-identity work resumes
 
 - **GIVEN** the consolidated quality baseline is fully green
-- **WHEN** slice 001 of
-  `harden-patient-identity-and-duplicate-prevention` is rerun
+- **WHEN** slice 001 of `harden-patient-identity-and-duplicate-prevention` is
+  rerun
 - **THEN** all original slice gates must pass without a baseline waiver
 - **AND** only then may tasks 1.1-1.5 be marked complete
 - **AND** slice 002 remains blocked until third-LLM approval of that rerun
@@ -181,16 +181,16 @@ data.
 ### Requirement: Consolidation service modules stay split by responsibility
 
 The patients consolidation service SHALL keep plan parsing/validation,
-review/skeleton presentation, and plan execution in separate modules,
-with `patient_record_consolidation` acting as the facade that
-re-exports the public surface.
+review/skeleton presentation, and plan execution in separate modules, with
+`patient_record_consolidation` acting as the facade that re-exports the public
+surface.
 
 #### Scenario: Facade preserves the public surface
 
 - **WHEN** an importer (command, prefill, tests) uses names from
   `patient_record_consolidation`
-- **THEN** every previously public name remains importable from the
-  facade, without any importer change
+- **THEN** every previously public name remains importable from the facade,
+  without any importer change
 
 #### Scenario: Executor keeps marker ownership
 

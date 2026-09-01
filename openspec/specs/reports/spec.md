@@ -19,8 +19,8 @@ create, update, and view report templates.
 
 #### Scenario: Unauthorized template creation blocked
 
-- **WHEN** a user who is not admin/staff, doctor, or resident attempts to
-  create a report template
+- **WHEN** a user who is not admin/staff, doctor, or resident attempts to create
+  a report template
 - **THEN** the system denies the action
 
 ### Requirement: Template visibility rules
