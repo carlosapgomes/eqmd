@@ -1,8 +1,23 @@
+from collections import Counter
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.mixins import (
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    UserPassesTestMixin,
+)
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Case, IntegerField, Q, When
+from django.db.models import (
+    Case,
+    DurationField,
+    ExpressionWrapper,
+    F,
+    IntegerField,
+    Q,
+    When,
+)
+from django.db.models.functions import ExtractDay
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -65,6 +80,7 @@ from .models import (
     Ward,
 )
 from .services.patient_identity import RECORD_NUMBER_DELETE_MESSAGE
+from .validators import TEMPORARY_RECORD_PREFIX
 
 
 class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -170,6 +186,47 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             .order_by("name")
         )
 
+        return context
+
+
+class TemporaryRecordListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Staff-only dashboard of patients pending a definitive record number.
+
+    Management view (design D7): gated by ``is_staff`` instead of a clinical
+    permission object. Lists non-deleted patients whose current record number
+    still carries the temporary prefix, oldest first, with the pending age
+    (whole days since creation) and an aggregate count by creator derived
+    from the same queryset.
+    """
+
+    model = Patient
+    template_name = "patients/temporary_record_list.html"
+    context_object_name = "patients"
+
+    def test_func(self) -> bool:
+        return self.request.user.is_staff
+
+    def get_queryset(self):
+        pending_duration = ExpressionWrapper(
+            timezone.now() - F("created_at"),
+            output_field=DurationField(),
+        )
+        return (
+            Patient.objects.filter(
+                is_deleted=False,
+                current_record_number__istartswith=TEMPORARY_RECORD_PREFIX,
+            )
+            .select_related("created_by")
+            .annotate(pending_days=ExtractDay(pending_duration))
+            .order_by("created_at")
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        counts = Counter(
+            self.object_list.values_list("created_by__username", flat=True)
+        )
+        context["aggregate_by_creator"] = counts.most_common()
         return context
 
 
