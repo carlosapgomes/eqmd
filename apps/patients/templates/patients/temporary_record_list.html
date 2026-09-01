@@ -1,0 +1,80 @@
+{% extends "patients/patient_base.html" %}
+{% block title %}Registros temporários pendentes{% endblock %}
+{% block patient_content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 text-medical-dark-gray">
+        <i class="bi bi-hourglass-split me-2 text-medical-primary"></i>
+        Registros temporários pendentes
+        {% if patients %}
+          <span class="badge bg-medical-teal ms-2">{{ patients|length }}</span>
+        {% endif %}
+      </h1>
+    </div>
+
+    <!-- Pending temporary records -->
+    <div class="card card-medical mb-4">
+      <div class="card-body">
+        {% if patients %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Número temporário</th>
+                <th>Paciente</th>
+                <th>Dias pendentes</th>
+                <th>Motivo</th>
+                <th>Criado por</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for patient in patients %}
+              <tr>
+                <td>
+                  <span class="badge bg-warning text-dark">
+                    {{ patient.current_record_number }}
+                  </span>
+                </td>
+                <td>
+                  <a href="{% url 'patients:patient_detail' patient.pk %}">
+                    {{ patient.name }}
+                  </a>
+                </td>
+                <td>{{ patient.pending_days }}</td>
+                <td>{{ patient.current_record_number_obj.change_reason }}</td>
+                <td>{{ patient.created_by.username }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info mb-0" role="alert">
+          Nenhum registro temporário pendente.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Aggregate by creator (derived from the same queryset) -->
+    {% if aggregate_by_creator %}
+    <div class="card card-medical mb-4">
+      <div class="card-header">
+        <h2 class="h5 mb-0">Pendências por criador</h2>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for username, count in aggregate_by_creator %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ username }}
+            <span class="badge bg-medical-teal">{{ count }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

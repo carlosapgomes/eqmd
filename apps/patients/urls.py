@@ -7,6 +7,14 @@ app_name = "apps.patients"
 urlpatterns = [
     # Patient URLs
     path("", views.PatientListView.as_view(), name="patient_list"),
+    # Pending temporary records dashboard (staff-only, design D7). Placed
+    # before the <uuid:pk> routes for clarity; the uuid converter never
+    # matches "temporary-records" anyway.
+    path(
+        "temporary-records/",
+        views.TemporaryRecordListView.as_view(),
+        name="temporary_record_list",
+    ),
     path("<uuid:pk>/", views.PatientDetailView.as_view(), name="patient_detail"),
     path(
         "<uuid:patient_id>/timeline/",
