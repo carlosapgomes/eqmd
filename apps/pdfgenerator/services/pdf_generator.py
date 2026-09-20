@@ -3,34 +3,26 @@ Base PDF generation service with hospital letterhead template.
 """
 
 import io
-import os
-from datetime import datetime
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.colors import black, darkblue, grey
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    PageBreak,
-    Table,
-    TableStyle,
-    BaseDocTemplate,
-    PageTemplate,
-    Frame,
-    KeepTogether,
-)
-from reportlab.platypus.flowables import Flowable
-from reportlab.platypus.tableofcontents import TableOfContents
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
-from reportlab.platypus.flowables import PageBreakIfNotEmpty
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfgen import canvas
 
 from django.conf import settings
-from django.contrib.staticfiles.finders import find
+from django.utils import timezone
+from reportlab.lib import colors
+from reportlab.lib.colors import black, darkblue
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    BaseDocTemplate,
+    Frame,
+    KeepTogether,
+    PageTemplate,
+    Paragraph,
+    Spacer,
+)
+from reportlab.platypus.flowables import Flowable
+
+from apps.pdfgenerator.services.header_canvas import NumberedCanvas, fit_patient_header
 
 
 class LastPageSignature(Flowable):
@@ -43,158 +35,11 @@ class LastPageSignature(Flowable):
         self.height = 120  # Approximate height needed for signature section
 
     def draw(self):
-        """Draw the full signature section"""
-        # This will be called when the flowable is rendered
-        # The signature content will be handled by _create_signature_section
-        pass
+        """Draw the full signature section."""
 
     def wrap(self, availWidth, availHeight):
         """Return the space needed by this flowable"""
         return (self.width, self.height)
-
-
-class NumberedCanvas(canvas.Canvas):
-    """Custom canvas class for page numbering and headers/footers"""
-
-    def __init__(self, *args, **kwargs):
-        self.hospital_config = kwargs.pop("hospital_config", {})
-        self.patient_data = kwargs.pop("patient_data", {})
-        self.doctor_info = kwargs.pop("doctor_info", {})
-        canvas.Canvas.__init__(self, *args, **kwargs)
-        self._saved_page_states = []
-        self.page_count = 0
-
-    def showPage(self):
-        self._saved_page_states.append(dict(self.__dict__))
-        self._startPage()
-
-    def save(self):
-        """Add page info to each page (page x of y)"""
-        num_pages = len(self._saved_page_states)
-        for page_num, state in enumerate(self._saved_page_states):
-            self.__dict__.update(state)
-            current_page = page_num + 1
-            is_last_page = current_page == num_pages
-
-            self.draw_page_number(current_page, num_pages)
-            self.draw_header()
-            self.draw_footer()
-
-            # Add small signature area on non-final pages (if more than 1 page total)
-            if not is_last_page and num_pages > 1:
-                self.draw_page_signature()
-
-            canvas.Canvas.showPage(self)
-        canvas.Canvas.save(self)
-
-    def draw_page_number(self, page_num, num_pages):
-        """Draw page number at bottom right"""
-        self.setFont("Times-Roman", 9)
-        self.setFillColor(grey)
-        self.drawRightString(A4[0] - 2 * cm, 1 * cm, f"Página {page_num}/{num_pages}")
-
-    def draw_header(self):
-        """Draw hospital header on each page"""
-        # Draw hospital logo if available
-        logo_path = self._get_logo_path()
-        if logo_path and os.path.exists(logo_path):
-            try:
-                self.drawImage(
-                    logo_path,
-                    2 * cm,
-                    A4[1] - 2.5 * cm,
-                    width=2 * cm,
-                    height=1.5 * cm,
-                    preserveAspectRatio=True,
-                )
-            except Exception:
-                pass  # If logo fails to load, continue without it
-
-        # Draw hospital name
-        hospital_name = self.hospital_config.get("name", "Medical Center")
-        self.setFont("Times-Bold", 20)
-        self.setFillColor(black)
-        self.drawString(6 * cm, A4[1] - 2.0 * cm, hospital_name)
-
-        # Draw patient name below hospital name
-        if self.patient_data and self.patient_data.get("name"):
-            patient_name = f"Paciente: {self.patient_data['name']}"
-            # self.setFont("Times-Bold", 14)
-            self.setFont("Times-Bold", 18)
-            self.setFillColor(black)
-            # self.drawString(6 * cm, A4[1] - 2.4 * cm, patient_name)
-            self.drawString(6 * cm, A4[1] - 3.0 * cm, patient_name)
-
-        # Draw separator line (adjusted for patient name)
-        self.setStrokeColor(black)
-        self.setLineWidth(1)
-        line_y = A4[1] - 3.2 * cm if self.patient_data.get("name") else A4[1] - 2.8 * cm
-        self.line(2 * cm, line_y, A4[0] - 2 * cm, line_y)
-
-    def draw_footer(self):
-        """Draw hospital footer on each page"""
-        # Footer text
-        footer_text = self.hospital_config.get("name", "Medical Center")
-        if self.hospital_config.get("address"):
-            footer_text += f" - {self.hospital_config['address']}"
-
-        self.setFont("Times-Roman", 9)
-        self.setFillColor(grey)
-        self.drawCentredString(A4[0] / 2, 2 * cm, footer_text)
-
-        # Footer line
-        self.setStrokeColor(grey)
-        self.setLineWidth(0.5)
-        self.line(2 * cm, 2.5 * cm, A4[0] - 2 * cm, 2.5 * cm)
-
-    def draw_page_signature(self):
-        """Draw small signature area on non-final pages"""
-        # Get doctor info for signature
-        doctor_name = (
-            self.doctor_info.get("name", "Médico Responsável")
-            if self.doctor_info
-            else "Médico Responsável"
-        )
-        registration_number = (
-            self.doctor_info.get("registration_number", "") if self.doctor_info else ""
-        )
-
-        # Format CRM field
-        crm_field = registration_number if registration_number else "___________"
-
-        # Position: bottom right corner, above page number
-        x_pos = A4[0] - 7 * cm  # 7cm from right edge
-        # y_pos = 1.8 * cm  # Just above page number
-        y_pos = 2.5 * cm  # Just above page number
-
-        # Signature text inside box (right-aligned)
-        self.setFont("Times-Roman", 8)
-        self.setFillColor(black)
-        right_x = x_pos + 4.8 * cm
-        self.drawRightString(right_x, y_pos + 0.5 * cm, f"{doctor_name}")
-        self.drawRightString(right_x, y_pos + 0.2 * cm, f"CRM: {crm_field}")
-
-        # Signature line
-        self.setLineWidth(0.3)
-        self.line(
-            x_pos + 1.8 * cm, y_pos + 0.8 * cm, right_x, y_pos + 0.8 * cm
-        )
-
-    def _get_logo_path(self):
-        """Get the path to the hospital logo"""
-        # Try logo_path first (local file path)
-        if self.hospital_config.get("logo_path"):
-            logo_path = self.hospital_config["logo_path"]
-            # Try as static file first
-            static_path = find(logo_path.replace("static/", ""))
-            if static_path and os.path.exists(static_path):
-                return static_path
-            # Try as absolute path
-            if os.path.exists(logo_path):
-                return logo_path
-
-        # Try logo_url (not implemented for security reasons - would need to download)
-        return None
 
 
 class HospitalLetterheadGenerator:
@@ -339,9 +184,7 @@ class HospitalLetterheadGenerator:
         content.append(Spacer(1, 12))
 
         # Date and location line with auto-filled current date
-        from datetime import datetime
-
-        current_date = datetime.now().strftime("%d/%m/%Y")
+        current_date = timezone.localtime().strftime("%d/%m/%Y")
         content.append(
             Paragraph(
                 f"Data: {current_date} &nbsp;&nbsp;&nbsp;&nbsp; Local: Salvador - BA",
@@ -408,6 +251,10 @@ class HospitalLetterheadGenerator:
         # Header space: caller can override, otherwise use default sizing
         if header_height_cm is not None:
             header_space = header_height_cm * cm
+        elif canvasmaker is None and patient_data and patient_data.get("name"):
+            header_space = (
+                fit_patient_header(patient_data["name"]).header_height_cm * cm
+            )
         elif patient_data and patient_data.get("name"):
             header_space = 2.4 * cm
         else:
@@ -458,6 +305,7 @@ class HospitalLetterheadGenerator:
 
         # Build PDF with custom canvas for headers/footers
         if canvasmaker is None:
+
             def canvasmaker(filename, **kwargs):
                 return NumberedCanvas(
                     filename,
@@ -474,8 +322,7 @@ class HospitalLetterheadGenerator:
         return buffer
 
     def _on_page(self, canvas, doc):
-        """Called for each page - headers and footers are handled by NumberedCanvas"""
-        pass  # Headers and footers are handled by the NumberedCanvas class
+        """Called for each page; headers and footers use NumberedCanvas."""
 
     def create_prescription_pdf(
         self, prescription_data, items, patient_data, doctor_info
