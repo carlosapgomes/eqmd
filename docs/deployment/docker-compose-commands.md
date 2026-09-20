@@ -91,22 +91,34 @@ not root).
 
 ### Routine update flow (recommended)
 
-```bash
-# 1) Get latest code
-git pull
+See [Release e upgrade de produção](release-to-production.md) for the complete
+release, verification, upgrade, and rollback procedure.
 
-# 2) Validate plan first (no changes)
-COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh --dry-run
-
-# 3) Apply upgrade
-COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless ./upgrade-rootless.sh
-```
-
-If the release includes Dockerfile changes, force a local rebuild on step 3:
+First pin `.env.rootless` to a release image published by the tag workflow, for
+example:
 
 ```bash
-COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless FORCE_BUILD=1 ./upgrade-rootless.sh
+EQMD_IMAGE=ghcr.io/carlosapgomes/eqmd:1.2.3
 ```
+
+Then run:
+
+```bash
+# 1) Get the matching deployment files
+git pull --ff-only
+
+# 2) Validate the plan without changes
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless \
+  ./upgrade-rootless.sh --dry-run
+
+# 3) Apply the versioned image
+COMPOSE_FILE=docker-compose.rootless.yml ENV_FILE=.env.rootless \
+  ./upgrade-rootless.sh
+```
+
+Wait for the release workflow to finish before deployment. Avoid `latest` and
+do not use `FORCE_BUILD=1` for routine production releases; it bypasses the
+versioned registry artifact.
 
 Useful overrides:
 

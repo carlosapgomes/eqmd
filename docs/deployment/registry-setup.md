@@ -1,10 +1,12 @@
 # Container Registry Setup
 
-**Complete guide for setting up container registries for EquipeMed deployment**
+Complete guide for setting up container registries for EquipeMed deployment.
 
 ## Overview
 
-EquipeMed uses a registry-based deployment approach where Docker images are built once and pushed to a container registry, then pulled for deployment. This eliminates the need to rebuild images on production servers.
+EquipeMed uses a registry-based deployment approach where Docker images are
+built once and pushed to a container registry, then pulled for deployment. This
+eliminates the need to rebuild images on production servers.
 
 ## Supported Registries
 
@@ -97,7 +99,9 @@ docker run -d -p 5000:5000 --restart=always --name registry registry:2
 
 ```bash
 # Generate certificates
-openssl req -newkey rsa:4096 -nodes -sha256 -keyout certs/domain.key -x509 -days 365 -out certs/domain.crt
+openssl req -newkey rsa:4096 -nodes -sha256 \
+  -keyout certs/domain.key -x509 -days 365 \
+  -out certs/domain.crt
 
 # Run registry with TLS
 docker run -d -p 5000:5000 --restart=always --name registry \
@@ -144,22 +148,51 @@ export REGISTRY_TOKEN="your-password"
 
 The repository includes `.github/workflows/build-and-push.yml` that:
 
-- Builds Docker images on push/PR
-- Pushes to GitHub Container Registry
-- Performs security scanning
-- Tags images appropriately
+- builds Docker images from `main` and semantic release tags;
+- pushes them to GitHub Container Registry;
+- scans the exact image digest for vulnerabilities;
+- publishes mutable convenience tags and immutable release references.
+
+Pull requests are validated separately by `.github/workflows/ci-pr.yml` and do
+not publish images.
 
 **Trigger conditions:**
 
-- Push to `main` or `dev` branches
-- Pull requests to `main`
+- push to `main`;
+- push of a Git tag matching `v*`, such as `v1.2.3`.
 
 **Image tags created:**
 
-- `latest` (for main branch)
-- `dev` (for dev branch)
-- `pr-123` (for pull requests)
-- `sha-abcd123` (for specific commits)
+- push to `main`: `latest`, `main`, and `sha-abcd123`;
+- push of `v1.2.3`: `1.2.3`, `1.2`, and `sha-abcd123`.
+
+Production deployments SHOULD pin the full release tag, such as `1.2.3`,
+instead of the mutable `latest` tag.
+
+### Publishing a release image
+
+For the complete release-to-production procedure, see
+[Release e upgrade de produção](release-to-production.md).
+
+Create release tags only from commits already merged into `main`:
+
+```bash
+git switch main
+git pull --ff-only
+git tag -a v1.2.3 -m "Release v1.2.3"
+git push origin v1.2.3
+```
+
+Wait for the **Build and Push Docker Image** workflow to finish successfully,
+then set production to the corresponding image tag:
+
+```bash
+EQMD_IMAGE=ghcr.io/carlosapgomes/eqmd:1.2.3
+```
+
+A Git tag publishes the container tags but does not create a GitHub Release
+entry. Create that entry separately when release notes or downloadable assets
+are required.
 
 ### Manual Build and Push
 
@@ -208,7 +241,7 @@ REGISTRY_USER=your-github-username  # Registry username
 REGISTRY_TOKEN=your-github-token    # Registry authentication token
 
 # Image configuration
-EQMD_IMAGE=ghcr.io/yourorg/eqmd:latest  # Full image name with tag
+EQMD_IMAGE=ghcr.io/yourorg/eqmd:1.2.3  # Pin a published release image
 
 # User configuration (for building)
 EQMD_UID=1001                      # User ID for eqmd user
@@ -327,8 +360,9 @@ docker compose up -d eqmd
 
 ### Image Management
 
-1. **Use semantic versioning** for tags (v1.0.0, v1.1.0)
-2. **Maintain multiple tags** (latest, stable, specific versions)
+1. **Use semantic Git tags** (`v1.0.0`, `v1.1.0`) to publish versioned images
+   (`1.0.0`, `1.1.0`)
+2. **Deploy specific versions** rather than mutable tags such as `latest`
 3. **Clean up old images** regularly to save space
 4. **Document image contents** and changes
 
@@ -343,8 +377,9 @@ docker compose up -d eqmd
 ### Development Workflow
 
 1. **Use feature branches** for development
-2. **Build images automatically** on PR/merge
+2. **Validate PRs separately** and publish images only from `main` or releases
 3. **Test with registry images** before production
 4. **Maintain development/staging/production** image variants
 
-This registry setup provides a robust foundation for scalable, consistent deployments while maintaining security and operational efficiency.
+This registry setup provides a robust foundation for scalable, consistent
+deployments while maintaining security and operational efficiency.
