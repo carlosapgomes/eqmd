@@ -7,10 +7,22 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from apps.patients.models import Patient
+from apps.pdfgenerator.services.header_canvas import (
+    DEFAULT_HEADER_HEIGHT_CM,
+    HEADER_ORIGIN_X,
+    PATIENT_BASELINE_Y,
+    fit_patient_header,
+)
 from apps.pdfgenerator.services.markdown_parser import MarkdownToPDFParser
-from apps.pdfgenerator.services.pdf_generator import HospitalLetterheadGenerator
+from apps.pdfgenerator.services.pdf_generator import (
+    HospitalLetterheadGenerator,
+    NumberedCanvas,
+)
 
 User = get_user_model()
 
@@ -74,6 +86,150 @@ class PDFGeneratorTestCase(TestCase):
         self.assertIsInstance(flowables, list)
         self.assertGreater(len(flowables), 0)
 
+    def test_short_patient_header_preserves_baseline_and_coordinates(self):
+        layout = fit_patient_header("Test Patient")
+
+        self.assertEqual(layout.font_size, 18)
+        self.assertEqual(layout.lines, ("Paciente: Test Patient",))
+        self.assertEqual(layout.extra_height, 0)
+        self.assertEqual(layout.origin_x, HEADER_ORIGIN_X)
+        self.assertEqual(layout.baseline_y, PATIENT_BASELINE_Y)
+
+        buffer = io.BytesIO()
+        canvas = NumberedCanvas(
+            buffer,
+            pagesize=self.pdf_generator.page_size,
+            hospital_config=self.pdf_generator.hospital_config,
+            patient_data={"name": "Test Patient"},
+            doctor_info={},
+        )
+        with (
+            patch.object(canvas, "drawString") as draw_string,
+            patch.object(canvas, "line") as draw_line,
+        ):
+            canvas.draw_header()
+
+        patient_call = next(
+            call
+            for call in draw_string.call_args_list
+            if call.args[2] == "Paciente: Test Patient"
+        )
+        self.assertEqual(patient_call.args[:2], (HEADER_ORIGIN_X, PATIENT_BASELINE_Y))
+        self.assertEqual(draw_line.call_args.args[1], A4[1] - 3.2 * cm)
+
+    def test_medium_patient_header_shrinks_before_wrapping(self):
+        layout = fit_patient_header("Ana Beatriz Gonçalves de Albuquerque")
+
+        self.assertLess(layout.font_size, 18)
+        self.assertGreaterEqual(layout.font_size, 12)
+        self.assertEqual(len(layout.lines), 1)
+
+    def test_long_accented_patient_header_wraps_without_loss(self):
+        name = "Áurea Conceição Montenegro de Oliveira da Silva Albuquerque Santos"
+        layout = fit_patient_header(name)
+
+        self.assertEqual(layout.font_size, 12)
+        self.assertGreater(len(layout.lines), 1)
+        self.assertEqual(
+            "".join("".join(layout.lines).split()),
+            "".join(f"Paciente: {name}".split()),
+        )
+        self.assertTrue(
+            all(
+                stringWidth(line, "Times-Bold", layout.font_size)
+                <= layout.available_width
+                for line in layout.lines
+            )
+        )
+        self.assertGreater(layout.extra_height, 0)
+
+    def test_wrapping_preserves_repeated_internal_whitespace(self):
+        name = "Áurea  Conceição   Montenegro de Oliveira da Silva Albuquerque Santos"
+        layout = fit_patient_header(name)
+
+        self.assertEqual(layout.font_size, 12)
+        self.assertGreater(len(layout.lines), 1)
+        self.assertTrue(any("Áurea  Conceição" in line for line in layout.lines))
+        self.assertTrue(any("Conceição   Montenegro" in line for line in layout.lines))
+        rendered_non_layout = "".join(
+            character
+            for line in layout.lines
+            for character in line
+            if not character.isspace()
+        )
+        expected_non_layout = "".join(
+            character for character in f"Paciente: {name}" if not character.isspace()
+        )
+        self.assertEqual(rendered_non_layout, expected_non_layout)
+
+    def test_oversized_patient_token_is_chunked_without_loss(self):
+        name = "X" * 180
+        layout = fit_patient_header(name)
+
+        self.assertEqual(layout.font_size, 12)
+        self.assertGreater(len(layout.lines), 2)
+        self.assertEqual("".join(layout.lines).replace("Paciente:", ""), name)
+        self.assertTrue(
+            all(
+                stringWidth(line, "Times-Bold", layout.font_size)
+                <= layout.available_width
+                for line in layout.lines
+            )
+        )
+
+    def test_wrapped_header_reservation_matches_separator_increment(self):
+        layout = fit_patient_header("Nome Muito Longo " * 8)
+        self.assertGreater(layout.extra_height, 0)
+
+        buffer = io.BytesIO()
+        numbered = NumberedCanvas(
+            buffer,
+            pagesize=self.pdf_generator.page_size,
+            hospital_config=self.pdf_generator.hospital_config,
+            patient_data={"name": "Nome Muito Longo " * 8},
+            doctor_info={},
+        )
+        with patch.object(numbered, "line") as draw_line:
+            numbered.draw_header()
+
+        separator_y = draw_line.call_args.args[1]
+        self.assertEqual(
+            A4[1] - 3.2 * cm - separator_y,
+            layout.extra_height,
+        )
+        self.assertEqual(
+            DEFAULT_HEADER_HEIGHT_CM + layout.extra_height / cm,
+            numbered.header_height_cm,
+        )
+
+    def test_explicit_height_and_custom_canvas_are_authoritative(self):
+        from reportlab.pdfgen import canvas as reportlab_canvas
+
+        called = []
+
+        def custom_canvasmaker(filename, **kwargs):
+            called.append(True)
+            return reportlab_canvas.Canvas(filename, **kwargs)
+
+        pdf = self.pdf_generator.generate_pdf(
+            content_elements=[],
+            patient_data={"name": "Nome Muito Longo " * 8},
+            canvasmaker=custom_canvasmaker,
+            header_height_cm=1.5,
+        )
+
+        self.assertTrue(called)
+        self.assertEqual(pdf.read(4), b"%PDF")
+
+    def test_patient_header_compatibility_export(self):
+        from apps.dailynotes.services.pdf_generator import DailyNoteCanvas
+        from apps.pdfgenerator.services.header_canvas import (
+            NumberedCanvas as HeaderCanvas,
+        )
+
+        self.assertIs(NumberedCanvas, HeaderCanvas)
+        self.assertTrue(issubclass(DailyNoteCanvas, NumberedCanvas))
+
     def test_patient_identification_rendered_in_header(self):
         """Test that patient identification renders in the repeated page header.
 
@@ -84,8 +240,6 @@ class PDFGeneratorTestCase(TestCase):
         ``openspec/changes/daily-note-pdf/design.md`` section 2, which relies on
         the base implementation returning an empty list.
         """
-        from apps.pdfgenerator.services.pdf_generator import NumberedCanvas
-
         patient_data = {
             "name": "Test Patient",
             "fiscal_number": "123.456.789-00",
@@ -172,7 +326,9 @@ class PDFGeneratorTestCase(TestCase):
         """Test prescription-specific PDF generation"""
         # Prepare test data
         patient_data = {
-            "name": self.patient.name,
+            "name": (
+                "Áurea Conceição Montenegro de Oliveira da Silva Albuquerque Santos"
+            ),
             "fiscal_number": self.patient.fiscal_number,
             "birth_date": "01/01/1990",
             "health_card_number": self.patient.healthcard_number,
