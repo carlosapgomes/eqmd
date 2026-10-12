@@ -6,6 +6,24 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-12
+
+### Fixed — collaborative discharge drafts
+
+- **Relatório de alta: rascunho colaborativo**
+  (change `2026-10-12-fix-discharge-report-collaborative-draft`):
+  - Qualquer médico/residente autenticado com acesso ao paciente pode
+    editar e re-salvar como rascunho um relatório criado por outro
+    usuário, sem limite de tempo; qualquer um deles pode finalizar
+    (`Salvar Definitivo`).
+  - Corrige duas causas: o helper de exibição comparava `user.profession`
+    (inexistente no usuário) com constantes string, e a regra de edição
+    exigia ser o criador ou ter `events.change_event`.
+  - Relatórios finalizados mantêm a regra de 24h (somente criador);
+    exclusão e criação inalteradas; não-médicos seguem bloqueados.
+  - Cobertura: edição/finalização por segundo médico (inclui residente),
+    rascunho com mais de 24h, negação a não-médicos, janela de finalizado.
+
 ## [0.2.0] - 2026-09-01
 
 Release focada em integridade de identificação do paciente, registro
