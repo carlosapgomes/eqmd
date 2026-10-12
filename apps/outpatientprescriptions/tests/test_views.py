@@ -1124,3 +1124,230 @@ class ViewIntegrationTest(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["prescription"], prescription)
+
+
+class OutpatientPrescriptionDuplicateViewTest(TestCase):
+    """Test cases for the duplicate action (slice-001-duplicate-endpoint)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Set up test data."""
+        cls.user = User.objects.create_user(
+            username="dupuser",
+            email="dup@example.com",
+            password="testpass123",
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
+        )
+        # Duplication creates a new event, so it requires add_event.
+        grant_event_permissions(cls.user, "add_event")
+
+        cls.patient = Patient.objects.create(
+            name="Duplicate Patient",
+            birthday="1990-01-01",
+            status=1,
+            created_by=cls.user,
+            updated_by=cls.user,
+        )
+
+        cls.source = OutpatientPrescription.objects.create(
+            event_datetime=timezone.now() - timedelta(days=30),
+            description="Receita",
+            instructions="Take as directed",
+            status="finalized",
+            prescription_date=timezone.localdate() - timedelta(days=30),
+            patient=cls.patient,
+            created_by=cls.user,
+            updated_by=cls.user,
+        )
+        cls.item1 = PrescriptionItem.objects.create(
+            prescription=cls.source,
+            drug_name="Drug A",
+            presentation="10mg tablet",
+            usage_instructions="Take 1 daily",
+            quantity="30",
+            order=1,
+        )
+        cls.item2 = PrescriptionItem.objects.create(
+            prescription=cls.source,
+            drug_name="Drug B",
+            presentation="5mg capsule",
+            usage_instructions="Take 2 at night",
+            quantity="60",
+            order=2,
+        )
+
+    def setUp(self):
+        """Set up for each test."""
+        self.client = Client()
+        self.client.login(username="dupuser", password="testpass123")
+
+    def duplicate_url(self):
+        return reverse(
+            "outpatientprescriptions:outpatientprescription_duplicate",
+            kwargs={"pk": self.source.pk},
+        )
+
+    def test_post_clones_header_items_and_redirects_to_copy_edit_view(self):
+        """R1/R2/R4: finalized source clones into an independent draft."""
+        source_item_ids = list(
+            self.source.items.order_by("order").values_list("id", flat=True)
+        )
+        count_before = OutpatientPrescription.objects.count()
+
+        response = self.client.post(self.duplicate_url())
+
+        self.assertEqual(OutpatientPrescription.objects.count(), count_before + 1)
+        copy = OutpatientPrescription.objects.exclude(pk=self.source.pk).get(
+            patient=self.patient, created_by=self.user
+        )
+
+        # R1: header contract.
+        self.assertEqual(copy.patient, self.patient)
+        self.assertEqual(copy.instructions, "Take as directed")
+        self.assertEqual(copy.prescription_date, timezone.localdate())
+        self.assertEqual(copy.status, "draft")
+        self.assertEqual(copy.description, "Receita")
+        self.assertEqual(copy.created_by, self.user)
+        self.assertEqual(copy.updated_by, self.user)
+
+        # R1: items preserve order and content.
+        copy_items = list(copy.items.order_by("order"))
+        self.assertEqual(len(copy_items), 2)
+        for copy_item, source_item in zip(
+            copy_items, self.source.items.order_by("order")
+        ):
+            self.assertEqual(copy_item.drug_name, source_item.drug_name)
+            self.assertEqual(copy_item.presentation, source_item.presentation)
+            self.assertEqual(
+                copy_item.usage_instructions, source_item.usage_instructions
+            )
+            self.assertEqual(copy_item.quantity, source_item.quantity)
+            self.assertEqual(copy_item.order, source_item.order)
+
+        # R2: independence — new PKs, source untouched, no template link.
+        self.assertNotEqual(copy.pk, self.source.pk)
+        self.assertFalse({item.pk for item in copy_items} & set(source_item_ids))
+        for copy_item in copy_items:
+            self.assertIsNone(copy_item.source_template)
+        self.source.refresh_from_db()
+        self.assertEqual(self.source.status, "finalized")
+        self.assertEqual(self.source.instructions, "Take as directed")
+        self.assertEqual(self.source.items.count(), 2)
+
+        # R4: 302 to the copy's edit view with a success message.
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            reverse(
+                "outpatientprescriptions:outpatientprescription_update",
+                kwargs={"pk": copy.pk},
+            ),
+        )
+        messages = list(response.wsgi_request._messages)
+        self.assertEqual(len(messages), 1)
+        self.assertIn(self.patient.name, str(messages[0]))
+
+    def test_post_uses_configured_local_date_near_midnight_boundary(self):
+        """R1: America/Bahia local date differs from the UTC date."""
+        from datetime import UTC
+        from datetime import datetime as dt_datetime
+
+        # 2026-06-01 02:30 UTC is 2026-05-31 23:30 in America/Bahia.
+        frozen_now = dt_datetime(2026, 6, 1, 2, 30, tzinfo=UTC)
+        with patch("django.utils.timezone.now", return_value=frozen_now):
+            response = self.client.post(self.duplicate_url())
+
+        self.assertEqual(response.status_code, 302)
+        copy = OutpatientPrescription.objects.exclude(pk=self.source.pk).get()
+        self.assertEqual(copy.prescription_date.isoformat(), "2026-05-31")
+        self.assertNotEqual(copy.prescription_date, frozen_now.date())
+
+    def test_post_denied_without_add_event_permission(self):
+        """R3: missing events.add_event denies without side effects."""
+        User.objects.create_user(
+            username="noperm",
+            email="noperm@example.com",
+            password="testpass123",
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
+        )
+        self.client.login(username="noperm", password="testpass123")
+        count_before = OutpatientPrescription.objects.count()
+
+        response = self.client.post(self.duplicate_url())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(OutpatientPrescription.objects.count(), count_before)
+
+    @patch("apps.outpatientprescriptions.views.can_access_patient")
+    def test_post_denied_without_patient_access(self, mock_can_access):
+        """R3: missing patient access denies without side effects."""
+        mock_can_access.return_value = False
+        count_before = OutpatientPrescription.objects.count()
+
+        response = self.client.post(self.duplicate_url())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(OutpatientPrescription.objects.count(), count_before)
+
+    def test_get_rejected(self):
+        """R3: GET on the duplicate action is rejected without side effects."""
+        count_before = OutpatientPrescription.objects.count()
+
+        response = self.client.get(self.duplicate_url())
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(OutpatientPrescription.objects.count(), count_before)
+
+    def test_post_requires_login(self):
+        """Unauthenticated POST redirects to login without side effects."""
+        self.client.logout()
+        count_before = OutpatientPrescription.objects.count()
+
+        response = self.client.post(self.duplicate_url())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+        self.assertEqual(OutpatientPrescription.objects.count(), count_before)
+
+    def test_duplication_leaves_drug_template_usage_count_unchanged(self):
+        """R5: cloned items carry no source_template, usage_count stable."""
+        from apps.drugtemplates.models import DrugTemplate
+
+        template = DrugTemplate.objects.create(
+            name="Template Drug",
+            concentration="10mg",
+            pharmaceutical_form="tablet",
+            usage_instructions="Take 1 daily",
+            creator=self.user,
+        )
+        template.refresh_from_db()
+        baseline = template.usage_count
+        templated_item = PrescriptionItem.objects.create(
+            prescription=self.source,
+            drug_name=template.name,
+            presentation="10mg tablet",
+            usage_instructions="Take 1 daily",
+            quantity="30",
+            order=3,
+            source_template=template,
+        )
+        template.refresh_from_db()
+        self.assertEqual(template.usage_count, baseline + 1)
+
+        response = self.client.post(self.duplicate_url())
+
+        self.assertEqual(response.status_code, 302)
+        template.refresh_from_db()
+        self.assertEqual(template.usage_count, baseline + 1)
+        copy = OutpatientPrescription.objects.exclude(pk=self.source.pk).get()
+        self.assertEqual(copy.items.count(), 3)
+        for copy_item in copy.items.all():
+            self.assertIsNone(copy_item.source_template)
+        templated_item.refresh_from_db()
+        self.assertEqual(templated_item.source_template, template)
+
+
