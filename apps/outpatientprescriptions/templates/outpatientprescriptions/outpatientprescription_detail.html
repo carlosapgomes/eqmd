@@ -32,6 +32,15 @@
           Gerando...
         </span>
       </button>
+      {% if perms.events.add_event %}
+      <form method="post" action="{% url 'outpatientprescriptions:outpatientprescription_duplicate' prescription.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-primary">
+          <i class="bi bi-copy me-1"></i>
+          Duplicar
+        </button>
+      </form>
+      {% endif %}
       {% if can_edit and perms.events.change_event %}
       <a href="{{ prescription.get_edit_url }}" class="btn btn-outline-primary">
         <i class="bi bi-pencil me-1"></i>
