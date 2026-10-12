@@ -6,6 +6,37 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-12
+
+### Added — prescription duplication
+
+- **Receita: duplicar para nova receita**
+  (change `2026-10-12-duplicate-outpatient-prescription`):
+  - Botão "Duplicar" na receita (rascunho ou finalizada) cria uma
+    cópia como novo rascunho do mesmo paciente — instruções e itens
+    copiados como linhas independentes, data local de hoje, autor é
+    quem duplicou — e abre a edição da cópia para ajustes.
+  - Itens copiados sem `source_template`: duplicar nunca infla
+    `DrugTemplate.usage_count`. Requer `events.add_event` + acesso ao
+    paciente; ação somente POST; sem migração.
+
+## [0.3.1] - 2026-09-20
+
+Backfill: tag `v0.3.1` (`5e44785`) publicada sem entrada de changelog.
+
+### Changed — release pipeline
+
+- Publicação de imagens versionadas (CI build-and-push).
+
+## [0.3.0] - 2026-09-20
+
+Backfill: tag `v0.3.0` (`f384e92`) publicada sem entrada de changelog.
+
+### Fixed — PDF headers
+
+- Cabeçalhos PDF compartilhados passaram a acomodar nomes longos de
+  paciente.
+
 ## [0.2.1] - 2026-10-12
 
 ### Fixed — collaborative discharge drafts

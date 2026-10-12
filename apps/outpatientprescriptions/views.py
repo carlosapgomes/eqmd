@@ -4,11 +4,13 @@ from django.views.generic import (
     CreateView,
     UpdateView,
     DeleteView,
+    View,
 )
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
+from django.db import transaction
 from django.db.models import Q, Func, TextField, Value
 from django.db.models.functions import Lower
 from django.utils.decorators import method_decorator
@@ -22,7 +24,11 @@ from datetime import datetime, timedelta
 import logging
 
 from .models import OutpatientPrescription, PrescriptionItem
-from .forms.prescription_forms import OutpatientPrescriptionForm, PrescriptionItemFormSet, PrescriptionItemFormSetHelper
+from .forms.prescription_forms import (
+    OutpatientPrescriptionForm,
+    PrescriptionItemFormSet,
+    PrescriptionItemFormSetHelper,
+)
 from apps.core.permissions import (
     can_edit_event_required,
     can_delete_event_required,
@@ -33,11 +39,16 @@ from apps.core.permissions import (
 from apps.patients.models import Patient
 from apps.sample_content.models import SampleContent
 from apps.events.models import Event
-from apps.drugtemplates.models import DrugTemplate, PrescriptionTemplate, PrescriptionTemplateItem
+from apps.drugtemplates.models import (
+    DrugTemplate,
+    PrescriptionTemplate,
+    PrescriptionTemplateItem,
+)
 
 
 class ImmutableUnaccent(Func):
     """PostgreSQL immutable unaccent wrapper for accent-insensitive searching."""
+
     function = "immutable_unaccent"
     output_field = TextField()
 
@@ -56,7 +67,9 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         """Filter queryset based on search parameters and user permissions."""
         queryset = (
-            OutpatientPrescription.objects.select_related("patient", "created_by", "updated_by")
+            OutpatientPrescription.objects.select_related(
+                "patient", "created_by", "updated_by"
+            )
             .prefetch_related("items")
             .all()
         )
@@ -151,7 +164,7 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
             available_creators = (
                 User.objects.filter(
                     event_set__event_type=Event.OUTPT_PRESCRIPTION_EVENT,
-                    event_set__patient__id__in=accessible_patient_ids
+                    event_set__patient__id__in=accessible_patient_ids,
                 )
                 .distinct()
                 .only("id", "first_name", "last_name", "email")
@@ -173,59 +186,64 @@ class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
         if "prescriptions" in context:
             for prescription in context["prescriptions"]:
                 prescription.can_edit = can_edit_event(self.request.user, prescription)
-                prescription.can_delete = can_delete_event(self.request.user, prescription)
+                prescription.can_delete = can_delete_event(
+                    self.request.user, prescription
+                )
 
         return context
 
 
-class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class OutpatientPrescriptionCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     """
     Create view for OutpatientPrescription instances with drug template integration.
     Handles both prescription form and item formset with AJAX functionality.
     """
-    
+
     model = OutpatientPrescription
     form_class = OutpatientPrescriptionForm
     template_name = "outpatientprescriptions/outpatientprescription_create.html"
     permission_required = "events.add_event"
-    
+
     def get_patient(self):
         """Get the patient from URL parameter."""
-        patient_uuid = self.kwargs.get('patient_uuid')
+        patient_uuid = self.kwargs.get("patient_uuid")
         if patient_uuid:
             patient = get_object_or_404(Patient, id=patient_uuid)
             # Check if user can access this patient
             if not can_access_patient(self.request.user, patient):
                 from django.core.exceptions import PermissionDenied
+
                 raise PermissionDenied(
                     "You don't have permission to access this patient"
                 )
             return patient
         return None
-    
+
     def get_form_kwargs(self):
         """Pass user to form for permission checks."""
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
+        kwargs["user"] = self.request.user
         return kwargs
-    
+
     def get_initial(self):
         """Set initial form data including patient if specified."""
         initial = super().get_initial()
         patient = self.get_patient()
         if patient:
-            initial['patient'] = patient
+            initial["patient"] = patient
         return initial
-    
+
     def get_context_data(self, **kwargs):
         """Add formset and additional context data."""
         context = super().get_context_data(**kwargs)
-        
+
         # Get patient from URL if specified
         patient = self.get_patient()
         if patient:
-            context['patient'] = patient
-        
+            context["patient"] = patient
+
         # Initialize formset with user context
         if self.request.POST:
             formset = PrescriptionItemFormSetHelper.get_formset_with_user(
@@ -235,71 +253,78 @@ class OutpatientPrescriptionCreateView(LoginRequiredMixin, PermissionRequiredMix
             formset = PrescriptionItemFormSetHelper.get_formset_with_user(
                 self.request.user
             )
-        
+
         # Prepare formset data for template
         formset_data = PrescriptionItemFormSetHelper.prepare_formset_data(formset)
         context.update(formset_data)
-        
+
         # Add drug templates for manual entry/autocomplete functionality
-        context['drug_templates'] = DrugTemplate.objects.filter(
+        context["drug_templates"] = DrugTemplate.objects.filter(
             Q(creator=self.request.user) | Q(is_public=True)
-        ).order_by('name')
-        
+        ).order_by("name")
+
         # Add prescription templates (multi-drug templates)
-        context['prescription_templates'] = PrescriptionTemplate.objects.filter(
-            Q(creator=self.request.user) | Q(is_public=True)
-        ).prefetch_related('items').order_by('name')
-        
+        context["prescription_templates"] = (
+            PrescriptionTemplate.objects.filter(
+                Q(creator=self.request.user) | Q(is_public=True)
+            )
+            .prefetch_related("items")
+            .order_by("name")
+        )
+
         # Add available patients for selection if no patient specified
         if not patient:
             from apps.core.permissions.cache import get_user_accessible_patients
+
             accessible_patient_ids = get_user_accessible_patients(self.request.user)
             if accessible_patient_ids:
-                context['available_patients'] = Patient.objects.filter(
-                    id__in=accessible_patient_ids
-                ).only("id", "name", "fiscal_number").order_by('name')
+                context["available_patients"] = (
+                    Patient.objects.filter(id__in=accessible_patient_ids)
+                    .only("id", "name", "fiscal_number")
+                    .order_by("name")
+                )
             else:
-                context['available_patients'] = Patient.objects.none()
-        
+                context["available_patients"] = Patient.objects.none()
+
         return context
-    
+
     def form_valid(self, form):
         """Handle form validation including formset."""
         context = self.get_context_data()
         formset = PrescriptionItemFormSetHelper.get_formset_with_user(
             self.request.user, self.request.POST
         )
-        
+
         if form.is_valid() and formset.is_valid():
             # Save the main prescription
             self.object = form.save(commit=False)
             self.object.created_by = self.request.user
             self.object.updated_by = self.request.user
             self.object.save()
-            
+
             # Save the formset
             formset.instance = self.object
             formset.save()
-            
+
             messages.success(
                 self.request,
-                f"Receita para {self.object.patient.name} criada com sucesso!"
+                f"Receita para {self.object.patient.name} criada com sucesso!",
             )
-            
+
             return super().form_valid(form)
         else:
             # Add formset to context for error display
             formset_data = PrescriptionItemFormSetHelper.prepare_formset_data(formset)
             context.update(formset_data)
             return self.render_to_response(context)
-    
-    
+
     def get_success_url(self):
         """Redirect to patient timeline after successful creation."""
         from django.urls import reverse
+
         return reverse(
-            'patients:patient_events_timeline',
-            kwargs={'patient_id': self.object.patient.id}
+            "patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.id},
         )
 
 
@@ -310,24 +335,24 @@ def get_drug_template_data(request, template_id):
     """
     try:
         template = get_object_or_404(DrugTemplate, id=template_id)
-        
+
         # Check if user has access to this template
         if not template.is_public and template.creator != request.user:
-            return JsonResponse({'error': 'Acesso negado'}, status=403)
-        
+            return JsonResponse({"error": "Acesso negado"}, status=403)
+
         data = {
-            'id': str(template.id),
-            'name': template.name,
-            'presentation': template.presentation,
-            'usage_instructions': template.usage_instructions,
+            "id": str(template.id),
+            "name": template.name,
+            "presentation": template.presentation,
+            "usage_instructions": template.usage_instructions,
         }
-        
+
         return JsonResponse(data)
-        
+
     except DrugTemplate.DoesNotExist:
-        return JsonResponse({'error': 'Template não encontrado'}, status=404)
+        return JsonResponse({"error": "Template não encontrado"}, status=404)
     except Exception as e:
-        return JsonResponse({'error': 'Erro interno'}, status=500)
+        return JsonResponse({"error": "Erro interno"}, status=500)
 
 
 @login_required
@@ -336,15 +361,15 @@ def search_drug_templates(request):
     AJAX view to search both drug templates and prescription template items for autocomplete functionality.
     Returns unified results including individual drug templates and complete prescription items.
     """
-    query = request.GET.get('q', '').strip()
-    limit = min(int(request.GET.get('limit', 10)), 50)  # Max 50 results
-    
+    query = request.GET.get("q", "").strip()
+    limit = min(int(request.GET.get("limit", 10)), 50)  # Max 50 results
+
     if len(query) < 2:
-        return JsonResponse({'results': []})
-    
+        return JsonResponse({"results": []})
+
     try:
         results = []
-        
+
         # Search individual drug templates only (accent- and case-insensitive)
         # Wrap query as a literal to avoid Django treating it as a field name.
         normalized_query = ImmutableUnaccent(Lower(Value(query)))
@@ -363,117 +388,117 @@ def search_drug_templates(request):
             .select_related("creator")
             .order_by("name")[:limit]
         )
-        
+
         for template in drug_templates:
-            results.append({
-                'id': str(template.id),
-                'name': template.name,
-                'presentation': template.presentation,
-                'usage_instructions': template.usage_instructions,
-                'display_text': f"{template.name} - {template.presentation}",
-                'creator': template.creator.get_full_name() if template.creator else 'Sistema',
-                'is_public': template.is_public,
-                'type': 'drug_template'
-            })
-        
+            results.append(
+                {
+                    "id": str(template.id),
+                    "name": template.name,
+                    "presentation": template.presentation,
+                    "usage_instructions": template.usage_instructions,
+                    "display_text": f"{template.name} - {template.presentation}",
+                    "creator": template.creator.get_full_name()
+                    if template.creator
+                    else "Sistema",
+                    "is_public": template.is_public,
+                    "type": "drug_template",
+                }
+            )
+
         # Sort results by name for better UX
-        results.sort(key=lambda x: x['name'].lower())
-        
-        return JsonResponse({
-            'results': results,
-            'total': len(results),
-            'query': query
-        })
-        
+        results.sort(key=lambda x: x["name"].lower())
+
+        return JsonResponse({"results": results, "total": len(results), "query": query})
+
     except Exception as e:
-        return JsonResponse({'error': 'Erro na busca'}, status=500)
+        return JsonResponse({"error": "Erro na busca"}, status=500)
 
 
 class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
     """
     Detail view for OutpatientPrescription instances showing complete prescription information.
     """
-    
+
     model = OutpatientPrescription
     template_name = "outpatientprescriptions/outpatientprescription_detail.html"
     context_object_name = "prescription"
-    
+
     def get_queryset(self):
         """Filter queryset to ensure proper permissions and optimized queries."""
-        return (
-            OutpatientPrescription.objects
-            .select_related("patient", "created_by", "updated_by")
-            .prefetch_related("items")
-        )
-    
+        return OutpatientPrescription.objects.select_related(
+            "patient", "created_by", "updated_by"
+        ).prefetch_related("items")
+
     def get_object(self, queryset=None):
         """Get object and check patient access permissions."""
         obj = super().get_object(queryset)
-        
+
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
             from django.core.exceptions import PermissionDenied
+
             raise PermissionDenied(
                 "You don't have permission to access this patient's prescriptions"
             )
-        
+
         return obj
-    
+
     def get_context_data(self, **kwargs):
         """Add permission checks and additional context data."""
         context = super().get_context_data(**kwargs)
-        
+
         # Add permission information
-        context['can_edit'] = can_edit_event(self.request.user, self.object)
-        context['can_delete'] = can_delete_event(self.request.user, self.object)
-        
+        context["can_edit"] = can_edit_event(self.request.user, self.object)
+        context["can_delete"] = can_delete_event(self.request.user, self.object)
+
         # Add prescription items ordered by their order field
-        context['prescription_items'] = self.object.items.order_by('order')
-        
+        context["prescription_items"] = self.object.items.order_by("order")
+
         # Add timeline URL for patient
         from django.urls import reverse
-        context['patient_timeline_url'] = reverse(
-            'patients:patient_events_timeline', 
-            kwargs={'patient_id': self.object.patient.id}
+
+        context["patient_timeline_url"] = reverse(
+            "patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.id},
         )
-        
+
         return context
 
 
 @method_decorator(can_edit_event_required, name="dispatch")
-class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class OutpatientPrescriptionUpdateView(
+    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
+):
     """
     Update view for OutpatientPrescription instances with 24-hour edit window check.
     Handles both prescription form and item formset updates.
     """
-    
+
     model = OutpatientPrescription
     form_class = OutpatientPrescriptionForm
     template_name = "outpatientprescriptions/outpatientprescription_update.html"
     context_object_name = "prescription"
     permission_required = "events.change_event"
-    
+
     def get_queryset(self):
         """Filter queryset to ensure proper permissions and optimized queries."""
-        return (
-            OutpatientPrescription.objects
-            .select_related("patient", "created_by", "updated_by")
-            .prefetch_related("items")
-        )
-    
+        return OutpatientPrescription.objects.select_related(
+            "patient", "created_by", "updated_by"
+        ).prefetch_related("items")
+
     def get_form_kwargs(self):
         """Pass user to form for permission checks."""
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
+        kwargs["user"] = self.request.user
         return kwargs
-    
+
     def get_context_data(self, **kwargs):
         """Add formset and additional context data."""
         context = super().get_context_data(**kwargs)
-        
+
         # Add patient info
-        context['patient'] = self.object.patient
-        
+        context["patient"] = self.object.patient
+
         # Initialize formset with existing items
         if self.request.POST:
             formset = PrescriptionItemFormSetHelper.get_formset_with_user(
@@ -483,71 +508,76 @@ class OutpatientPrescriptionUpdateView(LoginRequiredMixin, PermissionRequiredMix
             formset = PrescriptionItemFormSetHelper.get_formset_with_user(
                 self.request.user, instance=self.object
             )
-        
+
         # Prepare formset data for template
         formset_data = PrescriptionItemFormSetHelper.prepare_formset_data(formset)
         context.update(formset_data)
-        
+
         # Add drug templates for AJAX functionality
-        context['drug_templates'] = DrugTemplate.objects.filter(
+        context["drug_templates"] = DrugTemplate.objects.filter(
             Q(creator=self.request.user) | Q(is_public=True)
-        ).order_by('name')
-        
+        ).order_by("name")
+
         # Add prescription templates (multi-drug templates)
-        context['prescription_templates'] = PrescriptionTemplate.objects.filter(
-            Q(creator=self.request.user) | Q(is_public=True)
-        ).prefetch_related('items').order_by('name')
-        
+        context["prescription_templates"] = (
+            PrescriptionTemplate.objects.filter(
+                Q(creator=self.request.user) | Q(is_public=True)
+            )
+            .prefetch_related("items")
+            .order_by("name")
+        )
+
         # Add permission information
-        context['can_edit'] = can_edit_event(self.request.user, self.object)
-        context['can_delete'] = can_delete_event(self.request.user, self.object)
-        
+        context["can_edit"] = can_edit_event(self.request.user, self.object)
+        context["can_delete"] = can_delete_event(self.request.user, self.object)
+
         # Add timeline URL for patient
         from django.urls import reverse
-        context['patient_timeline_url'] = reverse(
-            'patients:patient_events_timeline', 
-            kwargs={'patient_id': self.object.patient.id}
+
+        context["patient_timeline_url"] = reverse(
+            "patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.id},
         )
-        
+
         return context
-    
-    
+
     def form_valid(self, form):
         """Handle form validation including formset and audit trail."""
         context = self.get_context_data()
         formset = PrescriptionItemFormSetHelper.get_formset_with_user(
             self.request.user, self.request.POST, instance=self.object
         )
-        
+
         if form.is_valid() and formset.is_valid():
             # Save the main prescription
             self.object = form.save(commit=False)
             self.object.updated_by = self.request.user
             self.object.updated_at = timezone.now()
             self.object.save()
-            
+
             # Save the formset
             formset.instance = self.object
             formset.save()
-            
+
             messages.success(
                 self.request,
-                f"Receita para {self.object.patient.name} atualizada com sucesso!"
+                f"Receita para {self.object.patient.name} atualizada com sucesso!",
             )
-            
+
             return super().form_valid(form)
         else:
             # Add formset to context for error display
             formset_data = PrescriptionItemFormSetHelper.prepare_formset_data(formset)
             context.update(formset_data)
             return self.render_to_response(context)
-    
+
     def get_success_url(self):
         """Redirect to patient timeline after successful update."""
         from django.urls import reverse
+
         return reverse(
-            'patients:patient_events_timeline', 
-            kwargs={'patient_id': self.object.patient.id}
+            "patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.id},
         )
 
 
@@ -555,237 +585,318 @@ class OutpatientPrescriptionPrintView(LoginRequiredMixin, DetailView):
     """
     Print view for OutpatientPrescription instances with print-optimized template.
     """
-    
+
     model = OutpatientPrescription
     template_name = "outpatientprescriptions/outpatientprescription_print.html"
     context_object_name = "prescription"
-    
+
     def get_queryset(self):
         """Filter queryset to ensure proper permissions and optimized queries."""
-        return (
-            OutpatientPrescription.objects
-            .select_related("patient", "created_by", "updated_by")
-            .prefetch_related("items")
-        )
-    
+        return OutpatientPrescription.objects.select_related(
+            "patient", "created_by", "updated_by"
+        ).prefetch_related("items")
+
     def get_object(self, queryset=None):
         """Get object and check patient access permissions."""
         obj = super().get_object(queryset)
-        
+
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
             from django.core.exceptions import PermissionDenied
+
             raise PermissionDenied(
                 "You don't have permission to access this patient's prescriptions"
             )
-        
+
         return obj
-    
+
     def get_context_data(self, **kwargs):
         """Add prescription items and medical information for print template."""
         context = super().get_context_data(**kwargs)
-        
+
         # Add prescription items ordered by their order field
-        context['prescription_items'] = self.object.items.order_by('order')
-        
+        context["prescription_items"] = self.object.items.order_by("order")
+
         return context
 
 
-class OutpatientPrescriptionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class OutpatientPrescriptionDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     """
     Delete view for OutpatientPrescription instances with permission checking.
     """
-    
+
     model = OutpatientPrescription
     template_name = "outpatientprescriptions/outpatientprescription_confirm_delete.html"
     context_object_name = "prescription"
     permission_required = "events.delete_event"
-    
+
     def get_success_url(self):
         """Redirect to patient timeline after successful deletion."""
         from django.urls import reverse
+
         return reverse(
-            'patients:patient_events_timeline', 
-            kwargs={'patient_id': self.object.patient.id}
+            "patients:patient_events_timeline",
+            kwargs={"patient_id": self.object.patient.id},
         )
-    
+
     def get_object(self, queryset=None):
         """Get object and check patient access and delete permissions."""
         obj = super().get_object(queryset)
-        
+
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
             from django.core.exceptions import PermissionDenied
+
             raise PermissionDenied(
                 "You don't have permission to access this patient's prescriptions"
             )
-        
+
         # Check if user can delete this event
         if not can_delete_event(self.request.user, obj):
             from django.core.exceptions import PermissionDenied
+
             raise PermissionDenied(
                 "You don't have permission to delete this prescription"
             )
-        
+
         return obj
-    
+
     def get_queryset(self):
         """Filter queryset to ensure proper permissions and optimized queries."""
-        return (
-            OutpatientPrescription.objects
-            .select_related("patient", "created_by", "updated_by")
-            .prefetch_related("items")
-        )
-    
+        return OutpatientPrescription.objects.select_related(
+            "patient", "created_by", "updated_by"
+        ).prefetch_related("items")
+
     def delete(self, request, *args, **kwargs):
         """Handle successful deletion."""
         prescription = self.get_object()
         messages.success(
-            request,
-            f"Receita para {prescription.patient.name} excluída com sucesso!"
+            request, f"Receita para {prescription.patient.name} excluída com sucesso!"
         )
         return super().delete(request, *args, **kwargs)
 
 
-@login_required 
+class OutpatientPrescriptionDuplicateView(
+    LoginRequiredMixin, PermissionRequiredMixin, View
+):
+    """
+    Duplicate view for OutpatientPrescription instances.
+
+    POST-only: clones the source prescription header (same patient,
+    copied instructions) and its items as independent rows into a new
+    draft, then redirects to the copy's edit view. Cloned items carry
+    no source_template so DrugTemplate usage counts are untouched.
+    """
+
+    permission_required = "events.add_event"
+    http_method_names = ("post",)
+
+    def post(self, request, *args, **kwargs):
+        """Clone the source prescription into a new draft."""
+        source = get_object_or_404(
+            OutpatientPrescription.objects.select_related("patient").prefetch_related(
+                "items"
+            ),
+            pk=kwargs["pk"],
+        )
+
+        if not can_access_patient(request.user, source.patient):
+            from django.core.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                "You don't have permission to access this patient's prescriptions"
+            )
+
+        with transaction.atomic():
+            copy = OutpatientPrescription(
+                patient=source.patient,
+                instructions=source.instructions,
+                prescription_date=timezone.localdate(),
+                status="draft",
+                event_datetime=timezone.now(),
+                description=Event.EVENT_TYPE_CHOICES[Event.OUTPT_PRESCRIPTION_EVENT][1],
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            copy.save()
+
+            for source_item in source.items.order_by("order"):
+                PrescriptionItem.objects.create(
+                    prescription=copy,
+                    drug_name=source_item.drug_name,
+                    presentation=source_item.presentation,
+                    usage_instructions=source_item.usage_instructions,
+                    quantity=source_item.quantity,
+                    order=source_item.order,
+                    source_template=None,
+                )
+
+        messages.success(
+            request,
+            f"Receita para {copy.patient.name} duplicada com sucesso! "
+            "Revise os itens da cópia.",
+        )
+        return redirect(copy.get_edit_url())
+
+
+@login_required
 def get_prescription_template_data(request, template_id):
     """
     AJAX view to get prescription template data by ID from PrescriptionTemplate model.
     """
     try:
         template = get_object_or_404(PrescriptionTemplate, id=template_id)
-        
+
         # Check if user has access to this template
         if not template.is_public and template.creator != request.user:
-            return JsonResponse({'error': 'Acesso negado'}, status=403)
-        
+            return JsonResponse({"error": "Acesso negado"}, status=403)
+
         # Get all template items
-        items = template.items.all().order_by('order', 'drug_name')
-        
+        items = template.items.all().order_by("order", "drug_name")
+
         data = {
-            'id': str(template.id),
-            'name': template.name,
-            'items': [
+            "id": str(template.id),
+            "name": template.name,
+            "items": [
                 {
-                    'id': str(item.id),
-                    'drug_name': item.drug_name,
-                    'presentation': item.presentation,
-                    'quantity': item.quantity,
-                    'usage_instructions': item.usage_instructions,
-                    'order': item.order
+                    "id": str(item.id),
+                    "drug_name": item.drug_name,
+                    "presentation": item.presentation,
+                    "quantity": item.quantity,
+                    "usage_instructions": item.usage_instructions,
+                    "order": item.order,
                 }
                 for item in items
-            ]
+            ],
         }
-        
+
         return JsonResponse(data)
-        
+
     except PrescriptionTemplate.DoesNotExist:
-        return JsonResponse({'error': 'Template não encontrado'}, status=404)
+        return JsonResponse({"error": "Template não encontrado"}, status=404)
     except Exception as e:
-        return JsonResponse({'error': 'Erro interno'}, status=500)
+        return JsonResponse({"error": "Erro interno"}, status=500)
 
 
 class OutpatientPrescriptionPDFView(LoginRequiredMixin, DetailView):
     """
     PDF generation view for OutpatientPrescription instances using the centralized PDF generator.
     """
-    
+
     model = OutpatientPrescription
-    
+
     def get_queryset(self):
         """Filter queryset to ensure proper permissions and optimized queries."""
-        return (
-            OutpatientPrescription.objects
-            .select_related("patient", "created_by", "updated_by")
-            .prefetch_related("items")
-        )
-    
+        return OutpatientPrescription.objects.select_related(
+            "patient", "created_by", "updated_by"
+        ).prefetch_related("items")
+
     def get_object(self, queryset=None):
         """Get object and check patient access permissions."""
         obj = super().get_object(queryset)
-        
+
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
             from django.core.exceptions import PermissionDenied
+
             raise PermissionDenied(
                 "You don't have permission to access this patient's prescriptions"
             )
-        
+
         return obj
-    
+
     def get(self, request, *args, **kwargs):
         """Generate and return PDF for the prescription."""
         try:
             # Import PDF generator services
-            from apps.pdfgenerator.services.pdf_generator import HospitalLetterheadGenerator
-            
+            from apps.pdfgenerator.services.pdf_generator import (
+                HospitalLetterheadGenerator,
+            )
+
             # Get prescription object
             prescription = self.get_object()
-            
+
             # Initialize PDF generator
             pdf_generator = HospitalLetterheadGenerator()
-            
+
             # Prepare patient data
             patient_data = {
-                'name': prescription.patient.name,
-                'fiscal_number': prescription.patient.fiscal_number or '—',
-                'birth_date': prescription.patient.birthday.strftime('%d/%m/%Y') if prescription.patient.birthday else '—',
-                'health_card_number': prescription.patient.healthcard_number or '—',
+                "name": prescription.patient.name,
+                "fiscal_number": prescription.patient.fiscal_number or "—",
+                "birth_date": prescription.patient.birthday.strftime("%d/%m/%Y")
+                if prescription.patient.birthday
+                else "—",
+                "health_card_number": prescription.patient.healthcard_number or "—",
             }
-            
+
             # Prepare doctor info
             doctor_info = {
-                'name': prescription.created_by.get_full_name() or prescription.created_by.username,
-                'profession': getattr(prescription.created_by, 'profession', 'Médico'),
-                'registration_number': getattr(prescription.created_by, 'professional_registration_number', ''),
+                "name": prescription.created_by.get_full_name()
+                or prescription.created_by.username,
+                "profession": getattr(prescription.created_by, "profession", "Médico"),
+                "registration_number": getattr(
+                    prescription.created_by, "professional_registration_number", ""
+                ),
             }
-            
+
             # Get prescription items
             items = []
-            for item in prescription.items.order_by('order'):
-                items.append({
-                    'drug_name': item.drug_name,
-                    'presentation': item.presentation,
-                    'usage_instructions': item.usage_instructions,
-                    'quantity': item.quantity,
-                })
-            
+            for item in prescription.items.order_by("order"):
+                items.append(
+                    {
+                        "drug_name": item.drug_name,
+                        "presentation": item.presentation,
+                        "usage_instructions": item.usage_instructions,
+                        "quantity": item.quantity,
+                    }
+                )
+
             # Prepare prescription data
             prescription_data = {
-                'prescription_date': prescription.prescription_date.strftime('%d/%m/%Y'),
-                'instructions': prescription.instructions,
-                'status': prescription.get_status_display(),
+                "prescription_date": prescription.prescription_date.strftime(
+                    "%d/%m/%Y"
+                ),
+                "instructions": prescription.instructions,
+                "status": prescription.get_status_display(),
             }
-            
+
             # Generate prescription PDF
             pdf_buffer = pdf_generator.create_prescription_pdf(
                 prescription_data=prescription_data,
                 items=items,
                 patient_data=patient_data,
-                doctor_info=doctor_info
+                doctor_info=doctor_info,
             )
-            
+
             # Create response
-            response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
-            
+            response = HttpResponse(pdf_buffer.read(), content_type="application/pdf")
+
             # Generate filename
-            safe_name = "".join(c for c in prescription.patient.name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            date_str = prescription.prescription_date.strftime('%Y%m%d')
+            safe_name = "".join(
+                c
+                for c in prescription.patient.name
+                if c.isalnum() or c in (" ", "-", "_")
+            ).rstrip()
+            date_str = prescription.prescription_date.strftime("%Y%m%d")
             filename = f"Receita_Medica_{safe_name}_{date_str}.pdf"
-            
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            
+
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
             # Log PDF generation
             logging.getLogger(__name__).info(
                 f"Prescription PDF generated for {prescription.patient.name} by {request.user.username}"
             )
-            
+
             return response
-            
+
         except Exception as e:
-            logging.getLogger(__name__).error(f"Prescription PDF generation error: {str(e)}", exc_info=True)
+            logging.getLogger(__name__).error(
+                f"Prescription PDF generation error: {str(e)}", exc_info=True
+            )
             messages.error(request, f"Erro ao gerar PDF: {str(e)}")
             # Redirect back to the prescription detail view
             from django.urls import reverse
+
             return HttpResponse(f"Erro ao gerar PDF: {str(e)}", status=500)
