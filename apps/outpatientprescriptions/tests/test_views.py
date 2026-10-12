@@ -1351,3 +1351,96 @@ class OutpatientPrescriptionDuplicateViewTest(TestCase):
         self.assertEqual(templated_item.source_template, template)
 
 
+class OutpatientPrescriptionDuplicateButtonVisibilityTest(TestCase):
+    """Visibility tests for the duplicate control (slice-002-duplicate-button)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Set up test data."""
+        cls.authorized_user = User.objects.create_user(
+            username="dupbtnallowed",
+            email="dupbtnallowed@example.com",
+            password="testpass123",
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
+        )
+        grant_event_permissions(cls.authorized_user, "add_event")
+
+        cls.unauthorized_user = User.objects.create_user(
+            username="dupbtndenied",
+            email="dupbtndenied@example.com",
+            password="testpass123",
+            profession_type=User.MEDICAL_DOCTOR,
+            password_change_required=False,
+            terms_accepted=True,
+        )
+
+        cls.patient = Patient.objects.create(
+            name="Duplicate Button Patient",
+            birthday="1990-01-01",
+            status=1,
+            created_by=cls.authorized_user,
+            updated_by=cls.authorized_user,
+        )
+
+        cls.prescription = OutpatientPrescription.objects.create(
+            event_datetime=timezone.now(),
+            description="Receita",
+            instructions="Take as directed",
+            status="finalized",
+            prescription_date=timezone.localdate(),
+            patient=cls.patient,
+            created_by=cls.authorized_user,
+            updated_by=cls.authorized_user,
+        )
+
+    def detail_url(self):
+        return reverse(
+            "outpatientprescriptions:outpatientprescription_detail",
+            kwargs={"pk": self.prescription.pk},
+        )
+
+    def duplicate_url(self):
+        return reverse(
+            "outpatientprescriptions:outpatientprescription_duplicate",
+            kwargs={"pk": self.prescription.pk},
+        )
+
+    @patch("apps.outpatientprescriptions.views.can_access_patient")
+    def test_duplicate_control_present_and_posts_for_authorized_user(
+        self, mock_can_access
+    ):
+        """R1: authorized user sees a Duplicar POST+CSRF control."""
+        mock_can_access.return_value = True
+        self.client.login(username="dupbtnallowed", password="testpass123")
+
+        response = self.client.get(self.detail_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Duplicar")
+        self.assertContains(response, f'action="{self.duplicate_url()}"')
+        self.assertContains(response, "csrfmiddlewaretoken")
+
+    @patch("apps.outpatientprescriptions.views.can_access_patient")
+    def test_duplicate_control_absent_without_add_event(self, mock_can_access):
+        """R2: user without events.add_event sees no duplicate control."""
+        mock_can_access.return_value = True
+        self.client.login(username="dupbtndenied", password="testpass123")
+
+        response = self.client.get(self.detail_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Duplicar")
+        self.assertNotContains(response, f'action="{self.duplicate_url()}"')
+
+    @patch("apps.outpatientprescriptions.views.can_access_patient")
+    def test_no_get_link_to_duplicate_url(self, mock_can_access):
+        """R3: duplicate action is never rendered as a GET link."""
+        mock_can_access.return_value = True
+        self.client.login(username="dupbtnallowed", password="testpass123")
+
+        response = self.client.get(self.detail_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, f'href="{self.duplicate_url()}"')
