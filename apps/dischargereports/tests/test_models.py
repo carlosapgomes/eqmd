@@ -186,7 +186,11 @@ class DischargeReportModelTests(TestCase):
         self.assertFalse(report.can_be_edited_by_user(self.user))
 
     def test_can_be_edited_by_user_different_user(self):
-        """Test that reports cannot be edited by different users"""
+        """Plain user without profession/permission cannot edit drafts.
+
+        Collaborator doctors are covered by
+        test_can_be_edited_by_user_collaborator_doctor (S1 new rule).
+        """
         other_user = User.objects.create_user(
             username="otheruser",
             email="other@example.com",
@@ -205,6 +209,81 @@ class DischargeReportModelTests(TestCase):
             updated_by=self.user,
         )
         self.assertFalse(report.can_be_edited_by_user(other_user))
+
+    def test_can_be_edited_by_user_collaborator_doctor(self):
+        """Collaborating doctor can edit another doctor's draft (S1)."""
+        other_doctor = User.objects.create_user(
+            username="otherdoctor",
+            email="otherdoctor@example.com",
+            password="otherpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
+        )
+        report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Test report",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Test Specialty",
+            is_draft=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        self.assertTrue(report.can_be_edited_by_user(other_doctor))
+
+    def test_collaborator_doctor_can_edit_old_draft(self):
+        """Draft older than 24h stays editable (no time limit, S1)."""
+        old_datetime = timezone.now() - timedelta(hours=25)
+        other_doctor = User.objects.create_user(
+            username="olddoctor",
+            email="olddoctor@example.com",
+            password="otherpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.RESIDENT,
+        )
+        report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=old_datetime,
+            description="Old draft report",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Test Specialty",
+            is_draft=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        DischargeReport.objects.filter(pk=report.pk).update(
+            created_at=old_datetime
+        )
+        report.refresh_from_db()
+        self.assertTrue(report.can_be_edited_by_user(self.user))
+        self.assertTrue(report.can_be_edited_by_user(other_doctor))
+
+    def test_non_doctor_cannot_edit_draft(self):
+        """Nurse gets False predicate on another user's draft (S2 R2)."""
+        nurse = User.objects.create_user(
+            username="draftnurse",
+            email="draftnurse@example.com",
+            password="otherpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.NURSE,
+        )
+        report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Test report",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Test Specialty",
+            is_draft=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        self.assertFalse(report.can_be_edited_by_user(nurse))
 
     def test_get_absolute_url(self):
         """Test get_absolute_url method"""

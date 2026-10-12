@@ -101,8 +101,16 @@ class DischargeReport(Event):
     def can_be_edited_by_user(self, user):
         """Check if report can be edited by specific user"""
         if self.is_draft:
-            # Drafts can be edited by creator or users with edit permissions
-            return self.created_by == user or user.has_perm('events.change_event')
+            # Drafts: creator, edit-permission holders, or any
+            # doctor/resident (collaborative draft workflow,
+            # no time limit). 0/1 are EqmdCustomUser
+            # MEDICAL_DOCTOR/RESIDENT (see core.permissions.utils).
+            if self.created_by == user or user.has_perm(
+                'events.change_event'
+            ):
+                return True
+            profession_type = getattr(user, 'profession_type', None)
+            return profession_type in (0, 1)
         else:
             # Finalized reports follow 24h rule
             return self.can_be_edited and (self.created_by == user or user.has_perm('events.change_event'))

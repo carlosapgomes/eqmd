@@ -526,3 +526,194 @@ class DischargeReportViewTests(TestCase):
         # Verify report is deleted (soft delete): hidden from the default
         # manager, retained in all_objects for audit/retention.
         self.assertFalse(DischargeReport.objects.filter(pk=report.pk).exists())
+
+
+class DischargeReportCollaborativeDraftViewTests(TestCase):
+    """S1: collaborating doctor can edit/re-save another doctor's draft."""
+
+    def setUp(self):
+        self.client = Client()
+        self.creator = User.objects.create_user(
+            username="creator",
+            email="creator@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
+        )
+        self.collaborator = User.objects.create_user(
+            username="collaborator",
+            email="collaborator@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.RESIDENT,
+        )
+        self.nurse = User.objects.create_user(
+            username="nurse",
+            email="nurse@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.NURSE,
+        )
+        self.patient = Patient.objects.create(
+            name="Collab Patient",
+            birthday=date(1990, 1, 1),
+            gender=Patient.GenderChoices.MALE,
+            created_by=self.creator,
+            updated_by=self.creator,
+        )
+        self.report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Collab draft",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Test Specialty",
+            admission_history="h",
+            problems_and_diagnosis="d",
+            exams_list="e",
+            procedures_list="p",
+            inpatient_medical_history="m",
+            discharge_status="s",
+            discharge_recommendations="r",
+            is_draft=True,
+            created_by=self.creator,
+            updated_by=self.creator,
+        )
+
+    def _draft_post_data(self, action):
+        return {
+            "patient": self.patient.pk,
+            "event_datetime": timezone.now().strftime("%Y-%m-%dT%H:%M"),
+            "description": "Collab draft",
+            "admission_date": date(2024, 1, 1),
+            "discharge_date": date(2024, 1, 5),
+            "medical_specialty": "Test Specialty",
+            "admission_history": "h",
+            "problems_and_diagnosis": "collab edit",
+            "exams_list": "e",
+            "procedures_list": "p",
+            "inpatient_medical_history": "m",
+            "discharge_status": "s",
+            "discharge_recommendations": "r",
+            action: "x",
+        }
+
+    def test_collaborator_can_open_update_view(self):
+        self.client.login(username="collaborator", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": self.report.pk},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_collaborator_can_resave_draft(self):
+        self.client.login(username="collaborator", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": self.report.pk},
+        )
+        response = self.client.post(url, self._draft_post_data("save_draft"))
+        self.assertEqual(response.status_code, 302)
+        self.report.refresh_from_db()
+        self.assertTrue(self.report.is_draft)
+        self.assertEqual(
+            self.report.problems_and_diagnosis, "collab edit"
+        )
+
+    def test_detail_shows_edit_action_to_collaborator(self):
+        self.client.login(username="collaborator", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_detail",
+            kwargs={"pk": self.report.pk},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        update_url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": self.report.pk},
+        )
+        self.assertContains(response, update_url)
+
+    def test_collaborator_can_finalize_draft(self):
+        """S2 R1: second doctor finalize flips is_draft to False."""
+        self.client.login(username="collaborator", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": self.report.pk},
+        )
+        response = self.client.post(url, self._draft_post_data("save_final"))
+        self.assertEqual(response.status_code, 302)
+        self.report.refresh_from_db()
+        self.assertFalse(self.report.is_draft)
+
+    def test_non_doctor_cannot_open_update_view(self):
+        """S2 R2: nurse gets 403 on draft update GET."""
+        self.client.login(username="nurse", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": self.report.pk},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_non_doctor_cannot_submit_update_view(self):
+        """S2 R2: nurse gets 403 on draft update POST."""
+        self.client.login(username="nurse", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": self.report.pk},
+        )
+        response = self.client.post(url, self._draft_post_data("save_draft"))
+        self.assertEqual(response.status_code, 403)
+        self.report.refresh_from_db()
+        self.assertTrue(self.report.is_draft)
+        self.assertNotEqual(
+            self.report.problems_and_diagnosis, "collab edit"
+        )
+
+    def test_detail_hides_edit_action_from_non_doctor(self):
+        """S2 R2: no edit action for non-doctor on detail view."""
+        self.client.login(username="nurse", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_detail",
+            kwargs={"pk": self.report.pk},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        update_url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": self.report.pk},
+        )
+        self.assertNotContains(response, update_url)
+
+    def test_second_doctor_blocked_on_finalized_report(self):
+        """S2 R3: fresh final stays creator-only (collaborator 403)."""
+        final_report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Fresh final",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Test Specialty",
+            admission_history="h",
+            problems_and_diagnosis="d",
+            exams_list="e",
+            procedures_list="p",
+            inpatient_medical_history="m",
+            discharge_status="s",
+            discharge_recommendations="r",
+            is_draft=False,
+            created_by=self.creator,
+            updated_by=self.creator,
+        )
+        self.client.login(username="collaborator", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": final_report.pk},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
