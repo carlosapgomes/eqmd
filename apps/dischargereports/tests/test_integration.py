@@ -223,17 +223,18 @@ class DischargeReportIntegrationTests(TestCase):
         self.assertFalse(DischargeReport.objects.filter(pk=report.pk).exists())
 
     def test_unauthorized_user_cannot_edit(self):
-        """Test that unauthorized users cannot edit reports"""
-        # Create another user
+        """Non-doctor (nurse) cannot edit a draft (S2 R2/R5)."""
+        # Create a non-doctor user with explicit profession fixture
         User.objects.create_user(
             username="otheruser",
             email="other@example.com",
             password="otherpass123",
             password_change_required=False,
             terms_accepted=True,
+            profession_type=User.NURSE,
         )
 
-        # Create report as original user
+        # Create draft report as original user
         report = DischargeReport.objects.create(
             patient=self.patient,
             event_datetime=timezone.now(),
@@ -241,17 +242,48 @@ class DischargeReportIntegrationTests(TestCase):
             admission_date=date(2024, 1, 1),
             discharge_date=date(2024, 1, 5),
             medical_specialty="Test Specialty",
+            is_draft=True,
             created_by=self.user,
             updated_by=self.user,
         )
 
-        # Try to edit as other user
+        # Try to edit as non-doctor user
         self.client.login(username="otheruser", password="otherpass123")
         update_url = reverse(
             "apps.dischargereports:dischargereport_update", kwargs={"pk": report.pk}
         )
         response = self.client.get(update_url)
         self.assertEqual(response.status_code, 403)
+
+    def test_collaborator_doctor_can_edit_draft(self):
+        """Collaborator doctor can edit a draft (S2 R5)."""
+        User.objects.create_user(
+            username="collabdoctor",
+            email="collabdoctor@example.com",
+            password="otherpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
+        )
+
+        report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Test report",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Test Specialty",
+            is_draft=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        self.client.login(username="collabdoctor", password="otherpass123")
+        update_url = reverse(
+            "apps.dischargereports:dischargereport_update", kwargs={"pk": report.pk}
+        )
+        response = self.client.get(update_url)
+        self.assertEqual(response.status_code, 200)
 
     def test_form_validation_integration(self):
         """Test form validation in the context of views"""
