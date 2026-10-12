@@ -17,7 +17,6 @@ from django.views.generic import (
 )
 
 from apps.core.permissions import can_access_patient, can_delete_event, can_edit_event
-from apps.core.permissions.constants import MEDICAL_DOCTOR, RESIDENT
 
 from .forms import DischargeReportCreateForm, DischargeReportUpdateForm
 from .models import DischargeReport
@@ -35,10 +34,16 @@ def can_edit_discharge_report(user, report):
     if not can_access_patient(user, report.patient):
         return False
 
-    # If it's a draft, any doctor/resident can edit
+    # If it's a draft, creator, edit-permission holders, or any
+    # doctor/resident can edit (collaborative draft workflow, no
+    # time limit). 0/1 are EqmdCustomUser MEDICAL_DOCTOR/RESIDENT.
     if report.is_draft:
-        user_profession = getattr(user, "profession", None)
-        return user_profession in [MEDICAL_DOCTOR, RESIDENT]
+        if report.created_by == user or user.has_perm(
+            "events.change_event"
+        ):
+            return True
+        profession_type = getattr(user, "profession_type", None)
+        return profession_type in (0, 1)
 
     # If it's final, follow system standards
     return can_edit_event(user, report)

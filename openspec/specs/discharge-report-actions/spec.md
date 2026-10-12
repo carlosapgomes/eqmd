@@ -48,3 +48,61 @@ current user is permitted to delete the report.
 
 - **WHEN** the current user lacks delete permission for the report
 - **THEN** the delete action is not shown on the timeline card
+
+### Requirement: Discharge report collaborative draft editing
+
+The system SHALL allow any authenticated doctor/resident with patient access
+to edit a discharge report draft at any time, regardless of authorship or
+draft age. Re-saving as draft SHALL keep `is_draft` true. Users whose
+profession is not doctor/resident SHALL still be denied.
+
+#### Scenario: Other doctor edits and re-saves a draft
+
+- **WHEN** a doctor/resident who did not create the draft opens the update
+  view and re-saves as draft
+- **THEN** access is granted and the report remains a draft
+
+#### Scenario: Old draft remains editable
+
+- **WHEN** a draft is older than 24h by `created_at`
+- **THEN** the creator and any other doctor/resident can still edit it
+
+#### Scenario: Non-doctor cannot edit a draft
+
+- **WHEN** a nurse, physiotherapist, or student tries to open or submit the
+  update view of a draft
+- **THEN** access is denied
+
+### Requirement: Discharge report collaborative finalization
+
+The system SHALL allow any doctor/resident who can edit a draft to finalize
+it. Finalizing SHALL set `is_draft` to false. After finalization the standard
+finalized-report rules SHALL apply (creator-only edit within 24h).
+
+#### Scenario: Other doctor finalizes a draft
+
+- **WHEN** a doctor/resident submits another author's draft with the finalize
+  action
+- **THEN** the report becomes finalized
+
+#### Scenario: Finalized report keeps the 24h creator rule
+
+- **WHEN** a report is finalized
+- **THEN** only the creator (or `events.change_event` holders) can edit it
+  and only within 24h of creation
+
+### Requirement: Discharge report edit action availability
+
+The discharge report detail view and timeline card SHALL show the edit action
+for a draft exactly when the current user satisfies the collaborative draft
+predicate (doctor/resident with patient access).
+
+#### Scenario: Edit action shown to collaborating doctor
+
+- **WHEN** a doctor/resident views a draft created by someone else
+- **THEN** the edit action is visible
+
+#### Scenario: Edit action hidden from non-doctor
+
+- **WHEN** a non-doctor views a draft
+- **THEN** the edit action is not visible
