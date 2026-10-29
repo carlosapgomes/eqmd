@@ -87,7 +87,7 @@ jobs:
         if: github.event_name == 'push'
 
       - name: Image vulnerability scan
-        uses: anchore/scan-action@v3
+        uses: anchore/scan-action@v7
         id: scan
         if: github.event_name == 'push'
         with:
@@ -95,16 +95,23 @@ jobs:
           fail-build: false
           severity-cutoff: high
 
+      - name: Validate SARIF report
+        id: validate-sarif
+        if: success() && github.event_name == 'push'
+        run: |
+          node scripts/validate-image-scan-sarif.mjs "${{ steps.scan.outputs.sarif }}"
+          echo "validated-sarif=${{ steps.scan.outputs.sarif }}" >> "$GITHUB_OUTPUT"
+
       - name: Upload vulnerability scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && github.event_name == 'push' && steps.scan.outputs.sarif != ''
+        if: success() && github.event_name == 'push' && steps.validate-sarif.outputs.validated-sarif != ''
         with:
-          sarif_file: ${{ steps.scan.outputs.sarif }}
+          sarif_file: ${{ steps.validate-sarif.outputs.validated-sarif }}
 
       - name: Upload SARIF as workflow artifact
         uses: actions/upload-artifact@v4
-        if: always() && github.event_name == 'push' && steps.scan.outputs.sarif != ''
+        if: github.event_name == 'push' && steps.validate-sarif.outputs.validated-sarif != '' && !cancelled()
         with:
           name: vulnerability-scan-results
-          path: ${{ steps.scan.outputs.sarif }}
+          path: ${{ steps.validate-sarif.outputs.validated-sarif }}
           retention-days: 30
