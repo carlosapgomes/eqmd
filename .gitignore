@@ -68,3 +68,4 @@ prompts/
 openspec/changes/*/
 !openspec/changes/archive/
 .claude/
+temp/
