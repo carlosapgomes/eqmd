@@ -1,0 +1,169 @@
+# EQMD no eon — etapa 1 (change migrate-production-to-eon, slice s2).
+# Autossuficiente: não herda nenhum Compose existente do repositório.
+# Sem portas publicadas; redes EQMD são externas (gate humano da fase D).
+#
+# UID/GID 9900:9900: identidade dedicada não privilegiada. A imagem não
+# define USER, então o Compose fixa o UID/GID numérico; nenhum outro
+# serviço do repositório usa 9900. Se o host já usar esse UID, trocar
+# `user` e o `init` juntos e revalidar. `init` (root, profile ops)
+# prepara o ownership dos volumes sem `chown -R` genérico; o restore
+# aplica o ownership do destino (design D4).
+
+services:
+  eqmd:
+    image: ghcr.io/carlosapgomes/eqmd@sha256:fe31d296f50dd34c19c437244ea9a3d61f75aba4ec7d806329b50f8340cc4c4f
+    restart: unless-stopped
+    user: "9900:9900"
+    env_file:
+      - env.eon.example
+    environment:
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_NAME: ${POSTGRES_DB:?POSTGRES_DB is required}
+      DATABASE_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+    networks:
+      - <REDE_APP>
+      - <REDE_DB>
+      - <REDE_EGRESS>
+    volumes:
+      - eqmd_media:/app/media
+      - eqmd_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Hardening provisório: revisar no ensaio s7 antes do cutover.
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run:size=8m,mode=0755
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen(
+          'http://127.0.0.1:8000/health/',
+          timeout=3).read()
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    # Limites conservadores; ajustar com os tempos do ensaio s7.
+    mem_limit: 1g
+    cpus: 1.0
+
+  postgres:
+    image: postgres@sha256:1d1095b0503145be79c79239372aefadfacf6b7c33c9245bbf99ce4b6b89c737
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    networks:
+      - <REDE_DB>
+    volumes:
+      - eqmd_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # SEM cap_drop: ALL: o entrypoint precisa ajustar ownership (D5).
+    mem_limit: 768m
+    cpus: 1.0
+    stop_grace_period: 1m
+
+  frontend:
+    # Imagem/digest definidos no slice s4; o valor é obrigatório.
+    image: ${EQMD_FRONTEND_IMAGE:?EQMD_FRONTEND_IMAGE must be set to the s4 digest}
+    restart: unless-stopped
+    networks:
+      - <REDE_INGRESS>
+      - <REDE_APP>
+    volumes:
+      # Caminho do estático confirmado com a imagem no slice s4.
+      - eqmd_static:/srv/eqmd/static:ro
+    mem_limit: 128m
+    cpus: 0.5
+
+  init:
+    profiles: ["ops"]
+    image: ghcr.io/carlosapgomes/eqmd@sha256:fe31d296f50dd34c19c437244ea9a3d61f75aba4ec7d806329b50f8340cc4c4f
+    # root apenas nesta operação explícita, para preparar volumes.
+    user: "0:0"
+    env_file:
+      - env.eon.example
+    networks:
+      - <REDE_APP>
+    volumes:
+      - eqmd_media:/app/media
+      - eqmd_logs:/app/logs
+      - eqmd_static:/app/staticfiles
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        install -d -o 9900 -g 9900 -m 0750 /app/media /app/logs
+        install -d -o 9900 -g 9900 -m 0750 \
+          /app/media/videos \
+          /app/media/videos/tmp \
+          /app/media/videos/tmp/filepond_uploads \
+          /app/media/videos/tmp/filepond_stored
+        install -d -o 9900 -g 9900 -m 0755 /app/staticfiles
+        python -c "import os,sys; os.setgroups([]); os.setgid(9900); os.setuid(9900); os.execvp(sys.argv[1], sys.argv[1:])" \
+          python manage.py collectstatic --clear --noinput
+    restart: "no"
+
+  migrate:
+    profiles: ["ops"]
+    image: ghcr.io/carlosapgomes/eqmd@sha256:fe31d296f50dd34c19c437244ea9a3d61f75aba4ec7d806329b50f8340cc4c4f
+    # Identidade de banco do migrator será definida no slice s3.
+    user: "9900:9900"
+    env_file:
+      - env.eon.example
+    networks:
+      - <REDE_DB>
+    volumes:
+      - eqmd_media:/app/media
+      - eqmd_logs:/app/logs
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: "no"
+
+networks:
+  # CIDRs reservados no slice s1: ingress <CIDR_INGRESS>, app
+  # <CIDR_APP>, db <CIDR_DB>, egress <CIDR_EGRESS>.
+  # A criação real das redes é gate humano da fase D.
+  <REDE_INGRESS>:
+    external: true
+  <REDE_APP>:
+    external: true
+  <REDE_DB>:
+    external: true
+  <REDE_EGRESS>:
+    external: true
+
+volumes:
+  eqmd_media:
+    name: eqmd_media
+  eqmd_logs:
+    name: eqmd_logs
+  eqmd_pgdata:
+    name: eqmd_pgdata
+  eqmd_static:
+    name: eqmd_static
