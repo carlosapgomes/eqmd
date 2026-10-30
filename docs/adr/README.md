@@ -16,7 +16,7 @@ Registros de decisões arquiteturais importantes do projeto.
 ## ADRs propostas
 
 - [ADR-0004 — Correção delimitada de segurança da imagem produtiva][adr-0004]
-  — _Proposed (2026-10-29)_
+  — _Accepted (2026-10-30)_
 
 [adr-0004]: ADR-0004-bounded-production-image-security-remediation.md
 [adr-0001]: ADR-0001-deterministic-development-quality-gates.md

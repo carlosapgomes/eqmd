@@ -43,8 +43,8 @@ const PROHIBITED = [
   'app.log',
   'logs/app.log',
   'media/local.jpg',
-  'temp/evidence.txt',
-  'temp/security/report.txt',
+  'temp/evidence.txt', 'temp/security/report.txt',
+  '.venv/pyvenv.cfg',
 ];
 
 // Keep legitimate resources, including Matrix code and its unrendered template.

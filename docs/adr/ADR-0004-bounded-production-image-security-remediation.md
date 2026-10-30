@@ -2,8 +2,15 @@
 
 ## Status
 
-Proposed — 2026-10-29. Planejamento autorizado; não representa execução,
-aceitação de risco residual ou autorização de publicação/implantação.
+Accepted — 2026-10-30. Executada e aceita integralmente via change
+`harden-production-image-security` (arquivada em
+`openspec/changes/archive/2026-10-30-harden-production-image-security/`):
+cinco alvos remediados (Brotli 1.1.0-2+deb13u1, Django 5.2.18, DRF
+3.18.3, certifi 2026.10.23, Pillow 13.0.0), scan baseline×candidato
+com política equivalente e dossiê em
+`docs/security/production-image-security.md`. Aceite de risco residual,
+publicação e implantação permanecem decisões humanas explicitas,
+fora do escopo desta ADR.
 
 ## Contexto
 

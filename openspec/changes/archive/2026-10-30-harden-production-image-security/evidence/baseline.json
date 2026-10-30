@@ -1,0 +1,1667 @@
+{
+  "schema": "eqmd.production-image-security.baseline.v1",
+  "observedAt": "2026-10-29",
+  "target": {
+    "image": "ghcr.io/carlosapgomes/eqmd",
+    "manifestDigest": "sha256:7087e3e0621d69b1b2be7e8029d712187f9ae3b8875f81f5e8fd90fd35637b8f",
+    "configDigest": "sha256:d876c9cb4e6a221b06788a37ff769eea6a18a46e42aa2bf02473064914021cba",
+    "revision": "6e2928c8d205ccb698bdbbd1bb48c281723cfa28",
+    "platform": "linux/amd64",
+    "distro": "debian:13"
+  },
+  "scanner": {
+    "version": "0.110.0",
+    "databaseBuilt": "2026-10-29T06:23:34Z",
+    "databaseSchema": "v6.1.10",
+    "databaseValid": true,
+    "scope": "squashed"
+  },
+  "rawReportSha256": "acd2cba766dbf418e8dae60ea1405df93dfee3c62b3125465d24012905df91e0",
+  "aggregate": {
+    "matches": 2166,
+    "critical": 61,
+    "high": 540,
+    "primaryAdvisoryIDs": 799,
+    "ignoredKernelHeaderMatches": 1601,
+    "targetedMatches": 101
+  },
+  "installedVersionsStaticallyVerified": [
+    "django",
+    "djangorestframework",
+    "pillow",
+    "certifi"
+  ],
+  "plannedFloors": {
+    "django": ">=5.2.17,<5.3",
+    "djangorestframework": ">=3.18.2,<3.19",
+    "pillow": ">=13.0.0,<14",
+    "certifi": ">=2026.10.18",
+    "libbrotli1": "dpkg >= 1.1.0-2+deb13u1 (Debian 13)"
+  },
+  "releaseMetadataChecked": [
+    "https://pypi.org/pypi/Django/5.2.17/json",
+    "https://pypi.org/pypi/djangorestframework/3.18.2/json",
+    "https://pypi.org/pypi/Pillow/13.0.0/json",
+    "https://pypi.org/pypi/certifi/2026.10.18/json"
+  ],
+  "limits": [
+    "Snapshot of advisory presence, not an exploit demonstration or risk acceptance.",
+    "Re-scan baseline and candidate on the same valid database for final comparison.",
+    "Native library version comes from the image package inventory; Python installation was confirmed by static METADATA extraction.",
+    "Excluded package families remain unresolved; no suppression or VEX approval is implied."
+  ],
+  "targetedAdvisories": [
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-6w2r-r2m5-xq5w",
+      "cveAliases": [
+        "CVE-2025-57833"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.6"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-6w2r-r2m5-xq5w"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-frmv-pr5f-9mcr",
+      "cveAliases": [
+        "CVE-2025-64459"
+      ],
+      "severity": "Critical",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.8"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-frmv-pr5f-9mcr"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-mwm9-4648-f68q",
+      "cveAliases": [
+        "CVE-2026-1207"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.11"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-mwm9-4648-f68q"
+    },
+    {
+      "package": "libbrotli1",
+      "installedVersion": "1.1.0-2+b7",
+      "packageType": "deb",
+      "advisory": "CVE-2026-111497",
+      "cveAliases": [
+        "CVE-2026-111497"
+      ],
+      "severity": "Negligible",
+      "fixState": "fixed",
+      "fixVersions": [
+        "1.1.0-2+deb13u1"
+      ],
+      "knownExploited": true,
+      "url": "https://security-tracker.debian.org/tracker/CVE-2026-111497"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-qw25-v68c-qjf3",
+      "cveAliases": [
+        "CVE-2025-64458"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.8"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-qw25-v68c-qjf3"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-w889-685w-c8fh",
+      "cveAliases": [
+        "CVE-2026-112900"
+      ],
+      "severity": "Critical",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-w889-685w-c8fh"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-vrcr-9hj9-jcg6",
+      "cveAliases": [
+        "CVE-2025-64460"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.9"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-vrcr-9hj9-jcg6"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-332p-7hrc-92wf",
+      "cveAliases": [
+        "CVE-2026-112393"
+      ],
+      "severity": "Critical",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-332p-7hrc-92wf"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-wvqv-fj8w-qmhm",
+      "cveAliases": [
+        "CVE-2026-15307"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.17"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-wvqv-fj8w-qmhm"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-8g5g-8vmr-9782",
+      "cveAliases": [
+        "CVE-2026-112403"
+      ],
+      "severity": "Critical",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-8g5g-8vmr-9782"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-gvg8-93h5-g6qq",
+      "cveAliases": [
+        "CVE-2026-1287"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.11"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-gvg8-93h5-g6qq"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-5x8w-8jj5-q52h",
+      "cveAliases": [
+        "CVE-2026-112398"
+      ],
+      "severity": "Critical",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-5x8w-8jj5-q52h"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-v9pv-5gc8-w2m6",
+      "cveAliases": [
+        "CVE-2026-96639"
+      ],
+      "severity": "Critical",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-v9pv-5gc8-w2m6"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-q238-5cxm-5c9h",
+      "cveAliases": [
+        "CVE-2026-15830"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.17"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-q238-5cxm-5c9h"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-933h-hp56-hf7m",
+      "cveAliases": [
+        "CVE-2026-33034"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.13"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-933h-hp56-hf7m"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-8p8v-wh79-9r56",
+      "cveAliases": [
+        "CVE-2026-25673"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.12"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-8p8v-wh79-9r56"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-whj4-6x5x-4v2j",
+      "cveAliases": [
+        "CVE-2026-40192"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.2.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-whj4-6x5x-4v2j"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-5mf9-h53q-7mhq",
+      "cveAliases": [
+        "CVE-2026-33033"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.13"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-5mf9-h53q-7mhq"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-65qm-jvmh-6pqg",
+      "cveAliases": [
+        "CVE-2026-112400"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-65qm-jvmh-6pqg"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-7mwm-ghpf-9vrm",
+      "cveAliases": [
+        "CVE-2026-112402"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-7mwm-ghpf-9vrm"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-p4wg-p73j-c528",
+      "cveAliases": [
+        "CVE-2026-112895"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-p4wg-p73j-c528"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-jg86-v3jv-hrpm",
+      "cveAliases": [
+        "CVE-2026-112894"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-jg86-v3jv-hrpm"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-6426-9fv3-65x8",
+      "cveAliases": [
+        "CVE-2026-1312"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.11"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-6426-9fv3-65x8"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-hpr9-3m2g-3j9p",
+      "cveAliases": [
+        "CVE-2025-59681"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.7"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-hpr9-3m2g-3j9p"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-22hg-r758-rrw9",
+      "cveAliases": [
+        "CVE-2026-112390"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-22hg-r758-rrw9"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-27h8-gf7j-v5hc",
+      "cveAliases": [
+        "CVE-2026-112392"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-27h8-gf7j-v5hc"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-58r4-6rv3-gfh8",
+      "cveAliases": [
+        "CVE-2026-112397"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-58r4-6rv3-gfh8"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-f2g6-542v-9j58",
+      "cveAliases": [
+        "CVE-2026-112406"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-f2g6-542v-9j58"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-mrfp-p49p-3hf2",
+      "cveAliases": [
+        "CVE-2026-96640"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-mrfp-p49p-3hf2"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-j4m9-6w36-pw47",
+      "cveAliases": [
+        "CVE-2026-112893"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-j4m9-6w36-pw47"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-cp9v-662q-vvx9",
+      "cveAliases": [
+        "CVE-2026-112405"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-cp9v-662q-vvx9"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-rqw2-ghq9-44m7",
+      "cveAliases": [
+        "CVE-2025-13372"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.9"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-rqw2-ghq9-44m7"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-5xm2-6676-qcp9",
+      "cveAliases": [
+        "CVE-2026-112399"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-5xm2-6676-qcp9"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-62p4-gmf7-7g93",
+      "cveAliases": [
+        "CVE-2026-54058"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-62p4-gmf7-7g93"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-gg2r-wvfm-q9rx",
+      "cveAliases": [
+        "CVE-2026-112892"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-gg2r-wvfm-q9rx"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-45hq-cxwh-f6vc",
+      "cveAliases": [
+        "CVE-2026-55379"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-45hq-cxwh-f6vc"
+    },
+    {
+      "package": "djangorestframework",
+      "installedVersion": "3.16.0",
+      "packageType": "python",
+      "advisory": "GHSA-33wh-fxxf-88vv",
+      "cveAliases": [
+        "CVE-2026-114138"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "3.18.2"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-33wh-fxxf-88vv"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-phj9-mv4w-65pm",
+      "cveAliases": [
+        "CVE-2026-55380"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-phj9-mv4w-65pm"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-q45j-58j2-45rg",
+      "cveAliases": [
+        "CVE-2026-112897"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-q45j-58j2-45rg"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-pchr-8j38-3x4p",
+      "cveAliases": [
+        "CVE-2026-112896"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-pchr-8j38-3x4p"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-74r2-7ff9-mjj2",
+      "cveAliases": [
+        "CVE-2026-112401"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-74r2-7ff9-mjj2"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-4rr5-89j8-mwwm",
+      "cveAliases": [
+        "CVE-2026-112396"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-4rr5-89j8-mwwm"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-c6hw-5grf-ff96",
+      "cveAliases": [
+        "CVE-2026-112404"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-c6hw-5grf-ff96"
+    },
+    {
+      "package": "djangorestframework",
+      "installedVersion": "3.16.0",
+      "packageType": "python",
+      "advisory": "GHSA-xw6w-gcfp-cf8m",
+      "cveAliases": [
+        "CVE-2026-114137"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "3.18.2"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-xw6w-gcfp-cf8m"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-xj96-63gp-2gmr",
+      "cveAliases": [
+        "CVE-2026-59197"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-xj96-63gp-2gmr"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-g7cr-3p24-7wf7",
+      "cveAliases": [
+        "CVE-2026-96778"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-g7cr-3p24-7wf7"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-7xr5-9hcq-chf9",
+      "cveAliases": [
+        "CVE-2025-48432"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.2"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-7xr5-9hcq-chf9"
+    },
+    {
+      "package": "djangorestframework",
+      "installedVersion": "3.16.0",
+      "packageType": "python",
+      "advisory": "GHSA-3547-9m27-7rxg",
+      "cveAliases": [
+        "CVE-2026-114136"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "3.18.2"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-3547-9m27-7rxg"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-cfh3-3jmp-rvhc",
+      "cveAliases": [
+        "CVE-2026-25990"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.1.1"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-cfh3-3jmp-rvhc"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-254f-3936-288h",
+      "cveAliases": [
+        "CVE-2026-112391"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-254f-3936-288h"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-mvfq-ggxm-9mc5",
+      "cveAliases": [
+        "CVE-2026-3902"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.13"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-mvfq-ggxm-9mc5"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-fc9g-5qg7-mf45",
+      "cveAliases": [
+        "CVE-2026-112891"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-fc9g-5qg7-mf45"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-33mw-q7rj-mjwj",
+      "cveAliases": [
+        "CVE-2025-14550"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.11"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-33mw-q7rj-mjwj"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-4rrr-2h4v-f3j9",
+      "cveAliases": [
+        "CVE-2026-1285"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.11"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-4rrr-2h4v-f3j9"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-xgh8-jp6q-p5x8",
+      "cveAliases": [
+        "CVE-2026-112901"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-xgh8-jp6q-p5x8"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-4558-3h8r-v8xp",
+      "cveAliases": [
+        "CVE-2026-112394"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-4558-3h8r-v8xp"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-5x94-69rx-g8h2",
+      "cveAliases": [
+        "CVE-2026-54060"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-5x94-69rx-g8h2"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-vjc4-5qp5-m44j",
+      "cveAliases": [
+        "CVE-2026-59204"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-vjc4-5qp5-m44j"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-8v84-f9pq-wr9x",
+      "cveAliases": [
+        "CVE-2026-54059"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-8v84-f9pq-wr9x"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-462x-pgg6-55fp",
+      "cveAliases": [
+        "CVE-2026-112395"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-462x-pgg6-55fp"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-6r8x-57c9-28j4",
+      "cveAliases": [
+        "CVE-2026-59199"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-6r8x-57c9-28j4"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-jjj6-mw9f-p565",
+      "cveAliases": [
+        "CVE-2026-59200"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-jjj6-mw9f-p565"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-9hw9-ch79-4vh6",
+      "cveAliases": [
+        "CVE-2026-59205"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-9hw9-ch79-4vh6"
+    },
+    {
+      "package": "djangorestframework",
+      "installedVersion": "3.16.0",
+      "packageType": "python",
+      "advisory": "GHSA-2m8g-3cmr-wg3w",
+      "cveAliases": [
+        "CVE-2026-73228"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "3.17.2"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-2m8g-3cmr-wg3w"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-q95w-c7qg-hrff",
+      "cveAliases": [
+        "CVE-2025-59682"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.7"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-q95w-c7qg-hrff"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-9v9v-9qvf-h2hj",
+      "cveAliases": [
+        "CVE-2026-96644"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-9v9v-9qvf-h2hj"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-crhf-3pfg-w68w",
+      "cveAliases": [
+        "CVE-2026-53877"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.16"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-crhf-3pfg-w68w"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-g4qv-2jxx-769h",
+      "cveAliases": [
+        "CVE-2026-96643"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-g4qv-2jxx-769h"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-g842-9rc4-69pw",
+      "cveAliases": [
+        "CVE-2026-96637"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-g842-9rc4-69pw"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-3j72-p6qg-6xp7",
+      "cveAliases": [
+        "CVE-2026-96642"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-3j72-p6qg-6xp7"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-2mcm-79hx-8fxw",
+      "cveAliases": [
+        "CVE-2025-13473"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.11"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-2mcm-79hx-8fxw"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-w26r-rmm8-9c29",
+      "cveAliases": [
+        "CVE-2026-5766"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.14"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-w26r-rmm8-9c29"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-654x-cwwv-5j9c",
+      "cveAliases": [
+        "CVE-2026-114501"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-654x-cwwv-5j9c"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-pg7v-jwj7-p798",
+      "cveAliases": [
+        "CVE-2026-59203"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-pg7v-jwj7-p798"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-rfgq-q3w2-pmv2",
+      "cveAliases": [
+        "CVE-2026-112898"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-rfgq-q3w2-pmv2"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-24rc-8hj2-v98c",
+      "cveAliases": [
+        "CVE-2026-96638"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-24rc-8hj2-v98c"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-4rm8-3hmm-39fg",
+      "cveAliases": [
+        "CVE-2026-96641"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-4rm8-3hmm-39fg"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-p8hx-v2p6-rp84",
+      "cveAliases": [
+        "CVE-2026-96636"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-p8hx-v2p6-rp84"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-fj7v-r99m-22gq",
+      "cveAliases": [
+        "CVE-2026-59198"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-fj7v-r99m-22gq"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-8qcx-xf44-272x",
+      "cveAliases": [
+        "CVE-2026-53878"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.16"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-8qcx-xf44-272x"
+    },
+    {
+      "package": "djangorestframework",
+      "installedVersion": "3.16.0",
+      "packageType": "python",
+      "advisory": "GHSA-g47c-3xmw-q6m2",
+      "cveAliases": [
+        "CVE-2026-73229"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "3.17.2"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-g47c-3xmw-q6m2"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-7h2m-m8vj-598h",
+      "cveAliases": [
+        "CVE-2026-35192"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.14"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-7h2m-m8vj-598h"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-3h9f-r86x-qvjx",
+      "cveAliases": [
+        "CVE-2026-48588"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.16"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-3h9f-r86x-qvjx"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-pwjp-ccjc-ghwg",
+      "cveAliases": [
+        "CVE-2026-4277"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.13"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-pwjp-ccjc-ghwg"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-pwv6-vv43-88gr",
+      "cveAliases": [
+        "CVE-2026-42311"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.2.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-pwv6-vv43-88gr"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-mjgh-79qc-68w3",
+      "cveAliases": [
+        "CVE-2026-25674"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.12"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-mjgh-79qc-68w3"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-5hrc-gvxj-w55p",
+      "cveAliases": [
+        "CVE-2026-6907"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.14"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-5hrc-gvxj-w55p"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-qpc8-7fxc-cm4p",
+      "cveAliases": [
+        "CVE-2026-35193"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.15"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-qpc8-7fxc-cm4p"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-923m-gv2p-w5qp",
+      "cveAliases": [
+        "CVE-2026-48587"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.15"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-923m-gv2p-w5qp"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-r73j-pqj5-w3x7",
+      "cveAliases": [
+        "CVE-2026-42310"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.2.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-r73j-pqj5-w3x7"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-4x4j-2g7c-83w6",
+      "cveAliases": [
+        "CVE-2026-55798"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.3.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-4x4j-2g7c-83w6"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-mmwr-2jhp-mc7j",
+      "cveAliases": [
+        "CVE-2026-4292"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.13"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-mmwr-2jhp-mc7j"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-8cjm-8mp7-r2xf",
+      "cveAliases": [
+        "CVE-2026-8404"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.15"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-8cjm-8mp7-r2xf"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-h7pc-vwp9-298g",
+      "cveAliases": [
+        "CVE-2026-6873"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.15"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-h7pc-vwp9-298g"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-5xmw-vc9v-4wf2",
+      "cveAliases": [
+        "CVE-2026-42309"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.2.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-5xmw-vc9v-4wf2"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-wjx4-4jcj-g98j",
+      "cveAliases": [
+        "CVE-2026-42308"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "12.2.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-wjx4-4jcj-g98j"
+    },
+    {
+      "package": "django",
+      "installedVersion": "5.2.1",
+      "packageType": "python",
+      "advisory": "GHSA-mm6v-q8q9-pgcf",
+      "cveAliases": [
+        "CVE-2026-7666"
+      ],
+      "severity": "Low",
+      "fixState": "fixed",
+      "fixVersions": [
+        "5.2.15"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-mm6v-q8q9-pgcf"
+    },
+    {
+      "package": "certifi",
+      "installedVersion": "2025.6.15",
+      "packageType": "python",
+      "advisory": "GHSA-6q48-6c7w-9gw2",
+      "cveAliases": [],
+      "severity": "Critical",
+      "fixState": "fixed",
+      "fixVersions": [
+        "2026.10.18"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-6q48-6c7w-9gw2"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-78g4-xqwv-q3g8",
+      "cveAliases": [],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-78g4-xqwv-q3g8"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-xvh5-g6gv-559v",
+      "cveAliases": [
+        "CVE-2026-112902"
+      ],
+      "severity": "High",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-xvh5-g6gv-559v"
+    },
+    {
+      "package": "pillow",
+      "installedVersion": "12.0.0",
+      "packageType": "python",
+      "advisory": "GHSA-vx6w-vv9f-6gvg",
+      "cveAliases": [
+        "CVE-2026-112899"
+      ],
+      "severity": "Medium",
+      "fixState": "fixed",
+      "fixVersions": [
+        "13.0.0"
+      ],
+      "knownExploited": false,
+      "url": "https://github.com/advisories/GHSA-vx6w-vv9f-6gvg"
+    }
+  ]
+}
