@@ -9,14 +9,17 @@ COPY webpack.config.js ./
 RUN npm run build
 
 # Stage 2: Python dependency base (runtime + optional dev group from uv.lock)
-FROM python:3.12-slim AS python-base
+# Base identity is pinned to the multi-arch python:3.12-slim-trixie index
+# (Debian 13) so the Python/Debian series cannot drift silently (ADR-0001).
+FROM python:3.12-slim-trixie@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159 AS python-base
 WORKDIR /app
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
   PYTHONUNBUFFERED=1 \
   PIP_NO_CACHE_DIR=1 \
-  PIP_DISABLE_PIP_VERSION_CHECK=1
+  PIP_DISABLE_PIP_VERSION_CHECK=1 \
+  UV_NO_CACHE=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -28,6 +31,8 @@ RUN apt-get update && apt-get install -y \
   libjpeg-dev \
   libpng-dev \
   libwebp-dev \
+  # Brotli runtime must carry the Debian 13 security fix (CVE-2026-111497)
+  libbrotli1 \
   # Database drivers
   libpq-dev \
   default-libmysqlclient-dev \
@@ -40,6 +45,11 @@ RUN apt-get update && apt-get install -y \
   curl \
   # Cleanup
   && rm -rf /var/lib/apt/lists/*
+
+# Fail closed if the Debian archive cannot supply the corrected Brotli build.
+# dpkg ordering handles the +deb13u1 revision correctly.
+RUN dpkg --compare-versions \
+    "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.1.0-2+deb13u1'
 
 # Install uv (validated 0.12.5 build tool, pinned tag; `latest` is forbidden
 # because it breaks deterministic builds, ADR-0001).
@@ -54,12 +64,12 @@ COPY pyproject.toml uv.lock ./
 ARG INSTALL_DEV=false
 RUN if [ "$INSTALL_DEV" = "true" ]; then \
       uv export --frozen --no-emit-project > /tmp/requirements.txt \
-      && uv pip install --system -r /tmp/requirements.txt \
-      && uv pip install --system --no-deps --editable .; \
+      && uv pip install --system --no-cache -r /tmp/requirements.txt \
+      && uv pip install --system --no-cache --no-deps --editable .; \
     else \
       uv export --frozen --no-dev --group prod --no-emit-project > /tmp/requirements.txt \
-      && uv pip install --system -r /tmp/requirements.txt \
-      && uv pip install --system --no-deps --editable .; \
+      && uv pip install --system --no-cache -r /tmp/requirements.txt \
+      && uv pip install --system --no-cache --no-deps --editable .; \
     fi \
     && rm -f /tmp/requirements.txt
 

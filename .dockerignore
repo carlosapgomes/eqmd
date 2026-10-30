@@ -1,7 +1,30 @@
 # Environment files
-.env
-.env.local
-.env.*.local
+.env*
+**/.env*
+
+# Secrets, credentials and private keys
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/id_rsa
+**/id_ed25519
+**/firebase-key.json
+**/credentials.json
+**/service-account*.json
+# Generated Matrix config contains database and OIDC credentials.
+# Keep its non-rendered template and modules available to existing targets.
+matrix/homeserver.yaml
+matrix/logs/
+
+# Backups, logs and local operational evidence
+backups/
+**/*.sql
+**/*.dump
+**/*.bak
+logs/
+**/*.log
+temp/
 
 # Database files
 *.sqlite3
