@@ -71,9 +71,13 @@ const SETTINGS_ENV_VARS = [
   'POSTGRES_DB',
   'POSTGRES_USER',
   'POSTGRES_PASSWORD',
+  'POSTGRES_ADMIN_PASSWORD',
+  'EQMD_USER_PASSWORD',
+  'EQMD_MIGRATOR_PASSWORD',
 ];
 
 let configCache;
+let referencedVarsCache;
 
 function runCompose(args) {
   const result = spawnSync(
@@ -131,6 +135,55 @@ function envValues() {
     values.set(line.slice(0, separator), line.slice(separator + 1));
   }
   return values;
+}
+
+function collectVariableReferences(node, found) {
+  if (typeof node === 'string') {
+    const pattern = /\$\{([A-Za-z_][A-Za-z0-9_]*)/g;
+    let match = pattern.exec(node);
+    while (match !== null) {
+      found.add(match[1]);
+      match = pattern.exec(node);
+    }
+  } else if (Array.isArray(node)) {
+    for (const item of node) collectVariableReferences(item, found);
+  } else if (node && typeof node === 'object') {
+    for (const [key, value] of Object.entries(node)) {
+      collectVariableReferences(key, found);
+      collectVariableReferences(value, found);
+    }
+  }
+  return found;
+}
+
+function composeVariableReferences() {
+  if (referencedVarsCache) return referencedVarsCache;
+  const rendered = runCompose([
+    '--profile',
+    'ops',
+    'config',
+    '--no-interpolate',
+    '--format',
+    'json',
+  ]);
+  assert.equal(
+    rendered.status,
+    0,
+    `docker compose config --no-interpolate failed (exit ${rendered.status}):\n` +
+      rendered.stderr,
+  );
+  let parsed;
+  try {
+    parsed = JSON.parse(rendered.stdout);
+  } catch (error) {
+    assert.fail(`no-interpolate config emitted invalid JSON: ${error.message}`);
+  }
+  assert.ok(parsed.services, 'no-interpolate config has no services');
+  // Scan the entire rendered text so command/volume/label interpolation is
+  // covered too, not only environment and image strings.
+  const found = collectVariableReferences(rendered.stdout, new Set());
+  referencedVarsCache = found;
+  return found;
 }
 
 function networkNames(service) {
@@ -334,5 +387,66 @@ test('j) env template is complete, synthetic and comment-safe', () => {
     inlineComments,
     [],
     'env template must not use inline comments after values',
+  );
+});
+
+test('k) every compose-referenced variable is defined in the env template', () => {
+  // Empty on purpose: a ${VAR:-fallback} is not an excuse for a missing
+  // template key. Add a name here only with a documented reason.
+  const documentedOptional = new Set([]);
+  const referenced = [...composeVariableReferences()].sort();
+  assert.ok(
+    referenced.includes('EQMD_FRONTEND_IMAGE'),
+    'image interpolation was not detected',
+  );
+  assert.ok(
+    referenced.includes('EQMD_USER_PASSWORD') &&
+      referenced.includes('EQMD_MIGRATOR_PASSWORD') &&
+      referenced.includes('POSTGRES_ADMIN_PASSWORD'),
+    'nested role-password references were not detected',
+  );
+  assert.ok(
+    referenced.includes('POSTGRES_PASSWORD'),
+    'nested fallback reference was not detected',
+  );
+  const values = envValues();
+  const missing = referenced.filter(
+    (name) => !values.has(name) && !documentedOptional.has(name),
+  );
+  assert.deepEqual(
+    missing,
+    [],
+    `compose references env vars missing from the template: ${missing}`,
+  );
+});
+
+test('l) migrate uses eqmd_migrator, never the runtime role', () => {
+  const config = renderConfig();
+  const migrateEnv = config.services.migrate.environment ?? {};
+  const runtimeEnv = config.services.eqmd.environment ?? {};
+  const values = envValues();
+  const migratorPassword = values.get('EQMD_MIGRATOR_PASSWORD');
+  const userPassword = values.get('EQMD_USER_PASSWORD');
+
+  assert.equal(
+    migrateEnv.DATABASE_USER,
+    'eqmd_migrator',
+    'migrate must authenticate as eqmd_migrator',
+  );
+  assert.notEqual(migrateEnv.DATABASE_USER, 'eqmd_user');
+  assert.equal(
+    migrateEnv.DATABASE_PASSWORD,
+    migratorPassword,
+    'migrate must use the migrator password, not the runtime fallback',
+  );
+  assert.notEqual(
+    migrateEnv.DATABASE_PASSWORD,
+    userPassword,
+    'migrate password still falls back to the runtime role',
+  );
+  assert.equal(
+    runtimeEnv.DATABASE_USER,
+    'eqmd_user',
+    'web/runtime service must stay eqmd_user',
   );
 });

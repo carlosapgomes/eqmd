@@ -20,7 +20,7 @@ services:
       DATABASE_ENGINE: django.db.backends.postgresql
       DATABASE_NAME: ${POSTGRES_DB:?POSTGRES_DB is required}
       DATABASE_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      DATABASE_PASSWORD: ${EQMD_USER_PASSWORD:-${POSTGRES_PASSWORD}}
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
     networks:
@@ -64,14 +64,23 @@ services:
     image: postgres@sha256:1d1095b0503145be79c79239372aefadfacf6b7c33c9245bbf99ce4b6b89c737
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      # Bootstrap cluster only: init scripts create eqmd_db/eqmd_user.
+      # The application connects with DATABASE_* below, not these values.
+      # Real env should set POSTGRES_ADMIN_PASSWORD, EQMD_USER_PASSWORD and
+      # EQMD_MIGRATOR_PASSWORD distinctly; the synthetic template does so.
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-${POSTGRES_PASSWORD}}
+      EQMD_USER_PASSWORD: ${EQMD_USER_PASSWORD:-${POSTGRES_PASSWORD}}
+      EQMD_MIGRATOR_PASSWORD: ${EQMD_MIGRATOR_PASSWORD:-${POSTGRES_PASSWORD}}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     networks:
       - <REDE_DB>
     volumes:
       - eqmd_pgdata:/var/lib/postgresql/data
+      # Init SQL runs once on an empty volume. Manual fallback:
+      # psql -U postgres -d postgres -f 01-roles.sql (then 02).
+      - ./deploy/eon/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test:
         - CMD-SHELL
@@ -105,6 +114,8 @@ services:
     user: "0:0"
     env_file:
       - env.eon.example
+    environment:
+      DATABASE_PASSWORD: ${EQMD_USER_PASSWORD:-${POSTGRES_PASSWORD}}
     networks:
       - <REDE_APP>
     volumes:
@@ -130,10 +141,13 @@ services:
   migrate:
     profiles: ["ops"]
     image: ghcr.io/carlosapgomes/eqmd@sha256:fe31d296f50dd34c19c437244ea9a3d61f75aba4ec7d806329b50f8340cc4c4f
-    # Identidade de banco do migrator será definida no slice s3.
+    # Web/runtime stays eqmd_user; migrate uses the separate migrator.
     user: "9900:9900"
     env_file:
       - env.eon.example
+    environment:
+      DATABASE_USER: eqmd_migrator
+      DATABASE_PASSWORD: ${EQMD_MIGRATOR_PASSWORD:?EQMD_MIGRATOR_PASSWORD is required}
     networks:
       - <REDE_DB>
     volumes:
