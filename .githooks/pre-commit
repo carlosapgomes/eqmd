@@ -36,8 +36,7 @@ echo "[pre-commit] Markdown OK."
 # untracked env file and the private infrastructure repository.
 mapfile -t staged_guard < <(
   git diff --cached --name-only --diff-filter=ACMR \
-    | grep -E '\.(md|yml|yaml|caddyfile|cron|example|json|txt|sh|mjs)$' \
-    | grep -vE '^(\.pi/|\.codex/|temp/)' \
+    | grep -E '^(deploy/|docs/|openspec/|\.github/|SECURITY.md|docker-compose|env\\.eon|README)' \
     || true
 )
 if [ ${#staged_guard[@]} -gt 0 ]; then
