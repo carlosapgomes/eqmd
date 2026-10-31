@@ -33,7 +33,8 @@ const IMAGE =
   'postgres@sha256:' +
   '1d1095b0503145be79c79239372aefadfacf6b7c33c9245bbf99ce4b6b89c737';
 const PREFIX = 'eqmd_s3_rehearsal_';
-const suffix = `${process.pid}-${Date.now()}`;
+const suffix =
+  process.env.EQMD_S3_RUN_SUFFIX || `${process.pid}-${Date.now()}`;
 const networkName = `${PREFIX}net_${suffix}`;
 const sourceName = `${PREFIX}a_${suffix}`;
 const targetName = `${PREFIX}b_${suffix}`;
@@ -113,7 +114,12 @@ WHERE schemaname = 'public'
 ORDER BY sequencename;
 `;
 
-const created = { containers: [], volumes: [], network: null };
+const expected = {
+  containers: [sourceName, targetName],
+  volumes: [sourceVolume, targetVolume],
+  networks: [networkName],
+};
+const created = { containers: [], volumes: [], networks: [] };
 
 function docker(args, options = {}) {
   const result = spawnSync('docker', args, {
@@ -138,34 +144,40 @@ function sleepSync(milliseconds) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 }
 
-function listMatching(kind) {
-  const result = docker(
+function resourceExists(kind, name) {
+  const args =
     kind === 'containers'
-      ? ['ps', '-a', '--filter', `name=${PREFIX}`, '--format', '{{.Names}}']
+      ? ['inspect', '--type', 'container', name]
       : kind === 'volumes'
-        ? ['volume', 'ls', '--filter', `name=${PREFIX}`, '--format', '{{.Name}}']
-        : ['network', 'ls', '--filter', `name=${PREFIX}`, '--format', '{{.Name}}'],
-    { allowFailure: true },
-  );
-  return result.stdout
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
+        ? ['volume', 'inspect', name]
+        : ['network', 'inspect', name];
+  return docker(args, { allowFailure: true }).status === 0;
 }
 
-function sweepPrefix() {
-  const containers = listMatching('containers');
-  if (containers.length) {
-    docker(['rm', '-f', ...containers], { allowFailure: true });
+function assertNamesFree() {
+  const conflicts = [];
+  for (const [kind, names] of Object.entries(expected)) {
+    for (const name of names) {
+      if (resourceExists(kind, name)) conflicts.push(`${kind}: ${name}`);
+    }
   }
-  const volumes = listMatching('volumes');
-  if (volumes.length) {
-    docker(['volume', 'rm', '-f', ...volumes], { allowFailure: true });
+  if (conflicts.length > 0) {
+    throw new Error(
+      'refusing to run: expected disposable names already exist ' +
+        `(${conflicts.join(', ')}). Remove them manually only if stale; ` +
+        'this script never deletes resources it did not create.',
+    );
   }
-  const networks = listMatching('networks');
-  if (networks.length) {
-    docker(['network', 'rm', ...networks], { allowFailure: true });
+}
+
+function remainingResources() {
+  const residue = { containers: [], volumes: [], networks: [] };
+  for (const [kind, names] of Object.entries(expected)) {
+    for (const name of names) {
+      if (resourceExists(kind, name)) residue[kind].push(name);
+    }
   }
+  return residue;
 }
 
 function cleanup() {
@@ -175,13 +187,8 @@ function cleanup() {
   for (const name of created.volumes) {
     docker(['volume', 'rm', '-f', name], { allowFailure: true });
   }
-  if (created.network) {
-    docker(['network', 'rm', created.network], { allowFailure: true });
-  }
-  try {
-    sweepPrefix();
-  } catch (error) {
-    console.error(`[s3] cleanup warning: ${error.message}`);
+  for (const name of created.networks) {
+    docker(['network', 'rm', name], { allowFailure: true });
   }
 }
 
@@ -245,11 +252,16 @@ function check(condition, message) {
 }
 
 function rehearse(evidence) {
-  console.log('[s3] sweeping stale eqmd_s3_rehearsal_* resources');
-  sweepPrefix();
+  assertNamesFree();
+  console.log('[s3] exact-name check passed; creating disposables');
 
   docker(['network', 'create', networkName]);
-  created.network = networkName;
+  created.networks.push(networkName);
+
+  docker(['volume', 'create', sourceVolume]);
+  created.volumes.push(sourceVolume);
+  docker(['volume', 'create', targetVolume]);
+  created.volumes.push(targetVolume);
 
   docker([
     'run', '-d', '--name', sourceName, '--network', networkName,
@@ -260,7 +272,6 @@ function rehearse(evidence) {
     IMAGE,
   ]);
   created.containers.push(sourceName);
-  created.volumes.push(sourceVolume);
 
   docker([
     'run', '-d', '--name', targetName, '--network', networkName,
@@ -274,7 +285,6 @@ function rehearse(evidence) {
     IMAGE,
   ]);
   created.containers.push(targetName);
-  created.volumes.push(targetVolume);
 
   console.log('[s3] waiting for source and target');
   waitReady(sourceName);
@@ -381,11 +391,7 @@ function main() {
     cleanup();
   }
 
-  const residue = {
-    containers: listMatching('containers'),
-    volumes: listMatching('volumes'),
-    networks: listMatching('networks'),
-  };
+  const residue = remainingResources();
   evidence.cleanup_residue = residue;
   console.log(`[s3] cleanup residue: ${JSON.stringify(residue)}`);
   try {
@@ -401,7 +407,7 @@ function main() {
     residue.containers.length + residue.volumes.length + residue.networks.length >
     0;
   if (hasResidue) {
-    failure = failure ?? new Error('eqmd_s3_rehearsal_* residue remains');
+    failure = failure ?? new Error('expected eqmd_s3_rehearsal_* names remain');
   }
   if (failure) {
     process.exitCode = 1;

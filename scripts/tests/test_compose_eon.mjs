@@ -16,6 +16,9 @@ const EQMD_IMAGE =
 const POSTGRES_IMAGE =
   'postgres@sha256:' +
   '1d1095b0503145be79c79239372aefadfacf6b7c33c9245bbf99ce4b6b89c737';
+const NGINX_IMAGE =
+  'nginx@sha256:' +
+  '51047bea59fed88fbd1f52565d2f5fabcb82d311cf6c9e507a10ce74bb3bc3f0';
 const NETWORKS = [
   '<REDE_INGRESS>',
   '<REDE_APP>',
@@ -67,7 +70,6 @@ const SETTINGS_ENV_VARS = [
   'PDF_FORMS_REQUIRE_VALIDATION',
   'OIDC_ISSUER',
   'DELEGATED_TOKEN_SECRET',
-  'EQMD_FRONTEND_IMAGE',
   'POSTGRES_DB',
   'POSTGRES_USER',
   'POSTGRES_PASSWORD',
@@ -239,15 +241,11 @@ test('c) the four networks are external and no default network exists', () => {
   }
 });
 
-test('d) images are pinned by digest / mandatory env', () => {
+test('d) images are pinned by digest', () => {
   const config = renderConfig();
   assert.equal(config.services.eqmd.image, EQMD_IMAGE);
   assert.equal(config.services.postgres.image, POSTGRES_IMAGE);
-  assert.equal(
-    config.services.frontend.image,
-    envValues().get('EQMD_FRONTEND_IMAGE'),
-    'frontend image must come from EQMD_FRONTEND_IMAGE',
-  );
+  assert.equal(config.services.frontend.image, NGINX_IMAGE);
 });
 
 test('e) eqmd runs as dedicated non-root UID/GID 9900', () => {
@@ -395,10 +393,6 @@ test('k) every compose-referenced variable is defined in the env template', () =
   // template key. Add a name here only with a documented reason.
   const documentedOptional = new Set([]);
   const referenced = [...composeVariableReferences()].sort();
-  assert.ok(
-    referenced.includes('EQMD_FRONTEND_IMAGE'),
-    'image interpolation was not detected',
-  );
   assert.ok(
     referenced.includes('EQMD_USER_PASSWORD') &&
       referenced.includes('EQMD_MIGRATOR_PASSWORD') &&

@@ -95,14 +95,15 @@ services:
     stop_grace_period: 1m
 
   frontend:
-    # Imagem/digest definidos no slice s4; o valor é obrigatório.
-    image: ${EQMD_FRONTEND_IMAGE:?EQMD_FRONTEND_IMAGE must be set to the s4 digest}
+    # nginx:stable resolved to 1.30.6; pinned by index digest in slice s4.
+    image: nginx@sha256:51047bea59fed88fbd1f52565d2f5fabcb82d311cf6c9e507a10ce74bb3bc3f0
     restart: unless-stopped
     networks:
       - <REDE_INGRESS>
       - <REDE_APP>
     volumes:
-      # Caminho do estático confirmado com a imagem no slice s4.
+      - ./deploy/eon/frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Collected static files, populated by the ops init service.
       - eqmd_static:/srv/eqmd/static:ro
     mem_limit: 128m
     cpus: 0.5
