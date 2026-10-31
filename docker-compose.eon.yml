@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
     user: "9900:9900"
     env_file:
-      - env.eon.example
+      - ${EQMD_ENV_FILE:?EQMD_ENV_FILE is required}
     environment:
       DATABASE_ENGINE: django.db.backends.postgresql
       DATABASE_NAME: ${POSTGRES_DB:?POSTGRES_DB is required}
@@ -114,7 +114,7 @@ services:
     # root apenas nesta operação explícita, para preparar volumes.
     user: "0:0"
     env_file:
-      - env.eon.example
+      - ${EQMD_ENV_FILE:?EQMD_ENV_FILE is required}
     environment:
       DATABASE_PASSWORD: ${EQMD_USER_PASSWORD:-${POSTGRES_PASSWORD}}
     networks:
@@ -145,7 +145,7 @@ services:
     # Web/runtime stays eqmd_user; migrate uses the separate migrator.
     user: "9900:9900"
     env_file:
-      - env.eon.example
+      - ${EQMD_ENV_FILE:?EQMD_ENV_FILE is required}
     environment:
       DATABASE_USER: eqmd_migrator
       DATABASE_PASSWORD: ${EQMD_MIGRATOR_PASSWORD:?EQMD_MIGRATOR_PASSWORD is required}
