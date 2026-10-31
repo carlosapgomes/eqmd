@@ -132,3 +132,14 @@ fe31d296...` pinada no Compose (risco residual aceito formalmente
   `deploy/eon/`.
 - ADR-0004 (baseline de segurança da imagem) e ADR-0001 (gates de
   desenvolvimento) permanecem vigentes.
+
+## Histórico de Mudanças
+
+- 2026-10-31: decisão do operador em fase D — túnel Cloudflare do EQMD
+  apontará para alias **dedicado** `<ALIAS_EDGE_EQMD>:80` (adicionado
+  na mesma intervenção D7 que anexa o Caddy a `<REDE_INGRESS>`),
+  mantendo o Caddy no caminho; **entrada pela intranet fica diferida**
+  (futuro: DNS interno apontando a <LAN_IP_EDGE> reutiliza as rotas).
+  Alternativa de bypass direto ao container (padrão CHD/Prisma) foi
+  rejeitada: perpetuaria o drift da `<REDE_EDGE>` documentado no
+  inventário da infra e exigiria refazer a intervenção depois.

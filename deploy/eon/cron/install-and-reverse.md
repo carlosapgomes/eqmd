@@ -23,8 +23,10 @@ test -d /run/lock && echo LOCK_DIR_OK
 docker compose -f /srv/apps/eqmd/docker-compose.eon.yml ps eqmd
 ```
 
-`timedatectl` deve responder exatamente `UTC` e `date -u` deve bater com
-o relógio do host. Se o timezone não for UTC, **parar**: não instalar,
+`timedatectl` deve responder `America/Bahia` (TZ do host medida no
+preflight D0 de 2026-10-31; igual à origem — os agendamentos do arquivo
+são horários LOCAIS idênticos aos da origem). Se o timezone divergir,
+**parar**: não instalar,
 não improvisar offsets e regenerar o arquivo antes de qualquer mudança.
 
 ## 1. Baseline

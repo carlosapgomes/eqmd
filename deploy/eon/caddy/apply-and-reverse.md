@@ -7,7 +7,10 @@ worker**. Cada bloco de comando exige aprovação explícita do operador.
 ## Pré-requisitos (operador)
 
 - DNS e túnel Cloudflare para `equipemed.projetoshgrs.com` criados e
-  apontando para o Caddy compartilhado. O hostname está NXDOMAIN hoje.
+  apontando para **`http://<ALIAS_EDGE_EQMD>:80`** — alias DEDICADO
+  do Caddy compartilhado na rede do túnel, criado nesta mesma
+  intervenção (decisão do operador 2026-10-31; entrada intranet
+  futura reutilizará as mesmas rotas via <LAN_IP_EDGE>).
 - Certificado/TLS do edge Cloudflare válido; o Caddy local recebe HTTP.
 - Redes `hospital_*_eqmd` criadas pelo gate da fase D (slice s1).
 - Frontend EQMD publicado em `<REDE_INGRESS>` como `frontend:80`.

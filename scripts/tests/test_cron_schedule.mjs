@@ -16,9 +16,9 @@ const JOB_PREFIX = '# EQMD_JOB ';
 const EXPECTED = new Map([
   ['*/5 * * * *', 'update_dashboard_stats'],
   ['2-59/5 * * * *', 'update_ward_mapping_cache'],
-  ['0 9 * * *', 'check_user_expiration'],
-  ['0 11 * * *', 'send_expiration_notifications'],
-  ['0 10 * * 0', 'lifecycle_report'],
+  ['0 6 * * *', 'check_user_expiration'],
+  ['0 8 * * *', 'send_expiration_notifications'],
+  ['0 7 * * 0', 'lifecycle_report'],
 ]);
 
 function read(file) {
@@ -41,7 +41,7 @@ test('the file is installed suspended with exactly five marked jobs', () => {
   assert.equal(jobLines(raw).length, 5);
 });
 
-test('the five UTC schedules and commands are exact', () => {
+test('the five LOCAL schedules and commands are exact', () => {
   const jobs = jobLines(read(cronPath));
   assert.equal(jobs.length, 5);
   const parsed = new Map();
@@ -79,22 +79,17 @@ test('SHELL and PATH are declared and the file ends with one newline', () => {
   assert.ok(!raw.endsWith('\n\n'));
 });
 
-test('comments document every Bahia to UTC pair', () => {
-  const raw = read(cronPath);
-  assert.match(raw, /Bahia: \*\/5 \* \* \* \* -> UTC: \*\/5 \* \* \* \*/);
-  assert.match(
-    raw,
-    /Bahia: 2-59\/5 \* \* \* \* -> UTC: 2-59\/5 \* \* \* \*/,
-  );
-  assert.match(raw, /Bahia: 0 6 \* \* \* -> UTC: 0 9 \* \* \*/);
-  assert.match(raw, /Bahia: 0 8 \* \* \* -> UTC: 0 11 \* \* \*/);
-  assert.match(raw, /Bahia: 0 7 \* \* 0 -> UTC: 0 10 \* \* 0/);
+test('comments document the America/Bahia local-time assumption', () => {
+  const raw = readFileSync(cronPath, 'utf8');
+  assert.match(raw, /America\/Bahia/);
+  assert.match(raw, /timedatectl/);
+  assert.match(raw, /origin value, unchanged/);
 });
 
-test('runbook covers UTC preflight, E14 and both rollback regimes', () => {
+test('runbook covers TZ preflight, E14 and both rollback regimes', () => {
   const runbook = read(runbookPath);
   assert.match(runbook, /timedatectl/i);
-  assert.match(runbook, /UTC/);
+  assert.match(runbook, /America\/Bahia/);
   assert.match(runbook, /# EQMD_JOB/);
   assert.match(runbook, /E14/);
   assert.match(runbook, /rollback|revers[aã]o/i);
