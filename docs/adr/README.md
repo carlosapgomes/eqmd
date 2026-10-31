@@ -12,12 +12,13 @@ Registros de decisões arquiteturais importantes do projeto.
 - [ADR-0003 — Manter cadastros duplicados separados, sem merge
   clínico][adr-0003]
   — _Accepted (2026-09-01)_
-
-## ADRs propostas
-
 - [ADR-0004 — Correção delimitada de segurança da imagem produtiva][adr-0004]
   — _Accepted (2026-10-30)_
+- [ADR-0005 — Migração de produção para o eon: etapa 1 declarativa
+  e gated][adr-0005]
+  — _Accepted (2026-10-31)_
 
+[adr-0005]: ADR-0005-migracao-producao-eon-etapa1.md
 [adr-0004]: ADR-0004-bounded-production-image-security-remediation.md
 [adr-0001]: ADR-0001-deterministic-development-quality-gates.md
 [adr-0002]: ADR-0002-deploy-application-level-duplicate-prevention-with-deferred-database-constraint.md
