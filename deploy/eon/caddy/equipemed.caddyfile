@@ -1,18 +1,24 @@
-# EQMD route for the shared hospital Caddy (phase D gate).
+# EQMD route for the shared hospital Caddy (phase D7 gate).
 # Prerequisites, applied by the operator before this snippet:
-#   1. DNS/Cloudflare tunnel for equipemed.projetoshgrs.com -> Caddy.
+#   1. Cloudflare tunnel: equipemed.projetoshgrs.com -> http://<ALIAS_EDGE_EQMD>:80
+#      (dedicated alias of the shared Caddy, added in this same
+#      intervention; operator decision 2026-10-31).
 #   2. Caddy container attached to <REDE_INGRESS>.
 #   3. EQMD frontend running on that network as frontend:80.
-# TLS terminates at Cloudflare/Caddy; this route is HTTP-only on purpose.
-# The HMD route pattern restricts the tunnel origin; mirror that matcher if
-# the operator requires it (replace <CLOUDFLARED_SOURCE_CIDR>). The active
-# route below stays simple because Caddy only listens on the private edge.
+# TLS terminates at Cloudflare; this route is HTTP-only on purpose.
+# Origin restriction mirrors the existing HMD route: <IP_TUNEL> is the
+# cloudflared container address on <REDE_TUNEL_VIZ> (same ingress path).
+# If that address ever changes, HMD and this route break together and must
+# be fixed together.
 http://equipemed.projetoshgrs.com {
-    encode gzip
-
-    reverse_proxy frontend:80 {
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-Proto https
-        header_up X-Forwarded-Host {host}
+    @from_hmd_tunnel remote_ip <IP_TUNEL>
+    handle @from_hmd_tunnel {
+        encode gzip
+        reverse_proxy frontend:80 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+        }
     }
+    respond 403
 }
