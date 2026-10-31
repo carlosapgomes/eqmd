@@ -1,0 +1,21 @@
+# EQMD cron jobs for the eon migration (slice s5).
+# Installed SUSPENDED by default: every job line starts with "# EQMD_JOB ".
+# E14 removes that marker; do not uncomment jobs before the cutover gate.
+# All schedules are UTC. America/Bahia is UTC-3 with no DST since 2019.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# update_dashboard_stats — Bahia: */5 * * * * -> UTC: */5 * * * *
+# EQMD_JOB */5 * * * * root flock -n /run/lock/eqmd-update-dashboard-stats.lock docker compose -f /srv/apps/eqmd/docker-compose.eon.yml exec -T eqmd python manage.py update_dashboard_stats
+
+# update_ward_mapping_cache — Bahia: 2-59/5 * * * * -> UTC: 2-59/5 * * * *
+# EQMD_JOB 2-59/5 * * * * root flock -n /run/lock/eqmd-update-ward-mapping-cache.lock docker compose -f /srv/apps/eqmd/docker-compose.eon.yml exec -T eqmd python manage.py update_ward_mapping_cache
+
+# check_user_expiration — Bahia: 0 6 * * * -> UTC: 0 9 * * *
+# EQMD_JOB 0 9 * * * root flock -n /run/lock/eqmd-check-user-expiration.lock docker compose -f /srv/apps/eqmd/docker-compose.eon.yml exec -T eqmd python manage.py check_user_expiration
+
+# send_expiration_notifications — Bahia: 0 8 * * * -> UTC: 0 11 * * *
+# EQMD_JOB 0 11 * * * root flock -n /run/lock/eqmd-send-expiration-notifications.lock docker compose -f /srv/apps/eqmd/docker-compose.eon.yml exec -T eqmd python manage.py send_expiration_notifications
+
+# lifecycle_report — Bahia: 0 7 * * 0 -> UTC: 0 10 * * 0
+# EQMD_JOB 0 10 * * 0 root flock -n /run/lock/eqmd-lifecycle-report.lock docker compose -f /srv/apps/eqmd/docker-compose.eon.yml exec -T eqmd python manage.py lifecycle_report
