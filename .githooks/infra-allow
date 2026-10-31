@@ -1,0 +1,5 @@
+# allowlist do infra-guard: uma regex por linha (casa com a linha do hit)
+# ranges genericos de documentacao e sub-redes sinteticas de ensaio local
+172\.16\.0\.0/12
+100\.64\.0\.0/10
+10\.99\.

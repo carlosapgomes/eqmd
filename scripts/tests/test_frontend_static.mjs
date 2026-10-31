@@ -9,7 +9,7 @@ const repoRoot = path.resolve(here, '..', '..');
 const nginxPath = path.join(repoRoot, 'deploy/eon/frontend/nginx.conf');
 const composePath = path.join(repoRoot, 'docker-compose.eon.yml');
 const envPath = path.join(repoRoot, 'env.eon.example');
-const caddyPath = path.join(repoRoot, 'deploy/eon/caddy/equipemed.caddyfile');
+const caddyPath = path.join(repoRoot, 'deploy/eon/caddy/equipemed.caddyfile.example');
 const runbookPath = path.join(
   repoRoot,
   'deploy/eon/caddy/apply-and-reverse.md',

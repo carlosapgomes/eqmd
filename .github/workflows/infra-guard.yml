@@ -1,0 +1,28 @@
+name: infra-guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
+
+jobs:
+  no-internal-addresses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Structural scan for internal addresses
+        run: |
+          set -euo pipefail
+          hits=$(git grep -nE \
+            '\b(10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|100\.(6[4-9]|[7-9][0-9]|1[11]?[0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3})(/[0-9]{1,2})?\b' \
+            -- . ':!temp' | grep -vf .githooks/infra-allow || true)
+          if [ -n "$hits" ]; then
+            echo "Enderecos internos (RFC1918/CGNAT) encontrados em arquivos rastreados:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "OK: nenhum endereco interno rastreado."

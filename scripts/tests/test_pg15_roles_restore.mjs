@@ -59,10 +59,15 @@ test('02-database.sql creates eqmd_db with explicit UTF8/C template0', () => {
   assert.match(sql, /LC_CTYPE\s*=?\s*'C'/i);
 });
 
-test('02-database.sql installs unaccent and pg_trgm', () => {
+test('02-database.sql installs unaccent and pg_trgm owned by migrator', () => {
   const sql = compact(read(databasePath));
   assert.match(sql, /CREATE EXTENSION IF NOT EXISTS unaccent/i);
   assert.match(sql, /CREATE EXTENSION IF NOT EXISTS pg_trgm/i);
+  assert.match(
+    sql,
+    /SET ROLE eqmd_migrator;[\s\S]*CREATE EXTENSION IF NOT EXISTS unaccent;[\s\S]*RESET ROLE;/,
+    'extensions must be created under SET ROLE so the migrator owns them',
+  );
 });
 
 test('02-database.sql grants runtime access and future privileges', () => {

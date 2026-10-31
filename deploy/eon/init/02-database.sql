@@ -16,10 +16,19 @@ CREATE DATABASE eqmd_db
 
 \connect eqmd_db
 
+-- Database-level privileges FIRST: trusted extensions still require
+-- CREATE ON DATABASE, so the migrator needs it before owning them.
+GRANT CONNECT ON DATABASE eqmd_db TO eqmd_user, eqmd_migrator;
+GRANT CREATE ON DATABASE eqmd_db TO eqmd_migrator;
+
+-- Production dumps carry COMMENT ON EXTENSION statements; only the
+-- extension owner may apply them, so the migrator must OWN them.
+-- Creating them under SET ROLE makes eqmd_migrator the owner.
+SET ROLE eqmd_migrator;
 CREATE EXTENSION IF NOT EXISTS unaccent;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+RESET ROLE;
 
-GRANT CONNECT ON DATABASE eqmd_db TO eqmd_user, eqmd_migrator;
 GRANT USAGE ON SCHEMA public TO eqmd_user, eqmd_migrator;
 GRANT CREATE ON SCHEMA public TO eqmd_migrator;
 

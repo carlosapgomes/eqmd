@@ -27,22 +27,22 @@ real é gate humano da fase D.
 
 ## 2. Faixas ocupadas (`occupied`)
 
-| Rede                      | CIDR           | Observação          |
-| ------------------------- | -------------- | ------------------- |
-| `bridge`                  | <CIDR_INTERNO>  | bridge padrão       |
-| `<REDE_EDGE>`           | <CIDR_INTERNO>  | caddy/cloudflared   |
-| `<REDE_VIZINHA>`        | <CIDR_INTERNO>  | Prisma              |
-| `hospital_egress`         | <CIDR_INTERNO>  | worker CHD          |
-| `<REDE_BACKUP>` | <CIDR_INTERNO>  | PG18/backup         |
-| `<REDE_BACKUP>`  | <CIDR_INTERNO>  | backup Prisma       |
-| `hospital_egress_backup`  | <CIDR_INTERNO>  | backup egress       |
-| `<REDE_DB_VIZ>`         | <CIDR_INTERNO> | PG central (CHD)    |
-| `<REDE_DB_VIZ>`         | <CIDR_INTERNO> | PG central (HMD)    |
-| `<REDE_TUNEL_VIZ>`     | <CIDR_TUNEL_VIZ> | cloudflared/caddy   |
-| `<REDE_INGRESS_VIZ>`    | <CIDR_INGRESS_VIZ> | web/caddy HMD       |
-| `<REDE_EGRESS_VIZ>`     | <CIDR_INTERNO> | workers HMD         |
-| host `enp6s0`             | <LAN_CIDR> | LAN <LAN_HOSPITAL> |
-| host `tailscale0`         | 100.64.0.0/10  | overlay VPN         |
+| Rede                     | CIDR               | Observação         |
+| ------------------------ | ------------------ | ------------------ |
+| `bridge`                 | <CIDR_INTERNO>     | bridge padrão      |
+| `<REDE_EDGE>`            | <CIDR_INTERNO>     | caddy/cloudflared  |
+| `<REDE_VIZINHA>`         | <CIDR_INTERNO>     | Prisma             |
+| `hospital_egress`        | <CIDR_INTERNO>     | worker CHD         |
+| `<REDE_BACKUP>`          | <CIDR_INTERNO>     | PG18/backup        |
+| `<REDE_BACKUP>`          | <CIDR_INTERNO>     | backup Prisma      |
+| `hospital_egress_backup` | <CIDR_INTERNO>     | backup egress      |
+| `<REDE_DB_VIZ>`          | <CIDR_INTERNO>     | PG central (CHD)   |
+| `<REDE_DB_VIZ>`          | <CIDR_INTERNO>     | PG central (HMD)   |
+| `<REDE_TUNEL_VIZ>`       | <CIDR_TUNEL_VIZ>   | cloudflared/caddy  |
+| `<REDE_INGRESS_VIZ>`     | <CIDR_INGRESS_VIZ> | web/caddy HMD      |
+| `<REDE_EGRESS_VIZ>`      | <CIDR_INTERNO>     | workers HMD        |
+| host `enp6s0`            | <LAN_CIDR>         | LAN <LAN_HOSPITAL> |
+| host `tailscale0`        | 100.64.0.0/10      | overlay VPN        |
 
 Sem marcação de host = rede Docker do eon (releitura 30/10).
 
@@ -58,16 +58,16 @@ uma change própria no repo de infra.
 
 | Lista do inventário | Faixas            | Papel                           |
 | ------------------- | ----------------- | ------------------------------- |
-| `reserved_cidrs`    | <CIDR_INTERNO>     | espelha o bridge do eon         |
+| `reserved_cidrs`    | <CIDR_INTERNO>    | espelha o bridge do eon         |
 | `reserved_cidrs`    | <CIDR_INTERNO>    | egress CHD retido               |
 | `reserved_cidrs`    | <CIDR_VIZ_RESERVA>.0/24 | database futuro (índices 13–16) |
 | `reserved_cidrs`    | 172.29.13-16.0/24 | ingress futuro (índices 13–16)  |
 | `reserved_cidrs`    | 172.28.13-16.0/24 | egress futuro (índices 13–16)   |
-| `networks`          | <CIDR_INTERNO>     | edge compartilhado              |
-| `networks`          | <CIDR_INTERNO>     | runtime legado Prisma           |
-| `networks`          | <CIDR_INTERNO>     | egress CHD                      |
-| `networks`          | <CIDR_INTERNO>     | egress do backup                |
-| `networks`          | <CIDR_INTERNO>     | backup do PG central            |
+| `networks`          | <CIDR_INTERNO>    | edge compartilhado              |
+| `networks`          | <CIDR_INTERNO>    | runtime legado Prisma           |
+| `networks`          | <CIDR_INTERNO>    | egress CHD                      |
+| `networks`          | <CIDR_INTERNO>    | egress do backup                |
+| `networks`          | <CIDR_INTERNO>    | backup do PG central            |
 | `networks`          | <CIDR_INTERNO>    | egress Prisma                   |
 | `networks`          | <CIDR_INTERNO>    | ingress CHD                     |
 | `networks`          | <CIDR_INTERNO>    | ingress Prisma                  |
@@ -85,10 +85,10 @@ O arquivo JSON canônico usado pelo verificador é
 A proposta preliminar (`15.0/29`, `16.0/24`, `17.0/24`, `18.0/24`)
 colide com dois slots já reservados no inventário:
 
-| #   | Faixa proposta | Faixa local                               | Relação |
-| --- | -------------- | ----------------------------------------- | ------- |
-| C1  | <CIDR_RESERVA_FUTURA> | `future_database_index_15` <CIDR_RESERVA_FUTURA> | contida |
-| C2  | <CIDR_RESERVA_FUTURA> | `future_database_index_16` <CIDR_RESERVA_FUTURA> | igual   |
+| #   | Faixa proposta        | Faixa local                          | Relação |
+| --- | --------------------- | ------------------------------------ | ------- |
+| C1  | <CIDR_RESERVA_FUTURA> | slot futuro 15 <CIDR_RESERVA_FUTURA> | contida |
+| C2  | <CIDR_RESERVA_FUTURA> | slot futuro 16 <CIDR_RESERVA_FUTURA> | igual   |
 
 O verificador acusa exatamente esses dois conflitos (exit 1) quando a
 reserva preliminar é testada. A reserva final foi deslocada para
@@ -98,13 +98,13 @@ reserva preliminar é testada. A reserva final foi deslocada para
 
 Há divergência entre a foto do eon e o inventário local:
 
-| #   | Eon (ocupado)  | Inventário (intent) | Relação |
-| --- | -------------- | ------------------- | ------- |
-| C3  | <CIDR_TUNEL_VIZ> | <CIDR_INTERNO>      | contido |
+| #   | Eon (ocupado)      | Inventário (intent) | Relação |
+| --- | ------------------ | ------------------- | ------- |
+| C3  | <CIDR_TUNEL_VIZ>   | <CIDR_INTERNO>      | contido |
 | C4  | <CIDR_INGRESS_VIZ> | <CIDR_INTERNO>      | contido |
-| C5  | <CIDR_INTERNO> | <CIDR_INTERNO>      | igual   |
-| C6  | <CIDR_INTERNO>  | <CIDR_INTERNO>       | contém  |
-| C7  | <CIDR_INTERNO>  | <CIDR_INTERNO>       | contém  |
+| C5  | <CIDR_INTERNO>     | <CIDR_INTERNO>      | igual   |
+| C6  | <CIDR_INTERNO>     | <CIDR_INTERNO>      | contém  |
+| C7  | <CIDR_INTERNO>     | <CIDR_INTERNO>      | contém  |
 
 Nomes: C3/C4 = `<REDE_TUNEL_VIZ>`/`<REDE_INGRESS_VIZ>` contra
 `future_database_index_13`; C5 = `<REDE_EGRESS_VIZ>` contra
@@ -133,12 +133,12 @@ há conflito.
 
 ## 5. Reserva escolhida
 
-| Rede                    | CIDR           | Sizing e uso                    |
-| ----------------------- | -------------- | ------------------------------- |
+| Rede             | CIDR           | Sizing e uso                    |
+| ---------------- | -------------- | ------------------------------- |
 | `<REDE_INGRESS>` | <CIDR_INGRESS> | Caddy + frontend; 6 hosts úteis |
-| `<REDE_APP>`     | <CIDR_APP> | app, web e workers; 254 hosts   |
-| `<REDE_DB>`      | <CIDR_DB> | PostgreSQL 15 + backup local    |
-| `<REDE_EGRESS>`  | <CIDR_EGRESS> | saída S3/Telegram; 254 hosts    |
+| `<REDE_APP>`     | <CIDR_APP>     | app, web e workers; 254 hosts   |
+| `<REDE_DB>`      | <CIDR_DB>      | PostgreSQL 15 + backup local    |
+| `<REDE_EGRESS>`  | <CIDR_EGRESS>  | saída S3/Telegram; 254 hosts    |
 
 Justificativa:
 

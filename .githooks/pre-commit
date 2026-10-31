@@ -29,3 +29,26 @@ npx --yes markdownlint-cli2@0.22.1 "${staged_md[@]}"
 git add -f -- "${staged_md[@]}"
 
 echo "[pre-commit] Markdown OK."
+
+# ---- Infra-structure guard (structural, no secrets stored here) ----
+# Blocks internal (RFC1918/CGNAT) addresses in tracked text files.
+# Deployable artifacts must use placeholders; real values live in the
+# untracked env file and the private infrastructure repository.
+mapfile -t staged_guard < <(
+  git diff --cached --name-only --diff-filter=ACMR \
+    | grep -E '\.(md|yml|yaml|caddyfile|cron|example|json|txt|sh|mjs)$' \
+    | grep -vE '^(\.pi/|\.codex/|temp/)' \
+    || true
+)
+if [ ${#staged_guard[@]} -gt 0 ]; then
+  hits=$(grep -nHE \
+    '\b(10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3})(/[0-9]{1,2})?\b' \
+    "${staged_guard[@]}" 2>/dev/null \
+    | grep -vf .githooks/infra-allow 2>/dev/null || true)
+  if [ -n "$hits" ]; then
+    echo "Erro: enderecos internos (RFC1918/CGNAT) em arquivos rastreados:" >&2
+    echo "$hits" >&2
+    echo "Use placeholders; valores reais ficam no env (untracked) e no repo privado de infra." >&2
+    exit 1
+  fi
+fi

@@ -6,12 +6,12 @@
 #   2. Caddy container attached to <REDE_INGRESS>.
 #   3. EQMD frontend running on that network as frontend:80.
 # TLS terminates at Cloudflare; this route is HTTP-only on purpose.
-# Origin restriction mirrors the existing HMD route: <IP_TUNEL> is the
+# Origin restriction mirrors the existing HMD route: <TUNNEL_SOURCE_IP> is the
 # cloudflared container address on <REDE_TUNEL_VIZ> (same ingress path).
 # If that address ever changes, HMD and this route break together and must
 # be fixed together.
 http://equipemed.projetoshgrs.com {
-    @from_hmd_tunnel remote_ip <IP_TUNEL>
+    @from_hmd_tunnel remote_ip <TUNNEL_SOURCE_IP>
     handle @from_hmd_tunnel {
         encode gzip
         reverse_proxy frontend:80 {

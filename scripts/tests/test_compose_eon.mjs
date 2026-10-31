@@ -20,10 +20,10 @@ const NGINX_IMAGE =
   'nginx@sha256:' +
   '51047bea59fed88fbd1f52565d2f5fabcb82d311cf6c9e507a10ce74bb3bc3f0';
 const NETWORKS = [
-  '<REDE_INGRESS>',
-  '<REDE_APP>',
-  '<REDE_DB>',
-  '<REDE_EGRESS>',
+  'ingress',
+  'app',
+  'db',
+  'egress',
 ];
 
 // Every variable config/settings.py reads via os.getenv, plus the
@@ -345,16 +345,16 @@ test('h) eqmd hardening is enabled; postgres keeps entrypoint caps', () => {
 test('i) network memberships keep the topology minimal', () => {
   const config = renderConfig();
   assert.deepEqual(networkNames(config.services.eqmd), [
-    '<REDE_APP>',
-    '<REDE_DB>',
-    '<REDE_EGRESS>',
+    'app',
+    'db',
+    'egress',
   ]);
   assert.deepEqual(networkNames(config.services.postgres), [
-    '<REDE_DB>',
+    'db',
   ]);
   assert.deepEqual(networkNames(config.services.frontend), [
-    '<REDE_APP>',
-    '<REDE_INGRESS>',
+    'app',
+    'ingress',
   ]);
   for (const name of ['init', 'migrate']) {
     const nets = networkNames(config.services[name]);

@@ -24,9 +24,9 @@ services:
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
     networks:
-      - <REDE_APP>
-      - <REDE_DB>
-      - <REDE_EGRESS>
+      - app
+      - db
+      - egress
     volumes:
       - eqmd_media:/app/media
       - eqmd_logs:/app/logs
@@ -75,7 +75,7 @@ services:
       EQMD_MIGRATOR_PASSWORD: ${EQMD_MIGRATOR_PASSWORD:-${POSTGRES_PASSWORD}}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     networks:
-      - <REDE_DB>
+      - db
     volumes:
       - eqmd_pgdata:/var/lib/postgresql/data
       # Init SQL runs once on an empty volume. Manual fallback:
@@ -99,8 +99,8 @@ services:
     image: nginx@sha256:51047bea59fed88fbd1f52565d2f5fabcb82d311cf6c9e507a10ce74bb3bc3f0
     restart: unless-stopped
     networks:
-      - <REDE_INGRESS>
-      - <REDE_APP>
+      - ingress
+      - app
     volumes:
       - ./deploy/eon/frontend/nginx.conf:/etc/nginx/nginx.conf:ro
       # Collected static files, populated by the ops init service.
@@ -118,7 +118,7 @@ services:
     environment:
       DATABASE_PASSWORD: ${EQMD_USER_PASSWORD:-${POSTGRES_PASSWORD}}
     networks:
-      - <REDE_APP>
+      - app
     volumes:
       - eqmd_media:/app/media
       - eqmd_logs:/app/logs
@@ -148,10 +148,14 @@ services:
     env_file:
       - ${EQMD_ENV_FILE:?EQMD_ENV_FILE is required}
     environment:
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_NAME: eqmd_db
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
       DATABASE_USER: eqmd_migrator
       DATABASE_PASSWORD: ${EQMD_MIGRATOR_PASSWORD:?EQMD_MIGRATOR_PASSWORD is required}
     networks:
-      - <REDE_DB>
+      - db
     volumes:
       - eqmd_media:/app/media
       - eqmd_logs:/app/logs
@@ -162,17 +166,20 @@ services:
     restart: "no"
 
 networks:
-  # CIDRs reservados no slice s1: ingress <CIDR_INGRESS>, app
-  # <CIDR_APP>, db <CIDR_DB>, egress <CIDR_EGRESS>.
-  # A criação real das redes é gate humano da fase D.
-  <REDE_INGRESS>:
+  # Real network names live ONLY in the (untracked) env file; the
+  # reservation itself is documented in the private infra repository.
+  ingress:
     external: true
-  <REDE_APP>:
+    name: ${EQMD_NET_INGRESS:?EQMD_NET_INGRESS is required}
+  app:
     external: true
-  <REDE_DB>:
+    name: ${EQMD_NET_APP:?EQMD_NET_APP is required}
+  db:
     external: true
-  <REDE_EGRESS>:
+    name: ${EQMD_NET_DB:?EQMD_NET_DB is required}
+  egress:
     external: true
+    name: ${EQMD_NET_EGRESS:?EQMD_NET_EGRESS is required}
 
 volumes:
   eqmd_media:

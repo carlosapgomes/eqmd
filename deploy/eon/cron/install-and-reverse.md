@@ -34,7 +34,7 @@ não improvisar offsets e regenerar o arquivo antes de qualquer mudança.
 ```bash
 sudo ls -l /etc/cron.d/eqmd 2>/dev/null || echo NO_EQMD_CRON
 sudo systemctl status cron --no-pager
-sha256sum /srv/apps/eqmd/deploy/eon/cron/eqmd.cron
+sha256sum <EQMD_APP_DIR>/deploy/eon/cron/eqmd.cron
 date -Is
 ```
 
@@ -45,7 +45,7 @@ serviço cron, hash do arquivo versionado e horário UTC do baseline.
 
 ```bash
 sudo install -o root -g root -m 0644 \
-  /srv/apps/eqmd/deploy/eon/cron/eqmd.cron \
+  <EQMD_APP_DIR>/deploy/eon/cron/eqmd.cron \
   /etc/cron.d/eqmd
 ```
 
@@ -60,7 +60,7 @@ sudo grep -cE '^[0-9*]' /etc/cron.d/eqmd
 sudo grep -E '^(SHELL|PATH)=' /etc/cron.d/eqmd
 sudo stat -c '%a %U:%G %n' /etc/cron.d/eqmd
 sudo sha256sum /etc/cron.d/eqmd \
-  /srv/apps/eqmd/deploy/eon/cron/eqmd.cron
+  <EQMD_APP_DIR>/deploy/eon/cron/eqmd.cron
 ```
 
 Esperado: 5 marcadores, 0 jobs ativos, `SHELL`/`PATH` presentes, modo

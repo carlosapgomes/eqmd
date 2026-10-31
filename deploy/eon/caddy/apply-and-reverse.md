@@ -51,10 +51,10 @@ depende do diretório corrente.
 
 Anotar também os hostnames atuais das vizinhas (o Caddyfile os contém):
 
-| Vizinha          | Hostname de smoke | URL de baseline          |
-| ---------------- | ----------------- | ------------------------ |
-| CHD / ats        | `<CHD_HOST>`      | `https://<CHD_HOST>/`    |
-| HMD              | `<HMD_HOST>`      | `https://<HMD_HOST>/`    |
+| Vizinha                | Hostname de smoke | URL de baseline          |
+| ---------------------- | ----------------- | ------------------------ |
+| CHD / ats              | `<CHD_HOST>`      | `https://<CHD_HOST>/`    |
+| HMD                    | `<HMD_HOST>`      | `https://<HMD_HOST>/`    |
 | Prisma / <APP_VIZINHA> | `<PRISMA_HOST>`   | `https://<PRISMA_HOST>/` |
 
 ## 2. Backup
@@ -99,10 +99,10 @@ com hash registrado:
 ```bash
 sudo install -d -m 0750 "$CADDY_STAGE"
 sudo install -m 0644 \
-  "$EQMD_REPO/deploy/eon/caddy/equipemed.caddyfile" \
+  "$EQMD_REPO/deploy/eon/caddy/equipemed.caddyfile.example" \
   "$CADDY_STAGE/equipemed.caddyfile.$STAMP"
 sha256sum \
-  "$EQMD_REPO/deploy/eon/caddy/equipemed.caddyfile" \
+  "$EQMD_REPO/deploy/eon/caddy/equipemed.caddyfile.example" \
   "$CADDY_STAGE/equipemed.caddyfile.$STAMP"
 ```
 

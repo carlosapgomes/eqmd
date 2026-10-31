@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..', '..');
-const cronPath = path.join(repoRoot, 'deploy/eon/cron/eqmd.cron');
+const cronPath = path.join(repoRoot, 'deploy/eon/cron/eqmd.cron.example');
 const runbookPath = path.join(
   repoRoot,
   'deploy/eon/cron/install-and-reverse.md',
@@ -39,6 +39,10 @@ test('the file is installed suspended with exactly five marked jobs', () => {
     .filter((line) => /^[0-9*]/.test(line));
   assert.deepEqual(active, [], 'no job may be active before E14');
   assert.equal(jobLines(raw).length, 5);
+  assert.ok(
+    raw.includes('--env-file <EQMD_APP_DIR>/env.eon'),
+    'cron job lines must pass --env-file to compose',
+  );
 });
 
 test('the five LOCAL schedules and commands are exact', () => {
@@ -47,7 +51,7 @@ test('the five LOCAL schedules and commands are exact', () => {
   const parsed = new Map();
   for (const job of jobs) {
     const match = job.match(
-      /^(\S+ \S+ \S+ \S+ \S+) root flock -n \/run\/lock\/eqmd-[a-z0-9-]+\.lock docker compose -f \/srv\/apps\/eqmd\/docker-compose\.eon\.yml exec -T eqmd python manage\.py ([a-z_]+)$/,
+      /^(\S+ \S+ \S+ \S+ \S+) root flock -n \/run\/lock\/eqmd-[a-z0-9-]+\.lock docker compose -f <EQMD_APP_DIR>\/docker-compose\.eon\.yml --env-file <EQMD_APP_DIR>\/env\.eon exec -T eqmd python manage\.py ([a-z_]+)$/,
     );
     assert.ok(match, `unexpected job line: ${job}`);
     parsed.set(match[1], match[2]);
@@ -58,7 +62,7 @@ test('the five LOCAL schedules and commands are exact', () => {
 test('every job uses flock -n, exec -T and the absolute compose path', () => {
   for (const job of jobLines(read(cronPath))) {
     assert.match(job, /flock -n \/run\/lock\/eqmd-[a-z0-9-]+\.lock/);
-    assert.match(job, /docker compose -f \/srv\/apps\/eqmd\/docker-compose\.eon\.yml/);
+    assert.match(job, /docker compose -f <EQMD_APP_DIR>\/docker-compose\.eon\.yml/);
     assert.match(job, / exec -T eqmd python manage\.py /);
   }
 });
