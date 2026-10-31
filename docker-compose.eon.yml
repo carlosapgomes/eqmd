@@ -135,6 +135,7 @@ services:
           /app/media/videos/tmp/filepond_uploads \
           /app/media/videos/tmp/filepond_stored
         install -d -o 9900 -g 9900 -m 0755 /app/staticfiles
+        chown -R 9900:9900 /app/staticfiles
         python -c "import os,sys; os.setgroups([]); os.setgid(9900); os.setuid(9900); os.execvp(sys.argv[1], sys.argv[1:])" \
           python manage.py collectstatic --clear --noinput
     restart: "no"
