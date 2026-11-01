@@ -388,11 +388,21 @@ HOSPITAL_CONFIG = {
     "website": os.getenv("HOSPITAL_WEBSITE", ""),
     "logo_path": os.getenv("HOSPITAL_LOGO_PATH", "static/images/hospital-logo.png"),
     "logo_url": os.getenv("HOSPITAL_LOGO_URL", ""),
-    # Hospital short identifier for PWA
+    # Hospital short identifier for legacy PWA fallback and reports branding.
+    # The PWA home-screen title is controlled by PWA_CONFIG below.
     "short_identifier": os.getenv("HOSPITAL_SHORT_ID", ""),
     # Brazilian hospital identifiers
     "cnes": os.getenv("HOSPITAL_CNES", ""),
     "cnpj": os.getenv("HOSPITAL_CNPJ", ""),
+}
+
+# PWA Configuration (home-screen title, decoupled from hospital branding).
+# PWA_SHORT_NAME controls the Android home-screen label (manifest short_name).
+# PWA_NAME controls the full install title (manifest name).
+# When empty, the legacy HOSPITAL_SHORT_ID fallback applies, then EquipeMed defaults.
+PWA_CONFIG = {
+    "short_name": os.getenv("PWA_SHORT_NAME", ""),
+    "name": os.getenv("PWA_NAME", ""),
 }
 
 # PDF Forms Configuration

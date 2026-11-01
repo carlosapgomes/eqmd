@@ -1,6 +1,6 @@
 # Hospital Configuration
 
-**Environment-based single hospital configuration**
+Environment-based single hospital configuration.
 
 ## Hospital Settings
 
@@ -15,8 +15,17 @@ HOSPITAL_CONFIG = {
     'website': os.getenv('HOSPITAL_WEBSITE', ''),
     'logo_path': os.getenv('HOSPITAL_LOGO_PATH', ''),
     'logo_url': os.getenv('HOSPITAL_LOGO_URL', ''),
-    # Hospital short identifier for PWA customization
+    # Hospital short identifier (legacy PWA fallback; PWA title uses PWA_CONFIG)
     'short_identifier': os.getenv('HOSPITAL_SHORT_ID', ''),
+}
+```
+
+PWA title lives in `PWA_CONFIG` (decoupled from hospital branding):
+
+```python
+PWA_CONFIG = {
+    'short_name': os.getenv('PWA_SHORT_NAME', ''),  # Android home-screen label
+    'name': os.getenv('PWA_NAME', ''),              # Full install title
 }
 ```
 
@@ -33,7 +42,7 @@ Available in `apps/core/templatetags/hospital_tags.py`:
 {% hospital_logo %}           # Get configured hospital logo URL
 {% hospital_header %}         # Render hospital header with configuration
 {% hospital_branding %}       # Get complete hospital branding info
-{% hospital_pwa_short_name %} # Get PWA short name (e.g., "HgrsEqmd")
+{% hospital_pwa_short_name %} # PWA home-screen label
 ```
 
 ## Environment Variables
@@ -48,8 +57,12 @@ HOSPITAL_WEBSITE="https://www.yourhospital.com"
 HOSPITAL_LOGO_PATH="static/images/hospital-logo.png"
 HOSPITAL_LOGO_URL="https://cdn.yourhospital.com/logo.png"
 
-# PWA Customization (optional)
-HOSPITAL_SHORT_ID="hgrs"  # Creates PWA short name "HgrsEqmd"
+# PWA home-screen title (optional, decoupled from hospital branding)
+PWA_SHORT_NAME="EquipeMed"  # Android home-screen label (manifest short_name)
+PWA_NAME="EquipeMed"        # Full install title (manifest name)
+
+# Legacy hospital fallback (optional)
+HOSPITAL_SHORT_ID="hgrs"  # Used only when PWA_SHORT_NAME is empty -> "HgrsEqmd"
 
 # Django Site Framework (for email templates and django-allauth)
 SITE_DOMAIN="yourhospital.com"  # Your actual domain name
@@ -129,28 +142,58 @@ SITE_NAME="Development Hospital"
 
 ## PWA Customization
 
-EquipeMed supports subtle PWA (Progressive Web App) customization for multi-hospital deployments while maintaining the EquipeMed brand identity.
+EquipeMed supports subtle PWA (Progressive Web App) customization for
+multi-hospital deployments while maintaining the EquipeMed brand identity.
 
-### Hospital Short Identifier
+### PWA Home-Screen Title (Recommended)
 
-Use `HOSPITAL_SHORT_ID` to create hospital-specific PWA short names:
+Use `PWA_SHORT_NAME` / `PWA_NAME` to control the installed app title
+independently from hospital branding (`HOSPITAL_SHORT_ID` stays untouched
+for reports, PDFs, and other hospital contexts):
+
+```bash
+# Fixed "EquipeMed" label even with HOSPITAL_SHORT_ID=ihgrs set
+PWA_SHORT_NAME="EquipeMed"
+PWA_NAME="EquipeMed"
+```
+
+Precedence for `short_name` (Android home-screen label):
+
+1. `PWA_SHORT_NAME` when non-blank.
+2. Legacy `HOSPITAL_SHORT_ID` fallback (`"hgrs"` -> `"HgrsEqmd"`).
+3. Default `"EquipeMed"`.
+
+Precedence for `name` (full install title):
+
+1. `PWA_NAME` when non-blank.
+2. `"EquipeMed - {HOSPITAL_NAME}"` when a hospital short id is set.
+3. Default `"EquipeMed - Plataforma Médica"`.
+
+After changing these values, reinstall the PWA on Android (or clear site
+data): Chrome caches the old manifest title.
+
+### Hospital Short Identifier (Legacy Fallback)
+
+`HOSPITAL_SHORT_ID` is only a fallback when `PWA_SHORT_NAME` is empty:
 
 ```bash
 # Hospital Regional do Sertão
 HOSPITAL_SHORT_ID="hgrs"
-# Results in PWA short name: "HgrsEqmd"
+# Results in PWA short name: "HgrsEqmd" (only if PWA_SHORT_NAME is empty)
 
-# Hospital Municipal Central  
+# Hospital Municipal Central
 HOSPITAL_SHORT_ID="hmc"
-# Results in PWA short name: "HmcEqmd"
+# Results in PWA short name: "HmcEqmd" (only if PWA_SHORT_NAME is empty)
 
-# No short ID (default)
+# No short ID and no PWA_SHORT_NAME (default)
 # Results in PWA short name: "EquipeMed"
 ```
 
 ### PWA Manifest
 
-The system automatically generates a dynamic PWA manifest at `/manifest.json` that includes:
+The system automatically generates a dynamic PWA manifest at `/manifest.json`
+(linked from `templates/base.html`; the checked-in `static/manifest.json`
+is not served and exists only as a static reference) that includes:
 
 - **name**: `"EquipeMed - [Hospital Name]"` or `"EquipeMed - Plataforma Médica"`
 - **short_name**: `"[ShortId]Eqmd"` or `"EquipeMed"`
@@ -160,7 +203,9 @@ The system automatically generates a dynamic PWA manifest at `/manifest.json` th
 
 ### Landing Page Context
 
-When `HOSPITAL_SHORT_ID` is configured, the landing page subtly displays the hospital name to provide context without changing the overall EquipeMed branding.
+When `HOSPITAL_SHORT_ID` is configured, the landing page subtly displays
+the hospital name to provide context without changing the overall EquipeMed
+branding.
 
 ### Multi-Hospital Deployment Example
 
@@ -170,7 +215,7 @@ HOSPITAL_NAME="Hospital Regional do Sertão"
 HOSPITAL_SHORT_ID="hgrs"
 HOSPITAL_ADDRESS="Av. Hospital Regional, 123, Petrolina, PE"
 
-# Hospital B (hospitalb.domain.com)  
+# Hospital B (hospitalb.domain.com)
 HOSPITAL_NAME="Hospital Municipal Central"
 HOSPITAL_SHORT_ID="hmc"
 HOSPITAL_ADDRESS="Rua Central, 456, Salvador, BA"
@@ -186,7 +231,8 @@ HOSPITAL_ADDRESS="Rua Central, 456, Salvador, BA"
 
 ## Django Site Framework Configuration
 
-EquipeMed automatically configures Django's Site Framework for proper email templates and django-allauth integration.
+EquipeMed automatically configures Django's Site Framework for proper
+email templates and django-allauth integration.
 
 ### Email Template Configuration
 
@@ -201,25 +247,27 @@ The system automatically updates the Django Site object when the container start
 
 1. **On container startup**: Checks if `SITE_DOMAIN` or `SITE_NAME` are set
 2. **Updates database**: Creates or updates the Site object with ID=1
-3. **Email templates**: Django-allauth uses the Site object for email subjects and content
+3. **Email templates**: Django-allauth uses the Site object for email
+   subjects and content
 
 ### Before/After Email Examples
 
 **Before configuration** (shows "example.com"):
 
-```
+```text
 Subject: [example.com] Confirme seu endereço de email
 ```
 
 **After configuration** with `SITE_DOMAIN=yourhospital.com`:
 
-```
+```text
 Subject: [yourhospital.com] Confirme seu endereço de email
 ```
 
 ### Manual Override (if needed)
 
-If automatic configuration doesn't work, you can manually set the site via Django admin:
+If automatic configuration doesn't work, you can manually set the site via
+Django admin:
 
 1. Go to `/admin/sites/site/1/change/`
 2. Update "Domain name" and "Display name"
@@ -227,6 +275,7 @@ If automatic configuration doesn't work, you can manually set the site via Djang
 
 ### Troubleshooting
 
-- **Emails still show example.com**: Check that `SITE_DOMAIN` is set in `.env` and container was restarted
+- **Emails still show example.com**: Check that `SITE_DOMAIN` is set in
+  `.env` and container was restarted
 - **Site not updating**: Check Django logs for database errors during startup
 - **Multiple sites**: Ensure `SITE_ID=1` in environment (default)

@@ -1,74 +1,78 @@
 from django import template
 from django.conf import settings
 
+from apps.core.services.pwa_branding import resolve_pwa_short_name
+
 register = template.Library()
+
 
 @register.simple_tag
 def hospital_name():
     """Get the configured hospital name from settings"""
-    return getattr(settings, 'HOSPITAL_CONFIG', {}).get('name', 'EquipeMed Hospital')
+    return getattr(settings, "HOSPITAL_CONFIG", {}).get("name", "EquipeMed Hospital")
+
 
 @register.simple_tag
 def hospital_address():
     """Get the configured hospital address from settings"""
-    return getattr(settings, 'HOSPITAL_CONFIG', {}).get('address', '')
+    return getattr(settings, "HOSPITAL_CONFIG", {}).get("address", "")
+
 
 @register.simple_tag
 def hospital_phone():
     """Get the configured hospital phone from settings"""
-    return getattr(settings, 'HOSPITAL_CONFIG', {}).get('phone', '')
+    return getattr(settings, "HOSPITAL_CONFIG", {}).get("phone", "")
+
 
 @register.simple_tag
 def hospital_email():
     """Get the configured hospital email from settings"""
-    return getattr(settings, 'HOSPITAL_CONFIG', {}).get('email', '')
+    return getattr(settings, "HOSPITAL_CONFIG", {}).get("email", "")
+
 
 @register.simple_tag
 def hospital_cnes():
     """Get the configured hospital CNES from settings"""
-    return getattr(settings, 'HOSPITAL_CONFIG', {}).get('cnes', '')
+    return getattr(settings, "HOSPITAL_CONFIG", {}).get("cnes", "")
+
 
 @register.simple_tag
 def hospital_cnpj():
     """Get the configured hospital CNPJ from settings"""
-    return getattr(settings, 'HOSPITAL_CONFIG', {}).get('cnpj', '')
+    return getattr(settings, "HOSPITAL_CONFIG", {}).get("cnpj", "")
+
 
 @register.simple_tag
 def hospital_logo():
     """Get the configured hospital logo URL from settings"""
-    hospital_config = getattr(settings, 'HOSPITAL_CONFIG', {})
-    if hospital_config.get('logo_url'):
-        return hospital_config['logo_url']
-    elif hospital_config.get('logo_path'):
-        return settings.STATIC_URL + hospital_config['logo_path']
-    return settings.STATIC_URL + 'images/logo.png'
+    hospital_config = getattr(settings, "HOSPITAL_CONFIG", {})
+    if hospital_config.get("logo_url"):
+        return hospital_config["logo_url"]
+    elif hospital_config.get("logo_path"):
+        return settings.STATIC_URL + hospital_config["logo_path"]
+    return settings.STATIC_URL + "images/logo.png"
 
-@register.inclusion_tag('core/partials/hospital_header.html')
+
+@register.inclusion_tag("core/partials/hospital_header.html")
 def hospital_header():
     """Render hospital header with configuration from settings"""
-    hospital_config = getattr(settings, 'HOSPITAL_CONFIG', {})
+    hospital_config = getattr(settings, "HOSPITAL_CONFIG", {})
     return {
-        'hospital': hospital_config,
-        'hospital_name': hospital_config.get('name', 'EquipeMed Hospital'),
-        'hospital_address': hospital_config.get('address', ''),
-        'hospital_phone': hospital_config.get('phone', ''),
-        'hospital_email': hospital_config.get('email', ''),
+        "hospital": hospital_config,
+        "hospital_name": hospital_config.get("name", "EquipeMed Hospital"),
+        "hospital_address": hospital_config.get("address", ""),
+        "hospital_phone": hospital_config.get("phone", ""),
+        "hospital_email": hospital_config.get("email", ""),
     }
+
 
 @register.simple_tag
 def hospital_branding():
     """Get complete hospital branding info as dict"""
-    return getattr(settings, 'HOSPITAL_CONFIG', {})
+    return getattr(settings, "HOSPITAL_CONFIG", {})
+
 
 @register.simple_tag
 def hospital_pwa_short_name():
-    """Generate PWA short name combining hospital short ID with EquipeMed brand"""
-    hospital_config = getattr(settings, 'HOSPITAL_CONFIG', {})
-    short_id = hospital_config.get('short_identifier', '').lower()
-    
-    if short_id:
-        # e.g., "hgrs" -> "HgrsEqmd"
-        return f"{short_id.capitalize()}Eqmd"
-    else:
-        # Default EquipeMed branding
-        return "EquipeMed"
+    """Return PWA home-screen label (PWA_SHORT_NAME wins, then legacy fallback)."""
+    return resolve_pwa_short_name()

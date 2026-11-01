@@ -19,6 +19,7 @@ from allauth.account.views import PasswordChangeView
 from django.contrib.auth import logout
 from .services.simple_notifications import send_simple_renewal_notification
 from apps.core.permissions.decorators import doctor_or_resident_required
+from apps.core.services.pwa_branding import resolve_pwa_names
 
 logger = logging.getLogger(__name__)
 
@@ -106,21 +107,12 @@ def accept_terms(request):
 
 
 def manifest_json(request):
-    """Serve dynamic PWA manifest with subtle hospital customization"""
-    hospital_config = getattr(settings, "HOSPITAL_CONFIG", {})
-    short_id = hospital_config.get("short_identifier", "").lower()
-
-    # Generate PWA short name
-    if short_id:
-        short_name = f"{short_id.capitalize()}Eqmd"
-        name = f"EquipeMed - {hospital_config.get('name', 'Plataforma Médica')}"
-    else:
-        short_name = "EquipeMed"
-        name = "EquipeMed - Plataforma Médica"
+    """Serve dynamic PWA manifest (PWA_CONFIG overrides hospital fallback)."""
+    pwa_names = resolve_pwa_names()
 
     manifest = {
-        "name": name,
-        "short_name": short_name,
+        "name": pwa_names["name"],
+        "short_name": pwa_names["short_name"],
         "description": "Plataforma de colaboração médica para rastreamento de pacientes e gestão hospitalar",
         "start_url": "/",
         "display": "standalone",
