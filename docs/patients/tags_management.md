@@ -206,6 +206,36 @@ distinct. A forged, unknown or malformed explicit identifier returns the
 generic message `Filtro de tag inválido.` with no patients instead of narrowing
 or widening the list; inaccessible restricted metadata is never echoed.
 
+### Filtering the ward map
+
+The ward map at **Patients → Mapa de Pacientes** uses the same selector, the
+same `tags`/`tag_mode`/`tag_filter` query parameters and the same saved
+specialty preference as the list. Selecting tags on one surface and opening the
+other keeps the same effective selection, ANY/ALL mode and manual/clear/default
+precedence; the explicit save, clear and reapply actions behave identically on
+both.
+
+Differences are limited to each page's own eligibility and presentation:
+
+- the map only shows **inpatients with a ward**, so a tag associated only with
+  outpatients returns zero map rows (with zero totals) while the list still
+  returns those patients;
+- the header totals and each ward counter are computed from the rows actually
+  rendered after filtering, never from global cached counts;
+- empty wards are included only when **Mostrar alas vazias** is checked, and
+  that control submits the same GET form, so the effective filters survive the
+  reload;
+- the AJAX tree refresh and the refresh button re-request the current URL, so
+  the same filters apply to the partial response.
+
+Map tag metadata and associations are re-read from the current catalogue on
+every request on top of the shared structural cache: renaming, reclassifying,
+revoking a membership or adding/removing an association is visible on the next
+response without rebuilding the cache. Three empty situations are presented
+differently: a filtered zero result ("Nenhum paciente encontrado"), an invalid
+manual tag filter (`Filtro de tag inválido.`) and a stale or missing base cache
+("Dados sendo atualizados").
+
 ## Preflight (read-only)
 
 Before or after applying the additive catalogue migrations, run:
@@ -284,11 +314,11 @@ at **Meu Perfil → Preferências de Tags**.
 
 Lifecycle, responsibility, assignment policy, atomic audited writes, stable
 event references, requester-aware read privacy, the leader team tag page,
-searchable multi-tag patient-list filtering and retained per-specialty
-preferences are delivered together. The ward map still applies only the legacy
-single-tag rule; full ANY/ALL map parity, filtered totals and map consumption
-of the persisted preferences remain open for the final integration slice.
+searchable multi-tag filtering on the patient list **and the ward map**, and
+retained per-specialty preferences are delivered together as one release
+candidate. Partial rollout is not supported: the change must be reviewed and
+deployed as a whole, and applying its migrations or deploying any slice to
+production requires separate human approval.
 Team roster and membership administration stay in **Django Admin →
 Especialidades dos Usuários**; the leader page never manages memberships. Do
-not deploy intermediate slices or create production restricted catalogue data
-before the release review covering those slices.
+not create production restricted catalogue data before that release review.

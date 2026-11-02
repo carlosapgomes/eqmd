@@ -286,7 +286,7 @@ class WardMapCachePrivacyTests(TestCase):
         response = self.client.get(self.map_url())
 
         self.assertEqual(response.status_code, 200)
-        available = [tag["name"] for tag in response.context["available_tags"]]
+        available = [tag.name for tag in response.context["available_tags"]]
         self.assertIn(self.public_tag.name, available)
         self.assertNotIn(self.restricted_tag.name, available)
 
@@ -339,6 +339,35 @@ class WardMapCachePrivacyTests(TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.content.decode()
         self.assertNotIn(self.public_tag.name, body)
+
+    def test_revoked_membership_redacts_the_ajax_variant_immediately(self) -> None:
+        membership = UserSpecialty.objects.get(user=self.member, specialty=self.cirger)
+        self.client.force_login(self.member)
+        warm = self.client.get(self.map_url(), HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertIn(self.restricted_tag.name, warm.content.decode())
+
+        UserSpecialty.objects.filter(pk=membership.pk).update(is_active=False)
+
+        response = self.client.get(
+            self.map_url(), HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assert_restricted_metadata_absent(response.content.decode())
+
+    def test_removed_association_disappears_from_the_warm_cache_payload(self) -> None:
+        self.client.force_login(self.member)
+        warm = self.client.get(self.map_url())
+        self.assertIn(
+            str(self.public_tag.pk), self.patient_tag_ids(warm.content.decode())
+        )
+
+        Tag.objects.filter(patient=self.patient, allowed_tag=self.public_tag).delete()
+
+        response = self.client.get(self.map_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(
+            str(self.public_tag.pk), self.patient_tag_ids(response.content.decode())
+        )
 
     def test_stale_cached_tag_name_is_replaced_by_current_catalogue_name(self) -> None:
         AllowedTag.all_objects.filter(pk=self.public_tag.pk).update(

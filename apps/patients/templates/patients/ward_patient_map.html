@@ -13,6 +13,7 @@
 {% block page_specific_scripts %}
 {{ block.super }}
 <script src="{% static 'js/ward_patient_map.js' %}"></script>
+<script src="{% static 'js/tag-selector.js' %}" defer></script>
 {% endblock %}
 
 {% block patient_content %}
@@ -31,7 +32,10 @@
           </p>
         </div>
         <div class="text-end">
-          <div class="bg-light rounded p-3">
+          <div class="bg-light rounded p-3"
+               data-map-totals
+               data-total-patients="{{ total_patients }}"
+               data-total-wards="{{ total_wards }}">
             <div class="row text-center">
               <div class="col">
                 <div class="h4 mb-0 text-medical-primary">
@@ -43,9 +47,12 @@
                 <div class="h4 mb-0 text-medical-secondary">
                   {{ total_wards }}
                 </div>
-                <small class="text-muted">Alas Ativas</small>
+                <small class="text-muted">Alas</small>
               </div>
             </div>
+            {% if has_active_filters %}
+            <small class="text-muted d-block mt-1">Totais do resultado filtrado</small>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -67,7 +74,7 @@
                      class="form-control"
                      id="search"
                      name="q"
-                     value="{{ request.GET.q|default:'' }}"
+                     value="{{ search_query }}"
                      placeholder="Nome do paciente ou número do leito...">
             </div>
 
@@ -78,30 +85,18 @@
                 <option value="">Todas as Alas</option>
                 {% for ward in all_wards %}
                   <option value="{{ ward.id }}"
-                          {% if request.GET.ward == ward.id|stringformat:"s" %}selected{% endif %}>
+                          {% if ward_filter == ward.id|stringformat:"s" %}selected{% endif %}>
                     {{ ward.abbreviation }} - {{ ward.name }}
                   </option>
                 {% endfor %}
               </select>
             </div>
 
-            <!-- Tag -->
-            <div class="col-md-2">
-              <label for="tag" class="form-label">Tag</label>
-              <select class="form-select" id="tag" name="tag">
-                <option value="">Todas as Tags</option>
-                {% for tag in available_tags %}
-                  <option value="{{ tag.id }}"
-                          {% if request.GET.tag == tag.id|stringformat:"s" %}selected{% endif %}
-                          style="background-color: {{ tag.color }}; color: white;">
-                    {{ tag.name }}
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
+            <!-- Tag Filter (shared multi-select + searchable lookup, S7/S9) -->
+            {% include "components/_tag_filter.html" %}
 
             <!-- Actions -->
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-2 d-flex align-items-end">
               <div class="btn-group w-100" role="group">
                 <button type="submit" class="btn btn-medical-outline-primary">
                   <i class="bi bi-search"></i>
@@ -128,15 +123,18 @@
                 </button>
               </div>
             </div>
-            
-            <!-- Empty Wards Toggle -->
+
+            <!-- Empty Wards Toggle: part of the same GET form so the effective
+                 filters survive the reload, with or without JavaScript. -->
             <div class="col-12 mt-3">
               <div class="form-check">
-                <input class="form-check-input border-primary" 
-                       type="checkbox" 
-                       id="show-empty-wards" 
+                <input class="form-check-input border-primary"
+                       type="checkbox"
+                       id="show-empty-wards"
+                       name="show_empty_wards"
+                       value="true"
                        {% if show_empty_wards %}checked{% endif %}
-                       onchange="toggleEmptyWards()">
+                       onchange="this.form.submit()">
                 <label class="form-check-label" for="show-empty-wards">
                   <i class="bi bi-building me-1"></i>
                   Mostrar alas vazias
@@ -145,58 +143,96 @@
             </div>
           </form>
 
-        {% if tag_filter_error %}
-        <div class="alert alert-warning mb-0 mt-3" role="alert">
-          <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
-          {{ tag_filter_error }}
-        </div>
-        {% endif %}
+          {% if tag_preference_specialty %}
+            <div class="mt-3" data-tag-preference-panel>
+              <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="me-auto">
+                  <div class="small text-muted">
+                    Especialidade ativa:
+                    <strong data-tag-preference-specialty>{{ tag_preference_specialty.name }}</strong>
+                  </div>
+                  <div class="small" data-tag-preference-state>
+                    {% if tag_preference_has_saved %}Preferência salva em uso{% else %}Sem preferência salva (padrão inicial){% endif %}
+                    · {{ tag_filter_mode_label }}
+                  </div>
+                </div>
+                <form method="post"
+                      action="{% url 'apps.accounts:tag_preference_save' %}"
+                      data-tag-preference-form>
+                  {% csrf_token %}
+                  <input type="hidden" name="specialty_id" value="{{ tag_preference_specialty.pk }}">
+                  <input type="hidden" name="tag_mode" value="{{ tag_preference_mode }}" data-tag-preference-mode>
+                  <input type="hidden" name="next" value="{{ tag_preference_next }}">
+                  <span data-tag-preference-tags>
+                    {% for tag_id in tag_preference_tags %}
+                      <input type="hidden" name="tags" value="{{ tag_id }}">
+                    {% endfor %}
+                  </span>
+                  <button type="submit" class="btn btn-sm btn-medical-primary">
+                    <i class="bi bi-bookmark-check me-1" aria-hidden="true"></i>
+                    Salvar como preferência da especialidade ativa
+                  </button>
+                </form>
+              </div>
+              {% if tag_preference_warning %}
+                <div class="alert alert-warning mb-0 mt-2 py-2"
+                     role="alert"
+                     data-tag-preference-warning>
+                  <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+                  {{ tag_preference_warning }}
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
 
           <!-- Active Filters -->
-          {% if active_filters %}
+          {% if has_active_filters %}
           <div class="mt-3">
             <small class="text-muted">Filtros ativos:</small>
             <div class="d-flex flex-wrap gap-2 mt-1">
-              {% for key, value in active_filters.items %}
-                {% if key == 'q' and value %}
-                  <span class="badge bg-primary">
-                    Busca: {{ value }}
-                    <a href="?{% for k, v in request.GET.items %}{% if k != key %}{{ k }}={{ v }}&{% endif %}{% endfor %}"
-                       class="text-white text-decoration-none ms-1">
-                      <i class="bi bi-x"></i>
-                    </a>
-                  </span>
-                {% elif key == 'ward' and value %}
-                  {% for ward in all_wards %}
-                    {% if ward.id|stringformat:"s" == value %}
-                      <span class="badge bg-secondary">
-                        Ala: {{ ward.abbreviation }}
-                        <a href="?{% for k, v in request.GET.items %}{% if k != key %}{{ k }}={{ v }}&{% endif %}{% endfor %}"
-                           class="text-white text-decoration-none ms-1">
-                          <i class="bi bi-x"></i>
-                        </a>
-                      </span>
-                    {% endif %}
-                  {% endfor %}
-                {% elif key == 'tag' and value %}
-                  {% for tag in available_tags %}
-                    {% if tag.id|stringformat:"s" == value %}
-                      <span class="badge" style="background-color: {{ tag.color }};">
-                        Tag: {{ tag.name }}
-                        <a href="?{% for k, v in request.GET.items %}{% if k != key %}{{ k }}={{ v }}&{% endif %}{% endfor %}"
-                           class="text-white text-decoration-none ms-1">
-                          <i class="bi bi-x"></i>
-                        </a>
-                      </span>
-                    {% endif %}
-                  {% endfor %}
-                {% endif %}
+              {% if search_query %}
+                <span class="badge bg-primary">
+                  Busca: {{ search_query }}
+                  <a href="?{{ search_remove_querystring }}"
+                     class="text-white text-decoration-none ms-1">
+                    <i class="bi bi-x"></i>
+                  </a>
+                </span>
+              {% endif %}
+              {% if ward_filter %}
+                {% for ward in all_wards %}
+                  {% if ward.id|stringformat:"s" == ward_filter %}
+                    <span class="badge bg-secondary">
+                      Ala: {{ ward.abbreviation }}
+                      <a href="?{{ ward_remove_querystring }}"
+                         class="text-white text-decoration-none ms-1">
+                        <i class="bi bi-x"></i>
+                      </a>
+                    </span>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+              {% for selected in selected_tags %}
+                <span class="badge" style="background-color: {{ selected.badge.color }};" data-active-tag-badge>
+                  {{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}
+                  <a href="?{{ selected.remove_querystring }}"
+                     class="text-white text-decoration-none ms-1">
+                    <i class="bi bi-x"></i>
+                  </a>
+                </span>
               {% endfor %}
-              
-              {% if active_filters|length > 1 %}
-                <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-sm btn-outline-secondary">
-                  <i class="bi bi-x-circle me-1"></i>Limpar todos
-                </a>
+              {% if tag_filter_is_manual %}
+                <span class="badge bg-secondary" data-tag-mode-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
+                <a href="?{{ clear_tags_querystring }}"
+                   class="badge bg-light text-dark text-decoration-none"
+                   data-clear-tag-filter>Limpar tags</a>
+                {% if tag_preference_specialty %}
+                  <a href="?{{ reapply_tags_querystring }}"
+                     class="badge bg-light text-dark text-decoration-none"
+                     data-reapply-tag-preferences>Reaplicar preferências</a>
+                {% endif %}
+              {% elif tag_selection.has_predicate %}
+                <span class="badge bg-secondary" data-tag-default-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
               {% endif %}
             </div>
           </div>
@@ -205,6 +241,13 @@
       </div>
     </div>
   </div>
+
+  {% if updating %}
+  <div class="alert alert-info" role="status" data-map-updating>
+    <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>
+    Os dados do mapa estão sendo atualizados. Recarregue a página em alguns minutos.
+  </div>
+  {% endif %}
 
   <!-- Tree View Section -->
   <div class="row">
@@ -231,7 +274,6 @@
                     <div>
                       <h5 class="mb-0">
                         {{ ward_info.ward.name }}
-                        <!-- {{ ward_info.ward.abbreviation }} - {{ ward_info.ward.name }} -->
                       </h5>
                       {% if ward_info.ward.floor %}
                       <small class="text-muted">{{ ward_info.ward.floor }}</small>
@@ -327,6 +369,31 @@
             </div>
             {% endfor %}
           </div>
+          {% elif all_wards %}
+          {% if tag_filter_error %}
+          <div class="text-center py-5" data-map-invalid-filter>
+            <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+            <h4>Filtro de tags inválido</h4>
+            <p class="text-muted">
+              Corrija ou limpe o filtro de tags para ver os pacientes internados.
+            </p>
+            <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-circle me-1"></i>Limpar filtros
+            </a>
+          </div>
+          {% else %}
+          <div class="text-center py-5" data-map-empty-results>
+            <i class="bi bi-search display-4 text-muted mb-3"></i>
+            <h4>Nenhum paciente encontrado</h4>
+            <p class="text-muted">
+              Nenhum paciente internado corresponde aos filtros atuais.
+              Ajuste a busca, a ala ou as tags para ver resultados.
+            </p>
+            <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-circle me-1"></i>Limpar filtros
+            </a>
+          </div>
+          {% endif %}
           {% else %}
           <div class="text-center py-5">
             <i class="bi bi-building display-4 text-muted mb-3"></i>

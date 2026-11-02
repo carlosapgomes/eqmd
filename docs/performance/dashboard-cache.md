@@ -2,14 +2,17 @@
 
 ## Overview
 
-The Dashboard Cache System eliminates expensive real-time database queries that were causing 100% CPU spikes when accessing the dashboard and ward mapping pages. Instead, background management commands run every 5 minutes to pre-compute and cache the data.
+The Dashboard Cache System eliminates expensive real-time database
+queries that were causing 100% CPU spikes when accessing the dashboard
+and ward mapping pages. Instead, background management commands run
+every 5 minutes to pre-compute and cache the data.
 
 ## Performance Impact
 
 ### Before (Real-time queries)
 
 - Dashboard load: ~2-5 seconds with complex JOINs
-- CPU spikes to 100% on each dashboard access  
+- CPU spikes to 100% on each dashboard access
 - Multiple expensive queries per page load
 - Ward mapping caused server slowdowns
 
@@ -111,9 +114,9 @@ docker compose exec web python manage.py check_cache_health --verbose
 
 **Output example:**
 
-```
+```text
 ✓ dashboard_stats: Healthy (2.3 minutes old)
-✓ recent_patients: Healthy (2.3 minutes old)  
+✓ recent_patients: Healthy (2.3 minutes old)
 ✓ ward_mapping: Healthy (1.8 minutes old)
 ✓ ward_filters: Healthy (1.8 minutes old)
 All caches are healthy!
@@ -123,17 +126,20 @@ All caches are healthy!
 
 ### Production Schedule (Docker Compose)
 
-Create cron jobs that run every 5 minutes with 2-minute offset to distribute server load:
+Create cron jobs that run every 5 minutes with 2-minute offset to
+distribute server load:
 
 ```bash
 # Add to crontab for eqmd user
 sudo crontab -u eqmd -e
 
-# Dashboard stats - runs every 5 minutes (:00, :05, :10, :15, :20, :25, :30, :35, :40, :45, :50, :55)
+<!-- markdownlint-disable MD013 -- crontab lines cannot be wrapped -->
+# Dashboard stats - runs every 5 minutes (:00, :05, ... :55)
 */5 * * * * cd /home/carlos/projects/eqmd && docker compose exec -T web python manage.py update_dashboard_stats >> /var/log/eqmd/dashboard_cache.log 2>&1
 
-# Ward mapping - runs every 5 minutes offset by 2 minutes (:02, :07, :12, :17, :22, :27, :32, :37, :42, :47, :52, :57)
+# Ward mapping - runs every 5 minutes offset by 2 minutes (:02, :07, ... :57)
 2-59/5 * * * * cd /home/carlos/projects/eqmd && docker compose exec -T web python manage.py update_ward_mapping_cache >> /var/log/eqmd/ward_cache.log 2>&1
+<!-- markdownlint-enable MD013 -->
 ```
 
 ### Alternative: Docker Compose Run
@@ -141,11 +147,13 @@ sudo crontab -u eqmd -e
 If services are not always running, use `run --rm` instead:
 
 ```bash
+<!-- markdownlint-disable MD013 -- crontab lines cannot be wrapped -->
 # Dashboard stats - runs every 5 minutes
 */5 * * * * cd /home/carlos/projects/eqmd && docker compose run --rm web python manage.py update_dashboard_stats
 
 # Ward mapping - runs every 5 minutes offset by 2 minutes
 2-59/5 * * * * cd /home/carlos/projects/eqmd && docker compose run --rm web python manage.py update_ward_mapping_cache
+<!-- markdownlint-enable MD013 -->
 ```
 
 ### Log Management
@@ -193,18 +201,65 @@ else:
 
 ```python
 from apps.core.utils.cache import get_cached_ward_mapping
+from apps.patients.services import tag_filters, ward_tag_overlay
 
-# Get all data
-ward_data = get_cached_ward_mapping()
+# Resolve the shared filter state (same contract as the patient list)
+filters = ward_tag_overlay.WardMapFilters(
+    selection=tag_filters.TagFilterSelection(),
+    search_query=search_query,
+    ward_id=ward_id,
+    show_empty_wards=show_empty_wards,
+)
 
-# Apply filters
-filters = {'ward': ward_id, 'tag': tag_id, 'q': search_query}
-filtered_data = get_cached_ward_mapping(filters)
+# Requester-aware projection + filtering; totals come from the returned rows
+ward_data = get_cached_ward_mapping(filters, viewer=request.user)
 
 ward_list = ward_data['ward_data']
 all_wards = ward_data['all_wards']  # For dropdowns
-available_tags = ward_data['available_tags']  # For dropdowns
+available_tags = ward_data['available_tags']  # Requester-visible TagBadge list
+total_patients = ward_data['total_patients']  # Filtered result, not global
+total_wards = ward_data['total_wards']  # Filtered result, not global
 ```
+
+### Map filters, tag overlay and stale states
+
+The ward-mapping cache is a **structural base only**: ward, bed, patient
+identity and admission duration. It is never an authorization or filtering
+decision.
+
+- `apps.patients.services.ward_tag_overlay.project_patients()` rehydrates tag
+  names, colours, identifiers, lifecycle labels and patient associations from
+  the current catalogue for the bounded patient set of the cached base, using
+  one batched projection per request (no query per patient or per ward).
+  Requester visibility is applied before serialization, so a revocation, a
+  reclassification or a rename is effective on the very next response without
+  waiting for the 20-minute expiry.
+- `apply_filters()` then applies the same `TagFilterSelection` (ANY/ALL,
+  manual/clear/default precedence, legacy `tag=` compatibility) used by the
+  patient list, together with the search and ward predicates. A tag
+  association added or removed after the base was built is reflected
+  immediately, because associations are re-read rather than trusted from the
+  payload.
+- `map_totals()` recomputes the page totals from the rows actually rendered,
+  so the header can never disagree with the filtered tree. Empty wards are
+  included only when the request asks for them.
+
+The empty states are deliberately distinguishable in the page:
+
+- **Empty result** — the filters match no inpatient: "Nenhum paciente
+  encontrado" plus a clear-filters action.
+- **Invalid automatic default** — the saved or principal tag is unavailable: a
+  generic warning, no tag predicate, patients still listed.
+- **Invalid manual filter** — a forged, unknown or inaccessible `tags`/`tag`
+  value: `Filtro de tag inválido.`, no rows, no metadata.
+- **Stale base data** — the cache is missing or older than 20 minutes: "Dados
+  sendo atualizados" plus the updating fallback.
+
+Map eligibility stays **INPATIENT with a ward**, as written by the background
+command. A tag associated only with outpatients therefore yields zero map rows
+with matching totals while the patient list can still return those patients.
+Refreshing the map is a plain GET reload that retains the query parameters; it
+never triggers a cache rebuild or a management command.
 
 ### get_cache_status()
 
@@ -227,9 +282,9 @@ The dashboard view now uses cached data with automatic fallback:
 @login_required
 def dashboard_view(request):
     from apps.core.utils.cache import get_cached_dashboard_stats
-    
+
     dashboard_data = get_cached_dashboard_stats()
-    
+
     if dashboard_data['from_cache']:
         # Use cached data - fast response
         context = {
@@ -246,24 +301,30 @@ def dashboard_view(request):
 
 ### Ward Patient Map View
 
-The ward mapping view supports client-side filtering:
+The ward mapping view resolves the shared tag filter state and hands a
+`WardMapFilters` object to the cache utility:
 
 ```python
 class WardPatientMapView(TemplateView):
     def get_context_data(self, **kwargs):
         from apps.core.utils.cache import get_cached_ward_mapping
-        
-        # Apply filters from GET parameters
-        filters = {
-            'q': self.request.GET.get('q'),
-            'ward': self.request.GET.get('ward'),
-            'tag': self.request.GET.get('tag')
-        }
-        
-        ward_data = get_cached_ward_mapping(filters)
+
+        preference = tag_preferences.resolve_request_state(
+            self.request.user, self.request.GET
+        )
+        filters = ward_tag_overlay.WardMapFilters(
+            selection=preference.selection,
+            search_query=self.request.GET.get('q', '').strip(),
+            ward_id=self.request.GET.get('ward', '').strip(),
+            show_empty_wards=self.request.GET.get('show_empty_wards') == 'true',
+        )
+
+        ward_data = get_cached_ward_mapping(filters, viewer=self.request.user)
         return {
             'ward_data': ward_data['ward_data'],
-            'updating': ward_data.get('updating', False)
+            'total_patients': ward_data['total_patients'],
+            'total_wards': ward_data['total_wards'],
+            'updating': ward_data.get('updating', False),
         }
 ```
 
@@ -277,17 +338,15 @@ Add updating indicators to dashboard templates:
 <!-- Show updating indicator -->
 {% if updating %}
 <div class="alert alert-info">
-    <i class="bi bi-arrow-clockwise me-2"></i>
-    Dados sendo atualizados... Recarregue a página em alguns minutos.
+  <i class="bi bi-arrow-clockwise me-2"></i>
+  Dados sendo atualizados... Recarregue a página em alguns minutos.
 </div>
 {% endif %}
 
 <!-- Patient counts -->
 <div class="col">
-    <div class="h4 mb-0 text-medical-primary">
-        {{ total_patients }}
-    </div>
-    <small class="text-muted">Pacientes</small>
+  <div class="h4 mb-0 text-medical-primary">{{ total_patients }}</div>
+  <small class="text-muted">Pacientes</small>
 </div>
 ```
 
@@ -297,17 +356,22 @@ Add refresh functionality:
 
 ```html
 <!-- Refresh button -->
-<button type="button" class="btn btn-outline-primary" id="refresh-data" title="Atualizar dados">
-    <i class="bi bi-arrow-clockwise"></i>
-    {% if updating %}Atualizando...{% endif %}
+<button
+  type="button"
+  class="btn btn-outline-primary"
+  id="refresh-data"
+  title="Atualizar dados"
+>
+  <i class="bi bi-arrow-clockwise"></i>
+  {% if updating %}Atualizando...{% endif %}
 </button>
 
 <!-- Auto-refresh script -->
 <script>
-{% if updating %}
-// Auto refresh every 5 minutes if showing "updating" state
-setTimeout(() => location.reload(), 300000);
-{% endif %}
+  {% if updating %}
+  // Auto refresh every 5 minutes if showing "updating" state
+  setTimeout(() => location.reload(), 300000);
+  {% endif %}
 </script>
 ```
 
@@ -318,8 +382,10 @@ setTimeout(() => location.reload(), 300000);
 Set up automated health checks:
 
 ```bash
+<!-- markdownlint-disable MD013 -- crontab line cannot be wrapped -->
 # Add to cron for monitoring
 */15 * * * * cd /home/carlos/projects/eqmd && docker compose exec web python manage.py check_cache_health --verbose >> /var/log/eqmd/cache_health.log 2>&1
+<!-- markdownlint-enable MD013 -->
 ```
 
 ### Manual Cache Refresh
@@ -360,8 +426,10 @@ docker compose exec web python manage.py update_ward_mapping_cache --force
 
 **2. "Updating" message persists:**
 
-- Run health check: `docker compose exec web python manage.py check_cache_health`
-- Force refresh: `docker compose exec web python manage.py update_dashboard_stats --force`
+- Run health check:
+  `docker compose exec web python manage.py check_cache_health`
+- Force refresh:
+  `docker compose exec web python manage.py update_dashboard_stats --force`
 - Check command logs for errors
 
 **3. Performance not improved:**
@@ -398,13 +466,15 @@ dashboard_data = get_cached_dashboard_stats()
 print(f"From cache: {dashboard_data['from_cache']}")
 print(f"Total patients: {dashboard_data['stats']['total_patients']}")
 
-# Test ward mapping cache  
+# Test ward mapping cache
 ward_data = get_cached_ward_mapping()
 print(f"Total wards: {ward_data['total_wards']}")
 
 # Test filtering
-filtered_data = get_cached_ward_mapping({'ward': 'some-ward-id'})
-print(f"Filtered wards: {len(filtered_data['ward_data'])}")
+from apps.patients.services import tag_filters, ward_tag_overlay
+filters = ward_tag_overlay.WardMapFilters(selection=tag_filters.TagFilterSelection())
+filtered_data = get_cached_ward_mapping(filters, viewer=user)
+print(f"Filtered patients: {filtered_data['total_patients']}")
 ```
 
 ## Data Staleness Policy
@@ -428,7 +498,9 @@ print(f"Filtered wards: {len(filtered_data['ward_data'])}")
 1. Deploy code with cache models
 2. Run migrations: `docker compose exec web python manage.py migrate`
 3. Set up cron jobs for cache refresh
-4. Run initial cache population: `docker compose exec web python manage.py update_dashboard_stats --force && docker compose exec web python manage.py update_ward_mapping_cache --force`
+4. Run initial cache population:
+   `docker compose exec web python manage.py update_dashboard_stats --force &&
+docker compose exec web python manage.py update_ward_mapping_cache --force`
 5. Verify health: `docker compose exec web python manage.py check_cache_health`
 
 ### Rolling Updates

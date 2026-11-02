@@ -19,7 +19,7 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import ExtractDay
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -87,10 +87,68 @@ from .services import (
     tag_filters,
     tag_policy,
     tag_projection,
+    ward_tag_overlay,
 )
 from .services.patient_identity import RECORD_NUMBER_DELETE_MESSAGE
 from .services.tag_assignments import TagAssignmentRejected, TagNotAssociated
 from .validators import TEMPORARY_RECORD_PREFIX
+
+
+def _tag_filter_context(
+    request: HttpRequest,
+    preference: tag_preferences.TagPreferenceState,
+    *,
+    page_url: str,
+) -> dict[str, Any]:
+    """Return the tag-filter context shared by the patient list and the map.
+
+    One selection/default contract serves both surfaces (S7/S8/S9): the same
+    resolved state, requester-visible option list, badge-removal links,
+    clear/reapply queries and explicit-save destination. Automatic defaults
+    stay out of the canonical query so refresh and result links recompute them
+    from the retained preference, while manual state keeps round-tripping
+    explicitly.
+    """
+    selection = preference.selection
+    query = request.GET
+    available_tags = tag_projection.filter_tag_options(request.user)
+    reapply_query = tag_filters.effective_query(
+        query, tag_filters.TagFilterSelection()
+    ).urlencode()
+    return {
+        "tag_selection": selection,
+        "tag_filter_is_manual": selection.is_manual,
+        "tag_filter_mode": selection.mode,
+        "tag_filter_mode_label": selection.mode_label,
+        "tag_filter_state_label": selection.state_label,
+        "selected_tag_ids": selection.tag_ids,
+        "available_tags": available_tags,
+        # Selected identities outside the option list (visible historical rows
+        # reached through the explicit lookup) still need a native option so a
+        # no-JavaScript resubmit preserves them.
+        "available_tag_ids": [tag.tag_id for tag in available_tags],
+        "selected_tags": [
+            {
+                "badge": tag_projection.tag_badge(tag),
+                "remove_querystring": tag_filters.remove_tag_query(
+                    query, selection, tag.pk
+                ),
+            }
+            for tag in selection.tags
+        ],
+        "tag_filter_error": preference.error,
+        "filter_querystring": tag_filters.encoded_query(query, selection),
+        "clear_tags_querystring": tag_filters.manual_empty_query(query, selection),
+        "reapply_tags_querystring": reapply_query,
+        "tag_preference_next": (
+            f"{page_url}?{reapply_query}" if reapply_query else page_url
+        ),
+        "tag_preference_specialty": preference.specialty,
+        "tag_preference_has_saved": preference.has_saved_preference,
+        "tag_preference_warning": preference.warning,
+        "tag_preference_mode": selection.mode,
+        "tag_preference_tags": selection.tag_ids,
+    }
 
 
 class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -147,12 +205,12 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         self.tag_preference = tag_preferences.resolve_request_state(
             self.request.user, self.request.GET
         )
-        self.tag_selection = self.tag_preference.selection
-        self.tag_filter_error = self.tag_preference.error
-        if self.tag_filter_error:
+        if self.tag_preference.error:
             queryset = queryset.none()
         else:
-            queryset = tag_filters.apply_tag_selection(queryset, self.tag_selection)
+            queryset = tag_filters.apply_tag_selection(
+                queryset, self.tag_preference.selection
+            )
 
         # Apply priority ordering: inpatients first, then outpatients, both alphabetically
         from apps.core.permissions.constants import (
@@ -185,65 +243,22 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context["wards"] = Ward.objects.filter(is_active=True).order_by("name")
 
         # Tag filter context (explicit manual state vs initial entry).
-        selection = self.tag_selection
-        context["tag_selection"] = selection
-        context["tag_filter_is_manual"] = selection.is_manual
-        context["tag_filter_mode"] = selection.mode
-        context["tag_filter_mode_label"] = selection.mode_label
-        context["tag_filter_state_label"] = selection.state_label
-        context["selected_tag_ids"] = selection.tag_ids
-        context["available_tags"] = tag_projection.filter_tag_options(
-            self.request.user
-        )
-        # Selected identities outside the option list (visible historical rows
-        # reached through the explicit lookup) still need a native option so a
-        # no-JavaScript resubmit preserves them.
-        context["available_tag_ids"] = [
-            tag.tag_id for tag in context["available_tags"]
-        ]
-        context["selected_tags"] = [
-            {
-                "badge": tag_projection.tag_badge(tag),
-                "remove_querystring": tag_filters.remove_tag_query(
-                    self.request.GET, selection, tag.pk
-                ),
-            }
-            for tag in selection.tags
-        ]
-        context["tag_filter_error"] = getattr(self, "tag_filter_error", "")
-        context["filter_querystring"] = tag_filters.encoded_query(
-            self.request.GET, selection
+        context.update(
+            _tag_filter_context(
+                self.request,
+                self.tag_preference,
+                page_url=reverse("patients:patient_list"),
+            )
         )
         context["search_remove_querystring"] = tag_filters.query_without(
-            self.request.GET, selection, "q"
+            self.request.GET, context["tag_selection"], "q"
         )
         context["status_remove_querystring"] = tag_filters.query_without(
-            self.request.GET, selection, "status"
+            self.request.GET, context["tag_selection"], "status"
         )
         context["admission_remove_querystring"] = tag_filters.query_without(
-            self.request.GET, selection, "admission"
+            self.request.GET, context["tag_selection"], "admission"
         )
-        context["clear_tags_querystring"] = tag_filters.manual_empty_query(
-            self.request.GET, selection
-        )
-        # Automatic defaults stay out of the canonical query so refresh,
-        # pagination and result links recompute them from the retained
-        # preference, while manual state keeps round-tripping explicitly.
-        reapply_query = tag_filters.effective_query(
-            self.request.GET, tag_filters.TagFilterSelection()
-        ).urlencode()
-        list_url = reverse("patients:patient_list")
-        context["reapply_tags_querystring"] = reapply_query
-        context["tag_preference_next"] = (
-            f"{list_url}?{reapply_query}" if reapply_query else list_url
-        )
-        context["tag_preference_specialty"] = self.tag_preference.specialty
-        context["tag_preference_has_saved"] = (
-            self.tag_preference.has_saved_preference
-        )
-        context["tag_preference_warning"] = self.tag_preference.warning
-        context["tag_preference_mode"] = selection.mode
-        context["tag_preference_tags"] = selection.tag_ids
         tag_projection.attach_patient_tag_badges(
             context["patients"], actor=self.request.user
         )
@@ -1747,52 +1762,31 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
         # Get filter parameters
         search_query = self.request.GET.get("q", "").strip()
         ward_filter = self.request.GET.get("ward", "").strip()
-        tag_filter = self.request.GET.get("tag", "").strip()
         show_empty_wards = (
             self.request.GET.get("show_empty_wards", "false").lower() == "true"
         )
 
-        # The legacy single-tag selector must enforce current visibility: an
-        # unknown or unreadable id is a generic error, never a wider placement
-        # of patients on the map (S7 owns multi-tag filtering).
-        tag_filter_error = ""
-        resolved_tag_id = ""
-        if tag_filter:
-            try:
-                resolved_tag = tag_projection.resolve_tag_filter(
-                    self.request.user, tag_filter
-                )
-            except tag_projection.InvalidTagFilter:
-                tag_filter_error = tag_projection.INVALID_TAG_FILTER_MESSAGE
-            else:
-                resolved_tag_id = str(resolved_tag.pk)
-
-        # Build active filters for display
-        active_filters = {}
-        if search_query:
-            active_filters["q"] = search_query
-        if ward_filter:
-            active_filters["ward"] = ward_filter
-        if tag_filter:
-            active_filters["tag"] = tag_filter
-        if show_empty_wards:
-            active_filters["show_empty_wards"] = "true"
-
-        # Get cached ward mapping data with filters applied. Tag metadata in the
-        # shared payload is reprojected for this requester before filtering.
-        filters = (
-            {
-                "q": search_query,
-                "ward": ward_filter,
-                "tag": resolved_tag_id,
-                "show_empty_wards": show_empty_wards,
-            }
-            if any([search_query, ward_filter, resolved_tag_id, show_empty_wards])
-            else {"show_empty_wards": show_empty_wards}
+        # One selection/default contract with the patient list: explicit manual
+        # state wins over the retained specialty preference, which wins over the
+        # principal-tag fallback (design D6). The shared parser also rejects an
+        # unknown or unreadable identity, so a forged filter never widens or
+        # narrows the map.
+        preference = tag_preferences.resolve_request_state(
+            self.request.user, self.request.GET
+        )
+        selection = preference.selection
+        filters = ward_tag_overlay.WardMapFilters(
+            selection=selection,
+            search_query=search_query,
+            ward_id=ward_filter,
+            show_empty_wards=show_empty_wards,
         )
 
+        # The shared cache is a structural base only: tag metadata is reprojected
+        # for this requester before the filters run, and the page totals are
+        # recomputed from the rows that survive them.
         ward_mapping_data = get_cached_ward_mapping(filters, viewer=self.request.user)
-        if tag_filter_error:
+        if preference.error:
             ward_mapping_data["ward_data"] = []
             ward_mapping_data["total_patients"] = 0
             ward_mapping_data["total_wards"] = 0
@@ -1801,19 +1795,35 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
             {
                 "ward_data": ward_mapping_data["ward_data"],
                 "all_wards": ward_mapping_data["all_wards"],
-                "available_tags": ward_mapping_data["available_tags"],
                 "total_patients": ward_mapping_data["total_patients"],
                 "total_wards": ward_mapping_data["total_wards"],
                 "page_title": "Mapa de Pacientes",
-                "active_filters": active_filters,
                 "show_empty_wards": show_empty_wards,
                 "from_cache": ward_mapping_data["from_cache"],
                 "updating": ward_mapping_data.get("updating", False),
-                "tag_filter_error": tag_filter_error,
+                "has_active_filters": bool(
+                    search_query
+                    or ward_filter
+                    or selection.has_predicate
+                    or selection.is_manual
+                ),
+                "search_query": search_query,
+                "ward_filter": ward_filter,
             }
         )
-
-        context["selected_tag"] = resolved_tag_id
+        context.update(
+            _tag_filter_context(
+                self.request,
+                preference,
+                page_url=reverse("patients:patient_map"),
+            )
+        )
+        context["search_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, selection, "q"
+        )
+        context["ward_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, selection, "ward"
+        )
 
         return context
 

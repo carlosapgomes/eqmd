@@ -1,4 +1,20 @@
 {% load static %}
+<div class="d-flex justify-content-end mb-2"
+     data-map-totals
+     data-total-patients="{{ total_patients }}"
+     data-total-wards="{{ total_wards }}">
+  <small class="text-muted">
+    {{ total_patients }} paciente{{ total_patients|pluralize }} ·
+    {{ total_wards }} ala{{ total_wards|pluralize }}
+    {% if has_active_filters %}(resultado filtrado){% endif %}
+  </small>
+</div>
+{% if updating %}
+<div class="alert alert-info py-2" role="status" data-map-updating>
+  <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>
+  Os dados do mapa estão sendo atualizados.
+</div>
+{% endif %}
 {% if ward_data %}
 <div class="ward-tree">
   {% for ward_info in ward_data %}
@@ -115,6 +131,25 @@
   {% endfor %}
 </div>
 {% else %}
+{% if all_wards %}
+{% if tag_filter_error %}
+<div class="text-center py-5" data-map-invalid-filter>
+  <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+  <h4>Filtro de tags inválido</h4>
+  <p class="text-muted">
+    Corrija ou limpe o filtro de tags para ver os pacientes internados.
+  </p>
+</div>
+{% else %}
+<div class="text-center py-5" data-map-empty-results>
+  <i class="bi bi-search display-4 text-muted mb-3"></i>
+  <h4>Nenhum paciente encontrado</h4>
+  <p class="text-muted">
+    Nenhum paciente internado corresponde aos filtros atuais.
+  </p>
+</div>
+{% endif %}
+{% else %}
 <div class="text-center py-5">
   <i class="bi bi-building display-4 text-muted mb-3"></i>
   <h4>Nenhuma ala cadastrada</h4>
@@ -131,4 +166,5 @@
   </a>
   {% endif %}
 </div>
+{% endif %}
 {% endif %}

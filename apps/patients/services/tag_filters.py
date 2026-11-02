@@ -107,6 +107,19 @@ class TagFilterSelection:
             source=SOURCE_MANUAL,
         )
 
+    def matches(self, tag_ids: Iterable[int]) -> bool:
+        """Return whether one association set satisfies this ANY/ALL state.
+
+        In-memory callers (the cached ward map) reuse this predicate so their
+        matching cannot drift from :func:`apply_tag_selection`.
+        """
+        if not self.has_predicate:
+            return True
+        associated = set(tag_ids)
+        if self.mode == MATCH_ALL:
+            return all(tag.pk in associated for tag in self.tags)
+        return any(tag.pk in associated for tag in self.tags)
+
 
 def parse_tag_ids(raw_values: Iterable[object]) -> tuple[int, ...]:
     """Normalise repeated identifier inputs, deduplicating in input order."""

@@ -157,31 +157,6 @@ def filter_tag_options(actor: EqmdCustomUser | None) -> list[TagBadge]:
     return [tag_badge(tag) for tag in queryset]
 
 
-def map_tag_options(actor: EqmdCustomUser | None) -> list[dict[str, object]]:
-    """Return the ward-map tag selector options from the current catalogue."""
-    return [
-        {"id": tag.pk, "name": tag.name, "color": tag.color}
-        for tag in visible_catalogue(actor).order_by("name")
-    ]
-
-
-def resolve_tag_filter(actor: EqmdCustomUser | None, raw_value: str) -> AllowedTag:
-    """Resolve a legacy ``tag=<id>`` value against the visible catalogue.
-
-    Raises :class:`InvalidTagFilter` for a malformed value, an unknown identity
-    and an identity the actor may not read. Callers must render an empty result
-    set plus the generic message instead of silently widening the search.
-    """
-    try:
-        tag_pk = int(str(raw_value).strip())
-    except (TypeError, ValueError) as error:
-        raise InvalidTagFilter(INVALID_TAG_FILTER_MESSAGE) from error
-    tag = visible_catalogue(actor).filter(pk=tag_pk).first()
-    if tag is None:
-        raise InvalidTagFilter(INVALID_TAG_FILTER_MESSAGE)
-    return tag
-
-
 def _association_badge(
     actor: EqmdCustomUser | None,
     association: Tag,

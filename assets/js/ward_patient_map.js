@@ -101,9 +101,18 @@ class WardPatientMap {
     }
 
     checkIfFiltersCleared() {
-        // Check if any filters are active by examining URL parameters
+        // Check if any filters are active by examining URL parameters. Tag
+        // filters (repeated `tags`, `tag_mode`, the manual marker) count too,
+        // so switching tag selections resets the remembered ward expansion.
         const urlParams = new URLSearchParams(window.location.search);
-        const hasActiveFilters = urlParams.get('q') || urlParams.get('ward') || urlParams.get('tag') || urlParams.get('show_empty_wards');
+        const hasActiveFilters =
+            urlParams.get("q") ||
+            urlParams.get("ward") ||
+            urlParams.get("tag") ||
+            urlParams.get("tags") ||
+            urlParams.get("tag_mode") ||
+            urlParams.get("tag_filter") ||
+            urlParams.get("show_empty_wards");
         
         // If no filters are active, clear ward states to return to initial state
         if (!hasActiveFilters) {
@@ -152,20 +161,9 @@ class WardPatientMap {
     }
 }
 
-// Global function for checkbox toggle
-function toggleEmptyWards() {
-    const checkbox = document.getElementById('show-empty-wards');
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    if (checkbox.checked) {
-        urlParams.set('show_empty_wards', 'true');
-    } else {
-        urlParams.delete('show_empty_wards');
-    }
-    
-    // Redirect to the new URL
-    window.location.search = urlParams.toString();
-}
+// The empty-ward checkbox is part of the GET filter form and submits it, so
+// the effective search/ward/tag state survives the reload without a separate
+// URL rewrite.
 
 document.addEventListener("DOMContentLoaded", function() {
     new WardPatientMap();
