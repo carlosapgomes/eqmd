@@ -2,6 +2,7 @@
 {% load static %}
 {% load hospital_tags %}
 {% load permission_tags %}
+{% load team_tags %}
 {% block extra_head %}
 <style>
   /* Ensure body has proper padding for fixed navbar */
@@ -175,6 +176,14 @@
             </a>
           </li>
           {% endif %}
+          {% with led_teams=user|led_teams %}{% if led_teams %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'apps.patients:team_tags' specialty_id=led_teams.0.pk %}">
+              <i class="bi bi-shield-lock"></i>
+              Tags da Equipe
+            </a>
+          </li>
+          {% endif %}{% endwith %}
           {% if perms.patients.view_patient %}
           <li class="nav-item">
             <a class="nav-link" href="{% url 'apps.patients:patient_map' %}">
@@ -379,6 +388,14 @@
             </a>
           </li>
           {% endif %}
+          {% with led_teams=user|led_teams %}{% if led_teams %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'apps.patients:team_tags' specialty_id=led_teams.0.pk %}">
+              <i class="bi bi-shield-lock"></i>
+              Tags da Equipe
+            </a>
+          </li>
+          {% endif %}{% endwith %}
           {% if perms.patients.view_patient %}
           <li class="nav-item">
             <a class="nav-link" href="{% url 'apps.patients:patient_map' %}">

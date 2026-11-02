@@ -23,11 +23,15 @@ Every catalogue tag has three independent attributes:
 
 ## Creating and editing tags
 
-Only administrators manage the catalogue. Use **Django Admin → Tags Permitidas**.
-An operator must be an active Django-admin user and hold the relevant
-`patients.add_allowedtag`, `patients.change_allowedtag` or
-`patients.delete_allowedtag` permission. Staff status alone, specialty
-membership and team leadership grant no catalogue authority.
+Administrators manage the whole catalogue through
+**Django Admin → Tags Permitidas**. An operator must be an active Django-admin
+user and hold the relevant `patients.add_allowedtag`,
+`patients.change_allowedtag` or `patients.delete_allowedtag` permission. Staff
+status alone, specialty membership and team leadership grant no administrative
+catalogue authority.
+
+Team leaders additionally maintain their own team's custom restricted tags on
+the leader page described below; that page never grants Django Admin access.
 
 The creator (`created_by`) is set from the authenticated administrator and is
 read-only afterwards; edits record the acting administrator in `updated_by`.
@@ -85,8 +89,42 @@ with actor, time and both leaders.
 A responsible leader may edit descriptive fields and deactivate/reactivate
 their own custom restricted tag in a team they actively lead. Archival,
 restoration, transfer, classification, namespace and responsibility changes
-remain administrator-only. The leader-facing page is delivered by a later
-slice; the server-side policy already enforces these limits.
+remain administrator-only: the leader page described below exposes no
+administrative action URL, and archive, restore, transfer and delete stay
+available only through Django Admin.
+
+## Leader team tag page
+
+A current team leader reaches the page from the navigation entry
+**Tags da Equipe**, or directly at `/patients/tags/team/<specialty-id>/`. The
+team is always explicit in the URL and never changes the user's active
+specialty context.
+
+What a leader can do there:
+
+- create a tag, which is always stored as `custom` + `restricted` in that
+  team's namespace, with the acting leader as `created_by` and
+  `responsible_user`;
+- edit the name, description and colour of a tag they are currently
+  responsible for;
+- deactivate and reactivate their own tag, with the actor and time recorded.
+
+What the page never allows, for leaders:
+
+- choosing origin, visibility, namespace or responsibility — the server derives
+  them, so forged POST values are ignored;
+- creating a public, system or global tag, or a tag in a team they do not lead;
+- archiving, restoring, transferring responsibility or deleting a tag;
+- managing another leader's tag, a former responsible leader's tag, or a tag of
+  another team (the request is denied with no catalogue or history change).
+
+Eligibility is evaluated on every request: revoking membership or leadership
+removes page access and the navigation entry on the next response, without
+logging out. Names remain reserved per namespace across active, inactive and
+archived tags, so a new team tag cannot reuse an archived name with case or
+space variations. The page shows only the addressed team's restricted tags,
+each with its lifecycle label (`Ativa`, `Inativa`, `Arquivada`) and its current
+responsible leader.
 
 ## Reserved names
 
@@ -189,8 +227,10 @@ requirements.
 ## Current limitation
 
 Lifecycle, responsibility, assignment policy, atomic audited writes, stable
-event references and requester-aware read privacy are delivered together. The
-leader self-service page, searchable multi-tag filtering, per-specialty
-preferences and final map parity/totals are delivered by later slices. Do not
-deploy intermediate slices or create production restricted catalogue data before
-the release review covering those slices.
+event references, requester-aware read privacy and the leader team tag page are
+delivered together. Searchable multi-tag filtering, per-specialty preferences
+and final map parity/totals are delivered by later slices. Team roster and
+membership administration stay in **Django Admin → Especialidades dos
+Usuários**; the leader page never manages memberships. Do not deploy
+intermediate slices or create production restricted catalogue data before the
+release review covering those slices.

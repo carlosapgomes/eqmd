@@ -1,0 +1,120 @@
+{% extends "patients/patient_base.html" %}
+{% block title %}Tags da Equipe{% endblock %}
+{% block patient_content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <h1 class="h4 text-medical-dark-gray mb-0">
+        <i class="bi bi-shield-lock me-2 text-medical-primary"></i>
+        Tags da Equipe
+        <span class="badge bg-medical-teal ms-2">{{ specialty.abbreviation }}</span>
+      </h1>
+      <a href="{% url 'patients:team_tag_create' specialty_id=specialty.pk %}" class="btn btn-medical-primary">
+        <i class="bi bi-plus-circle me-2"></i>
+        Nova tag da equipe
+      </a>
+    </div>
+
+    {% if led_teams|length > 1 %}
+    <nav class="mb-3" aria-label="Equipes que você lidera">
+      <ul class="nav nav-pills flex-wrap gap-2">
+        {% for team in led_teams %}
+        <li class="nav-item">
+          <a class="nav-link{% if team.pk == specialty.pk %} active{% endif %}"
+             href="{% url 'patients:team_tags' specialty_id=team.pk %}">
+            {{ team.name }} [{{ team.abbreviation }}]
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+    {% endif %}
+
+    <div class="alert alert-info" role="status">
+      <i class="bi bi-info-circle me-2"></i>
+      Você gerencia apenas as tags personalizadas e restritas da equipe
+      <strong>{{ specialty.name }} [{{ specialty.abbreviation }}]</strong> pelas
+      quais é o líder responsável. Origem, visibilidade, equipe, responsabilidade
+      e situação de arquivo são definidas pelo sistema e pela administração.
+    </div>
+
+    {% if team_tag_rows %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Tag</th>
+                <th scope="col" class="d-none d-md-table-cell">Descrição</th>
+                <th scope="col">Situação</th>
+                <th scope="col" class="d-none d-lg-table-cell">Líder responsável</th>
+                <th scope="col" class="text-end">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in team_tag_rows %}
+              <tr>
+                <td>
+                  <span class="badge" style="background-color: {{ row.tag.color }};">{{ row.tag.name }}</span>
+                  <div class="small text-muted d-md-none">{{ row.tag.description|default:"" }}</div>
+                </td>
+                <td class="d-none d-md-table-cell">{{ row.tag.description|default:"—" }}</td>
+                <td>
+                  {% if row.tag.lifecycle_state == "active" %}
+                  <span class="badge bg-success">{{ row.state_label }}</span>
+                  {% elif row.tag.lifecycle_state == "inactive" %}
+                  <span class="badge bg-secondary">{{ row.state_label }}</span>
+                  {% else %}
+                  <span class="badge bg-dark">{{ row.state_label }}</span>
+                  {% endif %}
+                </td>
+                <td class="d-none d-lg-table-cell">{{ row.responsible_name }}</td>
+                <td class="text-end">
+                  {% if row.can_manage %}
+                  <div class="d-flex flex-column flex-sm-row justify-content-sm-end gap-2">
+                    <a href="{% url 'patients:team_tag_edit' specialty_id=specialty.pk pk=row.tag.pk %}"
+                       class="btn btn-sm btn-outline-secondary">
+                      <i class="bi bi-pencil-square me-1"></i>
+                      Editar
+                    </a>
+                    {% if row.tag.lifecycle_state == "active" %}
+                    <form method="post" action="{% url 'patients:team_tag_deactivate' specialty_id=specialty.pk pk=row.tag.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-pause-circle me-1"></i>
+                        Desativar
+                      </button>
+                    </form>
+                    {% elif row.tag.lifecycle_state == "inactive" %}
+                    <form method="post" action="{% url 'patients:team_tag_reactivate' specialty_id=specialty.pk pk=row.tag.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-play-circle me-1"></i>
+                        Reativar
+                      </button>
+                    </form>
+                    {% endif %}
+                  </div>
+                  {% else %}
+                  <span class="text-muted small">Somente leitura</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card shadow-sm">
+      <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-tags display-6 d-block mb-3"></i>
+        Nenhuma tag da equipe cadastrada ainda.
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

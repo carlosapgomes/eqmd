@@ -53,26 +53,97 @@ def require_catalogue_administrator(
         raise PermissionDenied("Catalogue administration permission is missing.")
 
 
-def can_manage_tag(actor: EqmdCustomUser | None, tag: AllowedTag) -> bool:
-    """Return whether a responsible leader may edit/deactivate this tag.
+def is_manageable_by_leader(tag: AllowedTag, *, leader_id: int | None) -> bool:
+    """Return whether this row is a manageable team tag for that leader.
 
-    Leadership alone is insufficient: the actor must be the current responsible
-    leader of the tag's active team and the tag must remain a custom restricted
-    row in that team. Archived rows and authorship confer no authority.
+    Pure catalogue check without membership lookups, so a leader page can
+    decide every row of one team from the leadership it already verified.
+    Archived rows and non-responsible authorship confer no authority.
     """
-    if actor is None or not actor.is_authenticated or not actor.is_active:
-        return False
-    if tag.is_deleted:
+    if leader_id is None or tag.is_deleted:
         return False
     if tag.origin != AllowedTag.Origin.CUSTOM:
         return False
     if tag.visibility != AllowedTag.Visibility.RESTRICTED:
         return False
-    if tag.specialty_id is None or tag.responsible_user_id != actor.pk:
+    if tag.specialty_id is None:
         return False
+    return tag.responsible_user_id == leader_id
+
+
+def can_manage_tag(
+    actor: EqmdCustomUser | None,
+    tag: AllowedTag,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> bool:
+    """Return whether a responsible leader may edit/deactivate this tag.
+
+    Leadership alone is insufficient: the actor must be the current responsible
+    leader of the tag's active team and the tag must remain a custom restricted
+    row in that team. Archived rows and authorship confer no authority. Write
+    paths pass ``locked_memberships`` so leadership is decided from the locked
+    row instead of an unlocked membership read; the page gate reads live state.
+    """
+    if actor is None or not actor.is_authenticated or not actor.is_active:
+        return False
+    if not is_manageable_by_leader(tag, leader_id=actor.pk):
+        return False
+    specialty_id = tag.specialty_id
+    if specialty_id is None:
+        return False
+    if locked_memberships is not None:
+        membership = locked_memberships.get(specialty_id)
+        return (
+            membership is not None
+            and membership.is_leader
+            and _is_active_membership(membership)
+        )
     from apps.accounts.services import team_membership
 
     return team_membership.is_team_leader(actor, tag.specialty)
+
+
+def can_lead_team_catalogue(
+    actor: EqmdCustomUser | None,
+    specialty: MedicalSpecialty | None,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> bool:
+    """Return whether the actor currently leads this team's tag catalogue.
+
+    Write paths pass ``locked_memberships`` so the decision uses the locked row
+    instead of an unlocked membership read; the page gate reads live state.
+    """
+    if actor is None or not actor.is_authenticated or not actor.is_active:
+        return False
+    if specialty is None or not specialty.is_active:
+        return False
+    if locked_memberships is not None:
+        membership = locked_memberships.get(specialty.pk)
+        return (
+            membership is not None
+            and membership.is_leader
+            and _is_active_membership(membership)
+        )
+    from apps.accounts.services import team_membership
+
+    return team_membership.is_team_leader(actor, specialty)
+
+
+def require_team_catalogue_leader(
+    actor: EqmdCustomUser | None,
+    specialty: MedicalSpecialty | None,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> None:
+    """Deny team tag creation to anyone but a current leader of that team."""
+    if not can_lead_team_catalogue(
+        actor, specialty, locked_memberships=locked_memberships
+    ):
+        raise PermissionDenied(
+            "Team tag management requires current leadership of the team."
+        )
 
 
 def require_tag_manager(
@@ -80,9 +151,10 @@ def require_tag_manager(
     tag: AllowedTag,
     *,
     permission: str = CATALOGUE_CHANGE_PERMISSION,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
 ) -> None:
     """Allow the responsible leader or an administrator with the permission."""
-    if can_manage_tag(actor, tag):
+    if can_manage_tag(actor, tag, locked_memberships=locked_memberships):
         return
     require_catalogue_administrator(actor, permission=permission)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING, Final
 
 from django.core.exceptions import ValidationError
@@ -15,7 +16,7 @@ from apps.patients.models import AllowedTag, AllowedTagTransition
 from . import tag_policy
 
 if TYPE_CHECKING:
-    from apps.accounts.models import EqmdCustomUser, MedicalSpecialty
+    from apps.accounts.models import EqmdCustomUser, MedicalSpecialty, UserSpecialty
 
 DEFAULT_TAG_COLOR: Final[str] = "#007bff"
 
@@ -89,6 +90,50 @@ def create_tag(
 
 
 @transaction.atomic
+def create_team_tag(
+    *,
+    actor: EqmdCustomUser,
+    specialty: MedicalSpecialty,
+    name: str,
+    description: str = "",
+    color: str = DEFAULT_TAG_COLOR,
+) -> AllowedTag:
+    """Create a custom restricted tag led by the acting team leader.
+
+    Origin, visibility, namespace and responsibility are derived here, never
+    read from the request, so a forged classification cannot be persisted.
+    The membership row is locked before the name reservation is checked so a
+    concurrent revocation cannot grant a tag to a leader who just lost the
+    team.
+    """
+    tag_policy.require_team_catalogue_leader(actor, specialty)
+    locked_memberships = tag_policy.lock_team_memberships(actor, [specialty.pk])
+    tag_policy.require_team_catalogue_leader(
+        actor, specialty, locked_memberships=locked_memberships
+    )
+    if name_is_reserved(name, specialty_id=specialty.pk):
+        raise ValidationError(
+            {"name": "This name is already reserved in this team namespace."}
+        )
+    tag = AllowedTag(
+        name=name,
+        description=description,
+        color=color,
+        is_active=True,
+        origin=AllowedTag.Origin.CUSTOM,
+        visibility=AllowedTag.Visibility.RESTRICTED,
+        specialty=specialty,
+        responsible_user=actor,
+        created_by=actor,
+        updated_by=actor,
+    )
+    tag.full_clean()
+    tag._change_reason = f"Team tag creation by {actor.username}"
+    tag.save()
+    return tag
+
+
+@transaction.atomic
 def update_tag(
     *,
     actor: EqmdCustomUser,
@@ -148,13 +193,29 @@ def _lock_tag(tag: AllowedTag) -> AllowedTag:
     return AllowedTag.all_objects.select_for_update().get(pk=tag.pk)
 
 
+def _lock_manager_memberships(
+    actor: EqmdCustomUser, tag: AllowedTag
+) -> dict[uuid.UUID, UserSpecialty]:
+    """Lock the actor's membership row for the tag's team before revalidating.
+
+    Leadership must be decided from the locked row inside the same transaction
+    as the catalogue write, so a concurrent revocation cannot commit between an
+    unlocked leadership read and the mutation. Public tags have no team.
+    """
+    if tag.specialty_id is None:
+        return {}
+    return tag_policy.lock_team_memberships(actor, [tag.specialty_id])
+
+
 @transaction.atomic
 def deactivate_tag(
     *, actor: EqmdCustomUser, tag: AllowedTag, reason: str = ""
 ) -> AllowedTag:
     """Move an active tag to the reversible inactive state."""
     locked = _lock_tag(tag)
-    tag_policy.require_tag_manager(actor, locked)
+    tag_policy.require_tag_manager(
+        actor, locked, locked_memberships=_lock_manager_memberships(actor, locked)
+    )
     if locked.is_deleted:
         raise ValidationError("Archived tags cannot be deactivated.")
     if not locked.is_active:
@@ -192,7 +253,9 @@ def reactivate_tag(
 ) -> AllowedTag:
     """Move an inactive tag back to the active state."""
     locked = _lock_tag(tag)
-    tag_policy.require_tag_manager(actor, locked)
+    tag_policy.require_tag_manager(
+        actor, locked, locked_memberships=_lock_manager_memberships(actor, locked)
+    )
     if locked.is_deleted:
         raise ValidationError("Archived tags cannot be reactivated; restore first.")
     if locked.is_active:
@@ -314,7 +377,9 @@ def edit_tag(
 ) -> AllowedTag:
     """Edit descriptive fields for an administrator or responsible leader."""
     locked = _lock_tag(tag)
-    tag_policy.require_tag_manager(actor, locked)
+    tag_policy.require_tag_manager(
+        actor, locked, locked_memberships=_lock_manager_memberships(actor, locked)
+    )
     if locked.is_deleted:
         raise ValidationError("Archived tags cannot be edited.")
     if name is not None:
