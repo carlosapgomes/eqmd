@@ -31,10 +31,10 @@ Contract: `slices/slice-002-prescription-card-duplicate.md`
 
 ## 3. Slice 003 — duplication POST regression coverage (text apps)
 
-- [ ] 3.1 Add POST-creates-an-independent-copy tests for daily note,
+- [x] 3.1 Add POST-creates-an-independent-copy tests for daily note,
       simple note, and history and physical duplication per
       `slices/slice-003-duplication-post-tests.md`.
-- [ ] 3.2 New tests green immediately (coverage slice — any failure is
+- [x] 3.2 New tests green immediately (coverage slice — any failure is
       a bug finding, escalate instead of patching silently).
 
 Contract: `slices/slice-003-duplication-post-tests.md`
