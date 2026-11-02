@@ -15,10 +15,16 @@ def recent_events_widget(context, patient, limit=3):
         return {'recent_events': [], 'patient': patient}
     
     # Get recent events
-    recent_events = Event.objects.filter(
-        patient=patient
-    ).select_subclasses().select_related('created_by').order_by('-created_at')[:limit]
-    
+    recent_events = list(
+        Event.objects.filter(patient=patient)
+        .select_subclasses()
+        .select_related('created_by')
+        .order_by('-created_at')[:limit]
+    )
+    from apps.events.services import tag_audit_presentation
+
+    tag_audit_presentation.attach_tag_audit_presentations(recent_events, viewer=request.user)
+
     return {
         'recent_events': recent_events,
         'patient': patient,

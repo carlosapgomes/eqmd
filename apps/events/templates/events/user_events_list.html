@@ -34,7 +34,7 @@
             <tr>
               <td>{{ event.get_event_type_display }}</td>
               <td>{{ event.event_datetime|date:"d/m/Y H:i" }}</td>
-              <td>{{ event.description }}</td>
+              <td>{{ event.get_display_description }}</td>
               <td>{{ event.patient.name }}</td>
               <td>{{ event.created_at|date:"d/m/Y H:i" }}</td>
             </tr>

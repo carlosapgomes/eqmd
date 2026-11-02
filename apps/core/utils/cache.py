@@ -5,6 +5,7 @@ from django.utils import timezone
 from apps.core.models import DashboardCache, WardMappingCache
 from apps.core.utils.text import normalize_text_for_search
 from datetime import timedelta
+import uuid
 
 
 def get_cached_dashboard_stats():
@@ -88,8 +89,63 @@ def apply_client_side_filters(ward_data, filters):
     return filtered_data
 
 
-def get_cached_ward_mapping(filters=None):
-    """Get ward mapping from cache with optional filtering"""
+def _project_ward_patients(ward_data, *, viewer):
+    """Rebuild cached ward rows with current, requester-visible tag metadata.
+
+    The shared payload is only a structural base (ward, bed, patient id). Tag
+    names, colours, identifiers and associations are re-read from the current
+    catalogue and projected for this viewer (design D7), so revocation and
+    reclassification are effective on the very next request. The cached
+    structure itself is never mutated.
+    """
+    from apps.patients.services import tag_projection
+
+    patient_ids = [
+        patient_info["patient"]["pk"]
+        for ward_info in ward_data
+        for patient_info in ward_info.get("patients", [])
+    ]
+    # Cached identifiers are JSON strings; the projection keys by patient UUID.
+    ids_by_cached_key = {
+        str(raw_id): uuid.UUID(str(raw_id))
+        for raw_id in patient_ids
+        if str(raw_id).strip()
+    }
+    badges_by_patient = tag_projection.patient_tag_badges_by_patient(
+        viewer, list(set(ids_by_cached_key.values()))
+    )
+    projected = []
+    for ward_info in ward_data:
+        ward_copy = dict(ward_info)
+        patients = []
+        for patient_info in ward_info.get("patients", []):
+            patient_copy = dict(patient_info)
+            patient_id = ids_by_cached_key.get(str(patient_info["patient"]["pk"]))
+            patient_copy["tags"] = [
+                {
+                    "allowed_tag": {
+                        "id": badge.tag_id,
+                        "name": badge.name,
+                        "color": badge.color,
+                    },
+                    "state": badge.state,
+                    "state_label": badge.state_label,
+                }
+                for badge in badges_by_patient.get(patient_id, [])
+            ]
+            patients.append(patient_copy)
+        ward_copy["patients"] = patients
+        projected.append(ward_copy)
+    return projected
+
+
+def get_cached_ward_mapping(filters=None, *, viewer=None):
+    """Get ward mapping from cache with optional filtering.
+
+    ``viewer`` is the requesting user: cached tag metadata is replaced by a
+    requester-aware projection before any filtering or serialization. Without
+    a viewer only public tag metadata is readable.
+    """
     try:
         # Get full ward data from cache
         ward_cache = WardMappingCache.objects.get(cache_key='ward_mapping_full')
@@ -97,19 +153,25 @@ def get_cached_ward_mapping(filters=None):
         
         # Check staleness (20 minutes max)
         if (timezone.now() - ward_cache.updated_at).total_seconds() < 1200:
-            ward_data = ward_cache.ward_data
+            # Reproject before filtering: the cached tag payload is not an
+            # authorization decision and stale labels are never trusted.
+            projected_ward_data = _project_ward_patients(
+                ward_cache.ward_data['ward_data'], viewer=viewer
+            )
             
             # Apply filters if provided
-            filtered_ward_data = ward_data['ward_data']
+            filtered_ward_data = projected_ward_data
             if filters:
-                filtered_ward_data = apply_client_side_filters(ward_data['ward_data'], filters)
+                filtered_ward_data = apply_client_side_filters(
+                    projected_ward_data, filters
+                )
             
             return {
                 'ward_data': filtered_ward_data,
-                'total_patients': ward_data['total_patients'],
-                'total_wards': ward_data['total_wards'],
+                'total_patients': ward_cache.ward_data['total_patients'],
+                'total_wards': ward_cache.ward_data['total_wards'],
                 'all_wards': filter_cache.ward_data['all_wards'],
-                'available_tags': filter_cache.ward_data['available_tags'],
+                'available_tags': _project_available_tags(viewer),
                 'from_cache': True
             }
     except WardMappingCache.DoesNotExist:
@@ -121,10 +183,17 @@ def get_cached_ward_mapping(filters=None):
         'total_patients': 0,
         'total_wards': 0,
         'all_wards': [],
-        'available_tags': [],
+        'available_tags': _project_available_tags(viewer),
         'from_cache': False,
         'updating': True
     }
+
+
+def _project_available_tags(viewer):
+    """Return the tag selector options this viewer may currently read."""
+    from apps.patients.services import tag_projection
+
+    return tag_projection.map_tag_options(viewer)
 
 
 def get_cache_status():

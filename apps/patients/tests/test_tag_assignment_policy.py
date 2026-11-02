@@ -428,10 +428,10 @@ class BulkRemovalAuthorizedSetTests(TestCase):
         # tag stays on the caller's clinical mutation baseline.
         self.assertEqual(remaining, [self.cardio_tag.pk])
         self.assertEqual(data["preserved"], 1)
-        self.assertEqual(
-            [item["allowed_tag_id"] for item in data["tags"]],
-            [self.cardio_tag.pk],
-        )
+        # S5: the surviving association belongs to another team's restricted
+        # tag, so the response payload is requester-projected and omits it even
+        # though the association itself is preserved in the database.
+        self.assertEqual([item["allowed_tag_id"] for item in data["tags"]], [])
         event = TagBulkRemoveEvent.objects.get(patient=self.patient)
         self.assertEqual(event.tag_count, 2)
         self.assertEqual(

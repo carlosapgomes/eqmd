@@ -293,6 +293,12 @@
                             {{ total_events }} evento{{ total_events|pluralize }}
                         {% endif %}
                     </p>
+                    {% if patient_tags %}
+                    <div class="mt-2">
+                        <span class="text-muted small me-1">Tags atuais:</span>
+                        {% include "components/_patient_tag_badges.html" with patient_tags=patient_tags element_id="timeline-current-tags-mobile" %}
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <!-- Action Buttons Section -->
@@ -465,6 +471,12 @@
                             {{ total_events }} evento{{ total_events|pluralize }}
                         {% endif %}
                     </p>
+                    {% if patient_tags %}
+                    <div class="mt-2 d-flex flex-wrap align-items-center gap-1">
+                        <span class="text-muted small me-1">Tags atuais:</span>
+                        {% include "components/_patient_tag_badges.html" with patient_tags=patient_tags element_id="timeline-current-tags" %}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="d-flex gap-2">
                     <!-- Create Event Dropdown - Desktop -->

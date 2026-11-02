@@ -143,6 +143,11 @@ them.
 2. Use the tag filter to restrict the list.
 3. Legacy single-tag links remain supported.
 
+The selector lists only tags the requesting user may read, and a forged or
+unknown `?tag=<id>` value returns the generic message `Filtro de tag inválido.`
+with no patients instead of narrowing or widening the list. The ward map applies
+the same rule. Multi-tag filtering is delivered by a later slice.
+
 ## Preflight (read-only)
 
 Before or after applying the additive catalogue migrations, run:
@@ -163,11 +168,29 @@ catalogue tag only when exactly one identity provably carried that name when the
 event happened, using the retained catalogue history. Ambiguous or unresolvable
 legacy events keep their stored content untouched and are never guessed.
 
+## Restricted metadata visibility
+
+Restricted tag names, colours, notes, identifiers and descriptions are readable
+only by current members of the owning active team and by authorized catalogue
+administrators. The union of all active memberships applies, not only the
+selected current specialty, and it is re-evaluated on every request:
+
+- patient list, detail, ward and map badges show only visible associations;
+- add/remove/bulk JSON payloads, counters and tag selectors are projected too;
+- the timeline shows authorized viewers the action-time snapshot, and outsiders
+  only a generic restricted action with the team abbreviation, actor and time;
+- reclassifying a public tag as restricted or revoking a membership applies to
+  the very next response, including responses built from the shared ward cache.
+
+See [tag-privacy-surfaces.md](tag-privacy-surfaces.md) for the complete reader
+inventory, the legacy `?tag=` validation rule and the shared-cache reprojection
+requirements.
+
 ## Current limitation
 
-Lifecycle, responsibility, assignment policy, atomic audited writes and stable
-event references are delivered together. Restricted tag metadata is still **not**
-hidden from every reader: assignment policy and audit immutability do not protect
-names, colors or notes on list, detail, map, filter and timeline surfaces. Do not
-create production restricted catalogue data until the privacy slice closes every
-reader. The leader page is delivered by a later slice.
+Lifecycle, responsibility, assignment policy, atomic audited writes, stable
+event references and requester-aware read privacy are delivered together. The
+leader self-service page, searchable multi-tag filtering, per-specialty
+preferences and final map parity/totals are delivered by later slices. Do not
+deploy intermediate slices or create production restricted catalogue data before
+the release review covering those slices.

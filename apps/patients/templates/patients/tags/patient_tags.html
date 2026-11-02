@@ -1,8 +1,15 @@
+{% comment %}
+  Current patient tags, already projected for the requesting user.
+  ``tags`` holds PatientTagBadge entries; hidden associations are absent.
+{% endcomment %}
 {% if tags %}
 <div class="patient-tags">
   {% for tag in tags %}
-  <span class="badge me-1" style="background-color: {{ tag.allowed_tag.color }}; color: white;">
-    <i class="bi bi-tag-fill me-1"></i>{{ tag.allowed_tag.name }}
+  <span class="badge me-1" style="background-color: {{ tag.color }}; color: white;">
+    <i class="bi bi-tag-fill me-1"></i>{{ tag.name }}
+    {% if tag.state_label %}
+    <span class="badge bg-dark ms-1">{{ tag.state_label }}</span>
+    {% endif %}
   </span>
   {% endfor %}
 </div>

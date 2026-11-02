@@ -10,6 +10,11 @@ them against the retained catalogue history; ambiguous or unresolvable rows stay
 untouched and are never guessed. The same functions are used by the read-only
 preflight command and by the data migration (which passes the historical
 migration models).
+
+Split plan: this module keeps the write paths and the legacy
+classification/backfill helpers the 0007 migration imports; the
+requester-aware projection lives in ``tag_audit_presentation``. If it grows past
+its current size, the legacy resolver moves to ``tag_audit_legacy``.
 """
 
 from __future__ import annotations
@@ -37,6 +42,8 @@ if TYPE_CHECKING:
     from apps.patients.models import Patient
 
 LegacyStatus = Literal["known", "ambiguous", "unresolved"]
+
+UNRESOLVED_TAG_AUDIT_SUMMARY = "Ação de tag não identificada"
 
 
 @dataclass(frozen=True)
@@ -170,28 +177,107 @@ def resolve_legacy_tag(
     Only rows that already carried the name when the event happened count as
     evidence, so a later rename cannot fabricate a match.
     """
-    name = (snapshot_name or "").strip()
-    if not name:
+    resolver = LegacyEventResolver(tags=tags, history=history)
+    return resolver.resolve(snapshot_name=snapshot_name, occurred_at=occurred_at)
+
+
+class LegacyEventResolver:
+    """Classify legacy name snapshots against the retained catalogue history.
+
+    One instance serves a whole page of legacy events, so the catalogue and
+    history lookups are shared instead of repeated per event.
+    """
+
+    def __init__(
+        self,
+        *,
+        tags: QuerySet[AllowedTag] | None = None,
+        history: QuerySet[Any] | None = None,
+    ) -> None:
+        self._tags = tags if tags is not None else AllowedTag.all_objects.all()
+        self._history = (
+            history if history is not None else AllowedTag.history.model.objects.all()
+        )
+        self._candidate_ids: dict[str, set[int]] = {}
+        self._versions: dict[int, list[tuple[datetime, str | None]]] = {}
+
+    def _ids_for_name(self, name: str) -> set[int]:
+        """Return every identity that ever carried this exact name."""
+        cached = self._candidate_ids.get(name)
+        if cached is not None:
+            return cached
+        ids = set(self._tags.filter(name=name).values_list("pk", flat=True))
+        ids |= set(self._history.filter(name=name).values_list("id", flat=True))
+        self._candidate_ids[name] = ids
+        return ids
+
+    def _name_at(self, tag_id: int, occurred_at: datetime | None) -> str | None:
+        """Return the catalogue name this identity held at the action time."""
+        versions = self._versions.get(tag_id)
+        if versions is None:
+            versions = list(
+                self._history.filter(id=tag_id)
+                .order_by("history_date", "pk")
+                .values_list("history_date", "name")
+            )
+            self._versions[tag_id] = versions
+        selected: str | None = None
+        for history_date, name in versions:
+            if occurred_at is not None and history_date > occurred_at:
+                break
+            selected = name
+        return selected
+
+    def resolve(
+        self, *, snapshot_name: str, occurred_at: datetime | None
+    ) -> LegacyTagResolution:
+        """Match one legacy name snapshot to at most one catalogue identity."""
+        name = (snapshot_name or "").strip()
+        if not name:
+            return LegacyTagResolution("unresolved")
+        candidate_ids = self._ids_for_name(name)
+        if not candidate_ids:
+            return LegacyTagResolution("unresolved")
+        confirmed = [
+            tag_id
+            for tag_id in sorted(candidate_ids)
+            if self._name_at(tag_id, occurred_at) == name
+        ]
+        if len(confirmed) == 1:
+            return LegacyTagResolution("known", confirmed[0])
+        if len(confirmed) > 1:
+            return LegacyTagResolution("ambiguous")
         return LegacyTagResolution("unresolved")
-    tag_rows = tags if tags is not None else AllowedTag.all_objects.all()
-    history_rows = (
-        history if history is not None else AllowedTag.history.model.objects.all()
-    )
-    candidate_ids = set(tag_rows.filter(name=name).values_list("pk", flat=True))
-    candidate_ids |= set(history_rows.filter(name=name).values_list("id", flat=True))
-    if not candidate_ids:
-        return LegacyTagResolution("unresolved")
-    confirmed = [
-        tag_id
-        for tag_id in sorted(candidate_ids)
-        if _historical_name(history_rows, tag_id=tag_id, occurred_at=occurred_at)
-        == name
-    ]
-    if len(confirmed) == 1:
-        return LegacyTagResolution("known", confirmed[0])
-    if len(confirmed) > 1:
-        return LegacyTagResolution("ambiguous")
-    return LegacyTagResolution("unresolved")
+
+    def tag(self, tag_id: int) -> AllowedTag | None:
+        """Return the current catalogue row for a resolved identity."""
+        return self._tags.select_related("specialty").filter(pk=tag_id).first()
+
+    def resolve_event(self, event: Any) -> LegacyEventResolution:
+        """Resolve every name snapshot of one legacy tag audit event."""
+        names = legacy_event_names(event)
+        if not names:
+            return LegacyEventResolution("unresolved")
+        resolutions = [
+            self.resolve(
+                snapshot_name=name,
+                occurred_at=getattr(event, "event_datetime", None),
+            )
+            for name in names
+        ]
+        statuses = {resolution.status for resolution in resolutions}
+        if "ambiguous" in statuses:
+            return LegacyEventResolution("ambiguous")
+        if "unresolved" in statuses:
+            return LegacyEventResolution("unresolved")
+        tag_ids = tuple(
+            resolution.tag_id
+            for resolution in resolutions
+            if resolution.tag_id is not None
+        )
+        if len(set(tag_ids)) != len(tag_ids):
+            return LegacyEventResolution("ambiguous")
+        return LegacyEventResolution("known", tag_ids)
 
 
 def historical_version(
@@ -205,18 +291,6 @@ def historical_version(
     return rows.order_by("-history_date", "-pk").first()
 
 
-def _historical_name(
-    history_rows: QuerySet[Any], *, tag_id: int, occurred_at: datetime | None
-) -> str | None:
-    """Return the catalogue name that identity held at the action time."""
-    version = historical_version(
-        tag_id=tag_id, occurred_at=occurred_at, history=history_rows
-    )
-    if version is None:
-        return None
-    return str(version.name) if version.name is not None else None
-
-
 def resolve_legacy_event(
     event: Any,
     *,
@@ -224,29 +298,7 @@ def resolve_legacy_event(
     history: QuerySet[Any] | None = None,
 ) -> LegacyEventResolution:
     """Resolve every name snapshot of one legacy tag audit event."""
-    names = legacy_event_names(event)
-    if not names:
-        return LegacyEventResolution("unresolved")
-    resolutions = [
-        resolve_legacy_tag(
-            snapshot_name=name,
-            occurred_at=getattr(event, "event_datetime", None),
-            tags=tags,
-            history=history,
-        )
-        for name in names
-    ]
-    statuses = {resolution.status for resolution in resolutions}
-    if "ambiguous" in statuses:
-        return LegacyEventResolution("ambiguous")
-    if "unresolved" in statuses:
-        return LegacyEventResolution("unresolved")
-    tag_ids = tuple(
-        resolution.tag_id for resolution in resolutions if resolution.tag_id is not None
-    )
-    if len(set(tag_ids)) != len(tag_ids):
-        return LegacyEventResolution("ambiguous")
-    return LegacyEventResolution("known", tag_ids)
+    return LegacyEventResolver(tags=tags, history=history).resolve_event(event)
 
 
 def _tag_audit_events() -> QuerySet[Event]:
