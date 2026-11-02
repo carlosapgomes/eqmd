@@ -1,0 +1,102 @@
+{% load static %}
+{% comment %}
+Reusable multi-tag selector surface (S7).
+
+Server-rendered state is the contract; `assets/js/tag-selector.js` only
+enhances it into a searchable lookup. Inaccessible catalogue rows are never
+rendered because `available_tags` and `selected_tags` come from the
+requester-aware projection. Selected rows outside `available_tags` (visible
+historical identities) still get a native selected option so a no-JavaScript
+resubmit keeps filtering by them.
+{% endcomment %}
+<div class="tag-filter-controls">
+  <label for="tag-search" class="form-label">
+    <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
+  </label>
+  <div class="tag-selector position-relative"
+       data-tag-selector
+       data-lookup-url="{% url 'apps.patients:tag_lookup' %}">
+    <select id="tag"
+            name="tags"
+            multiple
+            class="form-select form-select-sm"
+            aria-label="Tags"
+            data-tag-native>
+      {% for tag in available_tags %}
+        <option value="{{ tag.tag_id }}"
+                {% if tag.tag_id in selected_tag_ids %}selected{% endif %}>
+          {{ tag.display_name }}{% if tag.state_label %} — {{ tag.state_label }}{% endif %}
+        </option>
+      {% endfor %}
+      {% for selected in selected_tags %}
+        {% if selected.badge.tag_id not in available_tag_ids %}
+          <option value="{{ selected.badge.tag_id }}" selected>
+            {{ selected.badge.display_name }}{% if selected.badge.state_label %} — {{ selected.badge.state_label }}{% endif %}
+          </option>
+        {% endif %}
+      {% endfor %}
+    </select>
+
+    <div class="d-none" data-tag-enhanced>
+      <input type="search"
+             id="tag-search"
+             class="form-control form-control-sm"
+             placeholder="Buscar tag por nome ou equipe..."
+             autocomplete="off"
+             data-tag-search>
+      <div class="d-flex justify-content-between align-items-center mt-1 gap-2">
+        <div class="form-check form-check-inline mb-0">
+          <input class="form-check-input"
+                 type="checkbox"
+                 id="include-historical-tags"
+                 data-tag-historical>
+          <label class="form-check-label small" for="include-historical-tags">
+            Incluir tags antigas
+          </label>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary"
+           href="?{{ clear_tags_querystring }}"
+           data-tag-clear>Limpar tags</a>
+      </div>
+      <div class="d-flex flex-wrap gap-1 mt-2" data-tag-chips>
+        {% for selected in selected_tags %}
+          <span class="badge bg-medical-teal d-inline-flex align-items-center gap-1"
+                data-tag-chip
+                data-tag-id="{{ selected.badge.tag_id }}">
+            {{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}
+            <button type="button"
+                    class="btn-close btn-close-white"
+                    style="font-size: 0.55rem;"
+                    aria-label="Remover {{ selected.badge.display_name }}"
+                    data-tag-remove></button>
+          </span>
+        {% endfor %}
+      </div>
+      <ul class="list-group mt-2 shadow-sm"
+          data-tag-results
+          aria-label="Resultados de tags"
+          hidden></ul>
+      <button type="button"
+              class="btn btn-link btn-sm p-0 mt-1"
+              data-tag-more
+              hidden>Carregar mais</button>
+      <p class="small text-muted mb-0 mt-1" data-tag-status aria-live="polite"></p>
+    </div>
+
+    <div data-tag-hidden-inputs></div>
+    <input type="hidden"
+           name="tag_filter"
+           value="{% if tag_selection.is_manual %}manual{% endif %}"
+           data-tag-marker>
+  </div>
+
+  <div class="d-flex align-items-center justify-content-between mt-1 gap-2">
+    <select name="tag_mode"
+            class="form-select form-select-sm w-auto"
+            aria-label="Modo de correspondência">
+      <option value="any" {% if tag_filter_mode == "any" %}selected{% endif %}>Qualquer tag</option>
+      <option value="all" {% if tag_filter_mode == "all" %}selected{% endif %}>Todas as tags</option>
+    </select>
+    <small class="text-muted text-end" data-tag-state>{{ tag_filter_state_label }}</small>
+  </div>
+</div>

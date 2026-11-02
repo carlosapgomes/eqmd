@@ -80,7 +80,13 @@ from .models import (
     Tag,
     Ward,
 )
-from .services import tag_assignments, tag_catalogue, tag_policy, tag_projection
+from .services import (
+    tag_assignments,
+    tag_catalogue,
+    tag_filters,
+    tag_policy,
+    tag_projection,
+)
 from .services.patient_identity import RECORD_NUMBER_DELETE_MESSAGE
 from .services.tag_assignments import TagAssignmentRejected, TagNotAssociated
 from .validators import TEMPORARY_RECORD_PREFIX
@@ -134,24 +140,22 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         elif admission_filter == "not_admitted":
             queryset = queryset.filter(current_admission_id__isnull=True)
 
-        # Tag filter (legacy single-tag selector; multi-tag filtering is S7).
-        # An inaccessible or unknown id must never narrow or widen the result
-        # set inferentially: it yields the generic message and no rows.
+        # Explicit multi-tag filter state (design D6). Repeated ``tags``,
+        # ANY/ALL mode, the manual-empty marker and the legacy ``tag`` form are
+        # parsed in one shared service. An inaccessible, unknown or malformed
+        # explicit selection always yields the generic message and no rows; it
+        # never falls back to an unfiltered (wider) result set.
         self.tag_filter_error = ""
-        tag_filter = self.request.GET.get("tag", "")
-        if tag_filter:
-            try:
-                filtered_tag = tag_projection.resolve_tag_filter(
-                    self.request.user, tag_filter
-                )
-            except tag_projection.InvalidTagFilter:
-                self.tag_filter_error = tag_projection.INVALID_TAG_FILTER_MESSAGE
-                queryset = queryset.none()
-            else:
-                # Filter patients who have this specific tag assigned
-                queryset = queryset.filter(
-                    patient_tags__allowed_tag_id=filtered_tag.pk
-                ).distinct()
+        self.tag_selection = tag_filters.TagFilterSelection()
+        try:
+            self.tag_selection = tag_filters.parse_tag_selection(
+                self.request.user, self.request.GET
+            )
+        except tag_projection.InvalidTagFilter:
+            self.tag_filter_error = tag_projection.INVALID_TAG_FILTER_MESSAGE
+            queryset = queryset.none()
+        else:
+            queryset = tag_filters.apply_tag_selection(queryset, self.tag_selection)
 
         # Apply priority ordering: inpatients first, then outpatients, both alphabetically
         from apps.core.permissions.constants import (
@@ -183,12 +187,48 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context["status_choices"] = Patient.Status.choices
         context["wards"] = Ward.objects.filter(is_active=True).order_by("name")
 
-        # Tag filter context
-        context["tag_filter"] = self.request.GET.get("tag", "")
+        # Tag filter context (explicit manual state vs initial entry).
+        selection = self.tag_selection
+        context["tag_selection"] = selection
+        context["tag_filter_is_manual"] = selection.is_manual
+        context["tag_filter_mode"] = selection.mode
+        context["tag_filter_mode_label"] = selection.mode_label
+        context["tag_filter_state_label"] = selection.state_label
+        context["selected_tag_ids"] = selection.tag_ids
         context["available_tags"] = tag_projection.filter_tag_options(
             self.request.user
         )
+        # Selected identities outside the option list (visible historical rows
+        # reached through the explicit lookup) still need a native option so a
+        # no-JavaScript resubmit preserves them.
+        context["available_tag_ids"] = [
+            tag.tag_id for tag in context["available_tags"]
+        ]
+        context["selected_tags"] = [
+            {
+                "badge": tag_projection.tag_badge(tag),
+                "remove_querystring": tag_filters.remove_tag_query(
+                    self.request.GET, selection, tag.pk
+                ),
+            }
+            for tag in selection.tags
+        ]
         context["tag_filter_error"] = getattr(self, "tag_filter_error", "")
+        context["filter_querystring"] = tag_filters.encoded_query(
+            self.request.GET, selection
+        )
+        context["search_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, selection, "q"
+        )
+        context["status_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, selection, "status"
+        )
+        context["admission_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, selection, "admission"
+        )
+        context["clear_tags_querystring"] = tag_filters.manual_empty_query(
+            self.request.GET, selection
+        )
         tag_projection.attach_patient_tag_badges(
             context["patients"], actor=self.request.user
         )

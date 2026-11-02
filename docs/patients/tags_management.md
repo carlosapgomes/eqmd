@@ -178,13 +178,33 @@ them.
 ## Using tags for filtering
 
 1. Open **Patients → All Patients**.
-2. Use the tag filter to restrict the list.
-3. Legacy single-tag links remain supported.
+2. Search and select one or more tags in the tag selector.
+3. Choose **Qualquer tag** (ANY) or **Todas as tags** (ALL).
+4. Submit the filter; repeated `tags=<id>` parameters are preserved through
+   refresh, pagination and badge removal.
 
-The selector lists only tags the requesting user may read, and a forged or
-unknown `?tag=<id>` value returns the generic message `Filtro de tag inválido.`
-with no patients instead of narrowing or widening the list. The ward map applies
-the same rule. Multi-tag filtering is delivered by a later slice.
+The selector searches the requester-visible catalogue by tag name or team
+abbreviation. Active visible tags are listed by default. Tick **Incluir tags
+antigas** to search visible inactive/archived tags; historical results are
+labelled with their team abbreviation and state and are offered for filtering
+only, never for new assignment. The lookup endpoint is read-only and has no
+create operation.
+
+Explicit filter state is URL-based:
+
+- `tags=<id>&tags=<id>` selects multiple identities (duplicates are removed);
+- `tag_mode=any` matches at least one selected tag, `tag_mode=all` requires all
+  of them, and other search/status/ward predicates remain conjunctive;
+- `tag_filter=manual` marks an explicit manual selection, including an empty
+  one, and a clear action keeps that marker so the cleared state survives
+  navigation;
+- the legacy `tag=<id>` bookmark remains an explicit ANY single-tag filter, and
+  a present empty `tag=` means an explicitly cleared selection.
+
+HTTP status/name/ward filtering remains conjunctive and patient results stay
+distinct. A forged, unknown or malformed explicit identifier returns the
+generic message `Filtro de tag inválido.` with no patients instead of narrowing
+or widening the list; inaccessible restricted metadata is never echoed.
 
 ## Preflight (read-only)
 
@@ -227,10 +247,11 @@ requirements.
 ## Current limitation
 
 Lifecycle, responsibility, assignment policy, atomic audited writes, stable
-event references, requester-aware read privacy and the leader team tag page are
-delivered together. Searchable multi-tag filtering, per-specialty preferences
-and final map parity/totals are delivered by later slices. Team roster and
-membership administration stay in **Django Admin → Especialidades dos
-Usuários**; the leader page never manages memberships. Do not deploy
-intermediate slices or create production restricted catalogue data before the
-release review covering those slices.
+event references, requester-aware read privacy, the leader team tag page and
+searchable multi-tag patient-list filtering are delivered together. The ward
+map still applies only the legacy single-tag rule; full ANY/ALL map parity,
+filtered totals and per-specialty default preferences are delivered by later
+slices. Team roster and membership administration stay in **Django Admin →
+Especialidades dos Usuários**; the leader page never manages memberships. Do
+not deploy intermediate slices or create production restricted catalogue data
+before the release review covering those slices.
