@@ -2,7 +2,9 @@
 
 ## Overview
 
-The EquipeMed permission system provides simple role-based access control for medical staff in a single-hospital environment. This documentation covers the complete permission framework implementation.
+The EquipeMed permission system provides simple role-based access control for
+medical staff in a single-hospital environment. This documentation covers the
+complete permission framework implementation.
 
 ## Table of Contents
 
@@ -21,7 +23,7 @@ The EquipeMed permission system provides simple role-based access control for me
 
 The permission system is organized into several modules:
 
-```
+```text
 apps/core/permissions/
 ├── __init__.py          # Public API exports
 ├── constants.py         # Permission constants and profession types
@@ -60,18 +62,22 @@ apps/core/permissions/
 **Key Simplifications:**
 
 - **Universal Patient Access**: All medical staff can access all patients
-- **No Hospital Context**: Single hospital environment eliminates hospital-based restrictions
-- **Focus on Role Differences**: Permissions based on medical profession capabilities
+- **No Hospital Context**: Single hospital environment eliminates hospital-based
+  restrictions
+- **Focus on Role Differences**: Permissions based on medical profession
+  capabilities
 
 ## Permission Utilities
 
-The core permission utilities are located in `apps/core/permissions/utils.py` and provide the foundation for all permission checking.
+The core permission utilities are located in `apps/core/permissions/utils.py`
+and provide the foundation for all permission checking.
 
 ### Patient Access Control
 
 #### `can_access_patient(user, patient)`
 
-**Always returns True** - All medical staff can access all patients in the single-hospital environment.
+**Always returns True** - All medical staff can access all patients in the
+single-hospital environment.
 
 ```python
 from apps.core.permissions import can_access_patient
@@ -164,7 +170,8 @@ Permission decorators provide view-level access control and are located in `apps
 
 #### `@patient_access_required`
 
-Validates user access to the specified patient (always passes for authenticated users).
+Validates user access to the specified patient (always passes for authenticated
+users).
 
 ```python
 from apps.core.permissions import patient_access_required
@@ -244,7 +251,8 @@ Template tags for permission checking are located in `apps/core/templatetags/per
 
 ```django
 <!-- Multiple permission checks -->
-{% check_multiple_permissions user "patients.add_patient" "patients.change_patient" as has_all_perms %}
+{% check_multiple_permissions user "patients.add_patient"
+   "patients.change_patient" as has_all_perms %}
 {% if has_all_perms %}
     <p>You have all required permissions</p>
 {% endif %}
@@ -262,23 +270,30 @@ Template tags for permission checking are located in `apps/core/templatetags/per
 <!-- Event deletion permission -->
 {% can_user_delete_event user event as can_delete %}
 {% if can_delete %}
-    <button class="btn btn-danger" onclick="deleteEvent('{{ event.pk }}')">Delete Event</button>
+    <button class="btn btn-danger"
+            onclick="deleteEvent('{{ event.pk }}')">Delete Event</button>
 {% endif %}
 ```
 
 ## Role-Based Permissions
 
-The system automatically assigns users to profession-based groups using Django signals and management commands.
+The system automatically assigns users to profession-based groups using Django
+signals and management commands.
 
 ### Automatic Group Assignment
 
 Users are automatically assigned to groups based on their profession type:
 
 - **Medical Doctors**: Full permissions for all models and operations
-- **Residents**: Full permissions for all models and operations (identical to Medical Doctors)
-- **Nurses**: Extended patient management, can create patients and manage records, full media access, limited status changes, cannot edit personal data, view-only access to history & physicals
-- **Physiotherapists**: View-only patient access, therapy notes documentation only, no patient management
-- **Students**: Supervised learning access, simple notes only, media documentation, view-only for formal records
+- **Residents**: Full permissions for all models and operations (identical to
+  Medical Doctors)
+- **Nurses**: Extended patient management, can create patients and manage
+  records, full media access, limited status changes, cannot edit personal data,
+  view-only access to history & physicals
+- **Physiotherapists**: View-only patient access, therapy notes documentation
+  only, no patient management
+- **Students**: Supervised learning access, simple notes only, media
+  documentation, view-only for formal records
 
 ### Group Setup
 
@@ -292,7 +307,8 @@ uv run python manage.py setup_groups --force
 
 ## Object-Level Permissions
 
-The system implements fine-grained object-level permissions through a custom permission backend.
+The system implements fine-grained object-level permissions through a custom
+permission backend.
 
 ### Supported Object-Level Permissions
 
@@ -310,6 +326,25 @@ if user.has_perm('events.delete_event', event):
     # Only event creator can delete within 24h window
     pass
 ```
+
+### Patient tag visibility permissions
+
+Tag reads are not a Django permission: restricted metadata is visible only to
+current members of the owning active team (the union of all active
+memberships) and to authorized catalogue administrators.
+
+- clinical tag permissions (`patients.*_tag`) gate ordinary patient tag work and
+  never reveal restricted metadata by themselves;
+- administrative permissions (`patients.*_allowedtag`) plus staff status define
+  a catalogue administrator; staff status alone grants nothing;
+- leadership grants management of the responsible leader's own custom
+  restricted tags, not general administrative authority;
+- visibility is re-evaluated on every request, so revocation and
+  reclassification apply to the next response, warm caches included.
+
+See
+[../patients/tag-privacy-surfaces.md](../patients/tag-privacy-surfaces.md) for
+the enforced reader inventory.
 
 ## Management Commands
 
@@ -357,10 +392,12 @@ uv run python manage.py test apps.core.tests.test_permissions.test_simplified_sy
 
 The simplified permission system maintains security while reducing complexity:
 
-- **Universal Patient Access**: All medical staff can access all patients (appropriate for single hospital)
+- **Universal Patient Access**: All medical staff can access all patients
+  (appropriate for single hospital)
 - **Role-Based Restrictions**: Different capabilities based on medical profession
 - **Time-Based Restrictions**: Medical record editing limited to 24-hour windows
-- **Personal Data Protection**: Only doctors/residents can modify sensitive patient data
+- **Personal Data Protection**: Only doctors/residents can modify sensitive
+  patient data
 - **Event Creator Protection**: Only creators can edit/delete their own events
 - **Discharge Protection**: Only doctors/residents can discharge patients
 - **Audit Trail Support**: All permission checks consider timestamps and creators

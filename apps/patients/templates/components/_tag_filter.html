@@ -1,0 +1,21 @@
+{% comment %}
+Patient-list tag filter column (S7/S8).
+
+The selector keeps repeated `tags`, `tag_mode` and `tag_filter=manual` in the
+same GET form as the other predicates. Automatic specialty defaults are
+recomputed from the retained preference and never enter that query, so a
+refresh or pagination keeps applying them. The validation message is generic
+and never echoes a forged identifier. Clear and reapply stay distinct actions:
+clearing keeps the manual marker, while reapply drops every tag parameter.
+{% endcomment %}
+<div class="col-md-3">
+  {% include "components/_tag_selector.html" %}
+</div>
+{% if tag_filter_error %}
+  <div class="col-12">
+    <div class="alert alert-warning mb-0" role="alert">
+      <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+      {{ tag_filter_error }}
+    </div>
+  </div>
+{% endif %}

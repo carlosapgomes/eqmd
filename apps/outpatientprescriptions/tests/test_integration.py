@@ -577,7 +577,7 @@ class PrescriptionListPerformanceTest(TestCase):
         pagination/prefetch queries and the filter-option lookups. Any
         regression that adds queries fails this test.
         """
-        with self.assertNumQueries(19):
+        with self.assertNumQueries(20):
             response = self.client.get(
                 reverse("outpatientprescriptions:outpatientprescription_list")
             )

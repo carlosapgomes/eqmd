@@ -15,7 +15,7 @@
 ❌ Create/edit user accounts  
 ❌ Access Django admin  
 ❌ Modify system settings  
-❌ Create/edit tag templates (AllowedTag)  
+❌ Create/edit tag templates (AllowedTag)
 
 ### Resident
 
@@ -30,7 +30,7 @@
 ❌ Create/edit user accounts  
 ❌ Access Django admin  
 ❌ Modify system settings  
-❌ Create/edit tag templates (AllowedTag)  
+❌ Create/edit tag templates (AllowedTag)
 
 ### Physiotherapist
 
@@ -44,7 +44,7 @@
 ❌ Edit patient personal data  
 ❌ Create/edit user accounts  
 ❌ Access Django admin  
-❌ Modify system settings  
+❌ Modify system settings
 
 ### Nurse
 
@@ -58,7 +58,7 @@
 ❌ Create prescriptions  
 ❌ Edit patient personal data  
 ❌ Manage user accounts  
-❌ Access Django admin  
+❌ Access Django admin
 
 ### Student
 
@@ -72,7 +72,7 @@
 ❌ Create prescriptions  
 ❌ Edit patient personal data  
 ❌ Manage user accounts  
-❌ Access Django admin  
+❌ Access Django admin
 
 ### User Manager (Administrative)
 
@@ -83,7 +83,7 @@
 ❌ Access patient data  
 ❌ View medical events  
 ❌ Access clinical information  
-❌ Modify group permissions  
+❌ Modify group permissions
 
 ### Superuser (IT Administrator)
 
@@ -92,7 +92,32 @@
 ✅ Change status of deceased patients (for data corrections)  
 ✅ Override all permission restrictions  
 ✅ Access Django admin  
-✅ Modify system settings  
+✅ Modify system settings
+
+## Tag permissions and visibility rules
+
+Patient tag operations combine the clinical mutation permission with a per-tag
+check; catalogue administration is a separate administrative authority.
+
+- `patients.view_tag`, `patients.add_tag`, `patients.change_tag` and
+  `patients.delete_tag` are clinical permissions: they gate ordinary patient tag
+  work but never grant restricted metadata by themselves.
+- `patients.add_allowedtag`, `patients.change_allowedtag` and
+  `patients.delete_allowedtag` are administrative permissions. Only staff
+  holding them (or superusers) are catalogue administrators; staff status alone
+  grants nothing.
+- Read visibility of restricted tag metadata requires current membership in the
+  owning active team (the union of all active memberships), or catalogue
+  administrator authority. It is re-evaluated on every request, so a revocation
+  applies to the next response.
+- A restricted tag requires that membership for assignment and removal; a
+  principal tag requires it even though it stays public and filterable; any
+  non-principal public tag keeps the clinical mutation baseline.
+- Leadership grants management of a responsible leader's own custom restricted
+  tags only, never general Django Admin or user-management permissions.
+
+See [../../../docs/patients/tag-privacy-surfaces.md](../../../docs/patients/tag-privacy-surfaces.md)
+for the reader inventory enforced by these rules.
 
 ## Permission Categories
 
@@ -212,30 +237,30 @@ def _get_nurse_permissions(self):
 def _get_physiotherapist_permissions(self):
     """Clinical permissions for physiotherapy work."""
     permissions = []
-    
+
     # Full patient access (same as doctors for therapy needs)
     permissions.extend(self._get_patient_related_permissions())
-    
+
     # Full event management for therapy documentation
     permissions.extend(self._get_event_permissions())
-    
+
     # Medical documentation apps
     permissions.extend(self._get_app_permissions('dailynotes'))
     permissions.extend(self._get_app_permissions('historyandphysicals'))
     permissions.extend(self._get_app_permissions('simplenotes'))
-    
+
     # Media for therapy documentation
     permissions.extend(self._get_app_permissions('mediafiles'))
-    
+
     # PDF forms
     permissions.extend(self._get_app_permissions('pdf_forms'))
-    
+
     # View sample content
     permissions.extend(self._get_view_permissions('sample_content'))
-    
+
     # NO prescriptions (not in physiotherapist scope)
     # NO user management or admin permissions
-    
+
     return permissions
 ```
 
@@ -245,31 +270,31 @@ def _get_physiotherapist_permissions(self):
 def _get_student_permissions(self):
     """Read-only permissions for medical students."""
     permissions = []
-    
+
     # View-only patient access
     permissions.extend(self._get_patient_view_permissions())
-    
-    # View-only event access  
+
+    # View-only event access
     permissions.extend(self._get_event_view_permissions())
-    
+
     # Can create basic notes for learning (with supervision)
     permissions.extend(self._get_app_permissions('dailynotes'))
     permissions.extend(self._get_app_permissions('simplenotes'))
-    
+
     # View medical media
     permissions.extend(self._get_view_permissions('mediafiles'))
-    
+
     # View and fill forms (learning purposes)
     permissions.extend(self._get_view_permissions('pdf_forms'))
     permissions.append('pdf_forms.add_pdfformsubmission')
-    
+
     # View sample content
     permissions.extend(self._get_view_permissions('sample_content'))
-    
+
     # NO prescriptions
     # NO patient management (add/change/delete)
     # NO user management or admin permissions
-    
+
     return permissions
 ```
 

@@ -1,0 +1,28 @@
+{% comment %}
+  Current requester-visible patient tags.
+
+  Expected context:
+    patient_tags – list of PatientTagBadge from
+                   apps.patients.services.tag_projection
+    element_id   – optional HTML id for the wrapper
+
+  Only projections reach this partial: hidden associations are already absent
+  from the payload, so nothing here can reveal a restricted tag. Inactive and
+  archived associations keep an explicit lifecycle label so they stay distinct
+  from the historical add/remove events further down the timeline.
+{% endcomment %}
+<div class="patient-tag-badges d-flex flex-wrap gap-1 align-items-center"
+     {% if element_id %}id="{{ element_id }}"{% endif %}
+     data-current-tag-count="{{ patient_tags|length }}">
+  {% for tag in patient_tags %}
+    <span class="badge"
+          style="background-color: {{ tag.color }}; color: white;"
+          {% if tag.state_label %}data-tag-state="{{ tag.state }}"{% endif %}
+          title="{{ tag.display_name }}">
+      <i class="bi bi-tag-fill me-1" aria-hidden="true"></i>{{ tag.name }}
+      {% if tag.state_label %}
+        <span class="badge bg-dark ms-1">{{ tag.state_label }}</span>
+      {% endif %}
+    </span>
+  {% endfor %}
+</div>

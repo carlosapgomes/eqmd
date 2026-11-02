@@ -1,0 +1,80 @@
+{% extends "base_app.html" %}
+
+{% block app_content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-10 offset-md-1">
+      <div class="card card-medical">
+        <div class="card-header">
+          <h2 class="h4 mb-0">
+            <i class="bi bi-tags me-2 text-medical-primary"></i>
+            Preferências de Tags por Especialidade
+          </h2>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small">
+            As preferências ficam guardadas em cada vínculo com a especialidade e
+            são aplicadas na lista de pacientes. Elas não alteram o acesso aos
+            pacientes. Para alterar uma seleção, use a lista de pacientes e o botão
+            <strong>Salvar como preferência da especialidade ativa</strong>.
+          </p>
+
+          {% if summaries %}
+            <div class="list-group">
+              {% for summary in summaries %}
+                <div class="list-group-item" data-tag-preference-summary>
+                  <div class="d-flex flex-wrap align-items-center gap-2">
+                    <strong>{{ summary.membership.specialty.name }}</strong>
+                    <span class="badge bg-secondary">
+                      {{ summary.membership.specialty.abbreviation }}
+                    </span>
+                    {% if not summary.membership.is_active %}
+                      <span class="badge bg-warning text-dark">
+                        Vínculo inativo (preferências mantidas)
+                      </span>
+                    {% endif %}
+                    {% if summary.membership.is_leader %}
+                      <span class="badge bg-success">Líder</span>
+                    {% endif %}
+                  </div>
+                  <div class="mt-2 small">
+                    {% if summary.has_preference %}
+                      <span class="text-muted">Modo:</span>
+                      <strong data-tag-preference-mode>{{ summary.mode_label }}</strong>
+                      <div class="d-flex flex-wrap gap-1 mt-1">
+                        {% for tag in summary.tags %}
+                          <span class="badge bg-medical-teal">
+                            {{ tag.display_name }}{% if tag.state_label %} ({{ tag.state_label }}){% endif %}
+                          </span>
+                        {% empty %}
+                          <span class="text-muted" data-tag-preference-empty>
+                            Nenhuma tag selecionada (sem filtro de tag)
+                          </span>
+                        {% endfor %}
+                      </div>
+                      {% if summary.omitted_count %}
+                        <p class="text-muted mb-0 mt-1" data-tag-preference-omitted>
+                          Algumas tags salvas estão indisponíveis e serão ignoradas
+                          até serem restauradas.
+                        </p>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted" data-tag-preference-absent>
+                        Sem preferência salva (padrão inicial da especialidade).
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="mb-0" data-tag-preference-none>
+              Nenhum vínculo de especialidade registrado.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock app_content %}

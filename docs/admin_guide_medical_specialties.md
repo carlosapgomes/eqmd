@@ -10,7 +10,8 @@ assign them to users in the EquipeMed system.
 3. [Assigning Specialties to Users](#assigning-specialties-to-users)
 4. [Understanding Primary vs Current Specialty](#understanding-primary-vs-current-specialty)
 5. [Configuring the Team Principal Tag](#configuring-the-team-principal-tag)
-6. [Troubleshooting](#troubleshooting)
+6. [User Tag Filter Preferences](#user-tag-filter-preferences)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -494,6 +495,32 @@ The system has **two concepts** for specialties:
 6. All switches logged in database for audit trail
 
 ---
+
+---
+
+## User Tag Filter Preferences
+
+Each user-specialty membership retains its own tag filter preference (selected
+tags plus `any`/`all` mode). Preferences follow the membership row:
+
+- deactivating a membership or specialty **retains** the saved preference and
+  immediately stops using it for automatic filtering;
+- reactivating the membership reuses the same settings, but leadership must be
+  granted again explicitly;
+- users can save preferences only for the specialty that is currently active
+  for them, through the patient list button **Salvar como preferência da
+  especialidade ativa**; the request is CSRF-protected and validated against
+  the still-current membership;
+- an explicitly saved empty selection means "no tag filter" and suppresses the
+  principal-tag fallback. Before the first save, the specialty's valid
+  principal tag applies with ANY matching;
+- inactive, archived or inaccessible saved tags are omitted with a generic
+  warning; if no tag remains, every otherwise eligible patient is shown. Stored
+  identities are preserved so a reactivated tag applies again.
+
+Users review their retained settings under **Meu Perfil → Preferências de
+Tags**. Administrators do not configure these rows directly; they follow the
+membership lifecycle.
 
 ## Troubleshooting
 

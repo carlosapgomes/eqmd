@@ -63,7 +63,11 @@ Parameters expected:
         <!-- Event Content -->
         <div id="event-{{ event.pk }}-content" class="event-content">
             {% block event_content %}
-            <p class="event-excerpt">{{ event_data.excerpt }}</p>
+            {% if event_data.tag_audit %}
+                {% include "events/partials/event_card_tag_action.html" with tag_audit=event_data.tag_audit %}
+            {% else %}
+                <p class="event-excerpt">{{ event_data.excerpt }}</p>
+            {% endif %}
             {% endblock event_content %}
         </div>
 

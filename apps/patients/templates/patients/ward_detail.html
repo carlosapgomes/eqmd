@@ -181,13 +181,11 @@
                       {{ patient.status|patient_status_badge }}
                     </td>
                     <td>
-                      {% for tag in patient.patient_tags.all %}
-                      <span class="badge me-1" style="background-color: {{ tag.allowed_tag.color }}; color: white;">
-                        {{ tag.allowed_tag.name }}
-                      </span>
-                      {% empty %}
-                      <span class="text-muted">-</span>
-                      {% endfor %}
+                      {% if patient.tag_badges %}
+                        {% include "components/_patient_tag_badges.html" with patient_tags=patient.tag_badges %}
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
                     </td>
                     <td>
                       <div class="btn-group btn-group-sm" role="group">

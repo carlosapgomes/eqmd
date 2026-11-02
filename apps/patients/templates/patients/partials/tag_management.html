@@ -25,15 +25,18 @@
                     <strong class="me-2">Tags Atuais:</strong>
                 </div>
                 <div id="current-tags-container">
-                    {% if patient.patient_tags.all %}
-                        {% for tag in patient.patient_tags.all %}
-                        <div class="tag-item d-inline-flex align-items-center me-2 mb-2" data-tag-id="{{ tag.id }}">
-                            <span class="badge" style="background-color: {{ tag.allowed_tag.color }}; color: white;">
-                                <i class="bi bi-tag-fill me-1"></i>{{ tag.allowed_tag.name }}
-                                {% if can_manage_tags %}
+                    {% if patient_tags %}
+                        {% for tag in patient_tags %}
+                        <div class="tag-item d-inline-flex align-items-center me-2 mb-2" data-tag-id="{{ tag.association_id }}">
+                            <span class="badge" style="background-color: {{ tag.color }}; color: white;">
+                                <i class="bi bi-tag-fill me-1"></i>{{ tag.name }}
+                                {% if tag.state_label %}
+                                <span class="badge bg-dark ms-1">{{ tag.state_label }}</span>
+                                {% endif %}
+                                {% if can_manage_tags and tag.can_remove %}
                                 <button type="button" class="btn btn-sm p-0 ms-1 text-white border-0 bg-transparent remove-tag-btn" 
-                                        data-tag-id="{{ tag.id }}" 
-                                        data-tag-name="{{ tag.allowed_tag.name }}"
+                                        data-tag-id="{{ tag.association_id }}"
+                                        data-tag-name="{{ tag.name }}"
                                         style="font-size: 0.8em; line-height: 1;">
                                     <i class="bi bi-x"></i>
                                 </button>
@@ -60,7 +63,7 @@
                     <i class="bi bi-plus-circle me-1"></i>
                     Adicionar Tag
                 </button>
-                {% if patient.patient_tags.all %}
+                {% if patient_tags %}
                 <button type="button" class="btn btn-sm btn-outline-warning ms-2" 
                         data-bs-toggle="modal" data-bs-target="#manageTagsModal">
                     <i class="bi bi-gear me-1"></i>
@@ -76,7 +79,7 @@
             <div class="col-12">
                 <div class="small text-muted">
                     <i class="bi bi-info-circle me-1"></i>
-                    Total de tags: <span id="tag-count">{{ patient.patient_tags.all|length }}</span>
+                    Total de tags: <span id="tag-count">{{ patient_tags|length }}</span>
                 </div>
             </div>
         </div>
@@ -163,7 +166,7 @@
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Tags Atuais</label>
                         <div class="form-control-plaintext">
-                            <span class="badge bg-secondary">{{ patient.patient_tags.all|length }}</span>
+                            <span class="badge bg-secondary">{{ patient_tags|length }}</span>
                         </div>
                     </div>
                 </div>
@@ -172,22 +175,27 @@
                     <div class="col-12">
                         <h6 class="mb-3">Tags Atribuídas</h6>
                         <div id="assigned-tags-list">
-                            {% for tag in patient.patient_tags.all %}
+                            {% for tag in patient_tags %}
                             <div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2 assigned-tag-item" 
-                                 data-tag-id="{{ tag.id }}">
+                                 data-tag-id="{{ tag.association_id }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="badge me-2" style="background-color: {{ tag.allowed_tag.color }}; color: white;">
-                                        <i class="bi bi-tag-fill me-1"></i>{{ tag.allowed_tag.name }}
+                                    <span class="badge me-2" style="background-color: {{ tag.color }}; color: white;">
+                                        <i class="bi bi-tag-fill me-1"></i>{{ tag.name }}
                                     </span>
+                                    {% if tag.state_label %}
+                                    <span class="badge bg-dark me-2">{{ tag.state_label }}</span>
+                                    {% endif %}
                                     <small class="text-muted">
                                         Atribuída em {{ tag.created_at|date:"d/m/Y H:i" }}
                                     </small>
                                 </div>
+                                {% if tag.can_remove %}
                                 <button type="button" class="btn btn-sm btn-outline-danger remove-assigned-tag-btn" 
-                                        data-tag-id="{{ tag.id }}" data-tag-name="{{ tag.allowed_tag.name }}">
+                                        data-tag-id="{{ tag.association_id }}" data-tag-name="{{ tag.name }}">
                                     <i class="bi bi-trash"></i>
                                     Remover
                                 </button>
+                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
@@ -197,7 +205,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
                 <button type="button" class="btn btn-outline-danger" id="remove-all-tags-btn" 
-                        {% if not patient.patient_tags.all %}disabled{% endif %}>
+                        {% if not patient_tags %}disabled{% endif %}>
                     <i class="bi bi-trash"></i>
                     Remover Tags Autorizadas
                 </button>
@@ -579,7 +587,8 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="tag-item d-inline-flex align-items-center me-2 mb-2" data-tag-id="${tag.id}">
                 <span class="badge" style="background-color: ${tag.color}; color: white;">
                     <i class="bi bi-tag-fill me-1"></i>${tag.name}
-                    ${canManageTags ? `
+                    ${tag.state_label ? `<span class="badge bg-dark ms-1">${tag.state_label}</span>` : ''}
+                    ${canManageTags && tag.can_remove ? `
                     <button type="button" class="btn btn-sm p-0 ms-1 text-white border-0 bg-transparent remove-tag-btn" 
                             data-tag-id="${tag.id}" 
                             data-tag-name="${tag.name}"

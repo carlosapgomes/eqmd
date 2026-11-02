@@ -1,0 +1,73 @@
+{% extends "patients/patient_base.html" %}
+{% block title %}{{ form_title }}{% endblock %}
+{% block patient_content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <h1 class="h4 text-medical-dark-gray mb-0">
+        <i class="bi bi-shield-lock me-2 text-medical-primary"></i>
+        {{ form_title }}
+      </h1>
+      <a href="{% url 'patients:team_tags' specialty_id=specialty.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar para as tags da equipe
+      </a>
+    </div>
+
+    <div class="alert alert-info" role="status">
+      <i class="bi bi-info-circle me-2"></i>
+      A tag será criada como <strong>personalizada e restrita</strong> na equipe
+      <strong>{{ specialty.name }} [{{ specialty.abbreviation }}]</strong>, com você
+      como líder responsável. Origem, visibilidade, equipe, responsabilidade e
+      situação de arquivo não são editáveis por aqui.
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger" role="alert">
+            {{ form.non_field_errors }}
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+            <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label for="{{ form.color.id_for_label }}" class="form-label">{{ form.color.label }}</label>
+            {{ form.color }}
+            {% if form.color.errors %}
+            <div class="invalid-feedback d-block">{{ form.color.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex flex-column flex-sm-row gap-2">
+            <button type="submit" class="btn btn-medical-primary">
+              <i class="bi bi-check2-circle me-2"></i>
+              {{ submit_label }}
+            </button>
+            <a href="{% url 'patients:team_tags' specialty_id=specialty.pk %}" class="btn btn-outline-secondary">
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

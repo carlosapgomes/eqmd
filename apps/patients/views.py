@@ -1,4 +1,5 @@
 from collections import Counter
+from typing import Any
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -18,7 +19,7 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import ExtractDay
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -34,6 +35,7 @@ from django.views.generic import (
     UpdateView,
 )
 
+from apps.accounts.services import tag_preferences
 from apps.core.permissions.decorators import doctor_required
 
 # from apps.hospitals.models import Hospital  # Removed for single-hospital refactor
@@ -79,10 +81,74 @@ from .models import (
     Tag,
     Ward,
 )
-from .services import tag_assignments, tag_catalogue, tag_policy
+from .services import (
+    tag_assignments,
+    tag_catalogue,
+    tag_filters,
+    tag_policy,
+    tag_projection,
+    ward_tag_overlay,
+)
 from .services.patient_identity import RECORD_NUMBER_DELETE_MESSAGE
 from .services.tag_assignments import TagAssignmentRejected, TagNotAssociated
 from .validators import TEMPORARY_RECORD_PREFIX
+
+
+def _tag_filter_context(
+    request: HttpRequest,
+    preference: tag_preferences.TagPreferenceState,
+    *,
+    page_url: str,
+) -> dict[str, Any]:
+    """Return the tag-filter context shared by the patient list and the map.
+
+    One selection/default contract serves both surfaces (S7/S8/S9): the same
+    resolved state, requester-visible option list, badge-removal links,
+    clear/reapply queries and explicit-save destination. Automatic defaults
+    stay out of the canonical query so refresh and result links recompute them
+    from the retained preference, while manual state keeps round-tripping
+    explicitly.
+    """
+    selection = preference.selection
+    query = request.GET
+    available_tags = tag_projection.filter_tag_options(request.user)
+    reapply_query = tag_filters.effective_query(
+        query, tag_filters.TagFilterSelection()
+    ).urlencode()
+    return {
+        "tag_selection": selection,
+        "tag_filter_is_manual": selection.is_manual,
+        "tag_filter_mode": selection.mode,
+        "tag_filter_mode_label": selection.mode_label,
+        "tag_filter_state_label": selection.state_label,
+        "selected_tag_ids": selection.tag_ids,
+        "available_tags": available_tags,
+        # Selected identities outside the option list (visible historical rows
+        # reached through the explicit lookup) still need a native option so a
+        # no-JavaScript resubmit preserves them.
+        "available_tag_ids": [tag.tag_id for tag in available_tags],
+        "selected_tags": [
+            {
+                "badge": tag_projection.tag_badge(tag),
+                "remove_querystring": tag_filters.remove_tag_query(
+                    query, selection, tag.pk
+                ),
+            }
+            for tag in selection.tags
+        ],
+        "tag_filter_error": preference.error,
+        "filter_querystring": tag_filters.encoded_query(query, selection),
+        "clear_tags_querystring": tag_filters.manual_empty_query(query, selection),
+        "reapply_tags_querystring": reapply_query,
+        "tag_preference_next": (
+            f"{page_url}?{reapply_query}" if reapply_query else page_url
+        ),
+        "tag_preference_specialty": preference.specialty,
+        "tag_preference_has_saved": preference.has_saved_preference,
+        "tag_preference_warning": preference.warning,
+        "tag_preference_mode": selection.mode,
+        "tag_preference_tags": selection.tag_ids,
+    }
 
 
 class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -103,9 +169,7 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             queryset = super().get_queryset().none()
 
         # Add optimized select_related and prefetch_related
-        queryset = queryset.select_related("created_by").prefetch_related(
-            "patient_tags__allowed_tag"
-        )
+        queryset = queryset.select_related("created_by")
 
         # Search functionality
         search_query = self.request.GET.get("q", "").strip()
@@ -135,17 +199,18 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         elif admission_filter == "not_admitted":
             queryset = queryset.filter(current_admission_id__isnull=True)
 
-        # Tag filter
-        tag_filter = self.request.GET.get("tag")
-        if tag_filter:
-            try:
-                tag_id = int(tag_filter)
-                # Filter patients who have this specific tag assigned
-                queryset = queryset.filter(
-                    patient_tags__allowed_tag_id=tag_id
-                ).distinct()
-            except (ValueError, TypeError):
-                pass
+        # Explicit manual state wins over the retained specialty preference,
+        # which wins over the principal-tag fallback (design D6). Automatic
+        # defaults are recomputed on every request and never stored on GET.
+        self.tag_preference = tag_preferences.resolve_request_state(
+            self.request.user, self.request.GET
+        )
+        if self.tag_preference.error:
+            queryset = queryset.none()
+        else:
+            queryset = tag_filters.apply_tag_selection(
+                queryset, self.tag_preference.selection
+            )
 
         # Apply priority ordering: inpatients first, then outpatients, both alphabetically
         from apps.core.permissions.constants import (
@@ -177,15 +242,25 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context["status_choices"] = Patient.Status.choices
         context["wards"] = Ward.objects.filter(is_active=True).order_by("name")
 
-        # Tag filter context
-        context["tag_filter"] = self.request.GET.get("tag", "")
-        context["available_tags"] = (
-            AllowedTag.objects.filter(
-                is_active=True,
-                tag_instances__isnull=False,  # Only tags that are actually used
+        # Tag filter context (explicit manual state vs initial entry).
+        context.update(
+            _tag_filter_context(
+                self.request,
+                self.tag_preference,
+                page_url=reverse("patients:patient_list"),
             )
-            .distinct()
-            .order_by("name")
+        )
+        context["search_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, context["tag_selection"], "q"
+        )
+        context["status_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, context["tag_selection"], "status"
+        )
+        context["admission_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, context["tag_selection"], "admission"
+        )
+        tag_projection.attach_patient_tag_badges(
+            context["patients"], actor=self.request.user
         )
 
         return context
@@ -257,13 +332,16 @@ class PatientDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
 
         # Add recent events (last 3)
         from apps.events.models import Event
+        from apps.events.services import tag_audit_presentation
 
-        context["recent_events"] = (
+        recent_events = list(
             Event.objects.filter(patient=patient)
             .select_subclasses()
             .select_related("created_by")
             .order_by("-created_at")[:3]
         )
+        tag_audit_presentation.attach_tag_audit_presentations(recent_events, viewer=self.request.user)
+        context["recent_events"] = recent_events
 
         # Add events count
         context["total_events_count"] = Event.objects.filter(patient=patient).count()
@@ -274,6 +352,9 @@ class PatientDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         )
         context["can_manage_tags"] = can_manage_patient_tags(self.request.user, patient)
         context["can_view_tags"] = can_view_patient_tags(self.request.user, patient)
+        context["patient_tags"] = tag_projection.patient_tag_badges(
+            self.request.user, patient
+        )
 
         # Add record number history
         context["record_numbers"] = patient.record_numbers.all().order_by(
@@ -1137,9 +1218,15 @@ class WardDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         ward = self.get_object()
-        context["current_patients"] = ward.patients.filter(
-            status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY]
-        ).order_by("name")
+        current_patients = list(
+            ward.patients.filter(
+                status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY]
+            ).order_by("name")
+        )
+        tag_projection.attach_patient_tag_badges(
+            current_patients, actor=self.request.user
+        )
+        context["current_patients"] = current_patients
         context["recent_admissions"] = ward.admissions.filter(is_active=True).order_by(
             "-admission_datetime"
         )[:10]
@@ -1408,19 +1495,25 @@ class SetOutpatientView(PatientStatusChangeView):
 # Tag Management Views
 
 
-def _patient_tags_payload(patient: Patient) -> list[dict[str, object]]:
-    """Serialize the patient's current associations for the tag AJAX views."""
-    payload: list[dict[str, object]] = []
-    for patient_tag in patient.patient_tags.select_related("allowed_tag").all():
-        payload.append(
-            {
-                "id": str(patient_tag.id),
-                "name": patient_tag.allowed_tag.name,
-                "color": patient_tag.allowed_tag.color,
-                "allowed_tag_id": patient_tag.allowed_tag.id,
-            }
-        )
-    return payload
+def _patient_tags_payload(
+    actor: Any, patient: Patient
+) -> list[dict[str, object]]:
+    """Serialize the caller's requester-visible associations for the tag views.
+
+    Hidden associations are dropped before serialization: the AJAX responses
+    must not become a way to read another team's restricted metadata.
+    """
+    return [
+        {
+            "id": str(badge.association_id),
+            "name": badge.name,
+            "color": badge.color,
+            "allowed_tag_id": badge.tag_id,
+            "state": badge.state,
+            "state_label": badge.state_label,
+        }
+        for badge in tag_projection.patient_tag_badges(actor, patient)
+    ]
 
 
 class PatientTagAddView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -1475,7 +1568,7 @@ class PatientTagAddView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 {
                     "success": True,
                     "message": f'Tag "{allowed_tag.name}" adicionada com sucesso',
-                    "tags": _patient_tags_payload(patient),
+                    "tags": _patient_tags_payload(request.user, patient),
                 }
             )
 
@@ -1524,7 +1617,7 @@ class PatientTagRemoveView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 {
                     "success": True,
                     "message": f'Tag "{tag_name}" removida com sucesso',
-                    "tags": _patient_tags_payload(patient),
+                    "tags": _patient_tags_payload(request.user, patient),
                 }
             )
 
@@ -1577,7 +1670,7 @@ class PatientTagRemoveAllView(LoginRequiredMixin, PermissionRequiredMixin, View)
                     "message": (
                         f"{len(result.removed)} tag(s) removida(s) com sucesso"
                     ),
-                    "tags": _patient_tags_payload(patient),
+                    "tags": _patient_tags_payload(request.user, patient),
                     "preserved": result.preserved,
                 }
             )
@@ -1617,43 +1710,15 @@ class PatientTagsAPIView(LoginRequiredMixin, View):
             )
 
         try:
-            # Get current patient tags
-            tags_data = []
-            for tag in patient.patient_tags.select_related("allowed_tag").all():
-                tags_data.append(
-                    {
-                        "id": str(tag.id),
-                        "name": tag.allowed_tag.name,
-                        "color": tag.allowed_tag.color,
-                        "allowed_tag_id": tag.allowed_tag.id,
-                        "notes": tag.notes,
-                        "created_at": tag.created_at.isoformat(),
-                        "created_by": tag.created_by.get_full_name()
-                        or tag.created_by.username,
-                    }
-                )
+            # Current associations and assignable options, both projected for
+            # the requester from the current catalogue and team memberships.
+            tags_data = tag_projection.patient_tag_json(request.user, patient)
 
-            # Get available tags (not already assigned) - only if user can manage tags
             available_tags_data = []
             if can_manage_patient_tags(request.user, patient):
-                assigned_allowed_tag_ids = patient.patient_tags.values_list(
-                    "allowed_tag_id", flat=True
+                available_tags_data = tag_projection.available_tag_json(
+                    request.user, patient
                 )
-                available_tags = (
-                    AllowedTag.objects.filter(is_active=True)
-                    .exclude(id__in=assigned_allowed_tag_ids)
-                    .order_by("name")
-                )
-
-                for allowed_tag in available_tags:
-                    available_tags_data.append(
-                        {
-                            "id": allowed_tag.id,
-                            "name": allowed_tag.name,
-                            "color": allowed_tag.color,
-                            "description": allowed_tag.description,
-                        }
-                    )
 
             # Add permission context
             permissions = {
@@ -1697,52 +1762,68 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
         # Get filter parameters
         search_query = self.request.GET.get("q", "").strip()
         ward_filter = self.request.GET.get("ward", "").strip()
-        tag_filter = self.request.GET.get("tag", "").strip()
         show_empty_wards = (
             self.request.GET.get("show_empty_wards", "false").lower() == "true"
         )
 
-        # Build active filters for display
-        active_filters = {}
-        if search_query:
-            active_filters["q"] = search_query
-        if ward_filter:
-            active_filters["ward"] = ward_filter
-        if tag_filter:
-            active_filters["tag"] = tag_filter
-        if show_empty_wards:
-            active_filters["show_empty_wards"] = "true"
-
-        # Get cached ward mapping data with filters applied
-        filters = (
-            {
-                "q": search_query,
-                "ward": ward_filter,
-                "tag": tag_filter,
-                "show_empty_wards": show_empty_wards,
-            }
-            if any([search_query, ward_filter, tag_filter, show_empty_wards])
-            else {"show_empty_wards": show_empty_wards}
+        # One selection/default contract with the patient list: explicit manual
+        # state wins over the retained specialty preference, which wins over the
+        # principal-tag fallback (design D6). The shared parser also rejects an
+        # unknown or unreadable identity, so a forged filter never widens or
+        # narrows the map.
+        preference = tag_preferences.resolve_request_state(
+            self.request.user, self.request.GET
+        )
+        selection = preference.selection
+        filters = ward_tag_overlay.WardMapFilters(
+            selection=selection,
+            search_query=search_query,
+            ward_id=ward_filter,
+            show_empty_wards=show_empty_wards,
         )
 
-        ward_mapping_data = get_cached_ward_mapping(filters)
+        # The shared cache is a structural base only: tag metadata is reprojected
+        # for this requester before the filters run, and the page totals are
+        # recomputed from the rows that survive them.
+        ward_mapping_data = get_cached_ward_mapping(filters, viewer=self.request.user)
+        if preference.error:
+            ward_mapping_data["ward_data"] = []
+            ward_mapping_data["total_patients"] = 0
+            ward_mapping_data["total_wards"] = 0
 
         context.update(
             {
                 "ward_data": ward_mapping_data["ward_data"],
                 "all_wards": ward_mapping_data["all_wards"],
-                "available_tags": ward_mapping_data["available_tags"],
                 "total_patients": ward_mapping_data["total_patients"],
                 "total_wards": ward_mapping_data["total_wards"],
                 "page_title": "Mapa de Pacientes",
-                "active_filters": active_filters,
                 "show_empty_wards": show_empty_wards,
                 "from_cache": ward_mapping_data["from_cache"],
                 "updating": ward_mapping_data.get("updating", False),
+                "has_active_filters": bool(
+                    search_query
+                    or ward_filter
+                    or selection.has_predicate
+                    or selection.is_manual
+                ),
+                "search_query": search_query,
+                "ward_filter": ward_filter,
             }
         )
-
-        context["selected_tag"] = tag_filter
+        context.update(
+            _tag_filter_context(
+                self.request,
+                preference,
+                page_url=reverse("patients:patient_map"),
+            )
+        )
+        context["search_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, selection, "q"
+        )
+        context["ward_remove_querystring"] = tag_filters.query_without(
+            self.request.GET, selection, "ward"
+        )
 
         return context
 

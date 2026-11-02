@@ -24,10 +24,15 @@ from apps.core.permissions.utils import (
     can_edit_discharge_data,
     can_edit_event,
 )
+from apps.dischargereports.services.permissions import (
+    can_delete_discharge_report,
+    can_edit_discharge_report,
+)
 from apps.patients.models import Patient
 from apps.pdf_forms.services.duplication import can_duplicate_pdf_submission
 
 from .models import Event
+from .services import tag_audit_presentation
 
 User = get_user_model()
 
@@ -43,6 +48,7 @@ def patient_events_list(request, patient_id):
     paginator = Paginator(events_list, 10)
     page_number = request.GET.get("page")
     events = paginator.get_page(page_number)
+    tag_audit_presentation.attach_tag_audit_presentations(events, viewer=request.user)
 
     return render(
         request,
@@ -66,6 +72,7 @@ def user_events_list(request):
     paginator = Paginator(events_list, 10)
     page_number = request.GET.get("page")
     events = paginator.get_page(page_number)
+    tag_audit_presentation.attach_tag_audit_presentations(events, viewer=request.user)
 
     return render(
         request,
@@ -178,6 +185,13 @@ class PatientEventsTimelineView(ListView):
         context = super().get_context_data(**kwargs)
         context["patient"] = self.patient
 
+        # Current requester-visible tags for the header badges (design D4/D7).
+        from apps.patients.services import tag_projection
+
+        context["patient_tags"] = tag_projection.patient_tag_badges(
+            self.request.user, self.patient
+        )
+
         # Cache filter options for 5 minutes
         cache_key = f"timeline_filters_{self.patient.pk}"
         filter_data = cache.get(cache_key)
@@ -219,16 +233,37 @@ class PatientEventsTimelineView(ListView):
 
         return context
 
+    def _event_permissions(self, event):
+        """Return ``(can_edit, can_delete)`` for one timeline event.
+
+        Discharge-report events dispatch to the discharge-report service
+        predicate (design D2); every other event type keeps the generic
+        event rules.
+        """
+        if event.event_type == Event.DISCHARGE_REPORT_EVENT:
+            return (
+                can_edit_discharge_report(self.request.user, event),
+                can_delete_discharge_report(self.request.user, event),
+            )
+        return (
+            can_edit_event(self.request.user, event),
+            can_delete_event(self.request.user, event),
+        )
+
     def _bulk_permission_check(self, events):
         """Bulk permission checking to avoid N+1 queries."""
         events_with_permissions = []
+        tag_audit_presentation.attach_tag_audit_presentations(
+            events, viewer=self.request.user
+        )
 
         # Pre-calculate edit permissions for all events
         edit_permissions = {}
         delete_permissions = {}
         for event in events:
-            edit_permissions[event.pk] = can_edit_event(self.request.user, event)
-            delete_permissions[event.pk] = can_delete_event(self.request.user, event)
+            can_edit, can_delete = self._event_permissions(event)
+            edit_permissions[event.pk] = can_edit
+            delete_permissions[event.pk] = can_delete
 
         for event in events:
             event_data = {
@@ -236,6 +271,7 @@ class PatientEventsTimelineView(ListView):
                 "can_edit": edit_permissions.get(event.pk, False),
                 "can_delete": delete_permissions.get(event.pk, False),
                 "excerpt": event.get_excerpt(150),
+                "tag_audit": event.get_tag_audit_presentation(),
             }
 
             # Add PDF form duplicate permission for PDF form events
@@ -332,13 +368,19 @@ def event_api_detail(request, pk):
     if not can_access_patient(request.user, event.patient):
         return JsonResponse({"error": "Permission denied"}, status=403)
 
+    presentation = tag_audit_presentation.project_tag_audit_event(
+        event, viewer=request.user
+    )
+    if presentation is not None:
+        event.tag_audit_presentation = presentation
+
     # Prepare response data
     data = {
         "id": str(event.pk),
         "event_type": event.event_type,
         "event_type_display": event.get_event_type_display(),
         "content": getattr(event, "content", None),
-        "description": getattr(event, "description", None),
+        "description": event.get_display_description(),
         "created_at": event.created_at.isoformat(),
         "created_at_formatted": event.created_at.strftime("%d/%m/%Y %H:%M"),
         "updated_at": event.updated_at.isoformat(),
@@ -352,5 +394,8 @@ def event_api_detail(request, pk):
         if can_edit_event(request.user, event)
         else None,
     }
+
+    if presentation is not None:
+        data["tag_audit"] = tag_audit_presentation.tag_audit_payload(presentation)
 
     return JsonResponse(data)

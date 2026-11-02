@@ -34,7 +34,7 @@
             <tr>
               <td>{{ event.get_event_type_display }}</td>
               <td>{{ event.event_datetime|date:"d/m/Y H:i" }}</td>
-              <td>{{ event.description }}</td>
+              <td>{{ event.get_display_description }}</td>
               <td>
                 {{ event.created_by.get_full_name|default:event.created_by.username }}
               </td>

@@ -1,6 +1,8 @@
 from django.urls import path
-from . import views
+
 from apps.events.views import PatientEventsTimelineView
+
+from . import views, views_tag_filters, views_team_tags
 
 app_name = "apps.patients"
 
@@ -127,12 +129,46 @@ urlpatterns = [
     path("map/", views.WardPatientMapView.as_view(), name="patient_map"),
     # Tag URLs
     path("tags/", views.AllowedTagListView.as_view(), name="tag_list"),
+    # Searchable read-only tag lookup used by the patient-list multi-tag
+    # selector (S7). It has no create/mutation operation.
+    path(
+        "tags/lookup/",
+        views_tag_filters.TagLookupView.as_view(),
+        name="tag_lookup",
+    ),
     path("tags/create/", views.AllowedTagCreateView.as_view(), name="tag_create"),
     path(
         "tags/<int:pk>/update/", views.AllowedTagUpdateView.as_view(), name="tag_update"
     ),
     path(
         "tags/<int:pk>/delete/", views.AllowedTagDeleteView.as_view(), name="tag_delete"
+    ),
+    # Responsible leader team tag page (S6). The team is explicit in the URL and
+    # never changes the user's active specialty.
+    path(
+        "tags/team/<uuid:specialty_id>/",
+        views_team_tags.TeamTagListView.as_view(),
+        name="team_tags",
+    ),
+    path(
+        "tags/team/<uuid:specialty_id>/create/",
+        views_team_tags.TeamTagCreateView.as_view(),
+        name="team_tag_create",
+    ),
+    path(
+        "tags/team/<uuid:specialty_id>/<int:pk>/edit/",
+        views_team_tags.TeamTagEditView.as_view(),
+        name="team_tag_edit",
+    ),
+    path(
+        "tags/team/<uuid:specialty_id>/<int:pk>/deactivate/",
+        views_team_tags.TeamTagDeactivateView.as_view(),
+        name="team_tag_deactivate",
+    ),
+    path(
+        "tags/team/<uuid:specialty_id>/<int:pk>/reactivate/",
+        views_team_tags.TeamTagReactivateView.as_view(),
+        name="team_tag_reactivate",
     ),
     # Patient Tag Management URLs
     path(

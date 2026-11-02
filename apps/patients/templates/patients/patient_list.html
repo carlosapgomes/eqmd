@@ -32,7 +32,7 @@
                    class="form-control" 
                    id="search" 
                    name="q" 
-                   value="{{ request.GET.q|default:'' }}"
+                   value="{{ search_query }}"
                    placeholder="Nome, CPF, cartão SUS...">
           </div>
           
@@ -42,32 +42,18 @@
               <i class="bi bi-activity me-2"></i>Status
             </label>
             <select class="form-select" id="status" name="status">
-              <option value="">Todos os status</option>
-              <option value="1" {% if request.GET.status == "1" %}selected{% endif %}>Ambulatorial</option>
-              <option value="2" {% if request.GET.status == "2" %}selected{% endif %}>Internado</option>
-              <option value="3" {% if request.GET.status == "3" %}selected{% endif %}>Emergência</option>
-              <option value="4" {% if request.GET.status == "4" %}selected{% endif %}>Alta</option>
-              <option value="5" {% if request.GET.status == "5" %}selected{% endif %}>Transferido</option>
-              <option value="6" {% if request.GET.status == "6" %}selected{% endif %}>Óbito</option>
+              <option value="" >Todos os status</option>
+              <option value="1" {% if status_filter == "1" %}selected{% endif %}>Ambulatorial</option>
+              <option value="2" {% if status_filter == "2" %}selected{% endif %}>Internado</option>
+              <option value="3" {% if status_filter == "3" %}selected{% endif %}>Emergência</option>
+              <option value="4" {% if status_filter == "4" %}selected{% endif %}>Alta</option>
+              <option value="5" {% if status_filter == "5" %}selected{% endif %}>Transferido</option>
+              <option value="6" {% if status_filter == "6" %}selected{% endif %}>Óbito</option>
             </select>
           </div>
 
-          <!-- Tag Filter -->
-          <div class="col-md-3">
-            <label for="tag" class="form-label">
-              <i class="bi bi-tags me-2"></i>Tag
-            </label>
-            <select class="form-select" id="tag" name="tag">
-              <option value="">Todas as tags</option>
-              {% for tag in available_tags %}
-                <option value="{{ tag.id }}" 
-                        {% if request.GET.tag == tag.id|stringformat:"s" %}selected{% endif %}
-                        style="background-color: {{ tag.color }}; color: white;">
-                  {{ tag.name }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
+          <!-- Tag Filter (multi-select + searchable lookup, S7) -->
+          {% include "components/_tag_filter.html" %}
           
           <!-- Actions -->
           <div class="col-md-3 d-flex align-items-end">
@@ -81,38 +67,95 @@
             </div>
           </div>
         </form>
-        
+
         <!-- Active Filters Display -->
-        {% if request.GET.q or request.GET.status or request.GET.tag %}
+        {% if search_query or status_filter or tag_selection.has_predicate or tag_filter_is_manual %}
         <div class="mt-3">
           <small class="text-medical-gray">Filtros ativos:</small>
           <div class="d-flex flex-wrap gap-2 mt-1">
-            {% if request.GET.q %}
+            {% if search_query %}
               <span class="badge bg-medical-teal">
-                Busca: "{{ request.GET.q }}"
-                <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}" 
+                Busca: "{{ search_query }}"
+                <a href="?{{ search_remove_querystring }}"
                    class="text-white text-decoration-none ms-1">×</a>
               </span>
             {% endif %}
-            {% if request.GET.status %}
+            {% if status_filter %}
               <span class="badge bg-medical-teal">
-                Status: {% if request.GET.status == "1" %}Ambulatorial{% elif request.GET.status == "2" %}Internado{% elif request.GET.status == "3" %}Emergência{% elif request.GET.status == "4" %}Alta{% elif request.GET.status == "5" %}Transferido{% elif request.GET.status == "6" %}Óbito{% endif %}
-                <a href="?{% if request.GET.q %}q={{ request.GET.q }}{% endif %}{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}" 
+                Status: {% if status_filter == "1" %}Ambulatorial{% elif status_filter == "2" %}Internado{% elif status_filter == "3" %}Emergência{% elif status_filter == "4" %}Alta{% elif status_filter == "5" %}Transferido{% elif status_filter == "6" %}Óbito{% endif %}
+                <a href="?{{ status_remove_querystring }}"
                    class="text-white text-decoration-none ms-1">×</a>
               </span>
             {% endif %}
-            {% if request.GET.tag %}
-              <span class="badge bg-medical-teal">
-                Tag: {% for tag in available_tags %}{% if tag.id|stringformat:"s" == request.GET.tag %}{{ tag.name }}{% endif %}{% endfor %}
-                <a href="?{% if request.GET.q %}q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+            {% for selected in selected_tags %}
+              <span class="badge bg-medical-teal" data-active-tag-badge>
+                {{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}
+                <a href="?{{ selected.remove_querystring }}"
                    class="text-white text-decoration-none ms-1">×</a>
               </span>
+            {% endfor %}
+            {% if tag_filter_is_manual %}
+              <span class="badge bg-secondary" data-tag-mode-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
+              <a href="?{{ clear_tags_querystring }}"
+                 class="badge bg-light text-dark text-decoration-none"
+                 data-clear-tag-filter>Limpar tags</a>
+              {% if tag_preference_specialty %}
+                <a href="?{{ reapply_tags_querystring }}"
+                   class="badge bg-light text-dark text-decoration-none"
+                   data-reapply-tag-preferences>Reaplicar preferências</a>
+              {% endif %}
+            {% elif tag_selection.has_predicate %}
+              <span class="badge bg-secondary" data-tag-default-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
             {% endif %}
           </div>
         </div>
         {% endif %}
       </div>
     </div>
+
+    {% if tag_preference_specialty %}
+      <div class="card card-medical mb-4" data-tag-preference-panel>
+        <div class="card-body d-flex flex-wrap align-items-center gap-3">
+          <div class="me-auto">
+            <div class="small text-muted">
+              Especialidade ativa:
+              <strong data-tag-preference-specialty>{{ tag_preference_specialty.name }}</strong>
+            </div>
+            <div class="small" data-tag-preference-state>
+              {% if tag_preference_has_saved %}Preferência salva em uso{% else %}Sem preferência salva (padrão inicial){% endif %}
+              · {{ tag_filter_mode_label }}
+            </div>
+          </div>
+          <form method="post"
+                action="{% url 'apps.accounts:tag_preference_save' %}"
+                data-tag-preference-form>
+            {% csrf_token %}
+            <input type="hidden" name="specialty_id" value="{{ tag_preference_specialty.pk }}">
+            <input type="hidden" name="tag_mode" value="{{ tag_preference_mode }}" data-tag-preference-mode>
+            <input type="hidden" name="next" value="{{ tag_preference_next }}">
+            <span data-tag-preference-tags>
+              {% for tag_id in tag_preference_tags %}
+                <input type="hidden" name="tags" value="{{ tag_id }}">
+              {% endfor %}
+            </span>
+            <button type="submit" class="btn btn-sm btn-medical-primary">
+              <i class="bi bi-bookmark-check me-1" aria-hidden="true"></i>
+              Salvar como preferência da especialidade ativa
+            </button>
+          </form>
+        </div>
+        {% if tag_preference_warning %}
+          <div class="card-footer bg-transparent">
+            <div class="alert alert-warning mb-0 py-2"
+                 role="alert"
+                 data-tag-preference-warning>
+              <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+              {{ tag_preference_warning }}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
     
     
     {% if patients %}
@@ -159,13 +202,11 @@
                     {% endif %}
                   </td>
                   <td>
-                    {% for tag in patient.patient_tags.all %}
-                    <span class="badge me-1" style="background-color: {{ tag.allowed_tag.color }}; color: white;">
-                      {{ tag.allowed_tag.name }}
-                    </span>
-                    {% empty %}
-                    <span class="text-muted">-</span>
-                    {% endfor %}
+                    {% if patient.tag_badges %}
+                      {% include "components/_patient_tag_badges.html" with patient_tags=patient.tag_badges %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
                   </td>
                   <td>
                     <div class="btn-group btn-group-sm" role="group">
@@ -193,7 +234,7 @@
               <ul class="pagination">
                 {% if page_obj.has_previous %}
                   <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.tag %}tag={{ request.GET.tag }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                    <a class="page-link" href="?{% if filter_querystring %}{{ filter_querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">
                       <i class="bi bi-chevron-left"></i> Anterior
                     </a>
                   </li>
@@ -207,7 +248,7 @@
                 
                 {% if page_obj.has_next %}
                   <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.tag %}tag={{ request.GET.tag }}&{% endif %}page={{ page_obj.next_page_number }}">
+                    <a class="page-link" href="?{% if filter_querystring %}{{ filter_querystring }}&{% endif %}page={{ page_obj.next_page_number }}">
                       Próxima <i class="bi bi-chevron-right"></i>
                     </a>
                   </li>
@@ -233,4 +274,9 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block page_specific_scripts %}
+{{ block.super }}
+<script src="{% static 'js/tag-selector.js' %}" defer></script>
 {% endblock %}

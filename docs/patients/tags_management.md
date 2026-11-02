@@ -23,11 +23,15 @@ Every catalogue tag has three independent attributes:
 
 ## Creating and editing tags
 
-Only administrators manage the catalogue. Use **Django Admin → Tags Permitidas**.
-An operator must be an active Django-admin user and hold the relevant
-`patients.add_allowedtag`, `patients.change_allowedtag` or
-`patients.delete_allowedtag` permission. Staff status alone, specialty
-membership and team leadership grant no catalogue authority.
+Administrators manage the whole catalogue through
+**Django Admin → Tags Permitidas**. An operator must be an active Django-admin
+user and hold the relevant `patients.add_allowedtag`,
+`patients.change_allowedtag` or `patients.delete_allowedtag` permission. Staff
+status alone, specialty membership and team leadership grant no administrative
+catalogue authority.
+
+Team leaders additionally maintain their own team's custom restricted tags on
+the leader page described below; that page never grants Django Admin access.
 
 The creator (`created_by`) is set from the authenticated administrator and is
 read-only afterwards; edits record the acting administrator in `updated_by`.
@@ -85,8 +89,42 @@ with actor, time and both leaders.
 A responsible leader may edit descriptive fields and deactivate/reactivate
 their own custom restricted tag in a team they actively lead. Archival,
 restoration, transfer, classification, namespace and responsibility changes
-remain administrator-only. The leader-facing page is delivered by a later
-slice; the server-side policy already enforces these limits.
+remain administrator-only: the leader page described below exposes no
+administrative action URL, and archive, restore, transfer and delete stay
+available only through Django Admin.
+
+## Leader team tag page
+
+A current team leader reaches the page from the navigation entry
+**Tags da Equipe**, or directly at `/patients/tags/team/<specialty-id>/`. The
+team is always explicit in the URL and never changes the user's active
+specialty context.
+
+What a leader can do there:
+
+- create a tag, which is always stored as `custom` + `restricted` in that
+  team's namespace, with the acting leader as `created_by` and
+  `responsible_user`;
+- edit the name, description and colour of a tag they are currently
+  responsible for;
+- deactivate and reactivate their own tag, with the actor and time recorded.
+
+What the page never allows, for leaders:
+
+- choosing origin, visibility, namespace or responsibility — the server derives
+  them, so forged POST values are ignored;
+- creating a public, system or global tag, or a tag in a team they do not lead;
+- archiving, restoring, transferring responsibility or deleting a tag;
+- managing another leader's tag, a former responsible leader's tag, or a tag of
+  another team (the request is denied with no catalogue or history change).
+
+Eligibility is evaluated on every request: revoking membership or leadership
+removes page access and the navigation entry on the next response, without
+logging out. Names remain reserved per namespace across active, inactive and
+archived tags, so a new team tag cannot reuse an archived name with case or
+space variations. The page shows only the addressed team's restricted tags,
+each with its lifecycle label (`Ativa`, `Inativa`, `Arquivada`) and its current
+responsible leader.
 
 ## Reserved names
 
@@ -140,8 +178,63 @@ them.
 ## Using tags for filtering
 
 1. Open **Patients → All Patients**.
-2. Use the tag filter to restrict the list.
-3. Legacy single-tag links remain supported.
+2. Search and select one or more tags in the tag selector.
+3. Choose **Qualquer tag** (ANY) or **Todas as tags** (ALL).
+4. Submit the filter; repeated `tags=<id>` parameters are preserved through
+   refresh, pagination and badge removal.
+
+The selector searches the requester-visible catalogue by tag name or team
+abbreviation. Active visible tags are listed by default. Tick **Incluir tags
+antigas** to search visible inactive/archived tags; historical results are
+labelled with their team abbreviation and state and are offered for filtering
+only, never for new assignment. The lookup endpoint is read-only and has no
+create operation.
+
+Explicit filter state is URL-based:
+
+- `tags=<id>&tags=<id>` selects multiple identities (duplicates are removed);
+- `tag_mode=any` matches at least one selected tag, `tag_mode=all` requires all
+  of them, and other search/status/ward predicates remain conjunctive;
+- `tag_filter=manual` marks an explicit manual selection, including an empty
+  one, and a clear action keeps that marker so the cleared state survives
+  navigation;
+- the legacy `tag=<id>` bookmark remains an explicit ANY single-tag filter, and
+  a present empty `tag=` means an explicitly cleared selection.
+
+HTTP status/name/ward filtering remains conjunctive and patient results stay
+distinct. A forged, unknown or malformed explicit identifier returns the
+generic message `Filtro de tag inválido.` with no patients instead of narrowing
+or widening the list; inaccessible restricted metadata is never echoed.
+
+### Filtering the ward map
+
+The ward map at **Patients → Mapa de Pacientes** uses the same selector, the
+same `tags`/`tag_mode`/`tag_filter` query parameters and the same saved
+specialty preference as the list. Selecting tags on one surface and opening the
+other keeps the same effective selection, ANY/ALL mode and manual/clear/default
+precedence; the explicit save, clear and reapply actions behave identically on
+both.
+
+Differences are limited to each page's own eligibility and presentation:
+
+- the map only shows **inpatients with a ward**, so a tag associated only with
+  outpatients returns zero map rows (with zero totals) while the list still
+  returns those patients;
+- the header totals and each ward counter are computed from the rows actually
+  rendered after filtering, never from global cached counts;
+- empty wards are included only when **Mostrar alas vazias** is checked, and
+  that control submits the same GET form, so the effective filters survive the
+  reload;
+- the AJAX tree refresh and the refresh button re-request the current URL, so
+  the same filters apply to the partial response.
+
+Map tag metadata and associations are re-read from the current catalogue on
+every request on top of the shared structural cache: renaming, reclassifying,
+revoking a membership or adding/removing an association is visible on the next
+response without rebuilding the cache. Three empty situations are presented
+differently: a filtered zero result ("Nenhum paciente encontrado"), an invalid
+manual tag filter (`Filtro de tag inválido.`) and a stale or missing base cache
+("Dados sendo atualizados").
 
 ## Preflight (read-only)
 
@@ -163,11 +256,69 @@ catalogue tag only when exactly one identity provably carried that name when the
 event happened, using the retained catalogue history. Ambiguous or unresolvable
 legacy events keep their stored content untouched and are never guessed.
 
+## Restricted metadata visibility
+
+Restricted tag names, colours, notes, identifiers and descriptions are readable
+only by current members of the owning active team and by authorized catalogue
+administrators. The union of all active memberships applies, not only the
+selected current specialty, and it is re-evaluated on every request:
+
+- patient list, detail, ward and map badges show only visible associations;
+- add/remove/bulk JSON payloads, counters and tag selectors are projected too;
+- the timeline shows authorized viewers the action-time snapshot, and outsiders
+  only a generic restricted action with the team abbreviation, actor and time;
+- reclassifying a public tag as restricted or revoking a membership applies to
+  the very next response, including responses built from the shared ward cache.
+
+See [tag-privacy-surfaces.md](tag-privacy-surfaces.md) for the complete reader
+inventory, the legacy `?tag=` validation rule and the shared-cache reprojection
+requirements.
+
+## Per-user specialty tag preferences
+
+Filter preferences are stored per retained user-specialty membership, not per
+session or per current selection. The row records the selected catalogue
+identities plus the `any`/`all` matching mode. Its **absence** means "not
+configured yet"; an **existing empty selection** means the user intentionally
+saved no tag filter and must not receive the principal tag again.
+
+On the patient list, the effective state follows this precedence:
+
+1. explicit manual state, including an explicitly empty selection
+   (`tag_filter=manual`, repeated `tags`, `tag_mode`);
+2. the saved preference of the valid active specialty, when one exists;
+3. that specialty's active public principal tag with ANY matching;
+4. no tag predicate, with a generic warning when a configured default exists
+   but is unavailable.
+
+Only explicit save persists a preference. Browsing, clearing and reapplying are
+GET-only state changes: clearing keeps the manual marker (and survives refresh,
+pagination and refresh links), while reapply drops the tag parameters so the
+saved or principal default is recomputed. **Salvar como preferência da
+especialidade ativa** is a CSRF-protected POST limited to the caller's current
+valid specialty; forged or stale specialty targets are denied and no
+preference is written into another team. Only currently visible active tags can
+be saved; historical/inaccessible identities remain usable for manual
+filtering but cannot become automatic defaults.
+
+Automatic defaults are revalidated on every request. Inactive, archived or
+inaccessible saved identities are omitted with the generic warning and the
+remaining tags still apply; if none remain the tag predicate is dropped rather
+than returning no patients. Stored identities are never silently rewritten, so
+reactivating a tag restores it, and revoking membership retains the settings
+without granting access. Rejoining the team reuses the retained preference and
+never restores leadership automatically. The owner can review retained settings
+at **Meu Perfil → Preferências de Tags**.
+
 ## Current limitation
 
-Lifecycle, responsibility, assignment policy, atomic audited writes and stable
-event references are delivered together. Restricted tag metadata is still **not**
-hidden from every reader: assignment policy and audit immutability do not protect
-names, colors or notes on list, detail, map, filter and timeline surfaces. Do not
-create production restricted catalogue data until the privacy slice closes every
-reader. The leader page is delivered by a later slice.
+Lifecycle, responsibility, assignment policy, atomic audited writes, stable
+event references, requester-aware read privacy, the leader team tag page,
+searchable multi-tag filtering on the patient list **and the ward map**, and
+retained per-specialty preferences are delivered together as one release
+candidate. Partial rollout is not supported: the change must be reviewed and
+deployed as a whole, and applying its migrations or deploying any slice to
+production requires separate human approval.
+Team roster and membership administration stay in **Django Admin →
+Especialidades dos Usuários**; the leader page never manages memberships. Do
+not create production restricted catalogue data before that release review.

@@ -13,6 +13,10 @@ TAG_AUDIT_IMMUTABLE_MESSAGE = (
     "Tag audit events are immutable; correct the assignment instead."
 )
 
+# Tag audit descriptions embed action-time tag names, so an event that has not
+# been projected for the current requester falls back to this neutral sentence.
+UNPROJECTED_TAG_AUDIT_SUMMARY = "Ação de tag registrada"
+
 
 class EventQuerySet(SoftDeleteInheritanceQuerySet):
     """Event queryset that refuses deleting immutable tag audit events.
@@ -280,7 +284,7 @@ class Event(SoftDeleteModel):
 
     def get_excerpt(self, max_length=150):
         """Generate a short excerpt from event content."""
-        content = getattr(self, "content", None) or getattr(self, "description", "")
+        content = getattr(self, "content", None) or self.get_display_description()
         if content:
             # Remove HTML tags
             import re
@@ -292,6 +296,24 @@ class Event(SoftDeleteModel):
                 else clean_content
             )
         return "No content available"
+
+    def get_tag_audit_presentation(self):
+        """Return the requester projection attached by the tag audit reader."""
+        return getattr(self, "tag_audit_presentation", None)
+
+    def get_display_description(self) -> str:
+        """Return this event's description as the current requester may read it.
+
+        Tag audit descriptions keep action-time tag names, so without a
+        requester projection they fail closed to a neutral sentence; readers
+        that show detail attach a projection first. No stored value changes.
+        """
+        if self.event_type in self.TAG_AUDIT_EVENT_TYPES:
+            presentation = self.get_tag_audit_presentation()
+            if presentation is None:
+                return UNPROJECTED_TAG_AUDIT_SUMMARY
+            return str(presentation.summary)
+        return str(self.description)
 
     def get_event_type_badge_class(self):
         """Return CSS class for event type badge."""

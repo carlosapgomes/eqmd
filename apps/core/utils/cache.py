@@ -2,9 +2,8 @@
 Cache utility functions for dashboard and ward mapping data
 """
 from django.utils import timezone
+
 from apps.core.models import DashboardCache, WardMappingCache
-from apps.core.utils.text import normalize_text_for_search
-from datetime import timedelta
 
 
 def get_cached_dashboard_stats():
@@ -33,63 +32,17 @@ def get_cached_dashboard_stats():
     }
 
 
-def apply_client_side_filters(ward_data, filters):
-    """Apply filters to ward data on the client side"""
-    if not filters:
-        # Default behavior: hide empty wards unless explicitly requested
-        return [ward_info for ward_info in ward_data if ward_info['patient_count'] > 0]
-        
-    filtered_data = []
-    
-    for ward_info in ward_data:
-        # Ward filter
-        if filters.get('ward') and str(ward_info['ward']['id']) != str(filters['ward']):
-            continue
-            
-        # If we're filtering by tag or search, we need to filter patients within each ward
-        if filters.get('tag') or filters.get('q'):
-            filtered_patients = []
-            
-            for patient_info in ward_info['patients']:
-                # Search filter
-                if filters.get('q'):
-                    search_term = normalize_text_for_search(filters['q'])
-                    patient_name = normalize_text_for_search(
-                        patient_info['patient']['name']
-                    )
-                    patient_bed = normalize_text_for_search(patient_info['bed'])
-                    if search_term not in patient_name and search_term not in patient_bed:
-                        continue
-                
-                # Tag filter
-                if filters.get('tag'):
-                    patient_tags = [str(tag['allowed_tag']['id']) for tag in patient_info['tags']]
-                    if str(filters['tag']) not in patient_tags:
-                        continue
-                
-                filtered_patients.append(patient_info)
-            
-            # Sort filtered patients by bed
-            filtered_patients.sort(key=lambda p: p['bed'])
-            
-            # Update ward info with filtered patients
-            ward_info_copy = ward_info.copy()
-            ward_info_copy['patients'] = filtered_patients
-            ward_info_copy['patient_count'] = len(filtered_patients)
-            
-            # Only include wards that have patients after filtering (unless showing empty wards)
-            if filtered_patients or (not (filters.get('tag') or filters.get('q')) and filters.get('show_empty_wards')):
-                filtered_data.append(ward_info_copy)
-        else:
-            # If not filtering by tag/search, apply empty ward filter
-            if filters.get('show_empty_wards', False) or ward_info['patient_count'] > 0:
-                filtered_data.append(ward_info)
-    
-    return filtered_data
+def get_cached_ward_mapping(filters=None, *, viewer=None):
+    """Get ward mapping from cache with the request filters applied.
 
+    ``viewer`` is the requesting user: cached tag metadata is replaced by a
+    requester-aware projection before any filtering or serialization. Without
+    a viewer only public tag metadata is readable. ``filters`` is a
+    ``ward_tag_overlay.WardMapFilters``; page totals are recomputed from the
+    rows that survive it, never from the shared global counts.
+    """
+    from apps.patients.services import ward_tag_overlay
 
-def get_cached_ward_mapping(filters=None):
-    """Get ward mapping from cache with optional filtering"""
     try:
         # Get full ward data from cache
         ward_cache = WardMappingCache.objects.get(cache_key='ward_mapping_full')
@@ -97,19 +50,21 @@ def get_cached_ward_mapping(filters=None):
         
         # Check staleness (20 minutes max)
         if (timezone.now() - ward_cache.updated_at).total_seconds() < 1200:
-            ward_data = ward_cache.ward_data
-            
-            # Apply filters if provided
-            filtered_ward_data = ward_data['ward_data']
-            if filters:
-                filtered_ward_data = apply_client_side_filters(ward_data['ward_data'], filters)
-            
+            # Reproject before filtering: the cached tag payload is not an
+            # authorization decision and stale labels are never trusted.
+            ward_data = ward_tag_overlay.project_patients(
+                ward_cache.ward_data['ward_data'], actor=viewer
+            )
+            if filters is not None:
+                ward_data = ward_tag_overlay.apply_filters(ward_data, filters)
+            totals = ward_tag_overlay.map_totals(ward_data)
+
             return {
-                'ward_data': filtered_ward_data,
-                'total_patients': ward_data['total_patients'],
-                'total_wards': ward_data['total_wards'],
+                'ward_data': ward_data,
+                'total_patients': totals['total_patients'],
+                'total_wards': totals['total_wards'],
                 'all_wards': filter_cache.ward_data['all_wards'],
-                'available_tags': filter_cache.ward_data['available_tags'],
+                'available_tags': _project_available_tags(viewer),
                 'from_cache': True
             }
     except WardMappingCache.DoesNotExist:
@@ -121,10 +76,17 @@ def get_cached_ward_mapping(filters=None):
         'total_patients': 0,
         'total_wards': 0,
         'all_wards': [],
-        'available_tags': [],
+        'available_tags': _project_available_tags(viewer),
         'from_cache': False,
         'updating': True
     }
+
+
+def _project_available_tags(viewer):
+    """Return the tag selector options this viewer may currently read."""
+    from apps.patients.services import tag_projection
+
+    return tag_projection.filter_tag_options(viewer)
 
 
 def get_cache_status():
