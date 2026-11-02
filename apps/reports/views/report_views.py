@@ -4,15 +4,25 @@ Views for report CRUD.
 from datetime import date, datetime
 
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import (
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    UserPassesTestMixin,
+)
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, UpdateView, DeleteView
 from django.utils import timezone
 
+from apps.core.permissions import can_access_patient
 from apps.patients.models import Patient
 from apps.reports.models import Report
-from apps.reports.forms import ReportCreateForm, ReportUpdateForm
+from apps.reports.forms import (
+    ReportCreateForm,
+    ReportDuplicateForm,
+    ReportUpdateForm,
+)
 from apps.reports.services.report_service import get_template_for_initial_content
 
 
@@ -171,4 +181,58 @@ class ReportCreateView(LoginRequiredMixin, CreateView):
         return reverse(
             'patients:patient_events_timeline',
             kwargs={'patient_id': self.patient.pk}
+        )
+
+
+class ReportDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """Duplicate an existing report into a new, independent report."""
+
+    model = Report
+    form_class = ReportDuplicateForm
+    template_name = 'reports/report_duplicate_form.html'
+    permission_required = 'events.add_event'
+
+    def dispatch(self, request, *args, **kwargs):
+        """Load the source report and check patient access."""
+        self.source_report = get_object_or_404(Report, pk=kwargs['pk'])
+
+        if not can_access_patient(request.user, self.source_report.patient):
+            raise PermissionDenied(
+                "You don't have permission to access this patient's reports"
+            )
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        """Pre-fill the form from the source report and bind the patient."""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        kwargs['patient'] = self.source_report.patient
+        kwargs['initial'] = {
+            'title': self.source_report.title,
+            'content': self.source_report.content,
+        }
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        """Add source report and patient to the context."""
+        context = super().get_context_data(**kwargs)
+        context['source_report'] = self.source_report
+        context['patient'] = self.source_report.patient
+        return context
+
+    def form_valid(self, form):
+        """Create the copy for the source patient and report success."""
+        form.instance.patient = self.source_report.patient
+        messages.success(
+            self.request,
+            f'Relatório duplicado para {self.source_report.patient.name} criado com base no relatório anterior.',
+        )
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        """Redirect to the source patient's timeline after creation."""
+        return reverse(
+            'patients:patient_events_timeline',
+            kwargs={'patient_id': self.source_report.patient.pk}
         )

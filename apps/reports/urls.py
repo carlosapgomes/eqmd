@@ -13,6 +13,7 @@ from .views.report_views import (
     ReportCreateView,
     ReportDetailView,
     ReportUpdateView,
+    ReportDuplicateView,
     ReportDeleteView,
 )
 from .views.pdf_views import ReportPDFView
@@ -30,6 +31,7 @@ urlpatterns = [
     path('create/<uuid:patient_id>/', ReportCreateView.as_view(), name='report_create'),
     path('<uuid:pk>/', ReportDetailView.as_view(), name='report_detail'),
     path('<uuid:pk>/update/', ReportUpdateView.as_view(), name='report_update'),
+    path('<uuid:pk>/duplicate/', ReportDuplicateView.as_view(), name='report_duplicate'),
     path('<uuid:pk>/delete/', ReportDeleteView.as_view(), name='report_delete'),
     path('<uuid:pk>/pdf/', ReportPDFView.as_view(), name='report_pdf'),
 ]

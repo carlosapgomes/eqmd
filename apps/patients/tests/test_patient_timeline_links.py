@@ -13,6 +13,7 @@ from django.utils import timezone
 from apps.accounts.models import EqmdCustomUser
 from apps.patients.models import Patient
 from apps.dailynotes.models import DailyNote
+from apps.reports.models import Report
 
 
 class PatientTimelineLinksTests(TestCase):
@@ -65,6 +66,16 @@ class PatientTimelineLinksTests(TestCase):
             updated_by=cls.user,
         )
 
+        cls.report = Report.objects.create(
+            patient=cls.patient,
+            title='Report for timeline duplicate action test',
+            content='Conteúdo do relatório para teste do botão duplicar.',
+            document_date=timezone.localdate(),
+            event_datetime=timezone.now(),
+            created_by=cls.user,
+            updated_by=cls.user,
+        )
+
     def setUp(self):
         """Log in the test user."""
         self.client.login(username='testuser', password='testpassword')
@@ -95,3 +106,41 @@ class PatientTimelineLinksTests(TestCase):
         pdf_url = reverse('dailynotes:dailynote_pdf', kwargs={'pk': self.dailynote.pk})
         self.assertContains(response, 'pdf-download-btn')
         self.assertContains(response, f'data-pdf-url="{pdf_url}"')
+
+    def test_patient_timeline_report_card_includes_duplicate_action(self):
+        """Report cards expose a duplicate action for users who can add events."""
+        response = self.client.get(
+            reverse('apps.patients:patient_events_timeline', kwargs={'patient_id': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        duplicate_url = reverse('reports:report_duplicate', kwargs={'pk': self.report.pk})
+        self.assertContains(response, duplicate_url)
+        self.assertContains(response, 'bi-files')
+        self.assertContains(response, 'btn-outline-info')
+        self.assertContains(response, 'aria-label="Duplicar relatório"')
+        self.assertContains(response, 'Criar novo relatório baseado neste')
+
+    def test_patient_timeline_report_card_hides_duplicate_action_without_permission(self):
+        """Users without events.add_event do not see the report duplicate action."""
+        limited_user = EqmdCustomUser.objects.create_user(
+            username='limited',
+            email='limited@example.com',
+            password='testpassword',
+            password_change_required=False,
+            terms_accepted=True,
+        )
+        content_type = ContentType.objects.get_for_model(Patient)
+        limited_user.user_permissions.add(
+            Permission.objects.get(content_type=content_type, codename='view_patient')
+        )
+
+        self.client.login(username='limited', password='testpassword')
+        response = self.client.get(
+            reverse('apps.patients:patient_events_timeline', kwargs={'patient_id': self.patient.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        duplicate_url = reverse('reports:report_duplicate', kwargs={'pk': self.report.pk})
+        self.assertContains(response, self.report.title)
+        self.assertNotContains(response, duplicate_url)

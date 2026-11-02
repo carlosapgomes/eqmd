@@ -137,7 +137,8 @@ class ReportCreateForm(forms.ModelForm):
         self.fields['content'].help_text = "Conteúdo do relatório (suporte a Markdown)"
 
         # Filter templates to show only public and user's own
-        if self.user:
+        # (the field is absent in subclasses, e.g. ReportDuplicateForm)
+        if self.user and 'template' in self.fields:
             self.fields['template'].queryset = ReportTemplate.objects.filter(
                 is_active=True
             ).filter(
@@ -179,3 +180,22 @@ class ReportCreateForm(forms.ModelForm):
             instance.save()
 
         return instance
+
+
+class ReportDuplicateForm(ReportCreateForm):
+    """Duplication form: a new report pre-filled from an existing one.
+
+    Template selection is deliberately absent. A duplicate repeats the
+    source's already-rendered content, so exposing the template selector
+    would let a template re-render replace that content.
+    """
+
+    class Meta(ReportCreateForm.Meta):
+        fields = ['title', 'document_date', 'content']
+
+    def __init__(self, *args, **kwargs):
+        """Remove the template field inherited as a declared field."""
+        super().__init__(*args, **kwargs)
+        # `template` is declared on ReportCreateForm, so Django keeps it in
+        # self.fields regardless of Meta.fields.
+        del self.fields['template']
