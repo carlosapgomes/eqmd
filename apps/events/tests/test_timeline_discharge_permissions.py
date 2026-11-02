@@ -183,3 +183,96 @@ class DischargeReportTimelinePermissionTests(TestCase):
 
         self.assertTrue(creator_permissions["can_edit"])
         self.assertFalse(collaborator_permissions["can_edit"])
+
+
+class DischargeReportFinalizationAnchorTimelineTests(TestCase):
+    """S3 R2/R4: the timeline follows the finalization anchor."""
+
+    def setUp(self):
+        self.creator = User.objects.create_user(
+            username="anchortimelinecreator",
+            email="anchortimelinecreator@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
+        )
+        self.finalizer = User.objects.create_user(
+            username="anchortimelinefinalizer",
+            email="anchortimelinefinalizer@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.RESIDENT,
+        )
+        self.patient = Patient.objects.create(
+            name="Anchor Timeline Patient",
+            birthday=date(1990, 1, 1),
+            gender=Patient.GenderChoices.MALE,
+            created_by=self.creator,
+            updated_by=self.creator,
+        )
+
+    def _create_finalized_old_draft(self, *, finalized_at):
+        report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Finalized old draft",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Cardiologia",
+            admission_history="history",
+            problems_and_diagnosis="diagnosis",
+            exams_list="exams",
+            procedures_list="procedures",
+            inpatient_medical_history="inpatient history",
+            discharge_status="status",
+            discharge_recommendations="recommendations",
+            is_draft=False,
+            created_by=self.creator,
+            updated_by=self.creator,
+            finalized_at=finalized_at,
+            finalized_by=self.finalizer,
+        )
+        DischargeReport.objects.filter(pk=report.pk).update(
+            created_at=timezone.now() - timedelta(days=3)
+        )
+        report.refresh_from_db()
+        return report
+
+    def _timeline_response(self, user):
+        self.client.force_login(user)
+        return self.client.get(
+            reverse(
+                "apps.patients:patient_events_timeline",
+                kwargs={"patient_id": self.patient.pk},
+            )
+        )
+
+    def _update_url(self, report):
+        return reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": report.pk},
+        )
+
+    def test_finalizer_sees_edit_on_freshly_finalized_old_draft(self):
+        """R2: the timeline card shows edit to the finalizer inside the window."""
+        report = self._create_finalized_old_draft(finalized_at=timezone.now())
+
+        response = self._timeline_response(self.finalizer)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"event-{report.pk}-title")
+        self.assertContains(response, self._update_url(report))
+
+    def test_expired_finalization_anchor_hides_edit_from_finalizer(self):
+        """R4: the timeline hides edit once the finalization window expired."""
+        report = self._create_finalized_old_draft(
+            finalized_at=timezone.now() - timedelta(hours=25)
+        )
+
+        response = self._timeline_response(self.finalizer)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"event-{report.pk}-title")
+        self.assertNotContains(response, self._update_url(report))

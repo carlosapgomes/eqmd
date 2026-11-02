@@ -3,8 +3,9 @@
 One rule serves the model methods, the detail view helper and the patient
 timeline bulk check (design D1/D2). Semantics are the shipped collaborative
 draft rules: drafts allow the creator, ``events.change_event`` holders or any
-doctor/resident with patient access (no time limit); finalized reports follow
-the standard event window for the creator or ``events.change_event`` holders.
+doctor/resident with patient access (no time limit); finalized reports allow
+the creator, the finalizer or ``events.change_event`` holders within 24h of
+the finalization anchor (``created_at`` for legacy finals).
 """
 
 from apps.core.permissions import (
@@ -18,9 +19,9 @@ def can_edit_discharge_report(user, report):
 
     Drafts: creator, edit-permission holders, or any doctor/resident
     (collaborative draft workflow, no time limit). 0/1 are
-    EqmdCustomUser MEDICAL_DOCTOR/RESIDENT. Finals keep the shipped rule:
-    within the edit window, the creator or an ``events.change_event``
-    holder.
+    EqmdCustomUser MEDICAL_DOCTOR/RESIDENT. Finals open a 24h correction
+    window anchored at ``finalized_at`` (``created_at`` for legacy finals)
+    for the creator, the finalizer or an ``events.change_event`` holder.
     """
     if not can_access_patient(user, report.patient):
         return False
@@ -31,8 +32,10 @@ def can_edit_discharge_report(user, report):
         profession_type = getattr(user, "profession_type", None)
         return profession_type in (0, 1)
 
-    return report.can_be_edited and (
-        report.created_by == user or user.has_perm("events.change_event")
+    return report.is_within_finalization_window and (
+        report.created_by == user
+        or report.finalized_by == user
+        or user.has_perm("events.change_event")
     )
 
 

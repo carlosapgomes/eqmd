@@ -7,7 +7,7 @@ class DischargeReportAdmin(admin.ModelAdmin):
     list_display = ['patient', 'medical_specialty', 'admission_date', 'discharge_date', 'status_display', 'created_at']
     list_filter = ['is_draft', 'medical_specialty', 'admission_date', 'discharge_date', 'created_at']
     search_fields = ['patient__name', 'medical_specialty', 'problems_and_diagnosis']
-    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by', 'status_display']
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by', 'status_display', 'finalized_at', 'finalized_by']
 
     def status_display(self, obj):
         return obj.status_display
@@ -30,7 +30,7 @@ class DischargeReportAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Metadados', {
-            'fields': ('created_at', 'updated_at', 'created_by', 'updated_by'),
+            'fields': ('created_at', 'updated_at', 'created_by', 'updated_by', 'finalized_at', 'finalized_by'),
             'classes': ('collapse',)
         }),
     )

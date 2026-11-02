@@ -1,4 +1,11 @@
+from datetime import timedelta
+from typing import ClassVar
+
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
+from apps.core.permissions.constants import EVENT_EDIT_TIME_LIMIT
 from apps.events.models import Event
 
 
@@ -52,6 +59,23 @@ class DischargeReport(Event):
         help_text="Especialidade responsável pela alta"
     )
 
+    # Finalization anchor for the 24h correction window (design D6)
+    finalized_at: ClassVar[models.DateTimeField] = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Finalizado em",
+        help_text="Data/hora da finalização que ancora a janela de correção"
+    )
+    finalized_by: ClassVar[models.ForeignKey] = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="finalized_discharge_reports",
+        verbose_name="Finalizado por",
+        help_text="Usuário que finalizou o relatório"
+    )
+
     class Meta:
         verbose_name = "Relatório de Alta"
         verbose_name_plural = "Relatórios de Alta"
@@ -97,6 +121,19 @@ class DischargeReport(Event):
         """Return the edit URL for this discharge report."""
         from django.urls import reverse
         return reverse('apps.dischargereports:dischargereport_update', kwargs={'pk': self.pk})
+
+    @property
+    def is_within_finalization_window(self):
+        """Whether the final's 24h correction window is still open.
+
+        The window is anchored at ``finalized_at``. Legacy finals without an
+        anchor fall back to ``created_at`` so their verdicts match the
+        creation-anchored rule that shipped before design D6.
+        """
+        anchor = self.finalized_at or self.created_at
+        if anchor is None:
+            return False
+        return timezone.now() <= anchor + timedelta(hours=EVENT_EDIT_TIME_LIMIT)
 
     def can_be_edited_by_user(self, user):
         """Check if report can be edited by specific user"""

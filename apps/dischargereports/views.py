@@ -138,6 +138,13 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
         self.object.updated_by = self.request.user
         self.object.event_datetime = self.object.event_datetime or timezone.now()
         self.object.is_draft = is_draft
+        if not is_draft:
+            # A report finalized straight from the create form records the same
+            # metadata as a draft-to-final flip (spec R7/"finalizing SHALL
+            # record"); only the access gate in ``dispatch`` decides who may
+            # create it.
+            self.object.finalized_at = timezone.now()
+            self.object.finalized_by = self.request.user
         self.object.save()
 
         return HttpResponseRedirect(self.get_success_url())
@@ -217,8 +224,10 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
             return self.form_invalid(form)
 
         # Handle draft vs final save
+        finalized_now = False
         if action == "save_final" and is_draft:
             is_draft = False
+            finalized_now = True
             messages.success(self.request, "Relatório de alta finalizado com sucesso.")
         elif action == "save_draft":
             is_draft = True
@@ -229,6 +238,15 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
         self.object = form.save(commit=False)
         self.object.updated_by = self.request.user
         self.object.is_draft = is_draft
+        if is_draft:
+            # Reverting to draft clears the anchor, so the next finalize starts
+            # a fresh 24h correction window (design D6).
+            self.object.finalized_at = None
+            self.object.finalized_by = None
+        elif finalized_now:
+            # Draft-to-final flip anchors the correction window at finalization.
+            self.object.finalized_at = timezone.now()
+            self.object.finalized_by = self.request.user
         self.object.save()
 
         return HttpResponseRedirect(self.get_success_url())

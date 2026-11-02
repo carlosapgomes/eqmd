@@ -864,3 +864,260 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
         self.assertEqual(
             final_report.problems_and_diagnosis, "corrected diagnosis"
         )
+
+
+class DischargeReportFinalizationWindowViewTests(TestCase):
+    """S3: finalizing a draft opens a 24h correction window (design D6)."""
+
+    def setUp(self):
+        self.client = Client()
+        self.creator = User.objects.create_user(
+            username="windowviewcreator",
+            email="windowviewcreator@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
+        )
+        self.finalizer = User.objects.create_user(
+            username="windowviewfinalizer",
+            email="windowviewfinalizer@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.RESIDENT,
+        )
+        self.patient = Patient.objects.create(
+            name="Window View Patient",
+            birthday=date(1990, 1, 1),
+            gender=Patient.GenderChoices.MALE,
+            created_by=self.creator,
+            updated_by=self.creator,
+        )
+
+    def _create_report(self, *, is_draft, created_at=None, finalized_at=None):
+        report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Window report",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Test Specialty",
+            admission_history="h",
+            problems_and_diagnosis="d",
+            exams_list="e",
+            procedures_list="p",
+            inpatient_medical_history="m",
+            discharge_status="s",
+            discharge_recommendations="r",
+            is_draft=is_draft,
+            created_by=self.creator,
+            updated_by=self.creator,
+            finalized_at=finalized_at,
+            finalized_by=self.finalizer if finalized_at else None,
+        )
+        if created_at is not None:
+            DischargeReport.all_objects.filter(pk=report.pk).update(
+                created_at=created_at
+            )
+            report.refresh_from_db()
+        return report
+
+    def _post_data(self, action):
+        return {
+            "patient": self.patient.pk,
+            "event_datetime": timezone.now().strftime("%Y-%m-%dT%H:%M"),
+            "description": "Window report",
+            "admission_date": date(2024, 1, 1),
+            "discharge_date": date(2024, 1, 5),
+            "medical_specialty": "Test Specialty",
+            "admission_history": "h",
+            "problems_and_diagnosis": "corrected",
+            "exams_list": "e",
+            "procedures_list": "p",
+            "inpatient_medical_history": "m",
+            "discharge_status": "s",
+            "discharge_recommendations": "r",
+            action: "x",
+        }
+
+    def _create_url(self):
+        return reverse(
+            "apps.dischargereports:patient_dischargereport_create",
+            kwargs={"patient_id": self.patient.pk},
+        )
+
+    def _update_url(self, report):
+        return reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": report.pk},
+        )
+
+    def _detail_url(self, report):
+        return reverse(
+            "apps.dischargereports:dischargereport_detail",
+            kwargs={"pk": report.pk},
+        )
+
+    def _delete_url(self, report):
+        return reverse(
+            "apps.dischargereports:dischargereport_delete",
+            kwargs={"pk": report.pk},
+        )
+
+    def test_finalizing_an_old_draft_records_the_anchor_and_opens_the_window(self):
+        """R2: a collaborator finalizes an old draft; creator and finalizer
+        keep the 24h correction window."""
+        old_draft = self._create_report(
+            is_draft=True, created_at=timezone.now() - timedelta(days=3)
+        )
+        self.client.login(username="windowviewfinalizer", password="testpass123")
+
+        response = self.client.post(
+            self._update_url(old_draft), self._post_data("save_final")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        old_draft.refresh_from_db()
+        self.assertFalse(old_draft.is_draft)
+        self.assertIsNotNone(old_draft.finalized_at)
+        self.assertEqual(old_draft.finalized_by, self.finalizer)
+        self.assertEqual(
+            self.client.get(self._update_url(old_draft)).status_code, 200
+        )
+        self.client.login(username="windowviewcreator", password="testpass123")
+        self.assertEqual(
+            self.client.get(self._update_url(old_draft)).status_code, 200
+        )
+
+    def test_update_button_keeps_the_recorded_anchor(self):
+        """R2/R4: editing a final does not restart its correction window."""
+        anchored_at = timezone.now() - timedelta(hours=2)
+        final = self._create_report(is_draft=False, finalized_at=anchored_at)
+        self.client.login(username="windowviewcreator", password="testpass123")
+
+        response = self.client.post(
+            self._update_url(final), self._post_data("update_final")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        final.refresh_from_db()
+        self.assertEqual(final.finalized_at, anchored_at)
+
+    def test_reverting_to_draft_clears_the_anchor_and_reanchors_next_finalize(self):
+        """R3: save_draft clears both fields; the next finalize re-anchors."""
+        first_anchor = timezone.now() - timedelta(hours=1)
+        final = self._create_report(is_draft=False, finalized_at=first_anchor)
+        self.client.login(username="windowviewfinalizer", password="testpass123")
+
+        response = self.client.post(
+            self._update_url(final), self._post_data("save_draft")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        final.refresh_from_db()
+        self.assertTrue(final.is_draft)
+        self.assertIsNone(final.finalized_at)
+        self.assertIsNone(final.finalized_by)
+        self.assertTrue(final.can_be_edited_by_user(self.creator))
+
+        response = self.client.post(
+            self._update_url(final), self._post_data("save_final")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        final.refresh_from_db()
+        self.assertFalse(final.is_draft)
+        self.assertGreater(final.finalized_at, first_anchor)
+        self.assertEqual(final.finalized_by, self.finalizer)
+
+    def test_update_denied_after_the_window_for_everyone_window_bound(self):
+        """R4: past 24h from finalization the update view denies everyone."""
+        expired = self._create_report(
+            is_draft=False,
+            created_at=timezone.now() - timedelta(days=30),
+            finalized_at=timezone.now() - timedelta(hours=25),
+        )
+        change_holder = User.objects.create_user(
+            username="windowviewchanger",
+            email="windowviewchanger@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.NURSE,
+        )
+        change_holder.user_permissions.add(
+            Permission.objects.get(codename="change_event")
+        )
+        url = self._update_url(expired)
+
+        for user in (self.creator, self.finalizer, change_holder):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                self.assertEqual(self.client.get(url).status_code, 403)
+
+    def test_old_draft_freshly_finalized_is_editable_but_not_deletable(self):
+        """R6: delete stays creation-anchored while edit re-anchors."""
+        old_draft = self._create_report(
+            is_draft=True, created_at=timezone.now() - timedelta(days=3)
+        )
+        self.client.login(username="windowviewcreator", password="testpass123")
+
+        self.client.post(self._update_url(old_draft), self._post_data("save_final"))
+
+        old_draft.refresh_from_db()
+        self.assertFalse(old_draft.is_draft)
+        self.assertEqual(
+            self.client.get(self._update_url(old_draft)).status_code, 200
+        )
+        self.assertEqual(
+            self.client.post(self._delete_url(old_draft)).status_code, 403
+        )
+        old_draft.refresh_from_db()
+        self.assertFalse(old_draft.is_deleted)
+
+    def test_detail_shows_the_finalization_line_for_finals_only(self):
+        """R7: "Finalizado por X em Y" renders for finalized reports only."""
+        now = timezone.now()
+        final = self._create_report(is_draft=False, finalized_at=now)
+        draft = self._create_report(is_draft=True)
+        self.client.login(username="windowviewcreator", password="testpass123")
+
+        final_response = self.client.get(self._detail_url(final))
+        draft_response = self.client.get(self._detail_url(draft))
+
+        self.assertEqual(final_response.status_code, 200)
+        self.assertContains(final_response, "Finalizado por")
+        self.assertContains(final_response, self.finalizer.username)
+        self.assertContains(
+            final_response,
+            timezone.localtime(now).strftime("%d/%m/%Y %H:%M"),
+        )
+        self.assertEqual(draft_response.status_code, 200)
+        self.assertNotContains(draft_response, "Finalizado por")
+
+    def test_direct_final_creation_records_the_anchor_and_shows_the_line(self):
+        """Spec: finalizing on the create form also records and displays
+        the finalization metadata."""
+        submitted_at = timezone.now()
+        self.client.login(username="windowviewcreator", password="testpass123")
+
+        response = self.client.post(self._create_url(), self._post_data("save_final"))
+
+        self.assertEqual(response.status_code, 302)
+        report = DischargeReport.objects.get(patient=self.patient)
+        with self.subTest(recorded="saved finalization fields"):
+            self.assertFalse(report.is_draft)
+            self.assertIsNotNone(report.finalized_at)
+            self.assertGreaterEqual(report.finalized_at, submitted_at)
+            self.assertEqual(report.finalized_by, self.creator)
+
+        detail_response = self.client.get(self._detail_url(report))
+        self.assertEqual(detail_response.status_code, 200)
+        with self.subTest(displayed="finalization line on detail"):
+            self.assertContains(detail_response, "Finalizado por")
+            self.assertContains(detail_response, self.creator.username)
+            self.assertContains(
+                detail_response,
+                timezone.localtime(report.finalized_at).strftime("%d/%m/%Y %H:%M"),
+            )
