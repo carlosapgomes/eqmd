@@ -104,9 +104,10 @@ never invents an identity.
 
 ## Legacy single-tag filters
 
-`?tag=<id>` on the patient list and the ward map is still a single-tag filter;
-multi-tag filtering belongs to a later slice. Both surfaces resolve the value
-against the readable catalogue first:
+The legacy `?tag=<id>` parameter remains supported on the patient list and
+the ward map: it resolves as a manual ANY selection in the shared multi-tag
+filter (S7/S9). Both surfaces resolve the value against the readable
+catalogue first:
 
 - unreadable, unknown or malformed values render the generic message
   `Filtro de tag inválido.` with an empty result set;
@@ -127,8 +128,10 @@ new ward/patient dictionaries. Requirements:
 - the tag selector is rebuilt from the current catalogue, not from the cached
   filter payload.
 
-Map assignment freshness, result totals and filter/map parity remain with the
-later S9 slice.
+Map assignment freshness, result totals and filter/map parity are delivered
+by S9: the live overlay rehydrates the bounded patient set per request,
+totals are recomputed from rendered rows and the list and map share one
+selection/default contract.
 
 ## Administrator-only surfaces
 
@@ -138,9 +141,11 @@ and the management commands (`update_ward_mapping_cache`, `security_report`,
 show full catalogue metadata by design. They expose aggregate counts only and
 are not patient readers.
 
-## Known gaps for later slices
+## Delivered slices and known gaps
 
-- S6: leader tag page; S7: multi-tag list filter; S8: specialty preferences;
-  S9: cache-assignment freshness, result totals and map parity.
+Delivered: S6 leader tag page; S7 multi-tag list filter; S8 specialty
+preferences; S9 cache-assignment freshness, result totals and map parity
+(list/map share the contract; live overlay covers cache freshness).
+
 - `OptimizedPatientEventsTimelineView` in `apps/events/views.py` caches whole
   HTML per URL and is not routed. Do not route it without per-user variation.
