@@ -277,3 +277,51 @@ class PatientViewTests(TestCase):
 
         # Check that gender information is in the response
         self.assertContains(response, "Masculino")  # Portuguese label for male
+
+
+class CatalogueViewAuthorityTests(TestCase):
+    """S2 R4: catalogue mutation routes require administrator authority."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = create_navigation_user(
+            username="catalogue_route_admin",
+            email="croute@example.com",
+            password="testpassword",
+            is_staff=True,
+            is_superuser=True,
+        )
+        cls.staff = create_navigation_user(
+            username="catalogue_route_staff",
+            email="cstaff@example.com",
+            password="testpassword",
+            is_staff=True,
+        )
+        from ..models import AllowedTag
+
+        cls.tag = AllowedTag.objects.create(
+            name="Route Tag", created_by=cls.admin, updated_by=cls.admin
+        )
+
+    def test_ordinary_staff_denied_on_every_catalogue_route(self):
+        self.client.force_login(self.staff)
+        urls = [
+            reverse("patients:tag_create"),
+            reverse("patients:tag_update", kwargs={"pk": self.tag.pk}),
+            reverse("patients:tag_delete", kwargs={"pk": self.tag.pk}),
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 403)
+
+    def test_superuser_can_open_catalogue_routes(self):
+        self.client.force_login(self.admin)
+        self.assertEqual(
+            self.client.get(reverse("patients:tag_create")).status_code, 200
+        )
+        self.assertEqual(
+            self.client.get(
+                reverse("patients:tag_update", kwargs={"pk": self.tag.pk})
+            ).status_code,
+            200,
+        )

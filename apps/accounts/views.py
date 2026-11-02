@@ -1,14 +1,18 @@
-import uuid
 import json
-from django.shortcuts import render, get_object_or_404
+import uuid
+
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
-from django.views.generic import DetailView, UpdateView, RedirectView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse_lazy
-from .models import UserProfile, UserSpecialty
+from django.views.decorators.http import require_http_methods
+from django.views.generic import DetailView, RedirectView, UpdateView
+
 from .forms import UserProfileForm
+from .models import UserProfile
+from .services import team_membership
 
 
 @login_required
@@ -91,18 +95,20 @@ def change_specialty_api(request):
             status=400
         )
 
-    # Verify user has this specialty and it's active
-    if not request.user.user_specialties.filter(
-        specialty_id=specialty_id,
-        specialty__is_active=True
-    ).exists():
+    # Verify user has an active membership in an active specialty
+    try:
+        specialty = team_membership.get_eligible_specialty(
+            request.user, specialty_id
+        )
+    except ValidationError:
         return JsonResponse(
             {'success': False, 'error': 'Specialty not assigned to user'},
             status=403
         )
 
-    # Update current specialty
-    request.user.profile.current_specialty_id = specialty_id
-    request.user.profile.save()
+    # Update current specialty through the request-time eligibility service
+    team_membership.set_current_specialty(
+        profile=request.user.profile, specialty=specialty
+    )
 
     return JsonResponse({'success': True})

@@ -1,13 +1,15 @@
 # Security and Audit History
 
-**EquipeMed includes comprehensive audit history tracking and security monitoring for all database changes.**
+**EquipeMed includes comprehensive audit history tracking and security
+monitoring for all database changes.**
 
 ## Audit Trail Storage
 
 All model changes are automatically tracked in dedicated history tables:
 
 - **Patient changes**: `patients_historicalpatient`
-- **User account changes**: `accounts_historicaleqmdcustomuser` (includes terms acceptance)
+- **User account changes**: `accounts_historicaleqmdcustomuser` (includes terms
+  acceptance)
 - **Medical events**: `events_historicalevent`
 - **System configuration**: `patients_historicalallowedtag`
 
@@ -19,6 +21,31 @@ Each history record includes:
 - **Change type** (created/modified/deleted)
 - **Change reason** (why change was made)
 - **IP address** (where change originated)
+
+## Catalogue tag audit
+
+Catalogue tags keep two complementary audit trails:
+
+- `patients_historicalallowedtag` (django-simple-history) records every field
+  change to the row, including classification and descriptive edits;
+- `patients_allowedtagtransition` is an append-only table for lifecycle and
+  ownership changes: activate, deactivate, archive, restore and responsibility
+  transfer. Each row stores the action, actor, timestamp, previous/new state,
+  previous/new responsible leader and an optional reason.
+
+Latest-action fields on the tag (`deactivated_*`, `reactivated_*`, `archived_*`,
+`restored_*`) describe the most recent corresponding action; they supplement the
+full transition history and never replace it. Archived rows are canonicalized as
+inactive; restoration keeps the same identity inactive and records its actor.
+The creator (`created_by`) is immutable across edits and transfers. Transition
+rows are append-only through ordinary workflows and are never edited or deleted
+by catalogue administration.
+
+Catalogue lifecycle operations must use **Tags Permitidas** admin actions or the
+catalogue services; direct field edits cannot change `is_active`, `is_deleted`
+or responsibility. Administrator authority requires an active staff/superuser
+account with the relevant catalogue permission, so staff status alone is
+insufficient.
 
 ## Accessing Audit History
 
@@ -63,7 +90,7 @@ uv run python manage.py security_report --days=30 --format=json --output=securit
 
 ```sql
 -- Recent patient changes
-SELECT h.history_date, h.history_type, h.name, h.status, 
+SELECT h.history_date, h.history_type, h.name, h.status,
        u.username as changed_by, h.history_change_reason
 FROM patients_historicalpatient h
 LEFT JOIN accounts_eqmdcustomuser u ON h.history_user_id = u.id
@@ -128,7 +155,8 @@ DJANGO_SETTINGS_MODULE=config.test_settings uv run pytest apps/patients/tests/te
 
 ## Related Security Features
 
-- **[Terms of Use System](terms-of-use.md)**: Legal compliance with audit trail for user consent
+- **[Terms of Use System](terms-of-use.md)**: Legal compliance with audit trail
+  for user consent
 - **Password Change Requirements**: Forced password changes for admin-created users
 - **IP Address Tracking**: Enhanced history middleware with client IP logging
 - **Security Monitoring**: Comprehensive detection and alerting system

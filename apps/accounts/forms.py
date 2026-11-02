@@ -1,6 +1,8 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import EqmdCustomUser, UserProfile, MedicalSpecialty
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm
+
+from .models import EqmdCustomUser, UserProfile
+from .services.team_membership import eligible_specialty_queryset
 
 
 class EqmdCustomUserCreationForm(UserCreationForm):
@@ -67,17 +69,10 @@ class UserProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Filter current_specialty to only assigned specialties
+        # Filter current_specialty to active memberships in active specialties
         if self.instance and self.instance.user:
-            # Get assigned specialty IDs
-            assigned_specialty_ids = self.instance.user.user_specialties.filter(
-                specialty__is_active=True
-            ).values_list('specialty_id', flat=True)
-
             self.fields['current_specialty'].queryset = (
-                MedicalSpecialty.objects.filter(
-                    id__in=assigned_specialty_ids
-                ).order_by('name')
+                eligible_specialty_queryset(self.instance.user)
             )
             self.fields['current_specialty'].empty_label = "Selecionar especialidade..."
 

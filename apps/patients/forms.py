@@ -591,7 +591,7 @@ class PatientProfileForm(forms.ModelForm):
 class AllowedTagForm(forms.ModelForm):
     class Meta:
         model = AllowedTag
-        fields = ["name", "description", "color", "is_active"]
+        fields = ["name", "description", "color"]
         widgets = {
             "color": forms.TextInput(attrs={"type": "color"}),
             "description": forms.Textarea(attrs={"rows": 3}),
@@ -605,6 +605,66 @@ class AllowedTagForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class AllowedTagAdminForm(forms.ModelForm):
+    """Admin form that routes responsibility changes through transfer rules."""
+
+    class Meta:
+        model = AllowedTag
+        fields = "__all__"
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean() or {}
+        responsible = cleaned.get("responsible_user")
+        visibility = cleaned.get("visibility")
+        specialty = cleaned.get("specialty")
+
+        if self.instance.pk is not None:
+            previous_id = (
+                AllowedTag.all_objects.filter(pk=self.instance.pk)
+                .values_list("responsible_user_id", flat=True)
+                .first()
+            )
+            if previous_id is not None and responsible is None:
+                raise ValidationError(
+                    {
+                        "responsible_user": (
+                            "Responsibility can only be transferred to another "
+                            "eligible leader, never cleared directly."
+                        )
+                    }
+                )
+            if responsible is not None and responsible.pk == previous_id:
+                return cleaned
+
+        if responsible is None:
+            return cleaned
+        if (
+            visibility != AllowedTag.Visibility.RESTRICTED
+            or specialty is None
+        ):
+            raise ValidationError(
+                {
+                    "responsible_user": (
+                        "Responsibility requires a restricted tag in exactly "
+                        "one specialty team."
+                    )
+                }
+            )
+        from .services import tag_policy
+
+        if not tag_policy.is_eligible_transfer_recipient(responsible, specialty):
+            raise ValidationError(
+                {
+                    "responsible_user": (
+                        "The responsible leader must currently lead this "
+                        "tag's specialty team."
+                    )
+                }
+            )
+        return cleaned
+
 
 
 class PatientRecordNumberForm(forms.ModelForm):

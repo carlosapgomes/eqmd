@@ -18,7 +18,7 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import ExtractDay
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -79,6 +79,7 @@ from .models import (
     Tag,
     Ward,
 )
+from .services import tag_catalogue, tag_policy
 from .services.patient_identity import RECORD_NUMBER_DELETE_MESSAGE
 from .validators import TEMPORARY_RECORD_PREFIX
 
@@ -421,6 +422,15 @@ class PatientRestoreView(LoginRequiredMixin, View):
 
 
 # AllowedTag views
+class CataloguePermissionRequiredMixin(PermissionRequiredMixin):
+    """Require both the Django permission and administrator authority."""
+
+    def has_permission(self) -> bool:
+        if not super().has_permission():
+            return False
+        return tag_policy.is_catalogue_administrator(self.request.user)
+
+
 class AllowedTagListView(LoginRequiredMixin, ListView):
     model = AllowedTag
     template_name = "patients/tag_list.html"
@@ -428,7 +438,9 @@ class AllowedTagListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
 
-class AllowedTagCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class AllowedTagCreateView(
+    LoginRequiredMixin, CataloguePermissionRequiredMixin, CreateView
+):
     model = AllowedTag
     form_class = AllowedTagForm
     template_name = "patients/tag_form.html"
@@ -442,7 +454,9 @@ class AllowedTagCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVi
         return super().form_valid(form)
 
 
-class AllowedTagUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class AllowedTagUpdateView(
+    LoginRequiredMixin, CataloguePermissionRequiredMixin, UpdateView
+):
     model = AllowedTag
     form_class = AllowedTagForm
     template_name = "patients/tag_form.html"
@@ -455,15 +469,23 @@ class AllowedTagUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVi
         return super().form_valid(form)
 
 
-class AllowedTagDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class AllowedTagDeleteView(
+    LoginRequiredMixin, CataloguePermissionRequiredMixin, DeleteView
+):
     model = AllowedTag
     template_name = "patients/tag_confirm_delete.html"
     success_url = reverse_lazy("patients:tag_list")
     permission_required = "patients.delete_allowedtag"
 
     def delete(self, request, *args, **kwargs):
-        messages.success(request, "Tag deleted successfully.")
-        return super().delete(request, *args, **kwargs)
+        tag = self.get_object()
+        tag_catalogue.archive_tag(actor=request.user, tag=tag)
+        messages.success(
+            request,
+            f'Tag "{tag.name}" foi arquivada e pode ser restaurada por um '
+            "administrador (permanecerá inativa).",
+        )
+        return HttpResponseRedirect(self.get_success_url())
 
 
 # Record Tracking Views

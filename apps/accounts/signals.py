@@ -5,11 +5,11 @@ This module handles automatic profile creation and group assignment
 based on user profession types.
 """
 
+from django.contrib.auth.models import Group
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import Group
 
-from .models import EqmdCustomUser, UserProfile
+from .models import EqmdCustomUser, UserProfile, UserSpecialty
 
 
 @receiver(post_save, sender=EqmdCustomUser)
@@ -26,6 +26,17 @@ def save_user_profile(sender, instance, **kwargs):
         instance.profile.save()
     else:
         UserProfile.objects.create(user=instance)
+
+
+@receiver(post_save, sender=UserSpecialty)
+def clear_invalid_current_specialty(sender, instance, **kwargs):
+    """Drop a current specialty selection once its membership is not usable."""
+    if instance.is_active and instance.specialty.is_active:
+        return
+    UserProfile.objects.filter(
+        user_id=instance.user_id,
+        current_specialty_id=instance.specialty_id,
+    ).update(current_specialty=None)
 
 
 @receiver(post_save, sender=EqmdCustomUser)
@@ -53,7 +64,7 @@ def assign_user_to_profession_group(sender, instance, created, **kwargs):
         if group_name:
             try:
                 # Get or create the group
-                group, created_group = Group.objects.get_or_create(name=group_name)
+                group, _created_group = Group.objects.get_or_create(name=group_name)
 
                 # Remove user from all profession-based groups first
                 profession_groups = Group.objects.filter(
@@ -64,7 +75,7 @@ def assign_user_to_profession_group(sender, instance, created, **kwargs):
                 # Add user to the appropriate group
                 instance.groups.add(group)
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 -- pre-existing best-effort group sync
                 # Log the error but don't fail the user creation/update
                 import logging
                 logger = logging.getLogger(__name__)

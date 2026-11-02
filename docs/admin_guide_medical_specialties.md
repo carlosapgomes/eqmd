@@ -1,6 +1,7 @@
 # Admin Guide: Managing Medical Specialties
 
-This guide explains how administrators can manage medical specialties and assign them to users in the EquipeMed system.
+This guide explains how administrators can manage medical specialties and
+assign them to users in the EquipeMed system.
 
 ## Table of Contents
 
@@ -8,7 +9,8 @@ This guide explains how administrators can manage medical specialties and assign
 2. [Managing Existing Specialties](#managing-existing-specialties)
 3. [Assigning Specialties to Users](#assigning-specialties-to-users)
 4. [Understanding Primary vs Current Specialty](#understanding-primary-vs-current-specialty)
-5. [Troubleshooting](#troubleshooting)
+5. [Configuring the Team Principal Tag](#configuring-the-team-principal-tag)
+6. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -31,12 +33,37 @@ This guide explains how administrators can manage medical specialties and assign
 
 ### Field Requirements
 
-| Field | Required | Max Length | Description |
-|-------|-----------|-------------|-------------|
-| Nome da Especialidade | Yes | 100 | Full specialty name (unique) |
-| Sigla | Yes | 10 | Abbreviation (unique) |
-| Descrição | No | Unlimited | Optional detailed description |
-| Ativa | No | - | If unchecked, specialty won't be available for selection |
+- **Nome da Especialidade** (required, max 100): full specialty name,
+  unique
+- **Sigla** (required, max 10): abbreviation, unique
+- **Descrição** (optional, no limit): detailed description
+- **Ativa** (optional): if unchecked, the specialty is not selectable
+
+### Configuring the Team Principal Tag
+
+Each specialty is one assistential team and can have at most one **principal
+tag**. The principal tag is optional and is configured after the specialty has
+been saved.
+
+1. Open the specialty in **Especialidades Médicas**.
+2. In **Tag Principal da Equipe**, select a public tag from the same team
+   namespace.
+3. Click **Salvar**.
+
+Rules enforced by the model, admin and services:
+
+- the tag must be `public` and belong to that specialty's own namespace;
+- a global tag or another team's tag is rejected;
+- no tag is created automatically and no mapping is inferred from the specialty
+  name;
+- while a tag is referenced as principal it cannot be made restricted or moved
+  to another namespace; clear or change the mapping first;
+- tags are reserved by normalized name inside each namespace, including
+  inactive and archived rows, so a conflicting case/space variant is rejected.
+
+Catalogue creation and editing remain administrator-only. Use **Tags
+Permitidas** in Django Admin; staff status or team leadership alone does not
+grant catalogue authority.
 
 ### Naming Conventions
 
@@ -48,38 +75,38 @@ This guide explains how administrators can manage medical specialties and assign
 
 The system comes with 30 common Brazilian medical specialties pre-loaded:
 
-| Specialty | Abbreviation |
-|----------|-------------|
-| Anestesiologia | ANEST |
-| Cardiologia | CARDIO |
-| Cirurgia Cardíaca | CIRCARD |
-| Cirurgia Geral | CIRGER |
-| Cirurgia Pediátrica | CIRPED |
-| Cirurgia Plástica | CIRPLAST |
-| Cirurgia Torácica | CIRTORAC |
-| Cirurgia Vascular | CIRVASC |
-| Clínica Médica | CLIN |
-| Dermatologia | DERM |
-| Emergência | EMERG |
-| Endocrinologia | ENDO |
-| Gastroenterologia | GASTRO |
-| Ginecologia e Obstetrícia | GO |
-| Infectologia | INFECTO |
-| Nefrologia | NEFRO |
-| Neurocirurgia | NEUROCIR |
-| Neurologia | NEURO |
-| Oncologia Clínica | ONCO |
-| Ortopedia | ORTO |
-| Oftalmologia | OFTALMO |
-| Otorrinolaringologia | ORL |
-| Pediatria | PED |
-| Pneumologia | PNEUMO |
-| Psiquiatria | PSIQ |
-| Reumatologia | REUMA |
-| Radiologia | RADIO |
-| Urologia | URO |
-| UTI Adulto | UTI |
-| UTI Pediátrica | UTIPED |
+| Specialty                 | Abbreviation |
+| ------------------------- | ------------ |
+| Anestesiologia            | ANEST        |
+| Cardiologia               | CARDIO       |
+| Cirurgia Cardíaca         | CIRCARD      |
+| Cirurgia Geral            | CIRGER       |
+| Cirurgia Pediátrica       | CIRPED       |
+| Cirurgia Plástica         | CIRPLAST     |
+| Cirurgia Torácica         | CIRTORAC     |
+| Cirurgia Vascular         | CIRVASC      |
+| Clínica Médica            | CLIN         |
+| Dermatologia              | DERM         |
+| Emergência                | EMERG        |
+| Endocrinologia            | ENDO         |
+| Gastroenterologia         | GASTRO       |
+| Ginecologia e Obstetrícia | GO           |
+| Infectologia              | INFECTO      |
+| Nefrologia                | NEFRO        |
+| Neurocirurgia             | NEUROCIR     |
+| Neurologia                | NEURO        |
+| Oncologia Clínica         | ONCO         |
+| Ortopedia                 | ORTO         |
+| Oftalmologia              | OFTALMO      |
+| Otorrinolaringologia      | ORL          |
+| Pediatria                 | PED          |
+| Pneumologia               | PNEUMO       |
+| Psiquiatria               | PSIQ         |
+| Reumatologia              | REUMA        |
+| Radiologia                | RADIO        |
+| Urologia                  | URO          |
+| UTI Adulto                | UTI          |
+| UTI Pediátrica            | UTIPED       |
 
 ---
 
@@ -88,6 +115,7 @@ The system comes with 30 common Brazilian medical specialties pre-loaded:
 ### Viewing All Specialties
 
 The specialties list shows:
+
 - **Name**: Full specialty name
 - **Sigla**: Abbreviation
 - **Ativa**: Status (yes/no)
@@ -96,12 +124,14 @@ The specialties list shows:
 ### Filtering Specialties
 
 Use the sidebar filters to:
+
 - Show only active specialties: Click **Ativa** → **Sim**
 - Show all specialties: Click **Ativa** → **Todos**
 
 ### Searching Specialties
 
 Use the search bar to find specialties by:
+
 - Name (e.g., "Cirurgia")
 - Abbreviation (e.g., "CIR")
 
@@ -114,6 +144,7 @@ Use the search bar to find specialties by:
 3. Click **Salvar** (Save)
 
 **What happens when deactivated:**
+
 - ✅ Specialty stays in database (for historical records)
 - ✅ Existing user assignments are preserved
 - ❌ Specialty no longer appears in dropdowns
@@ -123,11 +154,13 @@ Use the search bar to find specialties by:
 ### Why Not Hard Delete?
 
 Django will **prevent** deletion if:
+
 - Any users have this specialty assigned
 - The specialty is set as a user's current specialty
 
 If you try to delete a used specialty, you'll see:
-```
+
+```text
 Cannot delete MedicalSpecialty because it is referenced
 through a protected foreign key
 ```
@@ -153,7 +186,8 @@ Scroll down to the **Especialidades do Usuário** (User Specialties) section:
 
 1. Click **Adicionar outra Especialidade do Usuário** (Add another User Specialty)
 2. Select the **Especialidade** from the dropdown (only active specialties shown)
-3. **Optionally** check **Especialidade Principal** if this is the user's main/residency specialty
+3. **Optionally** check **Especialidade Principal** if this is the user's
+   main/residency specialty
 4. Click **Salvar** (Save) at the bottom of the page
 
 ### Assigning Multiple Specialties
@@ -166,6 +200,7 @@ A user can have **multiple specialties** assigned:
 4. Repeat as needed
 
 **Example:** A surgeon might have:
+
 - Primary: Cirurgia Geral (main residency)
 - Secondary: Cirurgia Vascular (additional certification)
 
@@ -177,6 +212,7 @@ For **residents** and medical students, mark the **training specialty** as prima
 2. Leave secondary specialties unchecked
 
 **Why this matters:**
+
 - The primary specialty is used as the default when no current specialty is set
 - It helps identify the user's main area of training/practice
 - It's displayed with a star icon ⭐ in the profile
@@ -184,9 +220,43 @@ For **residents** and medical students, mark the **training specialty** as prima
 ### Viewing Assignment History
 
 Each specialty assignment shows:
+
 - **Especialidade**: Name of assigned specialty
 - **Especialidade Principal**: Whether it's the primary one
 - **Atribuída em**: When the assignment was created
+
+### Durable Team Membership and Leadership
+
+Each medical specialty is one assistential team. The membership record is
+retained even after a user leaves the team, so preferences and assignment
+history are not lost.
+
+- **Active membership** (`Vínculo Ativo`) is required for a specialty to be
+  selectable as current context. Inactive membership in an inactive specialty
+  is never eligible.
+- **Administrators only** grant or revoke membership and leadership. Leaders
+  do not gain Django Admin access, staff status, or permission to add members
+  or grant leadership.
+- **Multiple leaders** can exist for the same specialty. Leadership requires
+  active membership in an active specialty.
+- **Revoking membership** deactivates the row instead of deleting it, clears
+  the user's current specialty if it pointed at that team, and removes
+  leadership. Another team is not selected automatically.
+- **Rejoining** reactivates the same row and preserves the original
+  `assigned_at`/`assigned_by` values, but leadership must be granted again
+  explicitly.
+
+To manage membership directly, open **Especialidades dos Usuários** in Django
+Admin and use the actions:
+
+1. **Desativar vínculo (manter histórico)** — ordinary removal; keeps the row.
+2. **Reativar vínculo (sem restaurar liderança)** — reuses the same membership.
+3. **Conceder liderança da equipe** — adds a leader; repeat for each leader.
+4. **Remover liderança da equipe** — keeps the membership active.
+
+Deleting an inline membership from the user page also deactivates it instead
+of deleting the row. Audit fields record who changed membership or leadership
+and when.
 
 ---
 
@@ -201,11 +271,13 @@ The system has **three related concepts** for managing medical specialties:
 **Who manages it:** Administrators only (via User Admin → "Especialidades do Usuário")
 
 **Use cases:**
+
 - A surgeon with multiple certifications (e.g., General Surgery + Vascular Surgery)
 - A doctor with additional qualifications (e.g., Cardiology + Internal Medicine)
 - Residents with rotations through different departments
 
 **How it works:**
+
 1. Admin goes to User Admin
 2. Scrolls to "Especialidades do Usuário" section
 3. Clicks "Adicionar outra Especialidade do Usuário"
@@ -214,6 +286,7 @@ The system has **three related concepts** for managing medical specialties:
 6. Clicks "Salvar" at bottom of page
 
 **In the UI:**
+
 - Shown as badges on user's profile page
 - All assigned specialties listed in avatar dropdown
 - Primary specialty marked with star icon (⭐)
@@ -225,65 +298,76 @@ The system has **three related concepts** for managing medical specialties:
 **Who manages it:** Administrators only (via User Admin → check "Especialidade Principal")
 
 **Use cases:**
+
 - **Residents:** Mark their main residency specialty
 - **Medical Students:** Mark their primary area of training
 - **Doctors with multiple certifications:** Mark their main specialization
 
 **How it works:**
+
 1. Admin goes to User Admin
 2. Scrolls to "Especialidades do Usuário" section
 3. Checks **"Especialidade Principal"** checkbox for the appropriate specialty
 4. Clicks "Salvar" at bottom of page
 
 **In the UI:**
+
 - Displayed with a star icon (⭐) on profile
 - Displayed with a star icon (⭐) in avatar dropdown
 - Used as **default** when user hasn't selected a "current" specialty
 
 **Important notes:**
+
 - ⚠️ Only ONE specialty should be marked as primary per user
 - ⚠️ If multiple are marked, the system uses the first alphabetically
 - ⚠️ Primary is **not** automatically updated when user changes current specialty
 
 ### 3. Current Specialty (Especialidade Atual)
 
-**What it means:** The specialty the user is **currently working with** or wants to use.
+**What it means:** The specialty the user is **currently working with** or
+wants to use.
 
 **Who manages it:** Users themselves (via Profile page)
 
 **Use cases:**
+
 - A vascular surgeon switching context to general surgery
 - A cardiologist covering for an internist rotation
 - A multi-specialty doctor selecting appropriate specialty for documentation
 
 **How it works:**
+
 1. User clicks their name in top-right avatar dropdown
 2. Scroll to "Trocar Especialidade" section
 3. Clicks on desired specialty
 4. Page automatically reloads with new selection
 
 **Alternative method (Profile page):**
+
 1. User goes to their profile (Meu Perfil)
 2. Clicks "Editar Perfil"
 3. Selects specialty from "Especialidade Atual" dropdown
 4. Clicks "Update Profile" button
 
 **In the UI:**
+
 - Displayed below user name in avatar dropdown
 - Shown with checkmark (✓) in dropdown when selected
 - Filtered in profile form dropdown to only show assigned specialties
 
 **Important notes:**
+
 - ✅ User can change it anytime without admin approval
-- ✅ Only shows specialties that are **assigned** to user
+- ✅ Only shows specialties where membership is **active**
 - ✅ Only shows specialties that are **active**
+- ✅ Revoked membership clears the current selection on the next request
 - ✅ Changes are logged/audited in database
 
 ---
 
 ## Relationship Between the Three Concepts
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │              User: Dr. João Silva                    │
 ├─────────────────────────────────────────────────────────────┤
@@ -304,13 +388,16 @@ The system has **three related concepts** for managing medical specialties:
 
 ### When Each Concept is Used
 
-| Situation | Which Specialties Appear | Primary Used | Current Used |
-|-----------|-------------------------|---------------|--------------|
-| Profile page | All assigned badges | ⭐ icon shows on primary | Highlighted separately |
-| Avatar dropdown | All assigned with checkmarks | ⭐ icon shows on primary | ✓ checkmark on selected |
-| Default display (no current set) | Shows first assigned | Primary if exists | Falls back to primary |
-| User changes selection | No change | No change | Updates to selection |
-| Admin adds/removes | Updates list | Updates if removed | May need new selection |
+- **Profile page**: all assigned specialties appear as badges; primary
+  shows ⭐; current is highlighted separately
+- **Avatar dropdown**: all assigned specialties, with ✓ on the selected
+  one; primary shows ⭐
+- **Default (none set)**: first assigned specialty is shown; primary is
+  used when it exists
+- **User changes selection**: the list does not change; current updates
+  to the selection
+- **Admin edit**: active memberships are updated; primary follows
+  deactivation; current is cleared on revoke
 
 ---
 
@@ -325,6 +412,7 @@ The system has **two concepts** for specialties:
 **Who sets it:** Admin only (via inline form)
 
 **When it's used:**
+
 - As the default when user has no "current" specialty selected
 - Shown with a star icon (⭐) in the profile and dropdown
 - Important for residents (marks their residency specialty)
@@ -338,6 +426,7 @@ The system has **two concepts** for specialties:
 **Who sets it:** User can change it themselves via their profile
 
 **When it's used:**
+
 - Displayed in avatar dropdown (top-right of every page)
 - Filters/views based on user's current context
 - Shown with checkmark (✓) in dropdown when selected
@@ -350,13 +439,15 @@ The system has **two concepts** for specialties:
 
 **Dr. Ana Costa** (Vascular and General Surgeon)
 
-| Concept | Value | Set By | When Used |
-|---------|-------|----------|------------|
-| Multiple Assigned | Cirurgia Vascular, Cirurgia Geral, Cardiologia | Admin | Always |
-| Primary Specialty | Cirurgia Vascular | Admin (⭐) | Default display |
-| Current Specialty | Cirurgia Geral | User (self-selected) | Current context |
+- **Assigned**: Cirurgia Vascular, Cirurgia Geral, Cardiologia — set by
+  Admin; shown always
+- **Primary Specialty**: Cirurgia Vascular — set by Admin (⭐); used for
+  default display
+- **Current Specialty**: Cirurgia Geral — set by the User
+  (self-selected); used as current context
 
 **Workflow:**
+
 1. Admin creates specialties: Cirurgia Vascular, Cirurgia Geral, Cardiologia
 2. Admin assigns all three to Ana (during residency + certifications)
 3. Admin marks Cirurgia Vascular as Primary (her residency specialty)
@@ -369,13 +460,14 @@ The system has **two concepts** for specialties:
 
 **Dr. Pedro Santos** (Surgery Resident)
 
-| Concept | Value | Set By | When Used |
-|---------|-------|----------|------------|
-| Multiple Assigned | Cirurgia Geral | Admin | Always |
-| Primary Specialty | Cirurgia Geral | Admin (⭐) | Default display |
-| Current Specialty | (not set) | — | Falls back to Primary |
+| Concept           | Value          | Set By     | When Used             |
+| ----------------- | -------------- | ---------- | --------------------- |
+| Multiple Assigned | Cirurgia Geral | Admin      | Always                |
+| Primary Specialty | Cirurgia Geral | Admin (⭐) | Default display       |
+| Current Specialty | (not set)      | —          | Falls back to Primary |
 
 **Workflow:**
+
 1. Admin creates Cirurgia Geral specialty
 2. Admin assigns to Pedro and marks as Primary
 3. Pedro logs in → sees Cirurgia Geral as current (fallback)
@@ -385,13 +477,15 @@ The system has **two concepts** for specialties:
 
 **Dr. Carlos Lima** (Intensivist with multiple certifications)
 
-| Concept | Value | Set By | When Used |
-|---------|-------|----------|------------|
-| Multiple Assigned | Clínica Médica, UTI Adulto, Cardiologia | Admin | Always |
-| Primary Specialty | Clínica Médica | Admin (⭐) | Default display |
-| Current Specialty | UTI Adulto | User (self-selected) | ICU rotation |
+- **Multiple Assigned**: Clínica Médica, UTI Adulto, Cardiologia — set
+  by Admin; shown always
+- **Primary Specialty**: Clínica Médica — set by Admin (⭐); used for
+  default display
+- **Current Specialty**: UTI Adulto — set by the User (self-selected);
+  used on ICU rotation
 
 **Workflow:**
+
 1. Admin assigns Clínica Médica as Primary (main area)
 2. Admin adds UTI Adulto and Cardiologia as additional certifications
 3. Carlos starts ICU rotation → switches to UTI Adulto
@@ -417,35 +511,60 @@ The system has **two concepts** for specialties:
    - Check: Specialties list → look at "Ativa" column
    - Fix: Edit specialty and check "Ativa"
 
-3. **User is not a doctor/resident**
+3. **Membership is inactive**
+   - Check: Especialidades dos Usuários → "Vínculo Ativo"
+   - Fix: Use **Reativar vínculo** (leadership is not restored automatically)
+
+4. **User is not a doctor/resident**
    - Check: User's "Tipo de Profissão" in user admin
-   - Note: All user types can have specialties, but typically only doctors/residents use them
+   - Note: All user types can have specialties, but typically only
+     doctors/residents use them
 
 ### Issue: Cannot Delete a Specialty
 
 **Symptom:** Error when trying to delete a specialty
 
 **Error Message:**
-```
+
+```text
 Cannot delete MedicalSpecialty because it is referenced
 through a protected foreign key
 ```
 
 **Solution:**
+
 - Do NOT delete
 - Uncheck "Ativa" instead (soft delete)
 - This preserves historical assignments
+
+### Issue: Principal Tag Is Rejected
+
+**Symptom:** Saving a specialty fails or the principal tag list is empty.
+
+**Possible Causes:**
+
+1. The specialty has not been saved yet; create it first, then edit it.
+2. The chosen tag is `restricted`; only public tags can be principals.
+3. The tag belongs to another team or to the global namespace.
+4. The tag is referenced as principal elsewhere and a namespace/visibility
+   change was attempted.
+
+**Solution:** use a public tag from the same team namespace. No tag is created
+automatically, and an unmapped team stays unmapped until an administrator
+selects a tag explicitly.
 
 ### Issue: Duplicate Specialty Names
 
 **Symptom:** Cannot create specialty with existing name or abbreviation
 
 **Error Message:**
-```
+
+```text
 Especialidade Médica with this Nome da Especialidade already exists.
 ```
 
 **Solution:**
+
 1. Check existing specialties for a similar one
 2. Edit the existing one instead
 3. Or use a different name/abbreviation
@@ -455,10 +574,12 @@ Especialidade Médica with this Nome da Especialidade already exists.
 **Symptom:** Multiple specialties marked as primary for a user
 
 **Impact:**
+
 - The system uses the first one alphabetically
 - Both show with star icons (confusing)
 
 **Solution:**
+
 1. Go to User Admin
 2. Edit the user
 3. In "Especialidades do Usuário", uncheck all but the real primary
@@ -505,16 +626,16 @@ If you encounter issues not covered in this guide:
 
 ## Quick Reference: Inline Form Fields
 
-| Field | Description | Required |
-|-------|-------------|----------|
-| Especialidade | Dropdown of all active specialties | Yes |
-| Especialidade Principal | Checkbox to mark as main specialty | No |
-| Atribuída em | Auto-populated timestamp (read-only) | N/A |
+| Field                   | Description                          | Required |
+| ----------------------- | ------------------------------------ | -------- |
+| Especialidade           | Dropdown of all active specialties   | Yes      |
+| Especialidade Principal | Checkbox to mark as main specialty   | No       |
+| Atribuída em            | Auto-populated timestamp (read-only) | N/A      |
 
 ---
 
 ## Related Documentation
 
-- [User Guide: Managing Your Specialty](./user_guide_specialties.md) *(not yet created)*
-- [API Documentation: Specialty Endpoints](./api_specialties.md) *(not yet created)*
+- [User Guide: Managing Your Specialty](./user_guide_specialties.md) _(not yet created)_
+- [API Documentation: Specialty Endpoints](./api_specialties.md) _(not yet created)_
 - [OpenSpec Proposal](../openspec/changes/add-medical-specialty/proposal.md)

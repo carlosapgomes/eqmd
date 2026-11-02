@@ -1,16 +1,51 @@
+from typing import Any, cast
+
+from django import forms
 from django.contrib import admin, messages
-from django.shortcuts import redirect
 from django.contrib.auth.admin import UserAdmin
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.forms.models import BaseInlineFormSet, BaseModelForm
+from django.http import HttpRequest
+from django.shortcuts import redirect
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
-from .models import EqmdCustomUser, UserProfile, MedicalSpecialty, UserSpecialty
-from .forms import EqmdCustomUserCreationForm, EqmdCustomUserChangeForm
+
 from apps.matrix_integration.services import (
     MatrixConfig,
     MatrixProvisioningError,
     MatrixProvisioningService,
     MatrixRoomProvisioningService,
 )
+from apps.patients.models import AllowedTag
+
+from .forms import EqmdCustomUserChangeForm, EqmdCustomUserCreationForm
+from .models import EqmdCustomUser, MedicalSpecialty, UserProfile, UserSpecialty
+from .services import team_membership
+
+
+class UserSpecialtyInlineFormSet(BaseInlineFormSet):
+    """Inline formset that deactivates memberships instead of deleting rows."""
+
+    request: HttpRequest | None = None
+
+    def delete_existing(
+        self, obj: models.Model, commit: bool = True
+    ) -> None:
+        if commit and isinstance(obj, UserSpecialty) and self.request is not None:
+            team_membership.revoke_membership(
+                actor=cast(EqmdCustomUser, self.request.user), membership=obj
+            )
+
+    def save_new(
+        self, form: BaseModelForm, commit: bool = True
+    ) -> models.Model:
+        obj = super().save_new(form, commit=False)
+        if isinstance(obj, UserSpecialty) and self.request is not None:
+            obj.assigned_by = cast(EqmdCustomUser, self.request.user)
+        if commit:
+            obj.save()
+        return obj
 
 
 class UserProfileInline(admin.StackedInline):
@@ -32,24 +67,142 @@ class UserProfileInline(admin.StackedInline):
 
 class UserSpecialtyInline(admin.TabularInline):
     """Inline for managing user specialties in user admin."""
+
     model = UserSpecialty
+    formset = UserSpecialtyInlineFormSet
     extra = 0
     fk_name = 'user'  # Specify which FK to use (user vs assigned_by)
-    readonly_fields = ('assigned_at',)
-    fields = ('specialty', 'is_primary', 'assigned_at')
+    readonly_fields = (
+        'is_active',
+        'is_leader',
+        'assigned_at',
+        'assigned_by',
+        'deactivated_at',
+    )
+    fields = (
+        'specialty',
+        'is_primary',
+        'is_active',
+        'is_leader',
+        'assigned_at',
+        'assigned_by',
+        'deactivated_at',
+    )
+
+
+def _membership_actor(request: HttpRequest) -> EqmdCustomUser:
+    return cast(EqmdCustomUser, request.user)
+
+
+_MEMBERSHIP_AUDIT_FIELDS = (
+    'is_active', 'is_leader', 'assigned_at', 'assigned_by', 'deactivated_at',
+    'deactivated_by', 'reactivated_at', 'reactivated_by',
+    'leadership_granted_at', 'leadership_granted_by',
+    'leadership_revoked_at', 'leadership_revoked_by',
+)
+
+
+@admin.register(UserSpecialty)
+class UserSpecialtyAdmin(admin.ModelAdmin):
+    """Administrator-only grant, revoke and leadership management."""
+
+    list_display = (
+        'user', 'specialty', 'is_active', 'is_leader',
+        'assigned_at', 'assigned_by', 'deactivated_at',
+    )
+    list_filter = ('is_active', 'is_leader', 'specialty')
+    search_fields = ('user__username', 'user__email', 'specialty__name')
+    list_select_related = ('user', 'specialty', 'assigned_by', 'deactivated_by')
+    readonly_fields = _MEMBERSHIP_AUDIT_FIELDS
+    fields = ('user', 'specialty', 'is_primary') + _MEMBERSHIP_AUDIT_FIELDS
+    actions = (
+        'deactivate_memberships', 'reactivate_memberships',
+        'grant_leadership', 'revoke_leadership',
+    )
+
+    def save_model(self, request: HttpRequest, obj: UserSpecialty, form: Any, change: bool) -> None:
+        if not change:
+            obj.assigned_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def delete_model(self, request: HttpRequest, obj: UserSpecialty) -> None:
+        team_membership.revoke_membership(actor=_membership_actor(request), membership=obj)
+
+    def delete_queryset(self, request: HttpRequest, queryset: models.QuerySet[UserSpecialty]) -> None:
+        for membership in queryset:
+            team_membership.revoke_membership(actor=_membership_actor(request), membership=membership)
+
+    @admin.action(description="Desativar vínculo (manter histórico)")
+    def deactivate_memberships(self, request: HttpRequest, queryset: models.QuerySet[UserSpecialty]) -> None:
+        for membership in queryset:
+            team_membership.revoke_membership(actor=_membership_actor(request), membership=membership)
+        self.message_user(request, "Vínculos desativados.", messages.SUCCESS)
+
+    @admin.action(description="Reativar vínculo (sem restaurar liderança)")
+    def reactivate_memberships(self, request: HttpRequest, queryset: models.QuerySet[UserSpecialty]) -> None:
+        for membership in queryset:
+            team_membership.grant_membership(
+                actor=_membership_actor(request), user=membership.user, specialty=membership.specialty
+            )
+        self.message_user(request, "Vínculos reativados.", messages.SUCCESS)
+
+    @admin.action(description="Conceder liderança da equipe")
+    def grant_leadership(self, request: HttpRequest, queryset: models.QuerySet[UserSpecialty]) -> None:
+        for membership in queryset:
+            try:
+                team_membership.grant_leadership(actor=_membership_actor(request), membership=membership)
+            except ValidationError as exc:
+                self.message_user(request, f"{membership}: {exc}", messages.ERROR)
+        self.message_user(request, "Lideranças concedidas.", messages.SUCCESS)
+
+    @admin.action(description="Remover liderança da equipe")
+    def revoke_leadership(self, request: HttpRequest, queryset: models.QuerySet[UserSpecialty]) -> None:
+        for membership in queryset:
+            team_membership.revoke_leadership(actor=_membership_actor(request), membership=membership)
+        self.message_user(request, "Lideranças removidas.", messages.SUCCESS)
+
+
+class MedicalSpecialtyAdminForm(forms.ModelForm):
+    """Restrict principal-tag choices to this team's public namespace."""
+
+    class Meta:
+        model = MedicalSpecialty
+        fields = "__all__"
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        choices = AllowedTag.all_objects.filter(
+            visibility=AllowedTag.Visibility.PUBLIC, is_deleted=False
+        )
+        if self.instance.pk:
+            choices = choices.filter(specialty_id=self.instance.pk)
+        else:
+            choices = choices.none()
+        principal_field = cast(
+            forms.ModelChoiceField, self.fields["principal_tag"]
+        )
+        principal_field.queryset = choices.order_by("name")
 
 
 @admin.register(MedicalSpecialty)
 class MedicalSpecialtyAdmin(admin.ModelAdmin):
     """Admin for managing medical specialties."""
-    list_display = ['name', 'abbreviation', 'is_active', 'created_at']
-    list_filter = ['is_active']
-    search_fields = ['name', 'abbreviation']
-    ordering = ['name']
+    form = MedicalSpecialtyAdminForm
+    list_display = ('name', 'abbreviation', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'abbreviation')
+    ordering = ('name',)
 
     fieldsets = (
         (None, {'fields': ('name', 'abbreviation')}),
         ('Detalhes', {'fields': ('description', 'is_active')}),
+        ('Tag Principal da Equipe', {
+            'fields': ('principal_tag',),
+            'description': (
+                'Opcional: selecione uma tag pública do próprio namespace da '
+                'equipe. Nenhuma tag é criada ou atribuída automaticamente.'
+            ),
+        }),
     )
 
 class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
@@ -58,17 +211,19 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
     model = EqmdCustomUser
     
     # Add account_status and access_expires_at to the main list view
-    list_display = [
+    list_display = (
         'username', 'email', 'first_name', 'last_name',
         'account_status', 'access_expires_at', 'is_researcher', 'is_active', 'is_staff'
-    ]
-    history_list_display = ['username', 'email', 'profession_type', 'history_change_reason']
+    )
+    history_list_display = ('username', 'email', 'profession_type', 'history_change_reason')
 
     # Add supervisor to search fields
-    search_fields = UserAdmin.search_fields + ('supervisor__username',)
+    search_fields = tuple(UserAdmin.search_fields) + ('supervisor__username',)
 
     # Define read-only fields for the detail view
-    readonly_fields = UserAdmin.readonly_fields + ('last_meaningful_activity', 'expiration_warning_sent')
+    readonly_fields = tuple(UserAdmin.readonly_fields) + (
+        'last_meaningful_activity', 'expiration_warning_sent'
+    )
 
     # Reorganize fieldsets to include a new "Lifecycle Management" section
     fieldsets = (
@@ -127,7 +282,7 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
     )
     
     # Add new filters to the sidebar
-    list_filter = UserAdmin.list_filter + (
+    list_filter = tuple(UserAdmin.list_filter) + (
         'account_status',
         'profession_type',
         'expiration_reason',
@@ -151,12 +306,18 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         When admin creates a new user, ensure password_change_required is True
         unless explicitly set otherwise.
         """
-        if not change:  # New user creation
-            # Set flag to require password change for new users
-            if not hasattr(obj, 'password_change_required') or obj.password_change_required is None:
-                obj.password_change_required = True
+        if not change and (  # New user creation
+            not hasattr(obj, 'password_change_required')
+            or obj.password_change_required is None
+        ):
+            obj.password_change_required = True
         
         super().save_model(request, obj, form, change)
+
+    def save_formset(self, request, form, formset, change):
+        """Give specialty inlines the acting administrator for audit state."""
+        formset.request = request
+        super().save_formset(request, form, formset, change)
     
     def get_form(self, request, obj=None, **kwargs):
         """Customize form with helpful information for admins."""

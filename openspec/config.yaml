@@ -35,7 +35,7 @@ context: |
   - **PostgreSQL** - Database for development and production (SQLite not supported)
   - **django-allauth 0.57.0** - Authentication (email-based login)
   - **django-simple-history 3.10.1** - Model change tracking and audit trails
-  - **django-taggit 6.1.0** - Patient tagging system
+  - **django-taggit 6.1.0** - Legacy dependency only; the patient tag catalogue is implemented by `apps.patients.AllowedTag`/`Tag`, not Taggit
   - **ReportLab 4.4.2** - PDF generation for medical forms
   - **PyPDF 5.8.0** - PDF manipulation
   - **Pillow 11.2.1** - Image processing

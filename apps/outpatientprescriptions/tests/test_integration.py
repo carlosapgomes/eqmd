@@ -571,13 +571,13 @@ class PrescriptionListPerformanceTest(TestCase):
     def test_list_view_query_count(self):
         """Test that list view doesn't generate excessive queries.
 
-        Baseline: 23 queries for the first (cache-cold) request, including the
+        Baseline: 19 queries for the first (cache-cold) request, including the
         UserLifecycleMiddleware activity update (user + history row), the
-        profile/group sync signals, the specialty context processors, the
+        profile/group sync signals, the specialty context lookups, the
         pagination/prefetch queries and the filter-option lookups. Any
         regression that adds queries fails this test.
         """
-        with self.assertNumQueries(23):
+        with self.assertNumQueries(19):
             response = self.client.get(
                 reverse("outpatientprescriptions:outpatientprescription_list")
             )

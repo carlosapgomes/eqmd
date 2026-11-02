@@ -951,3 +951,39 @@ class PatientTagPermissionTests(TestCase):
         response = self.client.post(remove_all_url)
 
         self.assertEqual(response.status_code, 403)
+
+
+class AllowedTagCatalogueCompatibilityTests(TestCase):
+    """S2: legacy public catalogue behavior stays compatible."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = create_navigation_user(
+            username="catalogue_compat",
+            email="compat@example.com",
+            password="testpassword",
+        )
+
+    def test_legacy_creation_defaults_to_global_public_custom(self):
+        tag = AllowedTag.objects.create(
+            name="Compat Tag", created_by=self.user, updated_by=self.user
+        )
+        self.assertEqual(tag.origin, AllowedTag.Origin.CUSTOM)
+        self.assertEqual(tag.visibility, AllowedTag.Visibility.PUBLIC)
+        self.assertIsNone(tag.specialty_id)
+        self.assertEqual(str(tag), "Compat Tag")
+
+    def test_public_tag_with_specialty_keeps_public_readability(self):
+        from apps.accounts.models import MedicalSpecialty
+
+        specialty = MedicalSpecialty.objects.create(
+            name="Compat Team", abbreviation="CT"
+        )
+        tag = AllowedTag.objects.create(
+            name="Compat Team Tag",
+            specialty=specialty,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        self.assertEqual(tag.visibility, AllowedTag.Visibility.PUBLIC)
+        self.assertEqual(str(tag), "Compat Team Tag [CT]")

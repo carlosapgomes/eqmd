@@ -10,7 +10,12 @@ from django.urls import reverse
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
-from apps.core.models.soft_delete import SoftDeleteModel
+from apps.core.models.soft_delete import (
+    AllObjectsManager,
+    SoftDeleteManager,
+    SoftDeleteModel,
+    SoftDeleteQuerySet,
+)
 
 from .validators import (
     validate_admission_datetime,
@@ -20,10 +25,47 @@ from .validators import (
 )
 
 
+class AllowedTagQuerySet(SoftDeleteQuerySet):
+    """Archive every selected catalogue row without violating the state check."""
+
+    def delete(self) -> int:
+        """Soft-delete catalogue rows into the canonical archived state."""
+        return self.update(
+            is_deleted=True, is_active=False, deleted_at=timezone.now()
+        )
+
+
+class AllowedTagManager(SoftDeleteManager):
+    """Default catalogue manager using archived-safe bulk mutations."""
+
+    def get_queryset(self) -> AllowedTagQuerySet:
+        return AllowedTagQuerySet(self.model, using=self._db).active()
+
+
+class AllowedTagAllObjectsManager(AllObjectsManager):
+    """Unfiltered catalogue manager using archived-safe bulk mutations."""
+
+    def get_queryset(self) -> AllowedTagQuerySet:
+        return AllowedTagQuerySet(self.model, using=self._db)
+
+
 class AllowedTag(SoftDeleteModel):
     """Model representing allowed tags that can be assigned to patients"""
 
-    name = models.CharField(max_length=100, unique=True, verbose_name="Nome")
+    class Origin(models.TextChoices):
+        SYSTEM = "system", "Sistema"
+        CUSTOM = "custom", "Personalizada"
+
+    class Visibility(models.TextChoices):
+        PUBLIC = "public", "Pública"
+        RESTRICTED = "restricted", "Restrita"
+
+    class LifecycleState(models.TextChoices):
+        ACTIVE = "active", "Ativa"
+        INACTIVE = "inactive", "Inativa"
+        ARCHIVED = "archived", "Arquivada"
+
+    name = models.CharField(max_length=100, verbose_name="Nome")
     description = models.TextField(blank=True, verbose_name="Descrição")
     color = models.CharField(
         max_length=7,
@@ -32,6 +74,85 @@ class AllowedTag(SoftDeleteModel):
         verbose_name="Cor",
     )
     is_active = models.BooleanField(default=True, verbose_name="Ativo")
+    origin = models.CharField(
+        max_length=16,
+        choices=Origin.choices,
+        default=Origin.CUSTOM,
+        verbose_name="Origem",
+    )
+    visibility = models.CharField(
+        max_length=16,
+        choices=Visibility.choices,
+        default=Visibility.PUBLIC,
+        verbose_name="Visibilidade",
+    )
+    specialty = models.ForeignKey(
+        "accounts.MedicalSpecialty",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="catalogue_tags",
+        verbose_name="Especialidade",
+        help_text="Equipe dona do namespace; vazio para o namespace global",
+    )
+    responsible_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="responsible_catalogue_tags",
+        verbose_name="Líder responsável",
+        help_text=(
+            "Líder atual da equipe com direito de gestão; definido apenas por "
+            "transferência administrativa e nunca altera o criador"
+        ),
+    )
+
+    # Lifecycle tracking (latest action only; full history is immutable)
+    deactivated_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Desativada em"
+    )
+    deactivated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="deactivated_catalogue_tags",
+        verbose_name="Desativada por",
+    )
+    reactivated_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Reativada em"
+    )
+    reactivated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reactivated_catalogue_tags",
+        verbose_name="Reativada por",
+    )
+    restored_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Restaurada em"
+    )
+    restored_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="restored_catalogue_tags",
+        verbose_name="Restaurada por",
+    )
+    archived_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Arquivada em"
+    )
+    archived_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="archived_catalogue_tags",
+        verbose_name="Arquivada por",
+    )
 
     # Tracking fields
     created_at = models.DateTimeField(auto_now_add=True)
@@ -60,10 +181,297 @@ class AllowedTag(SoftDeleteModel):
         verbose_name_plural = "Tags Permitidas"
         indexes: ClassVar[list[models.Index]] = [
             models.Index(fields=["is_deleted", "name"]),
+            models.Index(fields=["specialty", "visibility"]),
+        ]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(visibility="public")
+                    | models.Q(specialty__isnull=False)
+                ),
+                name="patients_allowedtag_restricted_requires_specialty",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(is_deleted=False) | models.Q(is_active=False)
+                ),
+                name="patients_allowedtag_archived_requires_inactive",
+            ),
+            models.UniqueConstraint(
+                Lower(Trim("name")),
+                name="patients_allowedtag_global_name_unique",
+                condition=models.Q(specialty__isnull=True),
+            ),
+            models.UniqueConstraint(
+                Lower(Trim("name")),
+                models.F("specialty"),
+                name="patients_allowedtag_team_name_unique",
+                condition=models.Q(specialty__isnull=False),
+            ),
         ]
 
-    def __str__(self):
+    objects = AllowedTagManager()
+    all_objects = AllowedTagAllObjectsManager()
+
+
+    def __str__(self) -> str:
+        return self.display_name
+
+    @property
+    def display_name(self) -> str:
+        """Identify the namespace by its team abbreviation."""
+        if self.specialty_id is not None and self.specialty is not None:
+            return f"{self.name} [{self.specialty.abbreviation}]"
         return self.name
+
+    @property
+    def lifecycle_state(self) -> str:
+        """Derive the canonical active/inactive/archived state from flags."""
+        if self.is_deleted:
+            return self.LifecycleState.ARCHIVED
+        if self.is_active:
+            return self.LifecycleState.ACTIVE
+        return self.LifecycleState.INACTIVE
+
+    def clean(self) -> None:
+        super().clean()
+        self._clean_classification()
+        self._clean_responsibility()
+        self._clean_reserved_name()
+        self._clean_principal_reference()
+
+    def _clean_responsibility(self) -> None:
+        if self.responsible_user_id is None:
+            return
+        if (
+            self.visibility != self.Visibility.RESTRICTED
+            or self.specialty_id is None
+        ):
+            raise ValidationError(
+                {
+                    "responsible_user": (
+                        "Responsibility requires a restricted tag in exactly "
+                        "one specialty team."
+                    )
+                }
+            )
+
+    def _clean_classification(self) -> None:
+        if not (self.name or "").strip():
+            raise ValidationError({"name": "A tag name is required."})
+        if (
+            self.visibility == self.Visibility.RESTRICTED
+            and self.specialty_id is None
+        ):
+            raise ValidationError(
+                {
+                    "specialty": (
+                        "Restricted tags require exactly one specialty team."
+                    )
+                }
+            )
+
+    def _clean_reserved_name(self) -> None:
+        from .services import tag_catalogue
+
+        if tag_catalogue.name_is_reserved(
+            self.name,
+            specialty_id=self.specialty_id,
+            exclude_pk=self.pk,
+        ):
+            raise ValidationError(
+                {
+                    "name": (
+                        "This name is already reserved in the selected "
+                        "namespace, including inactive or archived tags."
+                    )
+                }
+            )
+
+    def _clean_principal_reference(self) -> None:
+        if self.pk is None:
+            return
+        from .services import tag_policy
+
+        original = (
+            type(self)
+            .all_objects.filter(pk=self.pk)
+            .values("visibility", "specialty_id")
+            .first()
+        )
+        if original is None:
+            return
+        tag_policy.validate_namespace_change(
+            tag_pk=self.pk,
+            original_visibility=original["visibility"],
+            original_specialty_id=original["specialty_id"],
+            visibility=self.visibility,
+            specialty_id=self.specialty_id,
+        )
+
+    def delete(
+        self,
+        using: str | None = None,
+        keep_parents: bool = False,
+        deleted_by: object | None = None,
+        reason: str = "",
+    ) -> None:
+        """Archive this catalogue row, always landing in the inactive state."""
+        if self.is_deleted:
+            return
+        previous_state = self.lifecycle_state
+        self.is_deleted = True
+        self.is_active = False
+        self.deleted_at = timezone.now()
+        self.deleted_by = deleted_by
+        self.archived_at = self.deleted_at
+        self.archived_by = deleted_by
+        self.deletion_reason = reason
+        if deleted_by is not None:
+            self._history_user = deleted_by
+        self._change_reason = (
+            f"Catalogue archive by {getattr(deleted_by, 'username', 'system')}"
+        )
+        self.save(using=using)
+        self._record_transition(
+            action=AllowedTagTransition.Action.ARCHIVE,
+            actor=deleted_by,
+            from_state=previous_state,
+            to_state=self.LifecycleState.ARCHIVED,
+            reason=reason,
+        )
+
+    def restore(self, restored_by: object | None = None) -> None:
+        """Restore an archived row into the inactive state; never reactivate."""
+        if not self.is_deleted:
+            return
+        self.is_deleted = False
+        self.deleted_at = None
+        self.deleted_by = None
+        self.deletion_reason = ""
+        self.is_active = False
+        self.restored_at = timezone.now()
+        self.restored_by = restored_by
+        if restored_by is not None:
+            self._history_user = restored_by
+        self._change_reason = (
+            f"Catalogue restore by {getattr(restored_by, 'username', 'system')}"
+        )
+        self.save()
+        self._record_transition(
+            action=AllowedTagTransition.Action.RESTORE,
+            actor=restored_by,
+            from_state=self.LifecycleState.ARCHIVED,
+            to_state=self.LifecycleState.INACTIVE,
+        )
+
+    def _record_transition(
+        self,
+        *,
+        action: str,
+        actor: object | None,
+        from_state: str,
+        to_state: str,
+        reason: str = "",
+        previous_responsible: object | None = None,
+        new_responsible: object | None = None,
+    ) -> None:
+        """Append an immutable lifecycle/ownership transition row."""
+        AllowedTagTransition.objects.create(
+            tag_id=self.pk,
+            action=action,
+            performed_by=actor,
+            from_state=from_state,
+            to_state=to_state,
+            reason=reason,
+            previous_responsible=previous_responsible,
+            new_responsible=new_responsible,
+        )
+
+
+class AllowedTagTransition(models.Model):
+    """Immutable ordered history for catalogue lifecycle and ownership."""
+
+    class Action(models.TextChoices):
+        ACTIVATE = "activate", "Ativação"
+        DEACTIVATE = "deactivate", "Desativação"
+        ARCHIVE = "archive", "Arquivamento"
+        RESTORE = "restore", "Restauração"
+        TRANSFER = "transfer", "Transferência de responsabilidade"
+
+    tag = models.ForeignKey(
+        AllowedTag,
+        on_delete=models.CASCADE,
+        related_name="transitions",
+        verbose_name="Tag",
+    )
+    action = models.CharField(
+        max_length=16, choices=Action.choices, verbose_name="Ação"
+    )
+    performed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name="Executada por",
+    )
+    performed_at = models.DateTimeField(
+        auto_now_add=True, db_index=True, verbose_name="Executada em"
+    )
+    from_state = models.CharField(
+        max_length=16,
+        blank=True,
+        choices=AllowedTag.LifecycleState.choices,
+        verbose_name="Estado anterior",
+    )
+    to_state = models.CharField(
+        max_length=16,
+        blank=True,
+        choices=AllowedTag.LifecycleState.choices,
+        verbose_name="Novo estado",
+    )
+    previous_responsible = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name="Responsável anterior",
+    )
+    new_responsible = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name="Novo responsável",
+    )
+    reason = models.TextField(blank=True, verbose_name="Motivo")
+
+    class Meta:
+        db_table = "patients_allowedtagtransition"
+        ordering: ClassVar[list[str]] = ["performed_at", "pk"]
+        verbose_name = "Transição de Tag"
+        verbose_name_plural = "Transições de Tag"
+
+    def __str__(self) -> str:
+        return f"{self.get_action_display()} ({self.performed_at:%Y-%m-%d %H:%M})"
+
+    def save(self, *args: object, **kwargs: object) -> None:
+        """Reject updates: transition history is append-only."""
+        if self.pk is not None:
+            raise ValidationError(
+                "Catalogue transition history is immutable and cannot be changed."
+            )
+        super().save(*args, **kwargs)  # type: ignore[arg-type]
+
+    def delete(self, *args: object, **kwargs: object) -> tuple[int, dict[str, int]]:
+        """Reject deletion: catalogue history must survive ordinary workflows."""
+        raise ValidationError(
+            "Catalogue transition history is immutable and cannot be deleted."
+        )
+
 
 
 class Tag(models.Model):

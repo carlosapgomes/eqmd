@@ -1,10 +1,16 @@
 import uuid
-from django.db import models
+from datetime import timedelta
+from typing import TYPE_CHECKING, ClassVar
+
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
+from django.db import models
 from django.utils import timezone
-from datetime import timedelta
 from simple_history.models import HistoricalRecords
+
+if TYPE_CHECKING:
+    from apps.patients.models import AllowedTag
+
 
 class EqmdCustomUser(AbstractUser):
     MEDICAL_DOCTOR = 0
@@ -191,23 +197,22 @@ class EqmdCustomUser(AbstractUser):
         if self.account_status in ['expired', 'expiring_soon']:
             self.account_status = 'active'
 
-    @property
-    def specialties(self):
-        """Return all specialties assigned to this user."""
-        return [
-            us.specialty
-            for us in self.user_specialties.filter(specialty__is_active=True)
-        ]
+    def eligible_specialty_memberships(self):
+        return self.user_specialties.filter(
+            is_active=True, specialty__is_active=True
+        ).select_related("specialty")
 
     @property
-    def primary_specialty(self):
-        """Return the user's primary specialty."""
-        try:
-            return self.user_specialties.get(is_primary=True).specialty
-        except UserSpecialty.DoesNotExist:
-            # Return first specialty if no primary is set
-            specialties = self.specialties
-            return specialties[0] if specialties else None
+    def specialties(self) -> list["MedicalSpecialty"]:
+        return [m.specialty for m in self.eligible_specialty_memberships()]
+
+    @property
+    def primary_specialty(self) -> "MedicalSpecialty | None":
+        memberships = list(self.eligible_specialty_memberships())
+        for membership in memberships:
+            if membership.is_primary:
+                return membership.specialty
+        return memberships[0].specialty if memberships else None
 
     @property
     def specialty_display(self):
@@ -294,6 +299,19 @@ class UserProfile(models.Model):
             return self.current_specialty.name
         return self.user.specialty_display
 
+    @property
+    def effective_current_specialty(self) -> "MedicalSpecialty | None":
+        """Return the current specialty only while membership stays valid."""
+        from .services.team_membership import resolve_current_specialty
+
+        return resolve_current_specialty(self)
+
+    @property
+    def effective_current_specialty_display(self) -> str:
+        """Return the valid current specialty name, or an empty string."""
+        specialty = self.effective_current_specialty
+        return specialty.name if specialty else ""
+
     def _normalize_matrix_localpart(self):
         if self.matrix_localpart is None:
             return
@@ -341,16 +359,38 @@ class MedicalSpecialty(models.Model):
         verbose_name="Ativa",
         help_text="Se desmarcado, esta especialidade não estará disponível para seleção"
     )
+    principal_tag: "models.ForeignKey[AllowedTag | None, AllowedTag | None]" = models.ForeignKey(
+        "patients.AllowedTag",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="principal_specialties",
+        verbose_name="Tag Principal",
+        help_text=(
+            "Tag pública do próprio namespace usada como padrão da equipe; "
+            "deixe vazio para não configurar"
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
 
     class Meta:
         verbose_name = "Especialidade Médica"
         verbose_name_plural = "Especialidades Médicas"
-        ordering = ['name']
+        ordering: ClassVar[list[str]] = ['name']
 
     def __str__(self):
         return self.name
+
+    def clean(self) -> None:
+        super().clean()
+        if self.principal_tag is None:
+            return
+        from apps.patients.services import tag_policy
+
+        tag_policy.validate_principal_tag(
+            specialty=self, tag=self.principal_tag
+        )
 
 
 class UserSpecialty(models.Model):
@@ -374,6 +414,41 @@ class UserSpecialty(models.Model):
         verbose_name="Especialidade Principal",
         help_text="Marque como especialidade principal (ex: do residente)"
     )
+    is_active = models.BooleanField(
+        default=True, db_index=True, verbose_name="Vínculo Ativo"
+    )
+    is_leader = models.BooleanField(default=False, verbose_name="Líder da Equipe")
+    deactivated_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Desativado em"
+    )
+    deactivated_by = models.ForeignKey(
+        EqmdCustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="deactivated_specialty_memberships",
+        verbose_name="Desativado por")
+    reactivated_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Reativado em"
+    )
+    reactivated_by = models.ForeignKey(
+        EqmdCustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="reactivated_specialty_memberships",
+        verbose_name="Reativado por",
+    )
+    leadership_granted_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Liderança concedida em"
+    )
+    leadership_granted_by = models.ForeignKey(
+        EqmdCustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="granted_specialty_leaderships",
+        verbose_name="Liderança concedida por",
+    )
+    leadership_revoked_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Liderança removida em"
+    )
+    leadership_revoked_by = models.ForeignKey(
+        EqmdCustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="revoked_specialty_leaderships",
+        verbose_name="Liderança removida por",
+    )
     assigned_at = models.DateTimeField(auto_now_add=True, verbose_name="Atribuída em")
     assigned_by = models.ForeignKey(
         EqmdCustomUser,
@@ -387,8 +462,14 @@ class UserSpecialty(models.Model):
     class Meta:
         verbose_name = "Especialidade do Usuário"
         verbose_name_plural = "Especialidades dos Usuários"
-        unique_together = ['user', 'specialty']  # One user can't have same specialty twice
-        ordering = ['-is_primary', 'specialty__name']
+        unique_together: ClassVar[list[str] | list[tuple[str, str]]] = ['user', 'specialty']  # One user can't have same specialty twice
+        ordering: ClassVar[list[str]] = ['-is_primary', 'specialty__name']
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.CheckConstraint(
+                condition=models.Q(is_active=True) | models.Q(is_leader=False),
+                name="userspecialty_leader_requires_active",
+            )
+        ]
 
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.specialty.name}"

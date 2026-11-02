@@ -4,14 +4,12 @@ Tests for medical specialty profile form and display (Phase 4: TDD).
 This file contains tests for profile form filtering and profile
 template display of specialties.
 """
-from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
 from django.urls import reverse
-from apps.accounts.models import (
-    MedicalSpecialty,
-    UserSpecialty
-)
+
 from apps.accounts.forms import UserProfileForm
+from apps.accounts.models import MedicalSpecialty, UserSpecialty
 from apps.accounts.tests.factories import DoctorFactory
 
 User = get_user_model()
@@ -208,6 +206,11 @@ class ProfileTemplateTestCase(TestCase):
         specialty, _ = MedicalSpecialty.objects.get_or_create(
             name='Cirurgia Vascular',
             defaults={'abbreviation': 'CVASC'}
+        )
+        UserSpecialty.objects.create(
+            user=self.user,
+            specialty=specialty,
+            is_primary=True
         )
         self.user.profile.current_specialty = specialty
         self.user.profile.save()

@@ -352,3 +352,36 @@ class TestHistoryPerformance(TestCase):
         # Verify user data is available without additional queries
         for record in history_records:
             self.assertIsNotNone(record.history_user.username)
+
+
+class TestAllowedTagClassificationHistory(TestCase):
+    """S2 R1/R4: classification edits are attributable and keep creator."""
+
+    def setUp(self):
+        self.user = create_navigation_user(
+            username="classification_user",
+            email="classification@example.com",
+            password="testpass123",
+        )
+        from apps.accounts.models import MedicalSpecialty
+
+        self.specialty = MedicalSpecialty.objects.create(
+            name="História Cirúrgica", abbreviation="HISTCIR"
+        )
+
+    def test_classification_change_records_actor_and_keeps_creator(self):
+        tag = _create_allowed_tag(self.user, name="Classificada")
+        tag.visibility = AllowedTag.Visibility.RESTRICTED
+        tag.origin = AllowedTag.Origin.SYSTEM
+        tag.specialty = self.specialty
+        tag._history_user = self.user
+        tag._change_reason = "Classification update"
+        tag.save()
+
+        latest = tag.history.first()
+        self.assertEqual(latest.visibility, AllowedTag.Visibility.RESTRICTED)
+        self.assertEqual(latest.origin, AllowedTag.Origin.SYSTEM)
+        self.assertEqual(latest.specialty_id, self.specialty.pk)
+        self.assertEqual(latest.created_by_id, self.user.pk)
+        self.assertEqual(latest.history_user_id, self.user.pk)
+        self.assertIsNotNone(latest.history_date)

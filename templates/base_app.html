@@ -71,9 +71,9 @@
             {% else %}
               <div>{{ user.get_full_name|default:user.username }}</div>
             {% endif %}
-            {% if user.profile.current_specialty_display %}
+            {% if user.profile.effective_current_specialty_display %}
               <small class="text-muted d-block">
-                <i class="bi bi-stethoscope me-1"></i>{{ user.profile.current_specialty_display }}
+                <i class="bi bi-stethoscope me-1"></i>{{ user.profile.effective_current_specialty_display }}
               </small>
             {% elif user.profession %}
               <small class="text-muted d-block">{{ user.profession }}</small>
@@ -85,9 +85,9 @@
           <li>
             <div class="px-3 py-2">
               <strong>{% if user.profile.display_name %}{{ user.profile.display_name }}{% else %}{{ user.get_full_name|default:user.username }}{% endif %}</strong>
-              {% if user.profile.current_specialty_display %}
+              {% if user.profile.effective_current_specialty_display %}
                 <div class="small text-muted">
-                  <i class="bi bi-stethoscope me-1"></i>{{ user.profile.current_specialty_display }}
+                  <i class="bi bi-stethoscope me-1"></i>{{ user.profile.effective_current_specialty_display }}
                 </div>
               {% endif %}
             </div>
@@ -100,12 +100,12 @@
           {% for specialty in user.specialties %}
           <li>
             <button
-              class="dropdown-item {% if specialty == user.profile.current_specialty %}active{% endif %}"
+              class="dropdown-item {% if specialty == user.profile.effective_current_specialty %}active{% endif %}"
               onclick="changeSpecialty('{{ specialty.id }}')"
             >
               {% if specialty == user.primary_specialty %}<i class="bi bi-star-fill me-2 text-warning"></i>{% endif %}
               {{ specialty.name }}
-              {% if specialty == user.profile.current_specialty %}<i class="bi bi-check float-end"></i>{% endif %}
+              {% if specialty == user.profile.effective_current_specialty %}<i class="bi bi-check float-end"></i>{% endif %}
             </button>
           </li>
           {% endfor %}
