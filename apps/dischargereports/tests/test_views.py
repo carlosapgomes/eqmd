@@ -601,6 +601,51 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
             action: "x",
         }
 
+    def _create_final_report(self, *, created_at=None):
+        report = DischargeReport.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Fresh final",
+            admission_date=date(2024, 1, 1),
+            discharge_date=date(2024, 1, 5),
+            medical_specialty="Test Specialty",
+            admission_history="h",
+            problems_and_diagnosis="d",
+            exams_list="e",
+            procedures_list="p",
+            inpatient_medical_history="m",
+            discharge_status="s",
+            discharge_recommendations="r",
+            is_draft=False,
+            created_by=self.creator,
+            updated_by=self.creator,
+        )
+        if created_at is not None:
+            DischargeReport.objects.filter(pk=report.pk).update(
+                created_at=created_at
+            )
+            report.refresh_from_db()
+        return report
+
+    def _final_post_data(self):
+        """POST data as submitted by the final report's "Atualizar" button."""
+        return {
+            "patient": self.patient.pk,
+            "event_datetime": timezone.now().strftime("%Y-%m-%dT%H:%M"),
+            "description": "Fresh final",
+            "admission_date": date(2024, 1, 1),
+            "discharge_date": date(2024, 1, 5),
+            "medical_specialty": "Test Specialty",
+            "admission_history": "h",
+            "problems_and_diagnosis": "corrected diagnosis",
+            "exams_list": "e",
+            "procedures_list": "p",
+            "inpatient_medical_history": "m",
+            "discharge_status": "s",
+            "discharge_recommendations": "r",
+            "update_final": "",
+        }
+
     def test_collaborator_can_open_update_view(self):
         self.client.login(username="collaborator", password="testpass123")
         url = reverse(
@@ -717,3 +762,105 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
+
+    def test_unknown_update_action_preserves_state_with_explicit_error(self):
+        """R5: a draft POST without an action changes nothing and errors.
+
+        The error names the valid actions so the client can resubmit with
+        ``save_draft`` or ``save_final``.
+        """
+        self.client.login(username="collaborator", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": self.report.pk},
+        )
+        data = self._draft_post_data("save_draft")
+        data.pop("save_draft")
+
+        response = self.client.post(url, data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ação inválida")
+        self.assertContains(response, "Salvar Rascunho")
+        self.assertContains(response, "Salvar Definitivo")
+        self.report.refresh_from_db()
+        self.assertTrue(self.report.is_draft)
+        self.assertEqual(self.report.problems_and_diagnosis, "d")
+
+    def test_change_event_holder_can_open_fresh_final_update(self):
+        """Finals keep the shipped window: creator or change_event holders.
+
+        The pre-extraction model rule granted finals editing to
+        ``events.change_event`` holders inside the window; the shared
+        predicate must keep that right and stay window-bound.
+        """
+        fresh_final = self._create_final_report()
+        old_final = self._create_final_report(
+            created_at=timezone.now() - timedelta(hours=25)
+        )
+        change_holder = User.objects.create_user(
+            username="changefinalholder",
+            email="changefinalholder@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.NURSE,
+        )
+        change_holder.user_permissions.add(
+            Permission.objects.get(codename="change_event")
+        )
+        self.client.login(username="changefinalholder", password="testpass123")
+
+        fresh_url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": fresh_final.pk},
+        )
+        old_url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": old_final.pk},
+        )
+
+        self.assertEqual(self.client.get(fresh_url).status_code, 200)
+        self.assertEqual(self.client.get(old_url).status_code, 403)
+
+    def test_final_update_without_action_keys_preserves_state_with_error(self):
+        """R5: a final POST with no recognized action changes nothing.
+
+        The error names the action the finalized-report form offers, so the
+        client can resubmit with the "Atualizar" button.
+        """
+        final_report = self._create_final_report()
+        self.client.login(username="creator", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": final_report.pk},
+        )
+        data = self._final_post_data()
+        data.pop("update_final")
+
+        response = self.client.post(url, data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ação inválida")
+        self.assertContains(response, 'name="update_final"')
+        final_report.refresh_from_db()
+        self.assertFalse(final_report.is_draft)
+        self.assertEqual(final_report.problems_and_diagnosis, "d")
+
+    def test_final_update_button_saves(self):
+        """Normal flow: the final "Atualizar" button updates the report."""
+        final_report = self._create_final_report()
+        self.client.login(username="creator", password="testpass123")
+        url = reverse(
+            "apps.dischargereports:dischargereport_update",
+            kwargs={"pk": final_report.pk},
+        )
+
+        response = self.client.post(url, self._final_post_data())
+
+        self.assertEqual(response.status_code, 302)
+        final_report.refresh_from_db()
+        self.assertFalse(final_report.is_draft)
+        self.assertEqual(
+            final_report.problems_and_diagnosis, "corrected diagnosis"
+        )

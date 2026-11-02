@@ -16,54 +16,17 @@ from django.views.generic import (
     UpdateView,
 )
 
-from apps.core.permissions import can_access_patient, can_delete_event, can_edit_event
+from apps.core.permissions import can_access_patient
 
 from .forms import DischargeReportCreateForm, DischargeReportUpdateForm
 from .models import DischargeReport
 from .services.pdf_generator import DischargeReportPDFGenerator
+from .services.permissions import (
+    can_delete_discharge_report,
+    can_edit_discharge_report,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def can_edit_discharge_report(user, report):
-    """
-    Check if user can edit discharge report based on business logic:
-    - Drafts: Any doctor/resident can edit anytime
-    - Final reports: Follow system standards (24h window, creator-only)
-    """
-    if not can_access_patient(user, report.patient):
-        return False
-
-    # If it's a draft, creator, edit-permission holders, or any
-    # doctor/resident can edit (collaborative draft workflow, no
-    # time limit). 0/1 are EqmdCustomUser MEDICAL_DOCTOR/RESIDENT.
-    if report.is_draft:
-        if report.created_by == user or user.has_perm(
-            "events.change_event"
-        ):
-            return True
-        profession_type = getattr(user, "profession_type", None)
-        return profession_type in (0, 1)
-
-    # If it's final, follow system standards
-    return can_edit_event(user, report)
-
-
-def can_delete_discharge_report(user, report):
-    """
-    Check if user can delete discharge report based on business logic:
-    - Drafts: Creator or users with delete permission
-    - Final reports: Follow system standards or delete permission override
-    """
-    if not can_access_patient(user, report.patient):
-        return False
-
-    # If it's a draft, allow creator or delete permission
-    if report.is_draft:
-        return report.created_by == user or user.has_perm("events.delete_event")
-
-    # If it's final, follow system standards or delete permission override
-    return can_delete_event(user, report) or user.has_perm("events.delete_event")
 
 
 class DischargeReportListView(LoginRequiredMixin, ListView):
@@ -195,6 +158,10 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_object(self):
         obj = super().get_object()
+        # The bound form copies the hidden ``is_draft`` field onto this
+        # instance during validation; keep the persisted status for the
+        # action dispatch and the re-rendered form.
+        self.was_draft = obj.is_draft
         # Check if user can edit this specific report
         if not obj.can_be_edited_by_user(self.request.user):
             if obj.is_draft:
@@ -217,14 +184,43 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
             kwargs={"patient_id": self.object.patient.pk},
         )
 
+    def _submitted_action(self):
+        """Return the update action submitted by the form buttons.
+
+        ``save_draft``/``save_final`` come from the draft form;
+        ``update_final`` from the finalized-report form, whose single button
+        keeps the report finalized.
+        """
+        if "save_final" in self.request.POST:
+            return "save_final"
+        if "save_draft" in self.request.POST:
+            return "save_draft"
+        if "update_final" in self.request.POST:
+            return "update_final"
+        return None
+
+    def _invalid_action_message(self):
+        """Name the actions the update form offers for the stored status."""
+        if self.was_draft:
+            return "Ação inválida. Use 'Salvar Rascunho' ou 'Salvar Definitivo'."
+        return "Ação inválida. Use 'Atualizar'."
+
     def form_valid(self, form):
-        is_draft = self.object.is_draft
+        action = self._submitted_action()
+        is_draft = self.was_draft
+
+        if action is None:
+            # Restore the persisted status the bound form copied onto the
+            # shared instance, so the error page keeps the matching actions.
+            self.object.is_draft = is_draft
+            form.add_error(None, self._invalid_action_message())
+            return self.form_invalid(form)
 
         # Handle draft vs final save
-        if "save_final" in self.request.POST and self.object.is_draft:
+        if action == "save_final" and is_draft:
             is_draft = False
             messages.success(self.request, "Relatório de alta finalizado com sucesso.")
-        elif "save_draft" in self.request.POST:
+        elif action == "save_draft":
             is_draft = True
             messages.success(self.request, "Rascunho do relatório atualizado.")
         else:

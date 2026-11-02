@@ -24,6 +24,10 @@ from apps.core.permissions.utils import (
     can_edit_discharge_data,
     can_edit_event,
 )
+from apps.dischargereports.services.permissions import (
+    can_delete_discharge_report,
+    can_edit_discharge_report,
+)
 from apps.patients.models import Patient
 from apps.pdf_forms.services.duplication import can_duplicate_pdf_submission
 
@@ -219,6 +223,23 @@ class PatientEventsTimelineView(ListView):
 
         return context
 
+    def _event_permissions(self, event):
+        """Return ``(can_edit, can_delete)`` for one timeline event.
+
+        Discharge-report events dispatch to the discharge-report service
+        predicate (design D2); every other event type keeps the generic
+        event rules.
+        """
+        if event.event_type == Event.DISCHARGE_REPORT_EVENT:
+            return (
+                can_edit_discharge_report(self.request.user, event),
+                can_delete_discharge_report(self.request.user, event),
+            )
+        return (
+            can_edit_event(self.request.user, event),
+            can_delete_event(self.request.user, event),
+        )
+
     def _bulk_permission_check(self, events):
         """Bulk permission checking to avoid N+1 queries."""
         events_with_permissions = []
@@ -227,8 +248,9 @@ class PatientEventsTimelineView(ListView):
         edit_permissions = {}
         delete_permissions = {}
         for event in events:
-            edit_permissions[event.pk] = can_edit_event(self.request.user, event)
-            delete_permissions[event.pk] = can_delete_event(self.request.user, event)
+            can_edit, can_delete = self._event_permissions(event)
+            edit_permissions[event.pk] = can_edit
+            delete_permissions[event.pk] = can_delete
 
         for event in events:
             event_data = {
