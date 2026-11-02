@@ -10,14 +10,19 @@ from __future__ import annotations
 import html
 import re
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlsplit
 
 from django.contrib.auth.models import Permission
 from django.http import QueryDict
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.accounts.models import MedicalSpecialty, UserSpecialty
+from apps.accounts.models import (
+    MedicalSpecialty,
+    UserSpecialty,
+    UserSpecialtyTagPreference,
+)
+from apps.accounts.services import tag_preferences, team_membership
 from apps.accounts.tests.helpers import create_navigation_user
 from apps.patients.models import AllowedTag, Patient, Tag
 
@@ -713,3 +718,322 @@ class PatientListTagFilterFlowTests(TagFilterSelectionFixture):
             {patient.pk for patient in legacy.context["patients"]},
             {self.patient_both.pk, self.patient_cirger.pk},
         )
+
+
+class SpecialtyPreferenceDefaultTests(TagFilterSelectionFixture):
+    """S8 R1/R2/R4: retained defaults, manual precedence and revalidation."""
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        super().setUpTestData()
+        cls.cirger_principal = make_tag(
+            cls.owner, "Principal CIRGER", specialty=cls.cirger
+        )
+        cls.cardio_principal = make_tag(
+            cls.owner, "Principal CARDIO", specialty=cls.cardio
+        )
+        cls.cirger.principal_tag = cls.cirger_principal
+        cls.cirger.save(update_fields=["principal_tag"])
+        cls.cardio.principal_tag = cls.cardio_principal
+        cls.cardio.save(update_fields=["principal_tag"])
+        for patient, tag in (
+            (cls.patient_cirger, cls.cirger_principal),
+            (cls.patient_cardio, cls.cardio_principal),
+        ):
+            Tag.objects.create(
+                allowed_tag=tag,
+                patient=patient,
+                created_by=cls.owner,
+                updated_by=cls.owner,
+            )
+
+    def setUp(self) -> None:
+        self.set_current(self.member, self.cirger)
+
+    def set_current(self, user: Any, specialty: MedicalSpecialty) -> None:
+        profile = user.profile
+        profile.current_specialty = specialty
+        profile.save(update_fields=["current_specialty"])
+
+    def membership(self, specialty: MedicalSpecialty) -> UserSpecialty:
+        return UserSpecialty.objects.get(user=self.member, specialty=specialty)
+
+    def save_preference(
+        self, specialty: MedicalSpecialty, tags: tuple[AllowedTag, ...] = (), mode: str = "any"
+    ) -> UserSpecialtyTagPreference:
+        preference = UserSpecialtyTagPreference.objects.create(
+            membership=self.membership(specialty), mode=mode
+        )
+        preference.tags.set(tags)
+        return preference
+
+    def list_response(self, **params: Any) -> Any:
+        self.login(self.member)
+        return self.client.get(reverse("patients:patient_list"), params)
+
+    def test_first_entry_applies_principal_tag_with_any_mode(self) -> None:
+        response = self.list_response()
+
+        selection = response.context["tag_selection"]
+        self.assertFalse(selection.is_manual)
+        self.assertEqual(selection.tag_ids, (self.cirger_principal.pk,))
+        self.assertEqual(selection.mode, "any")
+        self.assertEqual(
+            [patient.pk for patient in response.context["patients"]],
+            [self.patient_cirger.pk],
+        )
+        self.assertEqual(
+            response.context["tag_filter_state_label"],
+            "Padrão inicial da especialidade",
+        )
+        self.assertEqual(response.context["tag_preference_warning"], "")
+
+    def test_saved_preference_replaces_principal_default(self) -> None:
+        self.save_preference(self.cirger, (self.cardio_tag,), mode="all")
+
+        response = self.list_response()
+
+        selection = response.context["tag_selection"]
+        self.assertEqual(selection.tag_ids, (self.cardio_tag.pk,))
+        self.assertEqual(selection.mode, "all")
+        self.assertTrue(response.context["tag_preference_has_saved"])
+        self.assertEqual(
+            {patient.pk for patient in response.context["patients"]},
+            {self.patient_both.pk, self.patient_cardio.pk},
+        )
+
+    def test_saved_empty_preference_suppresses_principal_fallback(self) -> None:
+        self.save_preference(self.cirger)
+
+        response = self.list_response()
+
+        self.assertFalse(response.context["tag_selection"].has_predicate)
+        self.assertTrue(response.context["tag_preference_has_saved"])
+        self.assertEqual(
+            response.context["tag_filter_state_label"],
+            "Sem tags (padrão salvo)",
+        )
+        self.assertEqual(len(response.context["patients"]), 5)
+        self.assertNotIn(
+            self.cirger_principal.pk,
+            response.context["tag_selection"].tag_ids,
+        )
+
+    def test_manual_selection_overrides_saved_preference_without_writing(
+        self,
+    ) -> None:
+        preference = self.save_preference(self.cirger, (self.cirger_tag,))
+
+        response = self.list_response(
+            tags=[self.public_tag.pk], tag_mode="any", tag_filter="manual"
+        )
+
+        selection = response.context["tag_selection"]
+        self.assertTrue(selection.is_manual)
+        self.assertEqual(selection.tag_ids, (self.public_tag.pk,))
+        self.assertEqual(
+            set(preference.tags.values_list("pk", flat=True)),
+            {self.cirger_tag.pk},
+        )
+        self.assertFalse(UserSpecialtyTagPreference.objects.filter(
+            membership=self.membership(self.cardio)
+        ).exists())
+
+    def test_manual_clear_survives_refresh_without_database_write(self) -> None:
+        self.save_preference(self.cirger, (self.cirger_tag,))
+        initial = self.list_response(status=str(Patient.Status.OUTPATIENT))
+        self.assertEqual(
+            initial.context["tag_selection"].tag_ids, (self.cirger_tag.pk,)
+        )
+        preference_count = UserSpecialtyTagPreference.objects.count()
+
+        cleared_params = parse_qs(
+            initial.context["clear_tags_querystring"], keep_blank_values=True
+        )
+        cleared = self.client.get(reverse("patients:patient_list"), cleared_params)
+        refreshed = self.client.get(reverse("patients:patient_list"), cleared_params)
+
+        for response in (cleared, refreshed):
+            self.assertTrue(response.context["tag_filter_is_manual"])
+            self.assertFalse(response.context["tag_selection"].has_predicate)
+            self.assertEqual(cleared_params["status"], [str(Patient.Status.OUTPATIENT)])
+        self.assertEqual(
+            UserSpecialtyTagPreference.objects.count(), preference_count
+        )
+        self.assertFalse(cleared_params.get("tags"))
+
+    def test_reapply_link_restores_automatic_defaults(self) -> None:
+        self.save_preference(self.cirger, (self.cirger_tag,))
+        manual = self.list_response(
+            tag_filter="manual", status=str(Patient.Status.OUTPATIENT)
+        )
+        self.assertFalse(manual.context["tag_selection"].has_predicate)
+
+        reapplied_params = parse_qs(
+            urlsplit(manual.context["tag_preference_next"]).query,
+            keep_blank_values=True,
+        )
+        reapplied = self.client.get(
+            reverse("patients:patient_list"), reapplied_params
+        )
+
+        self.assertEqual(
+            reapplied.context["tag_selection"].tag_ids, (self.cirger_tag.pk,)
+        )
+        self.assertFalse(reapplied.context["tag_filter_is_manual"])
+        self.assertIn("Reaplicar preferências", manual.content.decode())
+
+    def test_unavailable_saved_tag_is_omitted_with_generic_warning(self) -> None:
+        preference = self.save_preference(
+            self.cirger, (self.cirger_tag, self.public_tag)
+        )
+        self.cirger_tag.is_active = False
+        self.cirger_tag.save(update_fields=["is_active"])
+
+        response = self.list_response()
+
+        self.assertEqual(
+            response.context["tag_selection"].tag_ids, (self.public_tag.pk,)
+        )
+        self.assertEqual(
+            response.context["tag_preference_warning"],
+            tag_preferences.UNAVAILABLE_DEFAULTS_WARNING,
+        )
+        self.assertContains(
+            response, tag_preferences.UNAVAILABLE_DEFAULTS_WARNING
+        )
+        self.assertEqual(
+            set(preference.tags.values_list("pk", flat=True)),
+            {self.cirger_tag.pk, self.public_tag.pk},
+        )
+
+    def test_all_saved_tags_unavailable_means_no_predicate(self) -> None:
+        preference = self.save_preference(self.cirger, (self.cirger_tag,))
+        self.cirger_tag.is_active = False
+        self.cirger_tag.save(update_fields=["is_active"])
+
+        response = self.list_response()
+
+        self.assertFalse(response.context["tag_selection"].has_predicate)
+        self.assertEqual(len(response.context["patients"]), 5)
+        self.assertContains(
+            response, tag_preferences.UNAVAILABLE_DEFAULTS_WARNING
+        )
+        self.assertEqual(
+            list(preference.tags.values_list("pk", flat=True)),
+            [self.cirger_tag.pk],
+        )
+
+        self.cirger_tag.is_active = True
+        self.cirger_tag.save(update_fields=["is_active"])
+
+        restored = self.list_response()
+
+        self.assertEqual(
+            restored.context["tag_selection"].tag_ids, (self.cirger_tag.pk,)
+        )
+        self.assertEqual(restored.context["tag_preference_warning"], "")
+
+    def test_invalid_principal_warns_without_predicate(self) -> None:
+        self.cirger_principal.is_active = False
+        self.cirger_principal.save(update_fields=["is_active"])
+
+        response = self.list_response()
+
+        self.assertFalse(response.context["tag_selection"].has_predicate)
+        self.assertEqual(
+            response.context["tag_preference_warning"],
+            tag_preferences.UNAVAILABLE_DEFAULTS_WARNING,
+        )
+        self.assertEqual(len(response.context["patients"]), 5)
+
+    def test_invalid_manual_selection_stays_an_error_with_defaults(self) -> None:
+        self.save_preference(self.cirger, (self.cirger_tag,))
+
+        response = self.list_response(tags=["999999"])
+
+        self.assertEqual(list(response.context["patients"]), [])
+        self.assertTrue(response.context["tag_filter_error"])
+        self.assertFalse(response.context["tag_selection"].has_predicate)
+
+    def test_without_valid_specialty_no_default_is_applied(self) -> None:
+        profile = self.member.profile
+        profile.current_specialty = None
+        profile.save(update_fields=["current_specialty"])
+
+        response = self.list_response()
+
+        self.assertFalse(response.context["tag_selection"].has_predicate)
+        self.assertFalse(response.context["tag_filter_is_manual"])
+        self.assertEqual(response.context["tag_preference_warning"], "")
+        self.assertEqual(len(response.context["patients"]), 5)
+
+    def test_each_specialty_uses_its_own_saved_preference(self) -> None:
+        self.save_preference(self.cirger, (self.cirger_tag,))
+        self.save_preference(self.cardio, (self.cardio_tag,), mode="all")
+
+        cirger_response = self.list_response()
+        self.assertEqual(
+            cirger_response.context["tag_selection"].tag_ids,
+            (self.cirger_tag.pk,),
+        )
+
+        self.set_current(self.member, self.cardio)
+        cardio_response = self.client.get(reverse("patients:patient_list"))
+
+        self.assertEqual(
+            cardio_response.context["tag_selection"].tag_ids,
+            (self.cardio_tag.pk,),
+        )
+        self.assertEqual(cardio_response.context["tag_selection"].mode, "all")
+
+    def test_revoked_membership_retains_preference_without_using_it(self) -> None:
+        preference = self.save_preference(self.cirger, (self.cirger_tag,))
+        team_membership.revoke_membership(
+            actor=self.owner, membership=self.membership(self.cirger)
+        )
+
+        revoked = self.list_response()
+
+        self.assertFalse(revoked.context["tag_selection"].has_predicate)
+        self.assertEqual(revoked.context["tag_preference_warning"], "")
+        self.assertTrue(
+            UserSpecialtyTagPreference.objects.filter(pk=preference.pk).exists()
+        )
+
+        membership = self.membership(self.cirger)
+        team_membership.grant_membership(
+            actor=self.owner, user=self.member, specialty=self.cirger
+        )
+        self.set_current(self.member, self.cirger)
+        rejoined = self.client.get(reverse("patients:patient_list"))
+
+        self.assertEqual(
+            rejoined.context["tag_selection"].tag_ids, (self.cirger_tag.pk,)
+        )
+        self.assertFalse(membership.is_leader)
+
+    def test_save_form_renders_the_effective_selection(self) -> None:
+        response = self.list_response()
+
+        bodies = response.content.decode()
+        self.assertIn(reverse("apps.accounts:tag_preference_save"), bodies)
+        self.assertEqual(
+            response.context["tag_preference_specialty"].pk, self.cirger.pk
+        )
+        self.assertEqual(response.context["tag_preference_mode"], "any")
+        self.assertEqual(
+            response.context["tag_preference_tags"],
+            (self.cirger_principal.pk,),
+        )
+        self.assertIn('name="specialty_id"', bodies)
+        self.assertIn('name="csrfmiddlewaretoken"', bodies)
+
+    def test_automatic_defaults_do_not_enter_the_filter_querystring(self) -> None:
+        response = self.list_response(q="Paciente")
+
+        parsed = parse_qs(
+            response.context["filter_querystring"], keep_blank_values=True
+        )
+        self.assertEqual(parsed, {"q": ["Paciente"]})
+        self.assertFalse(response.context["tag_filter_is_manual"])

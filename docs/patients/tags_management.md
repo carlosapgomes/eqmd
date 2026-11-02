@@ -244,14 +244,51 @@ See [tag-privacy-surfaces.md](tag-privacy-surfaces.md) for the complete reader
 inventory, the legacy `?tag=` validation rule and the shared-cache reprojection
 requirements.
 
+## Per-user specialty tag preferences
+
+Filter preferences are stored per retained user-specialty membership, not per
+session or per current selection. The row records the selected catalogue
+identities plus the `any`/`all` matching mode. Its **absence** means "not
+configured yet"; an **existing empty selection** means the user intentionally
+saved no tag filter and must not receive the principal tag again.
+
+On the patient list, the effective state follows this precedence:
+
+1. explicit manual state, including an explicitly empty selection
+   (`tag_filter=manual`, repeated `tags`, `tag_mode`);
+2. the saved preference of the valid active specialty, when one exists;
+3. that specialty's active public principal tag with ANY matching;
+4. no tag predicate, with a generic warning when a configured default exists
+   but is unavailable.
+
+Only explicit save persists a preference. Browsing, clearing and reapplying are
+GET-only state changes: clearing keeps the manual marker (and survives refresh,
+pagination and refresh links), while reapply drops the tag parameters so the
+saved or principal default is recomputed. **Salvar como preferência da
+especialidade ativa** is a CSRF-protected POST limited to the caller's current
+valid specialty; forged or stale specialty targets are denied and no
+preference is written into another team. Only currently visible active tags can
+be saved; historical/inaccessible identities remain usable for manual
+filtering but cannot become automatic defaults.
+
+Automatic defaults are revalidated on every request. Inactive, archived or
+inaccessible saved identities are omitted with the generic warning and the
+remaining tags still apply; if none remain the tag predicate is dropped rather
+than returning no patients. Stored identities are never silently rewritten, so
+reactivating a tag restores it, and revoking membership retains the settings
+without granting access. Rejoining the team reuses the retained preference and
+never restores leadership automatically. The owner can review retained settings
+at **Meu Perfil → Preferências de Tags**.
+
 ## Current limitation
 
 Lifecycle, responsibility, assignment policy, atomic audited writes, stable
-event references, requester-aware read privacy, the leader team tag page and
-searchable multi-tag patient-list filtering are delivered together. The ward
-map still applies only the legacy single-tag rule; full ANY/ALL map parity,
-filtered totals and per-specialty default preferences are delivered by later
-slices. Team roster and membership administration stay in **Django Admin →
+event references, requester-aware read privacy, the leader team tag page,
+searchable multi-tag patient-list filtering and retained per-specialty
+preferences are delivered together. The ward map still applies only the legacy
+single-tag rule; full ANY/ALL map parity, filtered totals and map consumption
+of the persisted preferences remain open for the final integration slice.
+Team roster and membership administration stay in **Django Admin →
 Especialidades dos Usuários**; the leader page never manages memberships. Do
 not deploy intermediate slices or create production restricted catalogue data
 before the release review covering those slices.

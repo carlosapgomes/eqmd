@@ -4,8 +4,10 @@
  * The Django template already renders an explicit, requester-filtered state.
  * This script only turns the native multi-select into a searchable lookup:
  * selections still submit as repeated `tags` inputs plus `tag_mode` and the
- * explicit `tag_filter=manual` marker. It never creates catalogue rows and
- * renders only rows returned by the visibility-checked lookup endpoint.
+ * explicit `tag_filter=manual` marker. It also mirrors the current selection
+ * into the separate explicit-save form so the saved preference matches what
+ * the user sees. It never creates catalogue rows and renders only rows
+ * returned by the visibility-checked lookup endpoint.
  */
 (function () {
   "use strict";
@@ -251,6 +253,35 @@
         if (page < numPages) {
           page += 1;
           load(false);
+        }
+      });
+    }
+
+    var preferenceForm = document.querySelector("[data-tag-preference-form]");
+    if (preferenceForm) {
+      preferenceForm.addEventListener("submit", function () {
+        var container = preferenceForm.querySelector(
+          "[data-tag-preference-tags]"
+        );
+        if (container) {
+          container.replaceChildren();
+          Array.prototype.forEach.call(
+            hidden.querySelectorAll("[data-tag-input]"),
+            function (input) {
+              var copy = document.createElement("input");
+              copy.type = "hidden";
+              copy.name = "tags";
+              copy.value = input.value;
+              container.appendChild(copy);
+            }
+          );
+        }
+        var modeField = preferenceForm.querySelector(
+          "[data-tag-preference-mode]"
+        );
+        var modeSelect = root.querySelector('select[name="tag_mode"]');
+        if (modeField && modeSelect) {
+          modeField.value = modeSelect.value;
         }
       });
     }

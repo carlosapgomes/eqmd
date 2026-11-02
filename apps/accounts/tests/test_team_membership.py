@@ -8,9 +8,14 @@ from django.db.migrations.executor import MigrationExecutor
 from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
 
-from apps.accounts.models import MedicalSpecialty, UserSpecialty
-from apps.accounts.services import team_membership
+from apps.accounts.models import (
+    MedicalSpecialty,
+    UserSpecialty,
+    UserSpecialtyTagPreference,
+)
+from apps.accounts.services import tag_preferences, team_membership
 from apps.accounts.tests.factories import DoctorFactory, SuperUserFactory
+from apps.patients.models import AllowedTag
 
 BASE_MIGRATION = ("accounts", "0005_populate_sample_specialties")
 HEAD_MIGRATION = ("accounts", "0006_userspecialty_team_membership")
@@ -417,3 +422,74 @@ class MembershipBackfillMigrationTestCase(TransactionTestCase):
             executor = MigrationExecutor(connection)
             executor.loader.build_graph()
             executor.migrate(executor.loader.graph.leaf_nodes())
+
+
+class RevokedMembershipPreferenceTests(TestCase):
+    """S8 R4: revocation retains settings without granting eligibility."""
+
+    def setUp(self) -> None:
+        self.admin = SuperUserFactory()
+        self.user = DoctorFactory()
+        self.specialty = make_specialty("Cirurgia Geral", "RCIRGER")
+        self.membership = UserSpecialty.objects.create(
+            user=self.user, specialty=self.specialty
+        )
+        self.tag = AllowedTag.objects.create(
+            name="Preferida Revogacao",
+            created_by=self.admin,
+            updated_by=self.admin,
+        )
+        self.preference = UserSpecialtyTagPreference.objects.create(
+            membership=self.membership
+        )
+        self.preference.tags.set([self.tag])
+        team_membership.set_current_specialty(
+            profile=self.user.profile, specialty=self.specialty
+        )
+
+    def test_revocation_retains_preference_without_granting_eligibility(
+        self,
+    ) -> None:
+        team_membership.revoke_membership(
+            actor=self.admin, membership=self.membership
+        )
+
+        self.assertTrue(
+            UserSpecialtyTagPreference.objects.filter(
+                pk=self.preference.pk
+            ).exists()
+        )
+        self.assertEqual(self.preference.tags.count(), 1)
+        self.assertEqual(self.user.specialties, [])
+        self.assertIsNone(self.user.profile.effective_current_specialty)
+        state = tag_preferences.automatic_state(self.user)
+        self.assertFalse(state.selection.has_predicate)
+
+    def test_rejoin_reuses_the_retained_preference(self) -> None:
+        team_membership.revoke_membership(
+            actor=self.admin, membership=self.membership
+        )
+        team_membership.grant_membership(
+            actor=self.admin, user=self.user, specialty=self.specialty
+        )
+        team_membership.set_current_specialty(
+            profile=self.user.profile, specialty=self.specialty
+        )
+
+        self.assertFalse(self.membership.is_leader)
+        state = tag_preferences.automatic_state(self.user)
+        self.assertEqual(state.selection.tag_ids, (self.tag.pk,))
+        self.assertTrue(state.has_saved_preference)
+
+    def test_membership_deactivation_never_deletes_settings(self) -> None:
+        self.membership.is_active = False
+        self.membership.save(update_fields=["is_active"])
+
+        self.assertTrue(
+            UserSpecialtyTagPreference.objects.filter(
+                membership=self.membership
+            ).exists()
+        )
+        self.assertEqual(list(self.preference.tags.values_list("pk", flat=True)), [
+            self.tag.pk
+        ])

@@ -41,19 +41,42 @@ TAG_QUERY_KEYS = (
     TAG_FILTER_PARAM,
     "page",
 )
+SOURCE_INITIAL = "initial"
+SOURCE_MANUAL = "manual"
+SOURCE_SAVED = "saved"
+SOURCE_PRINCIPAL = "principal"
 MODE_LABELS = {MATCH_ANY: "Qualquer tag", MATCH_ALL: "Todas as tags"}
+MODE_CHOICES = tuple((mode, MODE_LABELS[mode]) for mode in MATCH_MODES)
 STATE_INITIAL_LABEL = "Sem filtro de tag"
 STATE_MANUAL_LABEL = "Filtro manual"
 STATE_MANUAL_EMPTY_LABEL = "Sem tags (filtro manual)"
+STATE_SAVED_LABEL = "Padrão salvo da especialidade"
+STATE_SAVED_EMPTY_LABEL = "Sem tags (padrão salvo)"
+STATE_PRINCIPAL_LABEL = "Padrão inicial da especialidade"
+SOURCE_LABELS = {
+    SOURCE_MANUAL: STATE_MANUAL_LABEL,
+    SOURCE_SAVED: STATE_SAVED_LABEL,
+    SOURCE_PRINCIPAL: STATE_PRINCIPAL_LABEL,
+}
 
 
 @dataclass(frozen=True)
 class TagFilterSelection:
-    """One resolved, requester-safe tag filter state."""
+    """One resolved, requester-safe tag filter state.
+
+    ``source`` records where the state came from so the page can tell saved
+    specialty defaults, the principal-tag fallback and explicit manual state
+    apart. Only manual state round-trips through query parameters; automatic
+    defaults are recomputed from the retained preference on every request.
+    """
 
     tags: tuple[AllowedTag, ...] = ()
     mode: str = DEFAULT_MODE
-    is_manual: bool = False
+    source: str = SOURCE_INITIAL
+
+    @property
+    def is_manual(self) -> bool:
+        return self.source == SOURCE_MANUAL
 
     @property
     def tag_ids(self) -> tuple[int, ...]:
@@ -70,16 +93,18 @@ class TagFilterSelection:
 
     @property
     def state_label(self) -> str:
-        if not self.is_manual:
-            return STATE_INITIAL_LABEL
-        return STATE_MANUAL_LABEL if self.tags else STATE_MANUAL_EMPTY_LABEL
+        if self.source == SOURCE_MANUAL:
+            return STATE_MANUAL_LABEL if self.tags else STATE_MANUAL_EMPTY_LABEL
+        if self.source == SOURCE_SAVED and not self.tags:
+            return STATE_SAVED_EMPTY_LABEL
+        return SOURCE_LABELS.get(self.source, STATE_INITIAL_LABEL)
 
     def without_tag_id(self, tag_id: int) -> TagFilterSelection:
         """Return the same manual state with one selected identity removed."""
         return replace(
             self,
             tags=tuple(tag for tag in self.tags if tag.pk != tag_id),
-            is_manual=True,
+            source=SOURCE_MANUAL,
         )
 
 
@@ -169,7 +194,7 @@ def parse_tag_selection(
     return TagFilterSelection(
         tags=resolve_visible_tags(actor, tag_ids),
         mode=mode,
-        is_manual=True,
+        source=SOURCE_MANUAL,
     )
 
 
@@ -234,7 +259,7 @@ def remove_tag_query(
 
 def manual_empty_query(query: QueryDict, selection: TagFilterSelection) -> str:
     """Return the effective query for an explicitly cleared tag filter."""
-    cleared = TagFilterSelection(mode=selection.mode, is_manual=True)
+    cleared = TagFilterSelection(mode=selection.mode, source=SOURCE_MANUAL)
     return encoded_query(query, cleared)
 
 

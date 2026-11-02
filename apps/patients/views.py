@@ -35,6 +35,7 @@ from django.views.generic import (
     UpdateView,
 )
 
+from apps.accounts.services import tag_preferences
 from apps.core.permissions.decorators import doctor_required
 
 # from apps.hospitals.models import Hospital  # Removed for single-hospital refactor
@@ -140,19 +141,15 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         elif admission_filter == "not_admitted":
             queryset = queryset.filter(current_admission_id__isnull=True)
 
-        # Explicit multi-tag filter state (design D6). Repeated ``tags``,
-        # ANY/ALL mode, the manual-empty marker and the legacy ``tag`` form are
-        # parsed in one shared service. An inaccessible, unknown or malformed
-        # explicit selection always yields the generic message and no rows; it
-        # never falls back to an unfiltered (wider) result set.
-        self.tag_filter_error = ""
-        self.tag_selection = tag_filters.TagFilterSelection()
-        try:
-            self.tag_selection = tag_filters.parse_tag_selection(
-                self.request.user, self.request.GET
-            )
-        except tag_projection.InvalidTagFilter:
-            self.tag_filter_error = tag_projection.INVALID_TAG_FILTER_MESSAGE
+        # Explicit manual state wins over the retained specialty preference,
+        # which wins over the principal-tag fallback (design D6). Automatic
+        # defaults are recomputed on every request and never stored on GET.
+        self.tag_preference = tag_preferences.resolve_request_state(
+            self.request.user, self.request.GET
+        )
+        self.tag_selection = self.tag_preference.selection
+        self.tag_filter_error = self.tag_preference.error
+        if self.tag_filter_error:
             queryset = queryset.none()
         else:
             queryset = tag_filters.apply_tag_selection(queryset, self.tag_selection)
@@ -229,6 +226,24 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context["clear_tags_querystring"] = tag_filters.manual_empty_query(
             self.request.GET, selection
         )
+        # Automatic defaults stay out of the canonical query so refresh,
+        # pagination and result links recompute them from the retained
+        # preference, while manual state keeps round-tripping explicitly.
+        reapply_query = tag_filters.effective_query(
+            self.request.GET, tag_filters.TagFilterSelection()
+        ).urlencode()
+        list_url = reverse("patients:patient_list")
+        context["reapply_tags_querystring"] = reapply_query
+        context["tag_preference_next"] = (
+            f"{list_url}?{reapply_query}" if reapply_query else list_url
+        )
+        context["tag_preference_specialty"] = self.tag_preference.specialty
+        context["tag_preference_has_saved"] = (
+            self.tag_preference.has_saved_preference
+        )
+        context["tag_preference_warning"] = self.tag_preference.warning
+        context["tag_preference_mode"] = selection.mode
+        context["tag_preference_tags"] = selection.tag_ids
         tag_projection.attach_patient_tag_badges(
             context["patients"], actor=self.request.user
         )

@@ -1,9 +1,20 @@
 from django.urls import path
-from . import views
+
+from . import views, views_tag_preferences
 
 app_name = "apps.accounts"
 
 urlpatterns = [
+    path(
+        "tag-preferences/",
+        views_tag_preferences.tag_preferences_view,
+        name="tag_preferences",
+    ),
+    path(
+        "tag-preferences/save/",
+        views_tag_preferences.save_tag_preference,
+        name="tag_preference_save",
+    ),
     path("<uuid:public_id>/", views.profile_view, name="profile"),
     path(
         "<uuid:public_id>/detail/",

@@ -99,12 +99,63 @@
               <a href="?{{ clear_tags_querystring }}"
                  class="badge bg-light text-dark text-decoration-none"
                  data-clear-tag-filter>Limpar tags</a>
+              {% if tag_preference_specialty %}
+                <a href="?{{ reapply_tags_querystring }}"
+                   class="badge bg-light text-dark text-decoration-none"
+                   data-reapply-tag-preferences>Reaplicar preferências</a>
+              {% endif %}
+            {% elif tag_selection.has_predicate %}
+              <span class="badge bg-secondary" data-tag-default-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
             {% endif %}
           </div>
         </div>
         {% endif %}
       </div>
     </div>
+
+    {% if tag_preference_specialty %}
+      <div class="card card-medical mb-4" data-tag-preference-panel>
+        <div class="card-body d-flex flex-wrap align-items-center gap-3">
+          <div class="me-auto">
+            <div class="small text-muted">
+              Especialidade ativa:
+              <strong data-tag-preference-specialty>{{ tag_preference_specialty.name }}</strong>
+            </div>
+            <div class="small" data-tag-preference-state>
+              {% if tag_preference_has_saved %}Preferência salva em uso{% else %}Sem preferência salva (padrão inicial){% endif %}
+              · {{ tag_filter_mode_label }}
+            </div>
+          </div>
+          <form method="post"
+                action="{% url 'apps.accounts:tag_preference_save' %}"
+                data-tag-preference-form>
+            {% csrf_token %}
+            <input type="hidden" name="specialty_id" value="{{ tag_preference_specialty.pk }}">
+            <input type="hidden" name="tag_mode" value="{{ tag_preference_mode }}" data-tag-preference-mode>
+            <input type="hidden" name="next" value="{{ tag_preference_next }}">
+            <span data-tag-preference-tags>
+              {% for tag_id in tag_preference_tags %}
+                <input type="hidden" name="tags" value="{{ tag_id }}">
+              {% endfor %}
+            </span>
+            <button type="submit" class="btn btn-sm btn-medical-primary">
+              <i class="bi bi-bookmark-check me-1" aria-hidden="true"></i>
+              Salvar como preferência da especialidade ativa
+            </button>
+          </form>
+        </div>
+        {% if tag_preference_warning %}
+          <div class="card-footer bg-transparent">
+            <div class="alert alert-warning mb-0 py-2"
+                 role="alert"
+                 data-tag-preference-warning>
+              <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+              {{ tag_preference_warning }}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
     
     
     {% if patients %}

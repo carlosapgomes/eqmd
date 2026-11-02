@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib.auth.models import AbstractUser
@@ -473,3 +473,58 @@ class UserSpecialty(models.Model):
 
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.specialty.name}"
+
+
+class UserSpecialtyTagPreference(models.Model):
+    """Retained tag filter preference for one user-specialty membership.
+
+    The row is keyed by the retained ``UserSpecialty`` identity, so revoking and
+    later restoring membership reuses the same settings. Absence of the row
+    means "not configured yet"; a row with no tags means an intentionally empty
+    selection (no tag predicate).
+    """
+
+    class Mode(models.TextChoices):
+        ANY = "any", "Qualquer tag"
+        ALL = "all", "Todas as tags"
+
+    membership: "models.OneToOneField[UserSpecialty, UserSpecialty]" = (
+        models.OneToOneField(
+            UserSpecialty,
+            on_delete=models.CASCADE,
+            primary_key=True,
+            related_name="tag_preference",
+            verbose_name="Vínculo com a especialidade",
+        )
+    )
+    tags: "models.ManyToManyField[AllowedTag, AllowedTag]" = models.ManyToManyField(
+        "patients.AllowedTag",
+        blank=True,
+        related_name="specialty_preferences",
+        verbose_name="Tags selecionadas",
+    )
+    mode: "models.CharField[str, str]" = models.CharField(
+        max_length=8,
+        choices=Mode.choices,
+        default=Mode.ANY,
+        verbose_name="Modo de correspondência",
+    )
+    created_at: "models.DateTimeField[datetime, datetime]" = models.DateTimeField(
+        auto_now_add=True, verbose_name="Criada em"
+    )
+    updated_at: "models.DateTimeField[datetime, datetime]" = models.DateTimeField(
+        auto_now=True, verbose_name="Atualizada em"
+    )
+
+    class Meta:
+        verbose_name = "Preferência de Tags da Especialidade"
+        verbose_name_plural = "Preferências de Tags das Especialidades"
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.CheckConstraint(
+                condition=models.Q(mode__in=["any", "all"]),
+                name="userspecialtytagpreference_mode_valid",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.membership} - {self.get_mode_display()}"

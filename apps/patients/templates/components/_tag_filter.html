@@ -1,10 +1,12 @@
 {% comment %}
-Patient-list tag filter column (S7 R4).
+Patient-list tag filter column (S7/S8).
 
 The selector keeps repeated `tags`, `tag_mode` and `tag_filter=manual` in the
-same GET form as the other predicates. The validation message is generic and
-never echoes a forged identifier. Reapply-preferences stays out of S7 because
-no preference is persisted yet.
+same GET form as the other predicates. Automatic specialty defaults are
+recomputed from the retained preference and never enter that query, so a
+refresh or pagination keeps applying them. The validation message is generic
+and never echoes a forged identifier. Clear and reapply stay distinct actions:
+clearing keeps the manual marker, while reapply drops every tag parameter.
 {% endcomment %}
 <div class="col-md-3">
   {% include "components/_tag_selector.html" %}
