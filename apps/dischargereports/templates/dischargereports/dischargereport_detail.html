@@ -188,6 +188,9 @@
         <div class="card-footer">
           <small class="text-muted">
             Criado por {{ report.created_by.get_full_name|default:report.created_by.username }} em {{ report.created_at|date:"d/m/Y H:i" }}
+            {% if not report.is_draft and report.finalized_at %}
+              • Finalizado por {{ report.finalized_by.get_full_name|default:report.finalized_by.username|default:"usuário removido" }} em {{ report.finalized_at|date:"d/m/Y H:i" }}
+            {% endif %}
             {% if report.updated_at != report.created_at %}
               • Atualizado em {{ report.updated_at|date:"d/m/Y H:i" }}
             {% endif %}
