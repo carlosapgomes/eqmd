@@ -23,6 +23,8 @@ from .forms import EqmdCustomUserChangeForm, EqmdCustomUserCreationForm
 from .models import EqmdCustomUser, MedicalSpecialty, UserProfile, UserSpecialty
 from .services import team_membership
 
+USER_MANAGERS_GROUP_NAME = "User Managers"
+
 
 class UserSpecialtyInlineFormSet(BaseInlineFormSet):
     """Inline formset that deactivates memberships instead of deleting rows."""
@@ -205,9 +207,60 @@ class MedicalSpecialtyAdmin(admin.ModelAdmin):
         }),
     )
 
+
+class ClinicalIdentityAdminFormMixin:
+    """Require ``profession_type`` on admin user forms (D3).
+
+    Superusers and ``User Managers`` members are exempt: they do not take
+    part in clinical draft authorization. The model field stays nullable,
+    so the guard lives only in the admin form path.
+    """
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            not self._is_clinical_identity_exempt(cleaned_data)
+            and cleaned_data.get('profession_type') is None
+        ):
+            self.add_error(
+                'profession_type',
+                _(
+                    'Selecione o tipo de profissão. Usuários clínicos '
+                    'não podem ficar sem profissão.'
+                ),
+            )
+        return cleaned_data
+
+    def _is_clinical_identity_exempt(self, cleaned_data):
+        is_superuser = cleaned_data.get('is_superuser')
+        if is_superuser is None:
+            is_superuser = self.instance.is_superuser
+        if is_superuser:
+            return True
+
+        groups = cleaned_data.get('groups')
+        if groups is not None:
+            return groups.filter(name=USER_MANAGERS_GROUP_NAME).exists()
+        if not self.instance.pk:
+            return False
+        return self.instance.groups.filter(name=USER_MANAGERS_GROUP_NAME).exists()
+
+
+class ClinicalIdentityUserCreationForm(
+    ClinicalIdentityAdminFormMixin, EqmdCustomUserCreationForm
+):
+    """Admin add form with the clinical identity requirement."""
+
+
+class ClinicalIdentityUserChangeForm(
+    ClinicalIdentityAdminFormMixin, EqmdCustomUserChangeForm
+):
+    """Admin change form with the clinical identity requirement."""
+
+
 class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
-    add_form = EqmdCustomUserCreationForm
-    form = EqmdCustomUserChangeForm
+    add_form = ClinicalIdentityUserCreationForm
+    form = ClinicalIdentityUserChangeForm
     model = EqmdCustomUser
     
     # Add account_status and access_expires_at to the main list view
@@ -260,7 +313,10 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
-    # Keep add_fieldsets simple for new user creation
+    # Keep add_fieldsets simple for new user creation. Permissions stay
+    # exposed so the add form can represent the clinical-identity exemption
+    # (superusers and ``User Managers`` members), which the change form
+    # already grants.
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
@@ -278,6 +334,13 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         ('Professional Information', {
             'fields': ('profession_type', 'professional_registration_number',
                       'country_id_number', 'fiscal_number', 'phone')
+        }),
+        ('Permissions', {
+            'fields': ('is_superuser', 'groups'),
+            'description': _(
+                'Superusuários e membros do grupo User Managers ficam isentos '
+                'de informar o tipo de profissão.'
+            ),
         }),
     )
     
@@ -299,6 +362,35 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
             return []
         return super().get_inline_instances(request, obj)
     
+    def get_fieldsets(self, request, obj=None):
+        """Serve add fieldsets without ``is_superuser`` to other requesters.
+
+        Only a superuser requester may create a superuser (D3 exemption
+        stays available to ``User Managers`` staff through ``groups``).
+        Dropping the field from the add fieldsets also drops it from the
+        generated form, so a tampered POST value cannot bind; the change
+        form keeps its pre-existing behavior.
+        """
+        fieldsets = super().get_fieldsets(request, obj)
+        requester_is_superuser = getattr(
+            getattr(request, 'user', None), 'is_superuser', False
+        )
+        if obj is not None or requester_is_superuser:
+            return fieldsets
+
+        restricted = []
+        for name, options in fieldsets:
+            fields = options['fields']
+            if isinstance(fields, (list, tuple)):
+                options = {
+                    **options,
+                    'fields': tuple(
+                        field for field in fields if field != 'is_superuser'
+                    ),
+                }
+            restricted.append((name, options))
+        return tuple(restricted)
+
     def save_model(self, request, obj, form, change):
         """
         Custom save logic for user creation by admins.
@@ -306,6 +398,10 @@ class EqmdCustomUserAdmin(UserAdmin, SimpleHistoryAdmin):
         When admin creates a new user, ensure password_change_required is True
         unless explicitly set otherwise.
         """
+        if not change and not request.user.is_superuser:
+            # Server-side enforcement: the add form hides is_superuser from
+            # non-superuser requesters; never persist it from a tampered POST.
+            obj.is_superuser = False
         if not change and (  # New user creation
             not hasattr(obj, 'password_change_required')
             or obj.password_change_required is None

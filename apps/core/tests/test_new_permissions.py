@@ -368,3 +368,37 @@ class TestPermissionSystemIntegrity(TestCase):
             violations, [],
             f'Medical roles have admin permissions: {violations}'
         )
+
+
+class SetupGroupsReconciliationTestCase(TestCase):
+    """R4 lock-in: setup_groups reconciles existing profession groups.
+
+    The post-save signal creates profession groups empty; running
+    ``setup_groups`` afterwards must give them their full specified
+    permission set (D5).
+    """
+
+    def test_signal_created_empty_group_gains_full_permission_set(self):
+        from django.core.management import call_command
+
+        from apps.accounts.tests.factories import DoctorFactory
+        from apps.core.management.commands.setup_groups import Command
+
+        self.assertFalse(Group.objects.filter(name='Medical Doctors').exists())
+
+        doctor = DoctorFactory()  # the post-save signal creates the profession group
+        self.assertTrue(doctor.groups.filter(name='Medical Doctors').exists())
+
+        signal_created_group = Group.objects.get(name='Medical Doctors')
+        self.assertEqual(signal_created_group.permissions.count(), 0)
+
+        call_command('setup_groups', verbosity=0)
+
+        expected = set(Command()._get_doctor_permissions())
+        actual = {
+            f'{perm.content_type.app_label}.{perm.codename}'
+            for perm in Group.objects.get(name='Medical Doctors').permissions.select_related(
+                'content_type'
+            )
+        }
+        self.assertEqual(actual, expected)
