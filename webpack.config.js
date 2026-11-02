@@ -93,6 +93,11 @@ module.exports = {
           from: "assets/js/ward_patient_map.js",
           to: "js/ward_patient_map.js",
         },
+        // Searchable multi-tag list filter (S7)
+        {
+          from: "assets/js/tag-selector.js",
+          to: "js/tag-selector.js",
+        },
         {
           from: "assets/css/ward_patient_map.css",
           to: "css/ward_patient_map.css",

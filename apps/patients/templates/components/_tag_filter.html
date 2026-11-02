@@ -1,0 +1,19 @@
+{% comment %}
+Patient-list tag filter column (S7 R4).
+
+The selector keeps repeated `tags`, `tag_mode` and `tag_filter=manual` in the
+same GET form as the other predicates. The validation message is generic and
+never echoes a forged identifier. Reapply-preferences stays out of S7 because
+no preference is persisted yet.
+{% endcomment %}
+<div class="col-md-3">
+  {% include "components/_tag_selector.html" %}
+</div>
+{% if tag_filter_error %}
+  <div class="col-12">
+    <div class="alert alert-warning mb-0" role="alert">
+      <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+      {{ tag_filter_error }}
+    </div>
+  </div>
+{% endif %}

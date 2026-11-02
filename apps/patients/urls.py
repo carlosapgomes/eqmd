@@ -2,7 +2,7 @@ from django.urls import path
 
 from apps.events.views import PatientEventsTimelineView
 
-from . import views, views_team_tags
+from . import views, views_tag_filters, views_team_tags
 
 app_name = "apps.patients"
 
@@ -129,6 +129,13 @@ urlpatterns = [
     path("map/", views.WardPatientMapView.as_view(), name="patient_map"),
     # Tag URLs
     path("tags/", views.AllowedTagListView.as_view(), name="tag_list"),
+    # Searchable read-only tag lookup used by the patient-list multi-tag
+    # selector (S7). It has no create/mutation operation.
+    path(
+        "tags/lookup/",
+        views_tag_filters.TagLookupView.as_view(),
+        name="tag_lookup",
+    ),
     path("tags/create/", views.AllowedTagCreateView.as_view(), name="tag_create"),
     path(
         "tags/<int:pk>/update/", views.AllowedTagUpdateView.as_view(), name="tag_update"
