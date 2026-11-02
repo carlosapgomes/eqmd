@@ -87,9 +87,7 @@ class SingleDischargeReportPredicateTests(TestCase):
             updated_by=self.creator,
         )
         if created_at is not None:
-            DischargeReport.objects.filter(pk=report.pk).update(
-                created_at=created_at
-            )
+            DischargeReport.objects.filter(pk=report.pk).update(created_at=created_at)
             report.refresh_from_db()
         return report
 
@@ -178,9 +176,7 @@ class SingleDischargeReportPredicateTests(TestCase):
                 case = (user_name, report_name)
                 model_verdict = report.can_be_edited_by_user(user)
                 detail_verdict = views.can_edit_discharge_report(user, report)
-                timeline_verdict = self._timeline_permissions(user, report)[
-                    "can_edit"
-                ]
+                timeline_verdict = self._timeline_permissions(user, report)["can_edit"]
                 with self.subTest(user=user_name, report=report_name):
                     self.assertEqual(expected[case], model_verdict)
                     self.assertEqual(model_verdict, detail_verdict)
@@ -200,9 +196,7 @@ class SingleDischargeReportPredicateTests(TestCase):
         for case_name, user, report, expected in cases:
             model_verdict = report.can_be_deleted_by_user(user)
             detail_verdict = views.can_delete_discharge_report(user, report)
-            timeline_verdict = self._timeline_permissions(user, report)[
-                "can_delete"
-            ]
+            timeline_verdict = self._timeline_permissions(user, report)["can_delete"]
             with self.subTest(case=case_name):
                 self.assertEqual(expected, model_verdict)
                 self.assertEqual(model_verdict, detail_verdict)
@@ -224,9 +218,7 @@ class SingleDischargeReportPredicateTests(TestCase):
         self.assertTrue(self.fresh_draft.can_be_edited_by_user(change_holder))
         for case_name, report, expected in cases:
             with self.subTest(case=case_name):
-                self.assertEqual(
-                    expected, report.can_be_edited_by_user(change_holder)
-                )
+                self.assertEqual(expected, report.can_be_edited_by_user(change_holder))
                 self.assertEqual(
                     expected,
                     views.can_edit_discharge_report(change_holder, report),
