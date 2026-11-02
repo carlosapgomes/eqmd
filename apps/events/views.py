@@ -253,7 +253,9 @@ class PatientEventsTimelineView(ListView):
     def _bulk_permission_check(self, events):
         """Bulk permission checking to avoid N+1 queries."""
         events_with_permissions = []
-        tag_audit_presentation.attach_tag_audit_presentations(events, viewer=self.request.user)
+        tag_audit_presentation.attach_tag_audit_presentations(
+            events, viewer=self.request.user
+        )
 
         # Pre-calculate edit permissions for all events
         edit_permissions = {}
@@ -366,7 +368,9 @@ def event_api_detail(request, pk):
     if not can_access_patient(request.user, event.patient):
         return JsonResponse({"error": "Permission denied"}, status=403)
 
-    presentation = tag_audit_presentation.project_tag_audit_event(event, viewer=request.user)
+    presentation = tag_audit_presentation.project_tag_audit_event(
+        event, viewer=request.user
+    )
     if presentation is not None:
         event.tag_audit_presentation = presentation
 

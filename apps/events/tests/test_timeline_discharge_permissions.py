@@ -79,9 +79,7 @@ class DischargeReportTimelinePermissionTests(TestCase):
             updated_by=self.creator,
         )
         if created_at is not None:
-            DischargeReport.objects.filter(pk=report.pk).update(
-                created_at=created_at
-            )
+            DischargeReport.objects.filter(pk=report.pk).update(created_at=created_at)
             report.refresh_from_db()
         return report
 

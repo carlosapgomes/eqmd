@@ -45,9 +45,7 @@ class Command(BaseCommand):
         null_profession_users = list(
             self._null_profession_users(user_model, exempt_user_ids)
         )
-        ungrouped_users = list(
-            self._ungrouped_users(user_model, exempt_user_ids)
-        )
+        ungrouped_users = list(self._ungrouped_users(user_model, exempt_user_ids))
         group_drift = self._group_drift()
 
         self._write_report(null_profession_users, group_drift, ungrouped_users)
@@ -83,10 +81,7 @@ class Command(BaseCommand):
             try:
                 group = Group.objects.get(name=group_name)
             except Group.DoesNotExist:
-                detail = (
-                    "group does not exist "
-                    f"(expected {len(expected)} permissions)"
-                )
+                detail = f"group does not exist (expected {len(expected)} permissions)"
                 drift.append((group_name, detail))
                 continue
             actual = {
@@ -103,8 +98,7 @@ class Command(BaseCommand):
         self.stdout.write("===================================")
         self.stdout.write("")
         self.stdout.write(
-            f"1) Active users without profession_type "
-            f"({len(null_profession_users)})"
+            f"1) Active users without profession_type ({len(null_profession_users)})"
         )
         for user in null_profession_users:
             self.stdout.write(
@@ -112,15 +106,13 @@ class Command(BaseCommand):
             )
         self.stdout.write("")
         self.stdout.write(
-            f"2) Profession groups missing expected permissions "
-            f"({len(group_drift)})"
+            f"2) Profession groups missing expected permissions ({len(group_drift)})"
         )
         for group_name, detail in group_drift:
             self.stdout.write(f"   - {group_name}: {detail}")
         self.stdout.write("")
         self.stdout.write(
-            f"3) Non-exempt users in no profession group "
-            f"({len(ungrouped_users)})"
+            f"3) Non-exempt users in no profession group ({len(ungrouped_users)})"
         )
         for user in ungrouped_users:
             profession = (

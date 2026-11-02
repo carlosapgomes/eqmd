@@ -122,9 +122,7 @@ class AuditClinicalIdentityCommandTests(TestCase):
         write_statements = [
             query["sql"]
             for query in queries.captured_queries
-            if query["sql"].lstrip().lower().startswith(
-                ("insert", "update", "delete")
-            )
+            if query["sql"].lstrip().lower().startswith(("insert", "update", "delete"))
         ]
         self.assertEqual(write_statements, [])
 

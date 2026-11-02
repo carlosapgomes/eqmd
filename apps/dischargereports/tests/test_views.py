@@ -621,9 +621,7 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
             updated_by=self.creator,
         )
         if created_at is not None:
-            DischargeReport.objects.filter(pk=report.pk).update(
-                created_at=created_at
-            )
+            DischargeReport.objects.filter(pk=report.pk).update(created_at=created_at)
             report.refresh_from_db()
         return report
 
@@ -665,9 +663,7 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.report.refresh_from_db()
         self.assertTrue(self.report.is_draft)
-        self.assertEqual(
-            self.report.problems_and_diagnosis, "collab edit"
-        )
+        self.assertEqual(self.report.problems_and_diagnosis, "collab edit")
 
     def test_detail_shows_edit_action_to_collaborator(self):
         self.client.login(username="collaborator", password="testpass123")
@@ -716,9 +712,7 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.report.refresh_from_db()
         self.assertTrue(self.report.is_draft)
-        self.assertNotEqual(
-            self.report.problems_and_diagnosis, "collab edit"
-        )
+        self.assertNotEqual(self.report.problems_and_diagnosis, "collab edit")
 
     def test_detail_hides_edit_action_from_non_doctor(self):
         """S2 R2: no edit action for non-doctor on detail view."""
@@ -861,9 +855,7 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         final_report.refresh_from_db()
         self.assertFalse(final_report.is_draft)
-        self.assertEqual(
-            final_report.problems_and_diagnosis, "corrected diagnosis"
-        )
+        self.assertEqual(final_report.problems_and_diagnosis, "corrected diagnosis")
 
 
 class DischargeReportFinalizationWindowViewTests(TestCase):
@@ -982,13 +974,9 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
         self.assertFalse(old_draft.is_draft)
         self.assertIsNotNone(old_draft.finalized_at)
         self.assertEqual(old_draft.finalized_by, self.finalizer)
-        self.assertEqual(
-            self.client.get(self._update_url(old_draft)).status_code, 200
-        )
+        self.assertEqual(self.client.get(self._update_url(old_draft)).status_code, 200)
         self.client.login(username="windowviewcreator", password="testpass123")
-        self.assertEqual(
-            self.client.get(self._update_url(old_draft)).status_code, 200
-        )
+        self.assertEqual(self.client.get(self._update_url(old_draft)).status_code, 200)
 
     def test_update_button_keeps_the_recorded_anchor(self):
         """R2/R4: editing a final does not restart its correction window."""
@@ -1067,12 +1055,8 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
 
         old_draft.refresh_from_db()
         self.assertFalse(old_draft.is_draft)
-        self.assertEqual(
-            self.client.get(self._update_url(old_draft)).status_code, 200
-        )
-        self.assertEqual(
-            self.client.post(self._delete_url(old_draft)).status_code, 403
-        )
+        self.assertEqual(self.client.get(self._update_url(old_draft)).status_code, 200)
+        self.assertEqual(self.client.post(self._delete_url(old_draft)).status_code, 403)
         old_draft.refresh_from_db()
         self.assertFalse(old_draft.is_deleted)
 
