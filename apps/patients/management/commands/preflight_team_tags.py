@@ -19,6 +19,7 @@ from apps.patients.models import AllowedTag
 
 TAG_TABLE = "patients_allowedtag"
 SPECIALTY_TABLE = "accounts_medicalspecialty"
+REFERENCE_TABLE = "events_tageventreference"
 CLASSIFICATION_COLUMNS = frozenset({"origin", "visibility", "specialty_id"})
 
 
@@ -46,7 +47,7 @@ class Command(BaseCommand):
             self.stdout.write(line)
 
         self._invalid_associations(has_classification, has_principal)
-        self.stdout.write("legacy_event_resolution=deferred_s4")
+        self._legacy_events(has_classification)
         self.stdout.write("read_only=yes")
 
     def _name_collisions(self, has_specialty: bool) -> tuple[int, list[str]]:
@@ -104,6 +105,31 @@ class Command(BaseCommand):
             self.stdout.write(f"invalid_principal_mappings={invalid_principals}")
         else:
             self.stdout.write("invalid_principal_mappings=not_checked_legacy_schema")
+
+    def _legacy_events(self, has_classification: bool) -> None:
+        """Count legacy tag events per resolution outcome without writing."""
+        if not has_classification:
+            self.stdout.write("legacy_event_resolution=not_checked_legacy_schema")
+            return
+        from apps.events.services import tag_audit
+
+        has_references = REFERENCE_TABLE in _table_columns(REFERENCE_TABLE)
+        if has_references:
+            events = tag_audit.unreferenced_tag_audit_events()
+            self.stdout.write(
+                f"legacy_event_references={tag_audit.referenced_event_count()}"
+            )
+        else:
+            events = tag_audit.all_tag_audit_events()
+            self.stdout.write("legacy_event_references=not_checked_legacy_schema")
+        counts = {"known": 0, "ambiguous": 0, "unresolved": 0}
+        for event in events:
+            counts[tag_audit.resolve_legacy_event(event).status] += 1
+        self.stdout.write(
+            "legacy_event_resolution="
+            f"known={counts['known']} ambiguous={counts['ambiguous']} "
+            f"unresolved={counts['unresolved']}"
+        )
 
 
 def _table_columns(table: str) -> set[str]:

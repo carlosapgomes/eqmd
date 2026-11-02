@@ -43,6 +43,27 @@ def can_access_patient(user: Any, patient: Any) -> bool:
     return getattr(user, 'is_authenticated', False)
 
 
+def is_tag_audit_event(event: Any) -> bool:
+    """
+    Check whether an event is an immutable patient tag audit event.
+
+    Tag additions, removals and bulk removals record who changed which tag;
+    ordinary clinical workflows may not edit or delete them.
+
+    Args:
+        event: The event object to inspect
+
+    Returns:
+        bool: True for tag audit events, False otherwise
+    """
+    if event is None:
+        return False
+
+    from apps.events.models import Event
+
+    return getattr(event, 'event_type', None) in Event.TAG_AUDIT_EVENT_TYPES
+
+
 def can_edit_event(user: Any, event: Any) -> bool:
     """
     Check if a user can edit a specific event.
@@ -50,6 +71,7 @@ def can_edit_event(user: Any, event: Any) -> bool:
     Rules:
     - Only the event creator can edit events
     - Events can only be edited within 24 hours of creation
+    - Tag audit events are never editable
     
     Args:
         user: The user requesting to edit
@@ -60,7 +82,10 @@ def can_edit_event(user: Any, event: Any) -> bool:
     """
     if user is None or event is None:
         return False
-    
+
+    if is_tag_audit_event(event):
+        return False
+
     if not getattr(user, 'is_authenticated', False):
         return False
     
@@ -331,6 +356,7 @@ def can_delete_event(user: Any, event: Any) -> bool:
     Rules:
     - Only the event creator can delete events
     - Events can only be deleted within 24 hours of creation
+    - Tag audit events are never deletable
 
     Args:
         user: The user requesting to delete
@@ -341,7 +367,10 @@ def can_delete_event(user: Any, event: Any) -> bool:
     """
     if user is None or event is None:
         return False
-    
+
+    if is_tag_audit_event(event):
+        return False
+
     if not getattr(user, 'is_authenticated', False):
         return False
 
@@ -449,7 +478,8 @@ def can_add_patient_tag(user: Any, patient: Any, allowed_tag: Any) -> bool:
     
     Rules:
     - Must pass can_manage_patient_tags check
-    - AllowedTag must be active
+    - The catalogue tag must be active and the user needs per-tag authority
+      (team membership for principal/restricted tags, or an administrator)
     - Tag must not already be assigned to patient
     
     Args:
@@ -462,16 +492,14 @@ def can_add_patient_tag(user: Any, patient: Any, allowed_tag: Any) -> bool:
     """
     if not can_manage_patient_tags(user, patient):
         return False
-    
-    # Check if allowed_tag is active
-    if not getattr(allowed_tag, 'is_active', True):
+
+    from apps.patients.services import tag_policy
+
+    if not tag_policy.can_assign_tag(user, allowed_tag):
         return False
-    
+
     # Check if tag is already assigned to patient
-    if patient.patient_tags.filter(allowed_tag=allowed_tag).exists():
-        return False
-    
-    return True
+    return not patient.patient_tags.filter(allowed_tag=allowed_tag).exists()
 
 
 def can_remove_patient_tag(user: Any, patient: Any, tag: Any) -> bool:
@@ -480,6 +508,7 @@ def can_remove_patient_tag(user: Any, patient: Any, tag: Any) -> bool:
     
     Rules:
     - Must pass can_manage_patient_tags check
+    - The user needs per-tag authority, also for inactive/archived tags
     - Tag must be assigned to the patient
     
     Args:
@@ -496,8 +525,17 @@ def can_remove_patient_tag(user: Any, patient: Any, tag: Any) -> bool:
     # Check if tag is assigned to this patient
     if not patient.patient_tags.filter(pk=tag.pk).exists():
         return False
-    
-    return True
+
+    from apps.patients.models import AllowedTag
+    from apps.patients.services import tag_policy
+
+    # Archived catalogue rows are hidden from the default manager; resolution
+    # must use all rows so historical associations stay removable.
+    allowed_tag = AllowedTag.all_objects.filter(pk=tag.allowed_tag_id).first()
+    if allowed_tag is None:
+        return False
+
+    return tag_policy.can_remove_tag(user, allowed_tag)
 
 
 def can_view_patient_tags(user: Any, patient: Any) -> bool:

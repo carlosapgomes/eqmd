@@ -199,7 +199,7 @@
                 <button type="button" class="btn btn-outline-danger" id="remove-all-tags-btn" 
                         {% if not patient.patient_tags.all %}disabled{% endif %}>
                     <i class="bi bi-trash"></i>
-                    Remover Todas
+                    Remover Tags Autorizadas
                 </button>
             </div>
         </div>
@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle remove all tags
     if (canManageTags && removeAllTagsButton) {
         removeAllTagsButton.addEventListener('click', function() {
-            if (confirm('Tem certeza que deseja remover TODAS as tags deste paciente? Esta ação não pode ser desfeita.')) {
+            if (confirm('Tem certeza que deseja remover apenas as tags deste paciente que você tem autorização para remover? Tags de outras equipes serão preservadas.')) {
                 removeAllTags();
             }
         });
@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 refreshCurrentTags();
                 bootstrap.Modal.getInstance(document.getElementById('manageTagsModal')).hide();
-                showSuccess('Todas as tags foram removidas com sucesso!');
+                showSuccess('As tags autorizadas foram removidas com sucesso!');
             } else {
                 showError(data.error || 'Erro ao remover tags');
             }

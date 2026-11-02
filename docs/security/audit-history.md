@@ -47,6 +47,44 @@ or responsibility. Administrator authority requires an active staff/superuser
 account with the relevant catalogue permission, so staff status alone is
 insufficient.
 
+## Patient tag assignment audit
+
+Assigning or removing a patient tag always records a timeline event for the same
+action, and both writes commit together:
+
+- a failed or denied operation leaves no changed association;
+- patient views, Django Admin assignment and bulk removal all use the same
+  audited workflow, so none of them can write an association without its event;
+- duplicates are rejected by the database uniqueness of patient plus catalogue
+  tag, so a race cannot create a second association or a misleading event.
+
+Each new event keeps its action-time tag snapshot and links the stable catalogue
+tag it refers to (name, color, notes, visibility and team at the time of the
+action). Renaming, transferring responsibility, archiving or removing the
+patient association never detaches or rewrites that history.
+
+Tag audit events are append-only in ordinary clinical workflows:
+
+- the timeline does not offer edit or delete for tag additions, removals or bulk
+  removals;
+- Django Admin renders them read-only and refuses change and delete, including
+  the bulk actions;
+- the permission helpers used by every event surface deny edit and delete, so
+  knowing an event identifier does not grant access to its history.
+
+Correcting a mistaken assignment appends the opposing event: the original
+addition stays visible and the removal is recorded separately.
+
+Legacy tag events only stored tag names. They are linked to a stable catalogue
+tag only when the retained catalogue history proves a single identity carried
+that name at the time of the event. Ambiguous or unresolvable legacy events keep
+their stored content untouched and are never guessed. Preflight reports how many
+legacy events are resolvable, ambiguous or unresolved without writing data:
+
+```bash
+docker exec eqmd_dev python manage.py preflight_team_tags
+```
+
 ## Accessing Audit History
 
 ### 1. Django Admin Interface (Primary Method)

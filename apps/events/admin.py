@@ -1,11 +1,19 @@
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
 from django.urls import path
 from django.http import HttpResponseRedirect
 from django.contrib import messages
 from simple_history.admin import SimpleHistoryAdmin
+
 from .models import (
     Event, RecordNumberChangeEvent, AdmissionEvent, DischargeEvent
 )
+
+
+def is_tag_audit_event(event):
+    """Return whether the event records an immutable patient tag action."""
+    return event is not None and event.event_type in Event.TAG_AUDIT_EVENT_TYPES
+
 
 @admin.register(Event)
 class EventAdmin(SimpleHistoryAdmin):
@@ -65,20 +73,31 @@ class EventAdmin(SimpleHistoryAdmin):
     actions = ['soft_delete_selected', 'restore_selected']
 
     def soft_delete_selected(self, request, queryset):
-        """Soft delete selected events."""
+        """Soft delete selected events, skipping immutable tag audit events."""
         count = 0
+        skipped = 0
         for event in queryset:
-            if not event.is_deleted:
-                event.delete(
-                    deleted_by=request.user,
-                    reason=f'Bulk deletion by admin {request.user.username}'
-                )
-                count += 1
+            if event.is_deleted:
+                continue
+            if is_tag_audit_event(event):
+                skipped += 1
+                continue
+            event.delete(
+                deleted_by=request.user,
+                reason=f'Bulk deletion by admin {request.user.username}'
+            )
+            count += 1
 
         messages.success(
             request,
             f'{count} event(s) were soft deleted.'
         )
+        if skipped:
+            messages.warning(
+                request,
+                f'{skipped} tag audit event(s) were kept: correct the tag '
+                'assignment instead of deleting its history.'
+            )
     soft_delete_selected.short_description = "Soft delete selected events"
 
     def restore_selected(self, request, queryset):
@@ -94,6 +113,48 @@ class EventAdmin(SimpleHistoryAdmin):
             f'{count} event(s) were restored.'
         )
     restore_selected.short_description = "Restore selected events"
+
+    def has_change_permission(self, request, obj=None):
+        """Tag audit events are append-only: no ordinary admin edit."""
+        if is_tag_audit_event(obj):
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        """Tag audit events cannot be deleted, also not in bulk."""
+        if is_tag_audit_event(obj):
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if is_tag_audit_event(obj):
+            readonly.extend(
+                ['event_type', 'event_datetime', 'patient', 'description']
+            )
+        return readonly
+
+    def save_model(self, request, obj, form, change):
+        """Refuse fabricating tag audit events outside the tag workflow."""
+        if is_tag_audit_event(obj):
+            raise PermissionDenied(
+                'Tag audit events are recorded by the patient tag workflow.'
+            )
+        super().save_model(request, obj, form, change)
+
+    def delete_model(self, request, obj):
+        if is_tag_audit_event(obj):
+            raise PermissionDenied(
+                'Tag audit events are immutable and cannot be deleted.'
+            )
+        super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        if any(is_tag_audit_event(event) for event in queryset):
+            raise PermissionDenied(
+                'Tag audit events are immutable and cannot be deleted.'
+            )
+        super().delete_queryset(request, queryset)
 
 
 @admin.register(RecordNumberChangeEvent)

@@ -258,19 +258,54 @@ class AllowedTagAdmin(SimpleHistoryAdmin):
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
+    """Administrative patient tag assignments, always audited.
+
+    Every add and delete goes through ``tag_assignments`` so the association and
+    its timeline event commit together. Existing associations are immutable:
+    correcting one appends an opposing event instead of rewriting history.
+    """
+
     list_display = ('allowed_tag', 'patient', 'notes', 'created_at')
     list_filter = ('allowed_tag', 'patient')
     search_fields = ('allowed_tag__name', 'patient__name', 'notes')
     readonly_fields = ('created_at', 'created_by', 'updated_at', 'updated_by')
 
+    def has_change_permission(self, request, obj=None):
+        if obj is not None:
+            return False
+        return super().has_change_permission(request, obj)
+
     def save_model(self, request, obj, form, change):
-        if not change:  # If creating a new object
-            obj.created_by = request.user
-        obj.updated_by = request.user
-        # Add change reason for admin modifications
-        if change:
-            obj._change_reason = f"Admin change by {request.user.username}"
-        super().save_model(request, obj, form, change)
+        from .services import tag_assignments
+
+        association = tag_assignments.assign_tag(
+            actor=request.user,
+            patient=obj.patient,
+            tag=obj.allowed_tag,
+            notes=obj.notes,
+        )
+        obj.pk = association.pk
+        obj.created_by = association.created_by
+        obj.updated_by = association.updated_by
+        obj.created_at = association.created_at
+        obj.updated_at = association.updated_at
+
+    def delete_model(self, request, obj):
+        from .services import tag_assignments
+
+        tag_assignments.remove_tag(
+            actor=request.user, patient=obj.patient, association=obj
+        )
+
+    def delete_queryset(self, request, queryset):
+        from .services import tag_assignments
+
+        for association in queryset.select_related('patient'):
+            tag_assignments.remove_tag(
+                actor=request.user,
+                patient=association.patient,
+                association=association,
+            )
 
 
 @admin.register(PatientRecordNumber)

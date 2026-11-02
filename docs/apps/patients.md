@@ -1,13 +1,15 @@
 # Patients App - Complete Guide
 
-**Full CRUD patient management with tagging system and status tracking**
+Full CRUD patient management with tagging system and status tracking.
 
 ## Overview
 
 - Patient models: Patient, AllowedTag, Tag
 - Search by name, ID, fiscal/health card numbers
-- Status tracking: inpatient, outpatient, emergency, discharged, transferred, deceased
-- Gender field: Masculino, Feminino, Outro, Não Informado (default for legacy data)
+- Status tracking: inpatient, outpatient, emergency, discharged, transferred,
+  deceased
+- Gender field: Masculino, Feminino, Outro, Não Informado (default for legacy
+  data)
 - Color-coded tagging system with web admin interface
 - Dashboard widgets: patient stats, recent patients
 - Template tags: `patient_status_badge`, `patient_tags`
@@ -15,12 +17,18 @@
 
 ## Patient Status Management
 
-- **Status Types**: inpatient, outpatient, emergency, discharged, transferred, deceased
-- **Role-Based Access**: Different access levels based on user profession and patient status
-- **Death Declaration**: Only doctors/residents can declare death (change to deceased status)
-- **Admin Override**: Only admin/superuser can change deceased patients (for data corrections)
-- **Simple Validation**: Basic status validation without complex assignment logic
-- **Universal Access**: All medical staff can access all patients regardless of status
+- **Status Types**: inpatient, outpatient, emergency, discharged, transferred,
+  deceased
+- **Role-Based Access**: Different access levels based on user profession and
+  patient status
+- **Death Declaration**: Only doctors/residents can declare death (change to
+  deceased status)
+- **Admin Override**: Only admin/superuser can change deceased patients (for data
+  corrections)
+- **Simple Validation**: Basic status validation without complex assignment
+  logic
+- **Universal Access**: All medical staff can access all patients regardless of
+  status
 
 ## Patient Model Fields
 
@@ -67,6 +75,7 @@
 
 - Links patients to allowed tags
 - Many-to-many relationship through Patient model
+- One association per patient and catalogue tag; duplicates are rejected
 - Audit trail for tag assignments
 
 ### Tag Management
@@ -74,13 +83,31 @@
 - Web interface for tag assignment
 - Color-coded display
 - Filter patients by tags
-- Bulk tag operations
+- Bulk removal of the tags the caller is authorized to remove
+
+Every assignment and removal, including the Django Admin and bulk paths, runs
+through one service that writes the association and its timeline event in a
+single transaction. A failed or denied write leaves no changed association.
+
+Per-tag authority applies on top of the clinical patient-access and mutation
+gates:
+
+- a restricted tag requires current membership in its team;
+- a principal tag requires that membership even though it is public;
+- a non-principal public tag keeps the clinical mutation baseline;
+- catalogue administrators may act on any tag;
+- only active tags can be newly assigned, while inactive or archived
+  associations remain removable by the same authority.
+
+Bulk removal preserves associations the caller may not manage, so other teams'
+classifications are never erased. Tags also persist across admission, discharge
+and status changes until an authorized actor removes them.
 
 ## Patient Status Workflow
 
 ### Status Transitions
 
-```
+```text
 New Patient → inpatient/outpatient/emergency
 inpatient → discharged/deceased/outpatient
 outpatient → inpatient/discharged/deceased
@@ -98,7 +125,7 @@ deceased → (final state, admin override only)
 
 ## Internal Transfer Management
 
-### Overview
+### Transfer Overview
 
 - **Internal transfers** change ward/bed location without changing patient status
 - Available for INPATIENT and EMERGENCY patients only

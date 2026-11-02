@@ -79,8 +79,9 @@ from .models import (
     Tag,
     Ward,
 )
-from .services import tag_catalogue, tag_policy
+from .services import tag_assignments, tag_catalogue, tag_policy
 from .services.patient_identity import RECORD_NUMBER_DELETE_MESSAGE
+from .services.tag_assignments import TagAssignmentRejected, TagNotAssociated
 from .validators import TEMPORARY_RECORD_PREFIX
 
 
@@ -1407,6 +1408,21 @@ class SetOutpatientView(PatientStatusChangeView):
 # Tag Management Views
 
 
+def _patient_tags_payload(patient: Patient) -> list[dict[str, object]]:
+    """Serialize the patient's current associations for the tag AJAX views."""
+    payload: list[dict[str, object]] = []
+    for patient_tag in patient.patient_tags.select_related("allowed_tag").all():
+        payload.append(
+            {
+                "id": str(patient_tag.id),
+                "name": patient_tag.allowed_tag.name,
+                "color": patient_tag.allowed_tag.color,
+                "allowed_tag_id": patient_tag.allowed_tag.id,
+            }
+        )
+    return payload
+
+
 class PatientTagAddView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Add tag to patient via AJAX"""
 
@@ -1437,71 +1453,37 @@ class PatientTagAddView(LoginRequiredMixin, PermissionRequiredMixin, View):
         # yields the domain 404 instead of a swallowed Http404 (500).
         allowed_tag = get_object_or_404(AllowedTag, pk=tag_pk)
 
+        # Enhanced permission check for adding specific tag
+        if not can_add_patient_tag(request.user, patient, allowed_tag):
+            return JsonResponse(
+                {"error": "Não é possível adicionar esta tag ao paciente"},
+                status=400,
+            )
+
+        # Get notes from request
+        notes = request.POST.get("notes", "")
+
         try:
-            # Enhanced permission check for adding specific tag
-            if not can_add_patient_tag(request.user, patient, allowed_tag):
-                return JsonResponse(
-                    {"error": "Não é possível adicionar esta tag ao paciente"},
-                    status=400,
-                )
-
-            # Get notes from request
-            notes = request.POST.get("notes", "")
-
-            # Check if this tag is already assigned to this patient
-            existing_tag = Tag.objects.filter(
-                allowed_tag=allowed_tag, patient=patient
-            ).first()
-
-            if existing_tag:
-                return JsonResponse(
-                    {
-                        "error": f'Tag "{allowed_tag.name}" já está atribuída a este paciente'
-                    },
-                    status=400,
-                )
-
-            # Create new tag instance with direct patient relationship
-            Tag.objects.create(
-                allowed_tag=allowed_tag,
+            tag_assignments.assign_tag(
+                actor=request.user,
                 patient=patient,
+                tag=allowed_tag,
                 notes=notes,
-                created_by=request.user,
-                updated_by=request.user,
             )
-
-            # Create timeline event for tag addition
-            from apps.events.models import TagAddedEvent
-
-            TagAddedEvent.objects.create(
-                patient=patient,
-                event_datetime=timezone.now(),
-                description=f"Tag '{allowed_tag.name}' adicionada",
-                tag_name=allowed_tag.name,
-                tag_color=allowed_tag.color,
-                tag_notes=notes,
-                created_by=request.user,
-                updated_by=request.user,
-            )
-
-            # Return updated tag list
-            tags_data = []
-            for patient_tag in patient.patient_tags.select_related("allowed_tag").all():
-                tags_data.append(
-                    {
-                        "id": str(patient_tag.id),
-                        "name": patient_tag.allowed_tag.name,
-                        "color": patient_tag.allowed_tag.color,
-                        "allowed_tag_id": patient_tag.allowed_tag.id,
-                    }
-                )
 
             return JsonResponse(
                 {
                     "success": True,
                     "message": f'Tag "{allowed_tag.name}" adicionada com sucesso',
-                    "tags": tags_data,
+                    "tags": _patient_tags_payload(patient),
                 }
+            )
+
+        except (TagAssignmentRejected, PermissionDenied):
+            # Duplicate, lifecycle or authority race: nothing was written.
+            return JsonResponse(
+                {"error": "Não é possível adicionar esta tag ao paciente"},
+                status=400,
             )
 
         except Exception as e:
@@ -1531,47 +1513,32 @@ class PatientTagRemoveView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 status=403,
             )
 
+        tag_name = tag.allowed_tag.name
+
         try:
-            tag_name = tag.allowed_tag.name
-            tag_color = tag.allowed_tag.color
-            tag_notes = tag.notes
-
-            # Delete tag instance (automatically removes from patient)
-            tag.delete()
-
-            # Create timeline event for tag removal
-            from apps.events.models import TagRemovedEvent
-
-            TagRemovedEvent.objects.create(
-                patient=patient,
-                event_datetime=timezone.now(),
-                description=f"Tag '{tag_name}' removida",
-                tag_name=tag_name,
-                tag_color=tag_color,
-                tag_notes=tag_notes,
-                created_by=request.user,
-                updated_by=request.user,
+            tag_assignments.remove_tag(
+                actor=request.user, patient=patient, association=tag
             )
-
-            # Return updated tag list
-            tags_data = []
-            for patient_tag in patient.patient_tags.select_related("allowed_tag").all():
-                tags_data.append(
-                    {
-                        "id": str(patient_tag.id),
-                        "name": patient_tag.allowed_tag.name,
-                        "color": patient_tag.allowed_tag.color,
-                        "allowed_tag_id": patient_tag.allowed_tag.id,
-                    }
-                )
 
             return JsonResponse(
                 {
                     "success": True,
                     "message": f'Tag "{tag_name}" removida com sucesso',
-                    "tags": tags_data,
+                    "tags": _patient_tags_payload(patient),
                 }
             )
+
+        except TagNotAssociated:
+            return JsonResponse({"error": "Tag não encontrada"}, status=404)
+
+        except PermissionDenied:
+            return JsonResponse(
+                {"error": "Você não tem permissão para remover esta tag do paciente"},
+                status=403,
+            )
+
+        except TagAssignmentRejected:
+            return JsonResponse({"error": "Erro interno do servidor"}, status=500)
 
         except Exception as e:
             import logging
@@ -1600,40 +1567,29 @@ class PatientTagRemoveAllView(LoginRequiredMixin, PermissionRequiredMixin, View)
             )
 
         try:
-            # Get tag information before deletion for audit trail
-            tags_info = list(
-                patient.patient_tags.select_related("allowed_tag").values(
-                    "allowed_tag__name", "allowed_tag__color", "notes"
-                )
-            )
-            tag_count = len(tags_info)
-
-            if tag_count == 0:
-                return JsonResponse({"error": "Nenhuma tag para remover"}, status=400)
-
-            # Delete all tag instances for this patient
-            patient.patient_tags.all().delete()
-
-            # Create timeline event for bulk tag removal
-            from apps.events.models import TagBulkRemoveEvent
-
-            tag_names_list = [tag_info["allowed_tag__name"] for tag_info in tags_info]
-            TagBulkRemoveEvent.objects.create(
-                patient=patient,
-                event_datetime=timezone.now(),
-                description=f"{tag_count} tag(s) removida(s) em lote",
-                tag_count=tag_count,
-                tag_names=", ".join(tag_names_list),
-                created_by=request.user,
-                updated_by=request.user,
+            result = tag_assignments.remove_authorized_tags(
+                actor=request.user, patient=patient
             )
 
             return JsonResponse(
                 {
                     "success": True,
-                    "message": f"{tag_count} tag(s) removida(s) com sucesso",
-                    "tags": [],
+                    "message": (
+                        f"{len(result.removed)} tag(s) removida(s) com sucesso"
+                    ),
+                    "tags": _patient_tags_payload(patient),
+                    "preserved": result.preserved,
                 }
+            )
+
+        except TagAssignmentRejected:
+            # No association is authorized for this caller: nothing was removed.
+            return JsonResponse({"error": "Nenhuma tag para remover"}, status=400)
+
+        except PermissionDenied:
+            return JsonResponse(
+                {"error": "Você não tem permissão para gerenciar tags deste paciente"},
+                status=403,
             )
 
         except Exception as e:

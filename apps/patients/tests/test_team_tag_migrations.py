@@ -51,6 +51,18 @@ def migrate_to(targets: list[tuple[str, str]]) -> Any:
     return executor.loader.project_state(targets).apps
 
 
+def migrate_to_leaves() -> None:
+    """Restore every app to its latest migration after a fixture reversal.
+
+    Reversing the catalogue apps also unapplies dependent migrations in other
+    apps (for example the events tag-audit reference relation). The restore must
+    reach the whole graph leaves so later tests see the complete schema.
+    """
+    executor = MigrationExecutor(connection)
+    executor.loader.build_graph()
+    executor.migrate(executor.loader.graph.leaf_nodes())
+
+
 class AdditiveCatalogueMigrationTests(TransactionTestCase):
     """R1: existing rows survive and backfill to public/custom global."""
 
@@ -62,6 +74,7 @@ class AdditiveCatalogueMigrationTests(TransactionTestCase):
             preflight_before = self._preflight()
         finally:
             migrate_to(AFTER)
+            migrate_to_leaves()
 
         tag = AllowedTag.all_objects.get(pk=legacy["tag_pk"])
         self.assertEqual(tag.name, "Legado")
@@ -94,6 +107,7 @@ class AdditiveCatalogueMigrationTests(TransactionTestCase):
             self.assertIn("read_only=yes", before)
         finally:
             migrate_to(AFTER)
+            migrate_to_leaves()
         after = self._preflight()
         self.assertIn("schema=additive", after)
         self.assertIn("normalized_name_collisions=", after)
@@ -397,6 +411,7 @@ class LifecycleMigrationPreservationTests(TransactionTestCase):
             legacy = self._create_legacy_rows(old_apps)
         finally:
             migrate_to(S3_AFTER)
+            migrate_to_leaves()
 
         tag = AllowedTag.all_objects.get(pk=legacy["tag_pk"])
         self.assertEqual(tag.name, "Arquivada Legada")

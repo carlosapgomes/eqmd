@@ -2,26 +2,51 @@ import uuid
 from typing import ClassVar
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from model_utils.managers import InheritanceManager
 from simple_history.models import HistoricalRecords
 
 from apps.core.models.soft_delete import SoftDeleteInheritanceQuerySet, SoftDeleteModel
 
+TAG_AUDIT_IMMUTABLE_MESSAGE = (
+    "Tag audit events are immutable; correct the assignment instead."
+)
+
+
+class EventQuerySet(SoftDeleteInheritanceQuerySet):
+    """Event queryset that refuses deleting immutable tag audit events.
+
+    The instance guard on ``Event.delete`` does not cover bulk callers, so the
+    queryset refuses soft and hard deletion of tag audit events as well.
+    """
+
+    def _reject_tag_audit_deletion(self):
+        if self.filter(event_type__in=Event.TAG_AUDIT_EVENT_TYPES).exists():
+            raise ValidationError(TAG_AUDIT_IMMUTABLE_MESSAGE)
+
+    def delete(self):
+        self._reject_tag_audit_deletion()
+        return super().delete()
+
+    def hard_delete(self):
+        self._reject_tag_audit_deletion()
+        return super().hard_delete()
+
 
 class SoftDeleteInheritanceManager(InheritanceManager):
     """Manager that combines InheritanceManager with soft delete functionality."""
 
     def get_queryset(self):
-        return SoftDeleteInheritanceQuerySet(self.model, using=self._db).active()
+        return EventQuerySet(self.model, using=self._db).active()
 
     def all_with_deleted(self):
         """Get all objects including soft-deleted ones."""
-        return SoftDeleteInheritanceQuerySet(self.model, using=self._db)
+        return EventQuerySet(self.model, using=self._db)
 
     def deleted_only(self):
         """Get only soft-deleted objects."""
-        return SoftDeleteInheritanceQuerySet(self.model, using=self._db).deleted()
+        return EventQuerySet(self.model, using=self._db).deleted()
 
 
 class SoftDeleteAllInheritanceManager(InheritanceManager):
@@ -36,7 +61,7 @@ class SoftDeleteAllInheritanceManager(InheritanceManager):
     """
 
     def get_queryset(self):
-        return SoftDeleteInheritanceQuerySet(self.model, using=self._db)
+        return EventQuerySet(self.model, using=self._db)
 
     def all_with_deleted(self):
         """Get all objects including soft-deleted ones."""
@@ -63,12 +88,12 @@ class EventManager(SoftDeleteInheritanceManager):
 
     def with_drafts(self):
         """Include drafts in queryset."""
-        return SoftDeleteInheritanceQuerySet(self.model, using=self._db).active()
+        return EventQuerySet(self.model, using=self._db).active()
 
     def drafts_only(self):
         """Get only drafts."""
         return (
-            SoftDeleteInheritanceQuerySet(self.model, using=self._db)
+            EventQuerySet(self.model, using=self._db)
             .active()
             .filter(is_draft=True)
         )
@@ -133,6 +158,14 @@ class Event(SoftDeleteModel):
         (TAG_BULK_REMOVE_EVENT, "Tags Removidas em Lote"),  # NEW
         (CONSENT_FORM_EVENT, "Termo de Consentimento"),  # NEW
         (PATIENT_PROFILE_CHANGE_EVENT, "Alteração de Perfil"),  # NEW
+    )
+
+    # Tag audit events describe who changed a patient's tag associations; they
+    # are append-only and must not be edited or deleted by ordinary workflows.
+    TAG_AUDIT_EVENT_TYPES: ClassVar[tuple[int, ...]] = (
+        TAG_ADDED_EVENT,
+        TAG_REMOVED_EVENT,
+        TAG_BULK_REMOVE_EVENT,
     )
 
     id: ClassVar[models.UUIDField] = models.UUIDField(
@@ -226,6 +259,24 @@ class Event(SoftDeleteModel):
 
     def __str__(self):
         return str(self.description)
+
+    def delete(
+        self,
+        using: str | None = None,
+        keep_parents: bool = False,
+        deleted_by: object | None = None,
+        reason: str = "",
+    ) -> None:
+        """Refuse deletion for tag audit events.
+
+        Correcting an assignment appends the opposing event instead, so the
+        audit trail keeps both operations.
+        """
+        if self.event_type in self.TAG_AUDIT_EVENT_TYPES:
+            raise ValidationError(TAG_AUDIT_IMMUTABLE_MESSAGE)
+        super().delete(
+            using=using, keep_parents=keep_parents, deleted_by=deleted_by, reason=reason
+        )
 
     def get_excerpt(self, max_length=150):
         """Generate a short excerpt from event content."""
@@ -956,3 +1007,8 @@ class PatientProfileChangeEvent(Event):
     def get_edit_url(self):
         """Profile change events are not editable."""
         return
+
+
+# Register the tag audit reference model in this app's model graph. It is kept
+# in its own module because S4 adds a focused relation, not a new event type.
+from .tag_event_reference import TagEventReference  # noqa: F401

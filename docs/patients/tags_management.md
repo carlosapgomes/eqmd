@@ -114,8 +114,28 @@ Open **Django Admin → Especialidades Médicas** and select **Tag Principal**:
 2. Select the visible tags for that patient.
 3. Save the changes.
 
-Tag assignment policy and history for restricted/principal tags are delivered
-by later slices.
+Assignments and removals are policy checked per tag on top of the clinical
+patient-access and mutation gates. Any eligible team member may assign, not only
+a leader:
+
+- a **restricted** tag requires current membership in its team;
+- a **principal** tag requires that membership even though it stays public and
+  filterable by everyone;
+- a **non-principal public** tag keeps the clinical mutation baseline;
+- an authorized catalogue administrator may act on any tag;
+- only **active** tags can be newly assigned, while inactive or archived
+  associations remain removable by the same per-tag authority.
+
+Every write records a timeline event in the same transaction as the association,
+including the Django Admin and bulk paths. A denied request changes nothing, and
+a failed event write leaves no changed association. Repeating an assignment is
+rejected by the database uniqueness of patient plus catalogue tag, so a race
+cannot create a duplicate association or a second event.
+
+**Remover Tags Autorizadas** removes only the associations the caller is
+authorized to remove; other teams' classifications are preserved. Tags persist
+across admission, discharge and status changes until an authorized actor removes
+them.
 
 ## Using tags for filtering
 
@@ -133,14 +153,21 @@ docker exec eqmd_dev python manage.py preflight_team_tags
 
 The command only reads data. It reports the live schema state, normalized-name
 collisions per namespace, restricted tags without a team, invalid principal
-mappings and the deferred legacy-event resolution (owned by a later slice).
-Resolution of reported collisions or mappings requires an explicit operator
-decision; the command never changes rows.
+mappings and how much legacy tag history can be resolved against the retained
+catalogue history (`known`, `ambiguous`, `unresolved`). Resolution of reported
+collisions, mappings or legacy events requires an explicit operator decision;
+the command never changes rows.
+
+Legacy tag events only kept tag names. A legacy event is linked to a stable
+catalogue tag only when exactly one identity provably carried that name when the
+event happened, using the retained catalogue history. Ambiguous or unresolvable
+legacy events keep their stored content untouched and are never guessed.
 
 ## Current limitation
 
-Lifecycle and responsibility are delivered together with full actor history, but
-restricted tag metadata is still not hidden from every reader. Do not create
-production restricted catalogue data until the privacy slice closes all list,
-detail, map and timeline readers. Assignment policy, audited patient events and
-the leader page are delivered by later slices.
+Lifecycle, responsibility, assignment policy, atomic audited writes and stable
+event references are delivered together. Restricted tag metadata is still **not**
+hidden from every reader: assignment policy and audit immutability do not protect
+names, colors or notes on list, detail, map, filter and timeline surfaces. Do not
+create production restricted catalogue data until the privacy slice closes every
+reader. The leader page is delivered by a later slice.

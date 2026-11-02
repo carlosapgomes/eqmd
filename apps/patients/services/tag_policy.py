@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+from collections.abc import Collection, Mapping
 from typing import TYPE_CHECKING
 
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -10,7 +12,7 @@ from django.db.models import QuerySet
 from apps.patients.models import AllowedTag
 
 if TYPE_CHECKING:
-    from apps.accounts.models import EqmdCustomUser, MedicalSpecialty
+    from apps.accounts.models import EqmdCustomUser, MedicalSpecialty, UserSpecialty
 
 CATALOGUE_ADD_PERMISSION = "patients.add_allowedtag"
 CATALOGUE_CHANGE_PERMISSION = "patients.change_allowedtag"
@@ -85,6 +87,133 @@ def require_tag_manager(
     require_catalogue_administrator(actor, permission=permission)
 
 
+def lock_team_memberships(
+    actor: EqmdCustomUser | None, specialty_ids: Collection[uuid.UUID]
+) -> dict[uuid.UUID, UserSpecialty]:
+    """Lock the actor's membership rows for these teams inside a transaction.
+
+    Call this from the write transaction that performs the audited change: the
+    row locks make a concurrent membership change wait until that transaction
+    commits, so the authority read below cannot be invalidated before the write.
+    Rows are returned regardless of state; the caller validates the state from
+    the locked row.
+    """
+    if actor is None or not actor.is_active or not specialty_ids:
+        return {}
+    from apps.accounts.models import UserSpecialty
+
+    rows = (
+        UserSpecialty.objects.select_for_update(of=("self",))
+        .filter(user=actor, specialty_id__in=specialty_ids)
+        .select_related("specialty")
+    )
+    return {row.specialty_id: row for row in rows}
+
+
+def _is_active_membership(membership: UserSpecialty) -> bool:
+    """Return whether a locked membership row still grants team authority."""
+    return membership.is_active and membership.specialty.is_active
+
+
+def is_team_member(
+    actor: EqmdCustomUser | None,
+    tag: AllowedTag,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> bool:
+    """Return whether the actor currently belongs to the tag's own team.
+
+    Write paths pass ``locked_memberships`` (see ``lock_team_memberships``) so
+    membership is decided from the locked row instead of an unlocked read.
+    """
+    if actor is None or not actor.is_authenticated or not actor.is_active:
+        return False
+    if tag.specialty_id is None:
+        return False
+    if locked_memberships is not None:
+        membership = locked_memberships.get(tag.specialty_id)
+        return membership is not None and _is_active_membership(membership)
+    from apps.accounts.services import team_membership
+
+    return (
+        team_membership.eligible_memberships(actor)
+        .filter(specialty_id=tag.specialty_id)
+        .exists()
+    )
+
+
+def is_principal_tag(tag: AllowedTag) -> bool:
+    """Return whether a team configured this tag as its principal tag."""
+    if tag.specialty_id is None or tag.pk is None:
+        return False
+    from apps.accounts.models import MedicalSpecialty
+
+    return MedicalSpecialty.objects.filter(principal_tag_id=tag.pk).exists()
+
+
+def can_assign_tag(
+    actor: EqmdCustomUser | None,
+    tag: AllowedTag,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> bool:
+    """Return whether the actor may newly assign this tag to a patient.
+
+    Principal and restricted tags need current team membership; non-principal
+    public tags stay on the clinical mutation baseline. Catalogue
+    administrators override team membership, and archived or inactive tags can
+    never be newly assigned.
+    """
+    if tag.lifecycle_state != AllowedTag.LifecycleState.ACTIVE:
+        return False
+    return has_tag_authority(actor, tag, locked_memberships=locked_memberships)
+
+
+def can_remove_tag(
+    actor: EqmdCustomUser | None,
+    tag: AllowedTag,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> bool:
+    """Return whether the actor may remove this tag from a patient.
+
+    Removal uses the same per-tag authority as assignment but works in every
+    lifecycle state, so historical associations stay removable.
+    """
+    return has_tag_authority(actor, tag, locked_memberships=locked_memberships)
+
+
+def has_tag_authority(
+    actor: EqmdCustomUser | None,
+    tag: AllowedTag,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> bool:
+    """Return whether the actor holds authority for this specific tag."""
+    if actor is None or not actor.is_authenticated or not actor.is_active:
+        return False
+    if is_catalogue_administrator(actor):
+        return True
+    if tag.visibility == AllowedTag.Visibility.RESTRICTED:
+        return is_team_member(actor, tag, locked_memberships=locked_memberships)
+    if is_principal_tag(tag):
+        return is_team_member(actor, tag, locked_memberships=locked_memberships)
+    return True
+
+
+def require_tag_authority(
+    actor: EqmdCustomUser | None,
+    tag: AllowedTag,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> None:
+    """Deny patient tag writes without per-tag authority."""
+    if not has_tag_authority(actor, tag, locked_memberships=locked_memberships):
+        raise PermissionDenied(
+            "Tag assignment requires team membership or administrator authority."
+        )
+
+
 def is_eligible_transfer_recipient(
     recipient: EqmdCustomUser | None, specialty: MedicalSpecialty | None
 ) -> bool:
@@ -117,7 +246,6 @@ def eligible_transfer_recipient_queryset(
     if include_user_id is not None:
         condition |= Q(pk=include_user_id)
     return EqmdCustomUser.objects.filter(condition).distinct()
-
 
 
 def validate_principal_tag(
