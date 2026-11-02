@@ -48,7 +48,8 @@
       {% if ward_info.patients %}
       <div class="ps-4 pt-2">
         {% for patient_info in ward_info.patients %}
-        <div class="patient-item p-3 mb-2 bg-white border rounded">
+        <div class="patient-item p-3 mb-2 bg-white border rounded"
+             data-patient-tags="{% for tag in patient_info.tags %}{{ tag.allowed_tag.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
           <div class="d-flex flex-column flex-md-row justify-content-between">
             <!-- Patient Info Section -->
             <div class="flex-grow-1 mb-2 mb-md-0">
@@ -79,6 +80,7 @@
                       style="background-color: {{ tag.allowed_tag.color }}; font-size: 0.7rem;"
                     >
                       {{ tag.allowed_tag.name }}
+                      {% if tag.state_label %}({{ tag.state_label }}){% endif %}
                     </span>
                     {% endfor %}
                   </div>

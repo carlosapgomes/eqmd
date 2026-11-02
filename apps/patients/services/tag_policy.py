@@ -53,26 +53,97 @@ def require_catalogue_administrator(
         raise PermissionDenied("Catalogue administration permission is missing.")
 
 
-def can_manage_tag(actor: EqmdCustomUser | None, tag: AllowedTag) -> bool:
-    """Return whether a responsible leader may edit/deactivate this tag.
+def is_manageable_by_leader(tag: AllowedTag, *, leader_id: int | None) -> bool:
+    """Return whether this row is a manageable team tag for that leader.
 
-    Leadership alone is insufficient: the actor must be the current responsible
-    leader of the tag's active team and the tag must remain a custom restricted
-    row in that team. Archived rows and authorship confer no authority.
+    Pure catalogue check without membership lookups, so a leader page can
+    decide every row of one team from the leadership it already verified.
+    Archived rows and non-responsible authorship confer no authority.
     """
-    if actor is None or not actor.is_authenticated or not actor.is_active:
-        return False
-    if tag.is_deleted:
+    if leader_id is None or tag.is_deleted:
         return False
     if tag.origin != AllowedTag.Origin.CUSTOM:
         return False
     if tag.visibility != AllowedTag.Visibility.RESTRICTED:
         return False
-    if tag.specialty_id is None or tag.responsible_user_id != actor.pk:
+    if tag.specialty_id is None:
         return False
+    return tag.responsible_user_id == leader_id
+
+
+def can_manage_tag(
+    actor: EqmdCustomUser | None,
+    tag: AllowedTag,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> bool:
+    """Return whether a responsible leader may edit/deactivate this tag.
+
+    Leadership alone is insufficient: the actor must be the current responsible
+    leader of the tag's active team and the tag must remain a custom restricted
+    row in that team. Archived rows and authorship confer no authority. Write
+    paths pass ``locked_memberships`` so leadership is decided from the locked
+    row instead of an unlocked membership read; the page gate reads live state.
+    """
+    if actor is None or not actor.is_authenticated or not actor.is_active:
+        return False
+    if not is_manageable_by_leader(tag, leader_id=actor.pk):
+        return False
+    specialty_id = tag.specialty_id
+    if specialty_id is None:
+        return False
+    if locked_memberships is not None:
+        membership = locked_memberships.get(specialty_id)
+        return (
+            membership is not None
+            and membership.is_leader
+            and _is_active_membership(membership)
+        )
     from apps.accounts.services import team_membership
 
     return team_membership.is_team_leader(actor, tag.specialty)
+
+
+def can_lead_team_catalogue(
+    actor: EqmdCustomUser | None,
+    specialty: MedicalSpecialty | None,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> bool:
+    """Return whether the actor currently leads this team's tag catalogue.
+
+    Write paths pass ``locked_memberships`` so the decision uses the locked row
+    instead of an unlocked membership read; the page gate reads live state.
+    """
+    if actor is None or not actor.is_authenticated or not actor.is_active:
+        return False
+    if specialty is None or not specialty.is_active:
+        return False
+    if locked_memberships is not None:
+        membership = locked_memberships.get(specialty.pk)
+        return (
+            membership is not None
+            and membership.is_leader
+            and _is_active_membership(membership)
+        )
+    from apps.accounts.services import team_membership
+
+    return team_membership.is_team_leader(actor, specialty)
+
+
+def require_team_catalogue_leader(
+    actor: EqmdCustomUser | None,
+    specialty: MedicalSpecialty | None,
+    *,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+) -> None:
+    """Deny team tag creation to anyone but a current leader of that team."""
+    if not can_lead_team_catalogue(
+        actor, specialty, locked_memberships=locked_memberships
+    ):
+        raise PermissionDenied(
+            "Team tag management requires current leadership of the team."
+        )
 
 
 def require_tag_manager(
@@ -80,9 +151,10 @@ def require_tag_manager(
     tag: AllowedTag,
     *,
     permission: str = CATALOGUE_CHANGE_PERMISSION,
+    locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
 ) -> None:
     """Allow the responsible leader or an administrator with the permission."""
-    if can_manage_tag(actor, tag):
+    if can_manage_tag(actor, tag, locked_memberships=locked_memberships):
         return
     require_catalogue_administrator(actor, permission=permission)
 
@@ -115,21 +187,44 @@ def _is_active_membership(membership: UserSpecialty) -> bool:
     return membership.is_active and membership.specialty.is_active
 
 
+def member_team_ids(actor: EqmdCustomUser | None) -> frozenset[uuid.UUID]:
+    """Return the team ids whose restricted metadata the actor may read now.
+
+    Read visibility is the union of every active membership in an active team,
+    not just the selected current specialty. One query per request; never
+    cached, so a revocation applies to the next response.
+    """
+    if actor is None or not actor.is_authenticated or not actor.is_active:
+        return frozenset()
+    from apps.accounts.services import team_membership
+
+    return frozenset(
+        team_membership.eligible_memberships(actor).values_list(
+            "specialty_id", flat=True
+        )
+    )
+
+
 def is_team_member(
     actor: EqmdCustomUser | None,
     tag: AllowedTag,
     *,
     locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+    read_team_ids: Collection[uuid.UUID] | None = None,
 ) -> bool:
     """Return whether the actor currently belongs to the tag's own team.
 
     Write paths pass ``locked_memberships`` (see ``lock_team_memberships``) so
-    membership is decided from the locked row instead of an unlocked read.
+    membership is decided from the locked row instead of an unlocked read. Read
+    projections may pass a ``read_team_ids`` snapshot instead; never pass it on
+    a write path, where the locked row is the authority.
     """
     if actor is None or not actor.is_authenticated or not actor.is_active:
         return False
     if tag.specialty_id is None:
         return False
+    if read_team_ids is not None:
+        return tag.specialty_id in read_team_ids
     if locked_memberships is not None:
         membership = locked_memberships.get(tag.specialty_id)
         return membership is not None and _is_active_membership(membership)
@@ -174,13 +269,20 @@ def can_remove_tag(
     tag: AllowedTag,
     *,
     locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+    read_team_ids: Collection[uuid.UUID] | None = None,
 ) -> bool:
     """Return whether the actor may remove this tag from a patient.
 
     Removal uses the same per-tag authority as assignment but works in every
-    lifecycle state, so historical associations stay removable.
+    lifecycle state, so historical associations stay removable. Read
+    projections pass ``read_team_ids`` instead of locking membership rows.
     """
-    return has_tag_authority(actor, tag, locked_memberships=locked_memberships)
+    return has_tag_authority(
+        actor,
+        tag,
+        locked_memberships=locked_memberships,
+        read_team_ids=read_team_ids,
+    )
 
 
 def has_tag_authority(
@@ -188,6 +290,7 @@ def has_tag_authority(
     tag: AllowedTag,
     *,
     locked_memberships: Mapping[uuid.UUID, UserSpecialty] | None = None,
+    read_team_ids: Collection[uuid.UUID] | None = None,
 ) -> bool:
     """Return whether the actor holds authority for this specific tag."""
     if actor is None or not actor.is_authenticated or not actor.is_active:
@@ -195,9 +298,19 @@ def has_tag_authority(
     if is_catalogue_administrator(actor):
         return True
     if tag.visibility == AllowedTag.Visibility.RESTRICTED:
-        return is_team_member(actor, tag, locked_memberships=locked_memberships)
+        return is_team_member(
+            actor,
+            tag,
+            locked_memberships=locked_memberships,
+            read_team_ids=read_team_ids,
+        )
     if is_principal_tag(tag):
-        return is_team_member(actor, tag, locked_memberships=locked_memberships)
+        return is_team_member(
+            actor,
+            tag,
+            locked_memberships=locked_memberships,
+            read_team_ids=read_team_ids,
+        )
     return True
 
 

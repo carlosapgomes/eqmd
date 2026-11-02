@@ -1,0 +1,33 @@
+{% comment %}
+Renders one requester-projected tag audit event.
+
+Expected context:
+  tag_audit – TagAuditPresentation from apps.events.services.tag_audit_presentation
+
+Visible actions show the action-time name/colour and a lifecycle label when the
+tag is no longer active. Hidden actions only show that a restricted tag of the
+owning team was added or removed: no name, colour, note or identifier.
+{% endcomment %}
+<div class="tag-audit-actions" data-tag-audit-bulk="{{ tag_audit.is_bulk|yesno:'true,false' }}">
+  <ul class="list-unstyled mb-0">
+    {% for action in tag_audit.actions %}
+      <li class="mb-1">
+        {% if action.visible %}
+          <span class="badge" style="background-color: {{ action.color }}; color: white;">
+            <i class="bi bi-tag-fill me-1" aria-hidden="true"></i>{{ action.name }}
+          </span>
+          <small class="text-muted ms-1">{{ action.action_label }}</small>
+          {% if action.state_label %}
+            <span class="badge bg-dark ms-1">{{ action.state_label }}</span>
+          {% endif %}
+        {% else %}
+          <span class="badge bg-secondary">
+            <i class="bi bi-tag me-1" aria-hidden="true"></i>Tag restrita{% if action.team_abbreviation %} ({{ action.team_abbreviation }}){% endif %}
+          </span>
+          <small class="text-muted ms-1">{{ action.action_label }}</small>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="visually-hidden mb-0">{{ tag_audit.summary }}</p>
+</div>

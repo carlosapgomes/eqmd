@@ -145,6 +145,13 @@
             </div>
           </form>
 
+        {% if tag_filter_error %}
+        <div class="alert alert-warning mb-0 mt-3" role="alert">
+          <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+          {{ tag_filter_error }}
+        </div>
+        {% endif %}
+
           <!-- Active Filters -->
           {% if active_filters %}
           <div class="mt-3">
@@ -286,6 +293,7 @@
                                 style="background-color: {{ tag.allowed_tag.color }}; font-size: 0.7rem;"
                               >
                                 {{ tag.allowed_tag.name }}
+                                {% if tag.state_label %}({{ tag.state_label }}){% endif %}
                               </span>
                               {% endfor %}
                             </div>

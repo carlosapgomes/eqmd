@@ -85,6 +85,31 @@ legacy events are resolvable, ambiguous or unresolved without writing data:
 docker exec eqmd_dev python manage.py preflight_team_tags
 ```
 
+## How tag audit history is presented
+
+Stored descriptions, snapshot fields and concatenated bulk names carry
+action-time tag names, so they are never serialized directly. Every reader uses
+the requester-aware projection in
+`apps/events/services/tag_audit_presentation.py`:
+
+- current catalogue visibility and current team memberships decide the output on
+  every request, not the visibility captured at write time;
+- an authorized viewer sees the action-time name and colour of a currently
+  visible tag plus its current lifecycle label;
+- an outsider sees a generic restricted-tag action with the team abbreviation,
+  the action verb, the actor and the timestamp only;
+- bulk events render one entry per acted-on tag, never the stored `tag_names`;
+- reclassifying a public tag as restricted protects its older events on the next
+  request, warm caches included;
+- without a projection, `Event.get_display_description()` fails closed to a
+  neutral sentence, so a forgotten reader cannot leak a name.
+
+Unresolved legacy events are shown as `Ação de tag não identificada` to
+non-administrators; administrators may see the stored snapshot because it cannot
+prove an identity. See
+[tag-privacy-surfaces.md](../patients/tag-privacy-surfaces.md) for the reader
+inventory.
+
 ## Accessing Audit History
 
 ### 1. Django Admin Interface (Primary Method)

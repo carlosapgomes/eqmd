@@ -26,14 +26,18 @@ def patient_status_badge(status):
 
     return mark_safe(f'<span class="badge {status_class}">{status_label}</span>')
 
-@register.inclusion_tag('patients/tags/patient_tags.html')
-def patient_tags(patient):
+@register.inclusion_tag('patients/tags/patient_tags.html', takes_context=True)
+def patient_tags(context, patient):
     """
-    Renders the tags for a patient.
+    Render the current patient tags the requesting user may read.
 
     Usage: {% patient_tags patient %}
     """
-    return {'tags': patient.patient_tags.all()}
+    from apps.patients.services import tag_projection
+
+    return {
+        'tags': tag_projection.patient_tag_badges(context.get('user'), patient)
+    }
 
 
 @register.filter
@@ -152,10 +156,13 @@ def patient_gender_display(gender):
 @register.inclusion_tag('patients/partials/patient_tag_badge.html')
 def patient_tag_badge(tag, removable=False, patient=None):
     """
-    Render individual tag with color and styling, optionally with remove button.
+    Render one projected patient tag badge, optionally with a remove button.
 
-    Usage: {% patient_tag_badge tag %}
-           {% patient_tag_badge tag removable=True patient=patient %}
+    ``tag`` must be a ``PatientTagBadge``: hidden associations never reach a
+    template, and archive/inactive labels come from the projection.
+
+    Usage: {% patient_tag_badge badge %}
+           {% patient_tag_badge badge removable=True patient=patient %}
     """
     return {
         'tag': tag,
@@ -167,18 +174,18 @@ def patient_tag_badge(tag, removable=False, patient=None):
 @register.inclusion_tag('patients/partials/tag_management_widget.html', takes_context=True)
 def tag_management_widget(context, patient):
     """
-    Render complete tag management interface for patient detail page.
+    Render the tag management widget with requester-projected current tags.
 
     Usage: {% tag_management_widget patient %}
     """
-    from apps.patients.models import AllowedTag
-    
+    from apps.patients.services import tag_projection
+
+    user = context['user']
     return {
         'patient': patient,
-        'user': context['user'],
-        'available_tags': AllowedTag.objects.filter(is_active=True),
-        'can_manage_tags': context['user'].has_perm('patients.change_patient'),
-        'current_tags': patient.patient_tags.all(),
+        'user': user,
+        'can_manage_tags': user.has_perm('patients.change_patient'),
+        'current_tags': tag_projection.patient_tag_badges(user, patient),
         'request': context.get('request')
     }
 
@@ -194,17 +201,23 @@ def available_for_patient(allowed_tags, patient):
     return allowed_tags.exclude(id__in=assigned_tag_ids)
 
 
-@register.simple_tag
-def get_available_tags_for_patient(patient):
+@register.simple_tag(takes_context=True)
+def get_available_tags_for_patient(context, patient):
     """
-    Get list of available tags that can be assigned to patient.
+    Get the assignable tags the requesting user may see for this patient.
 
     Usage: {% get_available_tags_for_patient patient as available_tags %}
     """
-    from apps.patients.models import AllowedTag
-    
+    from apps.patients.services import tag_projection
+
     assigned_tag_ids = patient.patient_tags.values_list('allowed_tag_id', flat=True)
-    return AllowedTag.objects.filter(is_active=True).exclude(id__in=assigned_tag_ids)
+    return [
+        tag_projection.tag_badge(tag)
+        for tag in tag_projection.visible_catalogue(context.get('user'))
+        .filter(is_active=True)
+        .exclude(pk__in=assigned_tag_ids)
+        .order_by('name')
+    ]
 
 
 @register.filter

@@ -1,4 +1,5 @@
 from collections import Counter
+from typing import Any
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -79,7 +80,7 @@ from .models import (
     Tag,
     Ward,
 )
-from .services import tag_assignments, tag_catalogue, tag_policy
+from .services import tag_assignments, tag_catalogue, tag_policy, tag_projection
 from .services.patient_identity import RECORD_NUMBER_DELETE_MESSAGE
 from .services.tag_assignments import TagAssignmentRejected, TagNotAssociated
 from .validators import TEMPORARY_RECORD_PREFIX
@@ -103,9 +104,7 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             queryset = super().get_queryset().none()
 
         # Add optimized select_related and prefetch_related
-        queryset = queryset.select_related("created_by").prefetch_related(
-            "patient_tags__allowed_tag"
-        )
+        queryset = queryset.select_related("created_by")
 
         # Search functionality
         search_query = self.request.GET.get("q", "").strip()
@@ -135,17 +134,24 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         elif admission_filter == "not_admitted":
             queryset = queryset.filter(current_admission_id__isnull=True)
 
-        # Tag filter
-        tag_filter = self.request.GET.get("tag")
+        # Tag filter (legacy single-tag selector; multi-tag filtering is S7).
+        # An inaccessible or unknown id must never narrow or widen the result
+        # set inferentially: it yields the generic message and no rows.
+        self.tag_filter_error = ""
+        tag_filter = self.request.GET.get("tag", "")
         if tag_filter:
             try:
-                tag_id = int(tag_filter)
+                filtered_tag = tag_projection.resolve_tag_filter(
+                    self.request.user, tag_filter
+                )
+            except tag_projection.InvalidTagFilter:
+                self.tag_filter_error = tag_projection.INVALID_TAG_FILTER_MESSAGE
+                queryset = queryset.none()
+            else:
                 # Filter patients who have this specific tag assigned
                 queryset = queryset.filter(
-                    patient_tags__allowed_tag_id=tag_id
+                    patient_tags__allowed_tag_id=filtered_tag.pk
                 ).distinct()
-            except (ValueError, TypeError):
-                pass
 
         # Apply priority ordering: inpatients first, then outpatients, both alphabetically
         from apps.core.permissions.constants import (
@@ -179,13 +185,12 @@ class PatientListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         # Tag filter context
         context["tag_filter"] = self.request.GET.get("tag", "")
-        context["available_tags"] = (
-            AllowedTag.objects.filter(
-                is_active=True,
-                tag_instances__isnull=False,  # Only tags that are actually used
-            )
-            .distinct()
-            .order_by("name")
+        context["available_tags"] = tag_projection.filter_tag_options(
+            self.request.user
+        )
+        context["tag_filter_error"] = getattr(self, "tag_filter_error", "")
+        tag_projection.attach_patient_tag_badges(
+            context["patients"], actor=self.request.user
         )
 
         return context
@@ -257,13 +262,16 @@ class PatientDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
 
         # Add recent events (last 3)
         from apps.events.models import Event
+        from apps.events.services import tag_audit_presentation
 
-        context["recent_events"] = (
+        recent_events = list(
             Event.objects.filter(patient=patient)
             .select_subclasses()
             .select_related("created_by")
             .order_by("-created_at")[:3]
         )
+        tag_audit_presentation.attach_tag_audit_presentations(recent_events, viewer=self.request.user)
+        context["recent_events"] = recent_events
 
         # Add events count
         context["total_events_count"] = Event.objects.filter(patient=patient).count()
@@ -274,6 +282,9 @@ class PatientDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         )
         context["can_manage_tags"] = can_manage_patient_tags(self.request.user, patient)
         context["can_view_tags"] = can_view_patient_tags(self.request.user, patient)
+        context["patient_tags"] = tag_projection.patient_tag_badges(
+            self.request.user, patient
+        )
 
         # Add record number history
         context["record_numbers"] = patient.record_numbers.all().order_by(
@@ -1137,9 +1148,15 @@ class WardDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         ward = self.get_object()
-        context["current_patients"] = ward.patients.filter(
-            status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY]
-        ).order_by("name")
+        current_patients = list(
+            ward.patients.filter(
+                status__in=[Patient.Status.INPATIENT, Patient.Status.EMERGENCY]
+            ).order_by("name")
+        )
+        tag_projection.attach_patient_tag_badges(
+            current_patients, actor=self.request.user
+        )
+        context["current_patients"] = current_patients
         context["recent_admissions"] = ward.admissions.filter(is_active=True).order_by(
             "-admission_datetime"
         )[:10]
@@ -1408,19 +1425,25 @@ class SetOutpatientView(PatientStatusChangeView):
 # Tag Management Views
 
 
-def _patient_tags_payload(patient: Patient) -> list[dict[str, object]]:
-    """Serialize the patient's current associations for the tag AJAX views."""
-    payload: list[dict[str, object]] = []
-    for patient_tag in patient.patient_tags.select_related("allowed_tag").all():
-        payload.append(
-            {
-                "id": str(patient_tag.id),
-                "name": patient_tag.allowed_tag.name,
-                "color": patient_tag.allowed_tag.color,
-                "allowed_tag_id": patient_tag.allowed_tag.id,
-            }
-        )
-    return payload
+def _patient_tags_payload(
+    actor: Any, patient: Patient
+) -> list[dict[str, object]]:
+    """Serialize the caller's requester-visible associations for the tag views.
+
+    Hidden associations are dropped before serialization: the AJAX responses
+    must not become a way to read another team's restricted metadata.
+    """
+    return [
+        {
+            "id": str(badge.association_id),
+            "name": badge.name,
+            "color": badge.color,
+            "allowed_tag_id": badge.tag_id,
+            "state": badge.state,
+            "state_label": badge.state_label,
+        }
+        for badge in tag_projection.patient_tag_badges(actor, patient)
+    ]
 
 
 class PatientTagAddView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -1475,7 +1498,7 @@ class PatientTagAddView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 {
                     "success": True,
                     "message": f'Tag "{allowed_tag.name}" adicionada com sucesso',
-                    "tags": _patient_tags_payload(patient),
+                    "tags": _patient_tags_payload(request.user, patient),
                 }
             )
 
@@ -1524,7 +1547,7 @@ class PatientTagRemoveView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 {
                     "success": True,
                     "message": f'Tag "{tag_name}" removida com sucesso',
-                    "tags": _patient_tags_payload(patient),
+                    "tags": _patient_tags_payload(request.user, patient),
                 }
             )
 
@@ -1577,7 +1600,7 @@ class PatientTagRemoveAllView(LoginRequiredMixin, PermissionRequiredMixin, View)
                     "message": (
                         f"{len(result.removed)} tag(s) removida(s) com sucesso"
                     ),
-                    "tags": _patient_tags_payload(patient),
+                    "tags": _patient_tags_payload(request.user, patient),
                     "preserved": result.preserved,
                 }
             )
@@ -1617,43 +1640,15 @@ class PatientTagsAPIView(LoginRequiredMixin, View):
             )
 
         try:
-            # Get current patient tags
-            tags_data = []
-            for tag in patient.patient_tags.select_related("allowed_tag").all():
-                tags_data.append(
-                    {
-                        "id": str(tag.id),
-                        "name": tag.allowed_tag.name,
-                        "color": tag.allowed_tag.color,
-                        "allowed_tag_id": tag.allowed_tag.id,
-                        "notes": tag.notes,
-                        "created_at": tag.created_at.isoformat(),
-                        "created_by": tag.created_by.get_full_name()
-                        or tag.created_by.username,
-                    }
-                )
+            # Current associations and assignable options, both projected for
+            # the requester from the current catalogue and team memberships.
+            tags_data = tag_projection.patient_tag_json(request.user, patient)
 
-            # Get available tags (not already assigned) - only if user can manage tags
             available_tags_data = []
             if can_manage_patient_tags(request.user, patient):
-                assigned_allowed_tag_ids = patient.patient_tags.values_list(
-                    "allowed_tag_id", flat=True
+                available_tags_data = tag_projection.available_tag_json(
+                    request.user, patient
                 )
-                available_tags = (
-                    AllowedTag.objects.filter(is_active=True)
-                    .exclude(id__in=assigned_allowed_tag_ids)
-                    .order_by("name")
-                )
-
-                for allowed_tag in available_tags:
-                    available_tags_data.append(
-                        {
-                            "id": allowed_tag.id,
-                            "name": allowed_tag.name,
-                            "color": allowed_tag.color,
-                            "description": allowed_tag.description,
-                        }
-                    )
 
             # Add permission context
             permissions = {
@@ -1702,6 +1697,21 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
             self.request.GET.get("show_empty_wards", "false").lower() == "true"
         )
 
+        # The legacy single-tag selector must enforce current visibility: an
+        # unknown or unreadable id is a generic error, never a wider placement
+        # of patients on the map (S7 owns multi-tag filtering).
+        tag_filter_error = ""
+        resolved_tag_id = ""
+        if tag_filter:
+            try:
+                resolved_tag = tag_projection.resolve_tag_filter(
+                    self.request.user, tag_filter
+                )
+            except tag_projection.InvalidTagFilter:
+                tag_filter_error = tag_projection.INVALID_TAG_FILTER_MESSAGE
+            else:
+                resolved_tag_id = str(resolved_tag.pk)
+
         # Build active filters for display
         active_filters = {}
         if search_query:
@@ -1713,19 +1723,24 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
         if show_empty_wards:
             active_filters["show_empty_wards"] = "true"
 
-        # Get cached ward mapping data with filters applied
+        # Get cached ward mapping data with filters applied. Tag metadata in the
+        # shared payload is reprojected for this requester before filtering.
         filters = (
             {
                 "q": search_query,
                 "ward": ward_filter,
-                "tag": tag_filter,
+                "tag": resolved_tag_id,
                 "show_empty_wards": show_empty_wards,
             }
-            if any([search_query, ward_filter, tag_filter, show_empty_wards])
+            if any([search_query, ward_filter, resolved_tag_id, show_empty_wards])
             else {"show_empty_wards": show_empty_wards}
         )
 
-        ward_mapping_data = get_cached_ward_mapping(filters)
+        ward_mapping_data = get_cached_ward_mapping(filters, viewer=self.request.user)
+        if tag_filter_error:
+            ward_mapping_data["ward_data"] = []
+            ward_mapping_data["total_patients"] = 0
+            ward_mapping_data["total_wards"] = 0
 
         context.update(
             {
@@ -1739,10 +1754,11 @@ class WardPatientMapView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
                 "show_empty_wards": show_empty_wards,
                 "from_cache": ward_mapping_data["from_cache"],
                 "updating": ward_mapping_data.get("updating", False),
+                "tag_filter_error": tag_filter_error,
             }
         )
 
-        context["selected_tag"] = tag_filter
+        context["selected_tag"] = resolved_tag_id
 
         return context
 
