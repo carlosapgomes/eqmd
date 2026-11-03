@@ -6,6 +6,14 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-03
+
+### Changed — legal content
+
+- **Termos de uso atualizados** (`6dae3cb`): revisão completa do
+  texto exibido na página de termos de uso (sem mudanças de código
+  ou de comportamento).
+
 ## [0.4.0] - 2026-11-03
 
 ### Fixed — test suite stability
