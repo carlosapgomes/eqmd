@@ -20,7 +20,11 @@ from apps.patients.models import Patient
 from .services.pdf_generator import ConsentFormPDFGenerator
 
 from .models import ConsentForm, ConsentTemplate, ConsentAttachment
-from .forms import ConsentFormCreateForm, ConsentAttachmentUploadForm
+from .forms import (
+    ConsentFormCreateForm,
+    ConsentFormDuplicateForm,
+    ConsentAttachmentUploadForm,
+)
 from .utils import normalize_filename
 
 logger = logging.getLogger(__name__)
@@ -78,6 +82,56 @@ class ConsentFormCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateV
         messages.success(
             self.request,
             f"Termo de consentimento criado para {self.patient.name}.",
+        )
+        return response
+
+
+class ConsentFormDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """Duplicate an existing consent form into a new, independent document."""
+
+    model = ConsentForm
+    form_class = ConsentFormDuplicateForm
+    template_name = "consentforms/consentform_duplicate_form.html"
+    permission_required = "events.add_event"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Resolve the source form and check patient access (design D3)."""
+        self.source = get_object_or_404(ConsentForm, pk=kwargs["pk"])
+        self.patient = self.source.patient
+
+        if not can_access_patient(request.user, self.patient):
+            raise PermissionDenied("You don't have permission to access this patient")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        """Hand the source, the submitting user and its patient to the form."""
+        kwargs = super().get_form_kwargs()
+        kwargs["source"] = self.source
+        kwargs["user"] = self.request.user
+        kwargs["patient"] = self.patient
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["patient"] = self.patient
+        context["source"] = self.source
+        context["patient_record_number"] = (
+            self.patient.get_current_record_number() or "—"
+        )
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy(
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.patient.pk},
+        )
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f"Termo de consentimento duplicado para {self.patient.name}.",
         )
         return response
 

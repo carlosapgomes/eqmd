@@ -49,6 +49,17 @@
         </span>
     </button>
 
+    {% if perms.events.add_event %}
+        <a href="{% url 'consentforms:consentform_duplicate' event.pk %}"
+           class="btn btn-outline-info btn-sm"
+           aria-label="Duplicar termo de consentimento"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="Criar novo termo baseado neste">
+            <i class="bi bi-files" aria-hidden="true"></i>
+        </a>
+    {% endif %}
+
     {% if event_data.can_edit %}
         <a href="{{ event.get_edit_url }}" 
            class="btn btn-outline-warning btn-sm"
