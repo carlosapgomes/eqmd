@@ -6,6 +6,73 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+### Added — document duplication across the timeline
+
+- **Duplicação de documentos** (changes `extend-document-duplication`,
+  `duplicate-discharge-report`, `duplicate-consent-form`):
+  - **Relatório**: botão duplicar no card da timeline abre formulário
+    pré-preenchido (título e conteúdo, data de hoje); a cópia é
+    independente e editável na própria janela de 24h.
+  - **Receita**: botão duplicar também no card da timeline (antes só
+    no detalhe) — POST cria rascunho pré-preenchido e abre a edição.
+  - **Relatório de alta**: a cópia nasce rascunho (mesmo a partir de
+    final expirado); salvar como definitivo carimba finalização
+    apenas na cópia; a fonte permanece intacta.
+  - **Termo de consentimento**: o texto congelado do original abre
+    editável com a data do documento auto-substituída pela atual
+    (`dd/mm/aaaa`, substituição única); template do original fixo
+    como proveniência (aceita inativo); sem anexos e sem referência
+    cruzada.
+  - Testes de regressão POST para os três apps de texto e namespaces
+    de URL curtos (`dailynotes:`, `simplenotes:`,
+    `historyandphysicals:`).
+
+### Added — specialty team tag governance
+
+- **Governança de tags por equipe de especialidade** (change
+  `add-specialty-team-tag-governance`): membership com ciclo de vida
+  auditado, catálogo governado, atribuições de tags de paciente com
+  política e auditoria, leitores privacy-safe, página de tags do
+  líder responsável, filtro multi-tag com busca na lista de
+  pacientes, preferências de filtro por especialidade e paridade de
+  filtro no mapa de enfermaria. Migrações: accounts 0006–0008, events
+  0006–0007 (com backfill), patients 0004–0005.
+
+### Changed — discharge report hardening
+
+- **Relatório de alta endurecido** (change
+  `harden-discharge-report-collaborative-draft`): predicado
+  colaborativo único (model, view e timeline), guardrails de
+  identidade clínica em rascunhos colaborativos e janela de correção
+  de 24h ancorada na finalização (legado: `created_at`). Migração:
+  dischargereports 0003.
+
+### Changed — tag selector and PWA
+
+- Resultados compactos e acessíveis no seletor de tags
+  (`role="list"` explícito).
+- Título da home-screen desacoplado do ambiente via
+  `PWA_SHORT_NAME`/`PWA_NAME`.
+
+### Security — production image and infra hardening
+
+- **Imagem de produção** (change `harden-production-image-security`):
+  contexto de build seguro, base Brotli corrigida, floors de
+  dependências (Django/DRF/certifi/Pillow) e qualificação final da
+  imagem.
+- **Infraestrutura**: artefatos de deploy parametrizados, detalhes de
+  infra removidos dos artefatos, infra-guard (pre-commit + CI),
+  política de segurança publicada e scan de imagem CI com uploads
+  SARIF reparados.
+
+### Added — EON migration stage 1
+
+- **Migração EON** (change `eon-migration`): artefatos stage-1
+  (compose, IPAM, ambiente sintético), papéis/init/restore do PostgreSQL
+  15, cron UTC com locks, runbook de cutover com rollback e checklist
+  de aceitação, ensaio e2e com timings, spec publicada e ADR-0005 e
+  atualizações phase-D (alias Caddy, cron Bahia, variáveis do site).
+
 ## [0.3.2] - 2026-10-12
 
 ### Added — prescription duplication
