@@ -265,5 +265,40 @@ class DischargeReportUpdateForm(forms.ModelForm):
         return cleaned_data
 
 
+class DischargeReportDuplicateForm(DischargeReportCreateForm):
+    """Duplication form: a new report pre-filled from an existing one.
+
+    ``DischargeReportCreateForm.__init__`` seeds ``event_datetime`` and the
+    admission/discharge dates at FIELD level (now and the active admission),
+    and ``Form.get_initial_for_field`` prefers form-level ``initial`` over
+    ``field.initial`` (design D4). Re-applying the source values at field
+    level after ``super().__init__()`` therefore lets the source win without
+    the view passing form-level initial.
+    """
+
+    # Copied verbatim from the source (design D3). ``event_datetime`` is
+    # deliberately absent: a duplicate is a new document, timestamped now.
+    SOURCE_FIELDS = (
+        "medical_specialty",
+        "admission_date",
+        "discharge_date",
+        "admission_history",
+        "problems_and_diagnosis",
+        "exams_list",
+        "procedures_list",
+        "inpatient_medical_history",
+        "discharge_status",
+        "discharge_recommendations",
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.source = kwargs.pop("source", None)
+        super().__init__(*args, **kwargs)
+
+        if self.source is not None:
+            for field_name in self.SOURCE_FIELDS:
+                self.fields[field_name].initial = getattr(self.source, field_name)
+
+
 # For backward compatibility, keep the old form name
 DischargeReportForm = DischargeReportCreateForm

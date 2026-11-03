@@ -38,6 +38,21 @@ Extends the base event card for discharge report events
     </span>
   </button>
 
+  <!-- Duplicate Button -->
+  {% if perms.events.add_event %}
+  <a
+    href="{% url 'apps.dischargereports:dischargereport_duplicate' pk=event.pk %}"
+    class="btn btn-outline-info btn-sm"
+    aria-label="Duplicar relatório de alta"
+    data-bs-toggle="tooltip"
+    data-bs-placement="top"
+    title="Criar novo relatório de alta baseado neste"
+  >
+    <i class="bi bi-files" aria-hidden="true"></i>
+    <span class="visually-hidden">Duplicar</span>
+  </a>
+  {% endif %}
+
   <!-- Edit Button -->
   {% if event_data.can_edit %}
   <a

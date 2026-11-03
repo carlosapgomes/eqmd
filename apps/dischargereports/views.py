@@ -18,7 +18,11 @@ from django.views.generic import (
 
 from apps.core.permissions import can_access_patient
 
-from .forms import DischargeReportCreateForm, DischargeReportUpdateForm
+from .forms import (
+    DischargeReportCreateForm,
+    DischargeReportDuplicateForm,
+    DischargeReportUpdateForm,
+)
 from .models import DischargeReport
 from .services.pdf_generator import DischargeReportPDFGenerator
 from .services.permissions import (
@@ -143,6 +147,79 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
             # metadata as a draft-to-final flip (spec R7/"finalizing SHALL
             # record"); only the access gate in ``dispatch`` decides who may
             # create it.
+            self.object.finalized_at = timezone.now()
+            self.object.finalized_by = self.request.user
+        self.object.save()
+
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class DischargeReportDuplicateView(LoginRequiredMixin, CreateView):
+    """Duplicate an existing discharge report into a new, independent report."""
+
+    model = DischargeReport
+    form_class = DischargeReportDuplicateForm
+    template_name = "dischargereports/dischargereport_duplicate.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Load the source report and check patient access (design D1)."""
+        self.source = get_object_or_404(
+            DischargeReport.objects.with_drafts(), pk=kwargs["pk"]
+        )
+        self.patient = self.source.patient
+
+        if not can_access_patient(request.user, self.patient):
+            raise PermissionDenied(
+                "You don't have permission to create discharge reports for this patient"
+            )
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        """Bind the patient and hand the source to the duplication form."""
+        kwargs = super().get_form_kwargs()
+        kwargs["patient"] = self.patient
+        kwargs["source"] = self.source
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        """Add the patient and the duplicated report to the context."""
+        context = super().get_context_data(**kwargs)
+        context["patient"] = self.patient
+        context["source"] = self.source
+        return context
+
+    def get_success_url(self):
+        """Redirect to patient timeline after successful duplication."""
+        return reverse_lazy(
+            "apps.patients:patient_events_timeline",
+            kwargs={"patient_id": self.patient.pk},
+        )
+
+    def form_valid(self, form):
+        """Create the copy with the create-form draft/final semantics (D2)."""
+        is_draft = "save_final" not in self.request.POST
+
+        if is_draft:
+            messages.success(
+                self.request,
+                f"Relatório de alta para {self.patient.name} duplicado como rascunho.",
+            )
+        else:
+            messages.success(
+                self.request,
+                f"Relatório de alta para {self.patient.name} duplicado e salvo definitivamente.",
+            )
+
+        self.object = form.save(commit=False)
+        self.object.patient = self.patient
+        self.object.created_by = self.request.user
+        self.object.updated_by = self.request.user
+        self.object.event_datetime = self.object.event_datetime or timezone.now()
+        self.object.is_draft = is_draft
+        if not is_draft:
+            # The copy records its own finalization; the source's metadata is
+            # never carried over (D2).
             self.object.finalized_at = timezone.now()
             self.object.finalized_by = self.request.user
         self.object.save()
