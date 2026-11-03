@@ -43,6 +43,7 @@ resubmit keeps filtering by them.
              class="form-control form-control-sm"
              placeholder="Buscar tag por nome ou equipe..."
              autocomplete="off"
+             aria-controls="tag-search-results"
              data-tag-search>
       <div class="d-flex justify-content-between align-items-center mt-1 gap-2">
         <div class="form-check form-check-inline mb-0">
@@ -73,6 +74,7 @@ resubmit keeps filtering by them.
         {% endfor %}
       </div>
       <ul class="list-group mt-2 shadow-sm"
+          id="tag-search-results"
           data-tag-results
           aria-label="Resultados de tags"
           hidden></ul>
@@ -80,7 +82,10 @@ resubmit keeps filtering by them.
               class="btn btn-link btn-sm p-0 mt-1"
               data-tag-more
               hidden>Carregar mais</button>
-      <p class="small text-muted mb-0 mt-1" data-tag-status aria-live="polite"></p>
+      <p class="small text-muted mb-0 mt-1"
+         data-tag-status
+         aria-live="polite"
+         aria-atomic="true"></p>
     </div>
 
     <div data-tag-hidden-inputs></div>

@@ -588,6 +588,10 @@ class WardMapTotalsAndNavigationTests(WardMapTagFilterFixture):
         self.assertIn('name="tag_mode"', body)
         self.assertIn('value="all" selected', body)
         self.assertIn('name="show_empty_wards"', body)
+        # Compact selector hooks shared with the patient list (S1 R3).
+        self.assertIn('aria-controls="tag-search-results"', body)
+        self.assertIn('id="tag-search-results"', body)
+        self.assertIn('aria-atomic="true"', body)
 
     def test_refresh_querystring_preserves_every_effective_predicate(self) -> None:
         response = self.map_response(
