@@ -1,11 +1,20 @@
 # Generated manually for sample data
 
 from django.db import migrations
-import uuid
 
 
 def create_sample_specialties(apps, schema_editor):
-    """Create sample medical specialties."""
+    """Create sample medical specialties.
+
+    Skipped unless EQMD_SEED_SAMPLE_SPECIALTIES is truthy (default on, so fresh
+    non-test installs keep the bootstrap rows). Test settings disable it so
+    test databases contain no sample rows and tests create their own.
+    """
+    from django.conf import settings
+
+    if not getattr(settings, "EQMD_SEED_SAMPLE_SPECIALTIES", True):
+        return
+
     MedicalSpecialty = apps.get_model("accounts", "MedicalSpecialty")
 
     specialties = [
@@ -48,10 +57,10 @@ def create_sample_specialties(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [
+    dependencies = [  # noqa: RUF012 - declarative migration attribute.
         ("accounts", "0004_add_medical_specialty_models"),
     ]
 
-    operations = [
+    operations = [  # noqa: RUF012 - declarative migration attribute.
         migrations.RunPython(create_sample_specialties),
     ]
