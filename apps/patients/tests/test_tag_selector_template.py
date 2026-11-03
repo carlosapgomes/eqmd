@@ -98,6 +98,7 @@ class TagSelectorTemplateTests(TestCase):
         results = self.matches(RESULTS_LIST)[0]
 
         self.assertIn('id="tag-search-results"', results)
+        self.assertIn('role="list"', results)
         self.assertIn('aria-label="Resultados de tags"', results)
 
     def test_status_region_announces_atomically_and_politely(self) -> None:
