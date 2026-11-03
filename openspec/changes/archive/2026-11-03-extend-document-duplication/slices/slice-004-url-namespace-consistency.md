@@ -65,7 +65,7 @@ namespace, and no reference uses the long `apps.*` spelling.
 
 - Deterministic verification: run
   `rg -n "apps\.(dailynotes|simplenotes|historyandphysicals):"
-  apps config templates docs`
+apps config templates docs`
   and record the matches (expected: ~34 in code plus the
   `docs/styling.md` example). After the slice the same command must
   return no matches.

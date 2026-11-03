@@ -53,10 +53,10 @@ post-hardening collaborative draft semantics.
   must not pass form-level `initial` for these fields (form-level
   takes precedence over both). Evidence: GET prefill tests.
 - **R3 — View**: `DischargeReportDuplicateView(LoginRequiredMixin,
-  CreateView)` in `apps/dischargereports/views.py`: `dispatch`
+CreateView)` in `apps/dischargereports/views.py`: `dispatch`
   resolves the source via `get_object_or_404` and raises
   `PermissionDenied` unless `can_access_patient(request.user,
-  source.patient)`; `get_form_kwargs` passes `patient` and
+source.patient)`; `get_form_kwargs` passes `patient` and
   `source`; context exposes `patient` and `source`; `form_valid`
   stamps `created_by`/`updated_by` to the request user and
   delegates draft/final to the create-form semantics (`save_final`
@@ -106,6 +106,7 @@ files need justification in the report.
 ## Failing-before plan
 
 Reproduce BEFORE implementing (record outputs):
+
 - from a Django shell, reverse the
   `apps.dischargereports:dischargereport_duplicate` route with a
   uuid kwarg → expected `NoReverseMatch`;

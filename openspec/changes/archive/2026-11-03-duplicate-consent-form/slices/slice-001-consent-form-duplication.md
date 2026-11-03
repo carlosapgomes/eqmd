@@ -57,7 +57,7 @@ re-creation, design D1).
   `created_by`/`updated_by` = user). Evidence: GET prefill tests +
   POST save tests.
 - **R3 — View**: `ConsentFormDuplicateView(LoginRequiredMixin,
-  PermissionRequiredMixin, CreateView)` with
+PermissionRequiredMixin, CreateView)` with
   `permission_required = 'events.add_event'`; `dispatch` resolves
   the source via `get_object_or_404` and raises `PermissionDenied`
   when `can_access_patient` fails; `get_form_kwargs` passes
@@ -113,6 +113,7 @@ Extra files need justification in the report.
 ## Failing-before plan
 
 Reproduce BEFORE implementing (record outputs):
+
 - from a Django shell, reverse the
   `consentforms:consentform_duplicate` route with a uuid kwarg →
   expected `NoReverseMatch`;
