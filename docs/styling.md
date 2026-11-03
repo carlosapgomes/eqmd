@@ -19,7 +19,8 @@ design.
 
 ### Medical Color System
 
-The application uses a medical-focused color palette designed to convey trust and professionalism:
+The application uses a medical-focused color palette designed to
+convey trust and professionalism:
 
 ```scss
 // Primary Medical Colors
@@ -58,7 +59,8 @@ $dark: $medical-dark-gray;
 ### Font Family
 
 - **Primary**: Inter
-- **Fallbacks**: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif
+- **Fallbacks**: -apple-system, BlinkMacSystemFont, "Segoe UI",
+  Roboto, "Helvetica Neue", Arial, sans-serif
 
 ### Font Weights
 
@@ -93,7 +95,8 @@ All headings use `$medical-dark-gray` for consistency and readability.
 
 ### Form Styling Approach
 
-EquipeMed uses **manual Bootstrap form rendering** for complete control over styling and layout. This approach provides:
+EquipeMed uses **manual Bootstrap form rendering** for complete control over
+styling and layout. This approach provides:
 
 - **Full customization**: Complete control over form structure and appearance
 - **No dependencies**: No additional form libraries required
@@ -355,7 +358,7 @@ Event types can extend the base template to add custom functionality:
   <!-- Duplicate Button - DailyNote specific -->
   {% if perms.events.add_event %}
   <a
-    href="{% url 'apps.dailynotes:dailynote_duplicate' pk=event.pk %}"
+    href="{% url 'dailynotes:dailynote_duplicate' pk=event.pk %}"
     class="btn btn-outline-info btn-sm"
   >
     <i class="bi bi-files"></i>
@@ -390,8 +393,10 @@ The main timeline template uses conditional logic to select the appropriate temp
 To add a new event type with custom functionality:
 
 1. **Create new template**: `event_card_[type].html` extending the base template
-2. **Override blocks**: Customize `event_actions`, `event_content`, or `event_metadata` as needed
-3. **Update timeline**: Add condition in `patient_timeline.html` for your event type
+2. **Override blocks**: Customize `event_actions`, `event_content`, or
+   `event_metadata` as needed
+3. **Update timeline**: Add condition in `patient_timeline.html` for your event
+   type
 4. **Follow styling**: Use established button patterns and medical styling classes
 
 #### Best Practices
@@ -602,7 +607,11 @@ class DocumentPrintView(LoginRequiredMixin, DetailView):
 ```python
 # In app/urls.py
 path('<uuid:pk>/print/', views.DocumentPrintView.as_view(), name='document_print'),
-path('patient/<uuid:patient_pk>/export/', views.PatientReportExportView.as_view(), name='patient_export'),
+path(
+    'patient/<uuid:patient_pk>/export/',
+    views.PatientReportExportView.as_view(),
+    name='patient_export',
+),
 ```
 
 #### Print Best Practices

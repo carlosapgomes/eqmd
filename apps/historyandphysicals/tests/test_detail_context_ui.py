@@ -66,7 +66,7 @@ class HistoryAndPhysicalDetailContextUITests(TestCase):
 
     def _detail_url(self):
         return reverse(
-            'apps.historyandphysicals:historyandphysical_detail',
+            'historyandphysicals:historyandphysical_detail',
             kwargs={'pk': self.historyandphysical.pk},
         )
 
@@ -109,7 +109,7 @@ class HistoryAndPhysicalDetailContextUITests(TestCase):
 
         # Print action
         print_url = reverse(
-            'apps.historyandphysicals:historyandphysical_print',
+            'historyandphysicals:historyandphysical_print',
             kwargs={'pk': self.historyandphysical.pk},
         )
         self.assertIn(print_url, content)
@@ -168,7 +168,7 @@ class HistoryAndPhysicalDetailContextUITests(TestCase):
 
         # Print action visible
         print_url = reverse(
-            'apps.historyandphysicals:historyandphysical_print',
+            'historyandphysicals:historyandphysical_print',
             kwargs={'pk': self.historyandphysical.pk},
         )
         self.assertIn(print_url, content)

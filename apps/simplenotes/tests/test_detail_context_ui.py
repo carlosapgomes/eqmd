@@ -66,7 +66,7 @@ class SimpleNoteDetailContextUITests(TestCase):
 
     def _detail_url(self):
         return reverse(
-            'apps.simplenotes:simplenote_detail',
+            'simplenotes:simplenote_detail',
             kwargs={'pk': self.simplenote.pk},
         )
 
@@ -109,7 +109,7 @@ class SimpleNoteDetailContextUITests(TestCase):
 
         # Print action
         print_url = reverse(
-            'apps.simplenotes:simplenote_print',
+            'simplenotes:simplenote_print',
             kwargs={'pk': self.simplenote.pk},
         )
         self.assertIn(print_url, content)
@@ -168,7 +168,7 @@ class SimpleNoteDetailContextUITests(TestCase):
 
         # Print action visible
         print_url = reverse(
-            'apps.simplenotes:simplenote_print',
+            'simplenotes:simplenote_print',
             kwargs={'pk': self.simplenote.pk},
         )
         self.assertIn(print_url, content)

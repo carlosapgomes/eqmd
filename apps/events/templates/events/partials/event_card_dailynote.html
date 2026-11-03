@@ -34,7 +34,7 @@ Extends the base event card and adds the duplicate button for DailyNote events
     <!-- PDF Button -->
     <button type="button"
             class="btn btn-outline-danger btn-sm pdf-download-btn"
-            data-pdf-url="{% url 'apps.dailynotes:dailynote_pdf' pk=event.pk %}"
+            data-pdf-url="{% url 'dailynotes:dailynote_pdf' pk=event.pk %}"
             data-filename="evolucao-{{ event.patient.name|slugify }}-{{ event.event_datetime|date:'d-m-Y' }}.pdf"
             aria-label="Gerar PDF da evolução"
             data-bs-toggle="tooltip" 
@@ -51,7 +51,7 @@ Extends the base event card and adds the duplicate button for DailyNote events
     
     <!-- Duplicate Button - Only for users with add_event permission -->
     {% if perms.events.add_event %}
-        <a href="{% url 'apps.dailynotes:dailynote_duplicate' pk=event.pk %}" 
+        <a href="{% url 'dailynotes:dailynote_duplicate' pk=event.pk %}" 
            class="btn btn-outline-info btn-sm"
            aria-label="Duplicar evolução"
            data-bs-toggle="tooltip" 

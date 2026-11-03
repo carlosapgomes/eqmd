@@ -173,7 +173,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
         client.login(username="doctor", password="testpass123")
 
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_detail",
+            "historyandphysicals:historyandphysical_detail",
             kwargs={"pk": self.recent_historyandphysical.pk},
         )
         response = client.get(url)
@@ -195,7 +195,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
         client.login(username="doctor", password="testpass123")
 
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_create",
+            "historyandphysicals:historyandphysical_create",
             kwargs={"patient_pk": self.inpatient.pk},
         )
 
@@ -223,7 +223,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
         client.login(username="doctor", password="testpass123")
 
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_update",
+            "historyandphysicals:historyandphysical_update",
             kwargs={"pk": self.recent_historyandphysical.pk},
         )
 
@@ -239,7 +239,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
 
         # Should not be able to update old history and physical
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_update",
+            "historyandphysicals:historyandphysical_update",
             kwargs={"pk": self.old_historyandphysical.pk},
         )
 
@@ -254,7 +254,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
         client.login(username="doctor", password="testpass123")
 
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_delete",
+            "historyandphysicals:historyandphysical_delete",
             kwargs={"pk": self.recent_historyandphysical.pk},
         )
 
@@ -263,7 +263,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
 
         # Should not be able to delete old history and physical
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_delete",
+            "historyandphysicals:historyandphysical_delete",
             kwargs={"pk": self.old_historyandphysical.pk},
         )
 
@@ -278,7 +278,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
         client.login(username="doctor", password="testpass123")
 
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_duplicate",
+            "historyandphysicals:historyandphysical_duplicate",
             kwargs={"pk": self.recent_historyandphysical.pk},
         )
 
@@ -299,7 +299,7 @@ class HistoryAndPhysicalPermissionsTest(TestCase):
         client.login(username="doctor", password="testpass123")
 
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_print",
+            "historyandphysicals:historyandphysical_print",
             kwargs={"pk": self.recent_historyandphysical.pk},
         )
 

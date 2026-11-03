@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 
-app_name = "apps.simplenotes"
+app_name = "simplenotes"
 
 urlpatterns = [
     # SimpleNote CRUD URLs

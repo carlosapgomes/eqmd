@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 
-app_name = "apps.historyandphysicals"
+app_name = "historyandphysicals"
 
 urlpatterns = [
     # HistoryAndPhysical CRUD URLs

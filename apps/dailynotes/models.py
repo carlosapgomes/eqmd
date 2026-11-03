@@ -22,12 +22,12 @@ class DailyNote(Event):
     def get_absolute_url(self):
         """Return the absolute URL for this daily note."""
         from django.urls import reverse
-        return reverse('apps.dailynotes:dailynote_detail', kwargs={'pk': self.pk})
+        return reverse('dailynotes:dailynote_detail', kwargs={'pk': self.pk})
 
     def get_edit_url(self):
         """Return the edit URL for this daily note."""
         from django.urls import reverse
-        return reverse('apps.dailynotes:dailynote_update', kwargs={'pk': self.pk})
+        return reverse('dailynotes:dailynote_update', kwargs={'pk': self.pk})
 
     def __str__(self):
         """String representation of the daily note."""

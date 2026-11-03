@@ -41,9 +41,9 @@ Contract: `slices/slice-003-duplication-post-tests.md`
 
 ## 4. Slice 004 — URL namespace consistency (runs last)
 
-- [ ] 4.1 Standardize the three text apps on the short namespace per
+- [x] 4.1 Standardize the three text apps on the short namespace per
       `slices/slice-004-url-namespace-consistency.md`.
-- [ ] 4.2 Repository grep returns zero long-form references; full suite
+- [x] 4.2 Repository grep returns zero long-form references; full suite
       green.
 
 Contract: `slices/slice-004-url-namespace-consistency.md`

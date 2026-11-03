@@ -17,12 +17,12 @@ class SimpleNote(Event):
     def get_absolute_url(self):
         """Return the absolute URL for this simple note."""
         from django.urls import reverse
-        return reverse('apps.simplenotes:simplenote_detail', kwargs={'pk': self.pk})
+        return reverse('simplenotes:simplenote_detail', kwargs={'pk': self.pk})
 
     def get_edit_url(self):
         """Return the edit URL for this simple note."""
         from django.urls import reverse
-        return reverse('apps.simplenotes:simplenote_update', kwargs={'pk': self.pk})
+        return reverse('simplenotes:simplenote_update', kwargs={'pk': self.pk})
 
     def __str__(self):
         """String representation of the simple note."""

@@ -17,12 +17,12 @@ class HistoryAndPhysical(Event):
     def get_absolute_url(self):
         """Return the absolute URL for this history and physical."""
         from django.urls import reverse
-        return reverse('apps.historyandphysicals:historyandphysical_detail', kwargs={'pk': self.pk})
+        return reverse('historyandphysicals:historyandphysical_detail', kwargs={'pk': self.pk})
 
     def get_edit_url(self):
         """Return the edit URL for this history and physical."""
         from django.urls import reverse
-        return reverse('apps.historyandphysicals:historyandphysical_update', kwargs={'pk': self.pk})
+        return reverse('historyandphysicals:historyandphysical_update', kwargs={'pk': self.pk})
 
     def __str__(self):
         """String representation of the history and physical."""

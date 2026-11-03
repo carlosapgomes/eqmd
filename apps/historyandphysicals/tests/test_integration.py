@@ -70,7 +70,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
     def test_historyandphysical_detail_view(self):
         """Test the history and physical detail view."""
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_detail",
+            "historyandphysicals:historyandphysical_detail",
             kwargs={"pk": self.historyandphysical.pk},
         )
         response = self.client.get(url)
@@ -82,7 +82,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
     def test_patient_historyandphysical_create_view(self):
         """Test creating a new history and physical for a patient."""
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_create",
+            "historyandphysicals:historyandphysical_create",
             kwargs={"patient_pk": self.patient.pk},
         )
 
@@ -116,7 +116,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
     def test_historyandphysical_update_view(self):
         """Test updating an existing history and physical."""
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_update",
+            "historyandphysicals:historyandphysical_update",
             kwargs={"pk": self.historyandphysical.pk},
         )
 
@@ -152,7 +152,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
     def test_historyandphysical_duplicate_view(self):
         """Test duplicating an existing history and physical."""
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_duplicate",
+            "historyandphysicals:historyandphysical_duplicate",
             kwargs={"pk": self.historyandphysical.pk},
         )
 
@@ -184,7 +184,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
     def test_historyandphysical_delete_view(self):
         """Test deleting a history and physical."""
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_delete",
+            "historyandphysicals:historyandphysical_delete",
             kwargs={"pk": self.historyandphysical.pk},
         )
 
@@ -206,7 +206,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
     def test_historyandphysical_print_view(self):
         """Test the print view for history and physical."""
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_print",
+            "historyandphysicals:historyandphysical_print",
             kwargs={"pk": self.historyandphysical.pk},
         )
 
@@ -252,7 +252,7 @@ class HistoryAndPhysicalIntegrationTest(TestCase):
         # events.view_event permission)
         self.client.login(username="otheruser", password="otherpass123")
         url = reverse(
-            "apps.historyandphysicals:historyandphysical_detail",
+            "historyandphysicals:historyandphysical_detail",
             kwargs={"pk": other_historyandphysical.pk},
         )
 

@@ -33,7 +33,7 @@ Extends the base event card and adds the duplicate button for HistoryAndPhysical
     
     <!-- Duplicate Button - Only for users with add_event permission -->
     {% if perms.events.add_event %}
-        <a href="{% url 'apps.historyandphysicals:historyandphysical_duplicate' pk=event.pk %}" 
+        <a href="{% url 'historyandphysicals:historyandphysical_duplicate' pk=event.pk %}" 
            class="btn btn-outline-info btn-sm"
            aria-label="Duplicar anamnese e exame físico"
            data-bs-toggle="tooltip" 

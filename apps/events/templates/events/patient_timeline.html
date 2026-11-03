@@ -320,7 +320,7 @@
                             </h6></li>
                             {% if perms.events.add_event %}
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}">
+                                    <a class="dropdown-item" href="{% url 'dailynotes:patient_dailynote_create' patient.pk %}">
                                         <i class="bi bi-journal-text me-2 text-medical-success" aria-hidden="true"></i>
                                         Evolução
                                     </a>
@@ -332,7 +332,7 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'apps.simplenotes:patient_simplenote_create' patient.pk %}">
+                                    <a class="dropdown-item" href="{% url 'simplenotes:patient_simplenote_create' patient.pk %}">
                                         <i class="bi bi-sticky me-2 text-medical-warning" aria-hidden="true"></i>
                                         Nota/Observação
                                     </a>
@@ -496,7 +496,7 @@
                             </h6></li>
                             {% if perms.events.add_event %}
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'apps.dailynotes:patient_dailynote_create' patient.pk %}">
+                                    <a class="dropdown-item" href="{% url 'dailynotes:patient_dailynote_create' patient.pk %}">
                                         <i class="bi bi-journal-text me-2 text-medical-success" aria-hidden="true"></i>
                                         Evolução
                                     </a>
@@ -508,7 +508,7 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'apps.simplenotes:patient_simplenote_create' patient.pk %}">
+                                    <a class="dropdown-item" href="{% url 'simplenotes:patient_simplenote_create' patient.pk %}">
                                         <i class="bi bi-sticky me-2 text-medical-warning" aria-hidden="true"></i>
                                         Nota/Observação
                                     </a>
