@@ -35,7 +35,9 @@ Semantic Versioning.
   política e auditoria, leitores privacy-safe, página de tags do
   líder responsável, filtro multi-tag com busca na lista de
   pacientes, preferências de filtro por especialidade e paridade de
-  filtro no mapa de enfermaria. Migrações: accounts 0006–0008, events
+  filtro no mapa de enfermaria. Tags existentes são preservadas e
+  classificadas como públicas ou customizadas, sem inferência de
+  equipe. Migrações: accounts 0006–0008, events
   0006–0007 (com backfill), patients 0004–0005.
 
 ### Changed — discharge report hardening
