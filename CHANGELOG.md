@@ -6,6 +6,20 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-03
+
+### Fixed — test suite stability
+
+- **Suíte de testes 100% verde** (change
+  `isolate-sample-specialty-seed-from-tests`): a migração de dados
+  de especialidades amostrais (accounts 0005) passa a semear
+  somente quando `EQMD_SEED_SAMPLE_SPECIALTIES` é verdadeiro
+  (padrão `True`; bancos já migrados intactos) e o
+  `config/test_settings.py` desativa o seed — os 74 erros
+  pré-existentes por colisão de chave única desaparecem, a suíte
+  completa (3378 testes) passa e o job full-suite do CI é
+  desbloqueado. Canário cobre as 30 abreviações do bootstrap.
+
 ### Added — document duplication across the timeline
 
 - **Duplicação de documentos** (changes `extend-document-duplication`,
