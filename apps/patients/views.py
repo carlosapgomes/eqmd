@@ -410,7 +410,7 @@ class PatientCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
-        # Store user for tag creation
+        # Store user for record number audit
         form.current_user = self.request.user
 
         try:
@@ -453,8 +453,6 @@ class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
-        # Store user for tag creation
-        form.current_user = self.request.user
 
         messages.success(
             self.request, f"Patient {form.instance.name} updated successfully."
