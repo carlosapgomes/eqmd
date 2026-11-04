@@ -71,6 +71,17 @@ class DischargeReport(Event):
         help_text="Usuário que finalizou o relatório",
     )
 
+    # (model field, clipboard section label) in PDF/detail display order.
+    COPY_SECTION_FIELDS: ClassVar[tuple[tuple[str, str], ...]] = (
+        ("problems_and_diagnosis", "Problemas e Diagnósticos"),
+        ("admission_history", "História da Admissão"),
+        ("exams_list", "Lista de Exames"),
+        ("procedures_list", "Lista de Procedimentos"),
+        ("inpatient_medical_history", "História Médica da Internação"),
+        ("discharge_status", "Status da Alta"),
+        ("discharge_recommendations", "Recomendações de Alta"),
+    )
+
     class Meta:
         verbose_name = "Relatório de Alta"
         verbose_name_plural = "Relatórios de Alta"
@@ -147,6 +158,50 @@ class DischargeReport(Event):
         from .services.permissions import can_delete_discharge_report
 
         return can_delete_discharge_report(user, self)
+
+    def get_copy_text(self) -> str:
+        """Plaintext export for the clipboard copy button.
+
+        Mirrors the PDF/detail section order with uppercase labels so the
+        pasted text stays readable in the hospital's internal system.
+        Blank sections are skipped; raw field text is preserved as-is
+        (same contract as DailyNote's copy button).
+        """
+        lines: list[str] = [self._copy_header(), self._copy_date_line(), ""]
+        for field_name, label in self.COPY_SECTION_FIELDS:
+            value = (getattr(self, field_name, "") or "").strip()
+            if not value:
+                continue
+            lines.append(f"{label.upper()}:")
+            lines.append(value)
+            lines.append("")
+        return "\n".join(lines).strip()
+
+    def _copy_header(self) -> str:
+        """First clipboard line with the medical specialty."""
+        header = "RELATÓRIO DE ALTA"
+        specialty = (self.medical_specialty or "").strip()
+        if specialty:
+            header += f" — {specialty}"
+        return header
+
+    def _copy_date_line(self) -> str:
+        """Second clipboard line with admission/discharge dates."""
+        admission = self._format_copy_date(self.admission_date)
+        discharge = self._format_copy_date(self.discharge_date)
+        date_line = f"Admissão: {admission} | Alta: {discharge}"
+        if self.admission_date and self.discharge_date:
+            days = (self.discharge_date - self.admission_date).days
+            duration = "1 dia" if days == 1 else f"{days} dias"
+            date_line += f" ({duration})"
+        return date_line
+
+    @staticmethod
+    def _format_copy_date(value) -> str:
+        """Format a date for clipboard output, tolerating missing values."""
+        if not value:
+            return "—"
+        return value.strftime("%d/%m/%Y")
 
     @property
     def status_display(self):

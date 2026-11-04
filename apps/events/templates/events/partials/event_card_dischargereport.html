@@ -20,6 +20,20 @@ Extends the base event card for discharge report events
     <span class="visually-hidden">Visualizar</span>
   </a>
 
+  <!-- Copy Button -->
+  <button
+    type="button"
+    class="btn btn-outline-secondary btn-sm copy-content-btn"
+    aria-label="Copiar conteúdo do relatório de alta"
+    data-content="{{ event.get_copy_text|escape }}"
+    data-bs-toggle="tooltip"
+    data-bs-placement="top"
+    title="Copiar conteúdo"
+  >
+    <i class="bi bi-clipboard" aria-hidden="true"></i>
+    <span class="visually-hidden">Copiar</span>
+  </button>
+
   <button
     type="button"
     class="btn btn-outline-danger btn-sm pdf-download-btn"
