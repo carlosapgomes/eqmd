@@ -101,6 +101,21 @@ Editar Série de Fotos - {{ patient.name }} - EquipeMed
             <div class="card-body">
                 <form method="post" id="photoSeriesUpdateForm" novalidate>
                     {% csrf_token %}
+
+                    {% if is_draft_media %}
+                    <div class="alert alert-warning" role="alert" data-draft-supervision-banner="1">
+                        <h6 class="alert-heading mb-2">
+                            <i class="bi bi-shield-check me-2"></i>
+                            Rascunho aguardando aprovação
+                        </h6>
+                        <p class="mb-0 small">
+                            Esta série permanece como rascunho e não integra o prontuário
+                            definitivo até que um médico ou residente use
+                            <strong>Salvar definitivo</strong>. A aprovação registra o aprovador
+                            responsável e mantém o autor original do registro.
+                        </p>
+                    </div>
+                    {% endif %}
                     
                     <!-- Description Field -->
                     <div class="mb-3">
@@ -191,10 +206,23 @@ Editar Série de Fotos - {{ patient.name }} - EquipeMed
                                 <i class="bi bi-arrow-left me-1"></i>
                                 Cancelar
                             </a>
+                            {% if is_draft_media %}
+                            <button type="submit" name="save_draft" value="1" class="btn btn-outline-medical-primary" id="submitBtn">
+                                <i class="bi bi-save me-1"></i>
+                                Salvar rascunho
+                            </button>
+                            {% if can_finalize %}
+                            <button type="submit" name="save_final" value="1" class="btn btn-medical-primary ms-2">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Salvar definitivo
+                            </button>
+                            {% endif %}
+                            {% else %}
                             <button type="submit" class="btn btn-medical-primary" id="submitBtn">
                                 <i class="bi bi-check-circle me-1"></i>
                                 Salvar Alterações
                             </button>
+                            {% endif %}
                         </div>
                     </div>
                 </form>

@@ -18,6 +18,8 @@ urlpatterns = [
 
     # Submissions
     path('submission/<uuid:pk>/', views.PDFFormSubmissionDetailView.as_view(), name='submission_detail'),
+    path('submission/<uuid:pk>/edit/', views.PDFFormSubmissionUpdateView.as_view(), name='submission_update'),
+    path('apac/submission/<uuid:pk>/edit/', national_forms.APACFormUpdateView.as_view(), name='apac_submission_update'),
     path('submission/<uuid:pk>/duplicate/', views.PDFFormSubmissionDuplicateView.as_view(), name='submission_duplicate'),
     path('submission/<uuid:pk>/delete/', views.PDFFormSubmissionDeleteView.as_view(), name='submission_delete'),
     path('download/<uuid:submission_id>/', views.PDFFormDownloadView.as_view(), name='pdf_download'),

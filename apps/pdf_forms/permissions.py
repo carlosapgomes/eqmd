@@ -56,27 +56,3 @@ def check_pdf_download_access(user, submission):
     return True
 
 
-def can_edit_pdf_submission(user, submission):
-    """Check if user can edit a PDF form submission."""
-    # Following the same pattern as events - creator can edit within time window
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    # Must have patient access
-    if not can_access_patient(user, submission.patient):
-        return False
-
-    # Creator can edit within 24 hours
-    if submission.created_by == user:
-        time_limit = timedelta(hours=24)
-        return timezone.now() - submission.created_at <= time_limit
-
-    # Superusers can always edit
-    return user.is_superuser
-
-
-def can_delete_pdf_submission(user, submission):
-    """Check if user can delete a PDF form submission."""
-    # Same rules as editing
-    return can_edit_pdf_submission(user, submission)

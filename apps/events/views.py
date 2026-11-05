@@ -95,17 +95,18 @@ class PatientEventsTimelineView(ListView):
     paginate_orphans = 5
 
     def _get_timeline_base_queryset(self):
-        """Base timeline queryset including finalized events and discharge report drafts.
+        """Base timeline queryset with finalized events and human drafts.
 
         Uses ``with_drafts()`` (active events, drafts included) instead of
         ``all_objects``: the patient timeline must never surface soft-deleted
-        events (soft-delete retention contract), while discharge report drafts
-        remain visible.
+        events (soft-delete retention contract). Human drafts stay visible for
+        every user with patient access (design D9); bot drafts keep their own
+        promotion path and stay out of the timeline (design D3).
         """
         return (
             Event.objects.with_drafts()
             .filter(patient=self.patient)
-            .filter(Q(is_draft=False) | Q(event_type=Event.DISCHARGE_REPORT_EVENT))
+            .filter(Q(is_draft=False) | Q(draft_created_by_bot=""))
         )
 
     def get_queryset(self):
@@ -169,6 +170,11 @@ class PatientEventsTimelineView(ListView):
             elif quick_filter == "30d":
                 queryset = queryset.filter(created_at__gte=now - timedelta(days=30))
 
+        # Drafts-only filter (human drafts are the only drafts in the base
+        # queryset; bot drafts never reach it)
+        if self.request.GET.get("drafts_only"):
+            queryset = queryset.filter(is_draft=True)
+
         # Creator filter (uses created_by index)
         creator_id = self.request.GET.get("creator")
         if creator_id:
@@ -217,6 +223,7 @@ class PatientEventsTimelineView(ListView):
             "date_to": self.request.GET.get("date_to", ""),
             "quick_date": self.request.GET.get("quick_date", ""),
             "creator": self.request.GET.get("creator", ""),
+            "drafts_only": self.request.GET.get("drafts_only", ""),
         }
 
         # Add counts (cached)

@@ -23,6 +23,7 @@ class DischargeReportIntegrationTests(TestCase):
             password="testpass123",
             password_change_required=False,
             terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
         )
         self.patient = Patient.objects.create(
             name="Integration Test Patient",
@@ -218,9 +219,10 @@ class DischargeReportIntegrationTests(TestCase):
         response = self.client.post(delete_url)
         self.assertEqual(response.status_code, 302)
 
-        # Verify draft is deleted (soft delete): hidden from the default manager,
-        # retained in all_objects for audit/retention.
+        # A never-finalized draft is hard-deleted (design D7): gone from the
+        # default manager and from all_objects alike.
         self.assertFalse(DischargeReport.objects.filter(pk=report.pk).exists())
+        self.assertFalse(DischargeReport.all_objects.filter(pk=report.pk).exists())
 
     def test_unauthorized_user_cannot_edit(self):
         """Non-doctor (nurse) cannot edit a draft (S2 R2/R5)."""
@@ -348,8 +350,8 @@ class DischargeReportIntegrationTests(TestCase):
         self.assertContains(response, "Test Specialty")
         self.assertContains(response, "Relatório de Alta")
 
-    def test_timeline_shows_discharge_report_draft_but_not_other_drafts(self):
-        """Timeline should include discharge report drafts without exposing other draft types."""
+    def test_timeline_shows_human_drafts_and_hides_bot_drafts(self):
+        """S2 R1: human drafts of every type appear; bot drafts stay hidden."""
         self.client.login(username="testuser", password="testpass123")
 
         DischargeReport.objects.create(
@@ -367,9 +369,20 @@ class DischargeReportIntegrationTests(TestCase):
         DailyNote.objects.create(
             patient=self.patient,
             event_datetime=timezone.now(),
-            description="Draft daily note should stay hidden",
-            content="DRAFT_DAILY_NOTE_SHOULD_NOT_APPEAR_IN_TIMELINE",
+            description="Human draft daily note",
+            content="HUMAN_DRAFT_DAILY_NOTE_IN_TIMELINE",
             is_draft=True,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        DailyNote.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Bot draft daily note",
+            content="BOT_DRAFT_DAILY_NOTE_STAYS_HIDDEN",
+            is_draft=True,
+            draft_created_by_bot="bot-client-1",
             created_by=self.user,
             updated_by=self.user,
         )
@@ -382,7 +395,6 @@ class DischargeReportIntegrationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Draft Timeline Specialty")
+        self.assertContains(response, "HUMAN_DRAFT_DAILY_NOTE_IN_TIMELINE")
         self.assertContains(response, "Rascunho")
-        self.assertNotContains(
-            response, "DRAFT_DAILY_NOTE_SHOULD_NOT_APPEAR_IN_TIMELINE"
-        )
+        self.assertNotContains(response, "BOT_DRAFT_DAILY_NOTE_STAYS_HIDDEN")

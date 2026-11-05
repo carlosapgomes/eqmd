@@ -31,8 +31,8 @@ Extends the base event card and adds the duplicate button for HistoryAndPhysical
         <span class="visually-hidden">Copiar</span>
     </button>
     
-    <!-- Duplicate Button - Only for users with add_event permission -->
-    {% if perms.events.add_event %}
+    <!-- Duplicate Button - definitive records only (drafts cannot seed a copy) -->
+    {% if perms.events.add_event and not event.is_draft %}
         <a href="{% url 'historyandphysicals:historyandphysical_duplicate' pk=event.pk %}" 
            class="btn btn-outline-info btn-sm"
            aria-label="Duplicar anamnese e exame físico"
@@ -44,16 +44,44 @@ Extends the base event card and adds the duplicate button for HistoryAndPhysical
         </a>
     {% endif %}
     
-    <!-- Edit Button -->
-    {% if event_data.can_edit %}
-        <a href="{{ event.get_edit_url }}" 
-           class="btn btn-outline-warning btn-sm"
-           aria-label="Editar anamnese e exame físico"
+    {% if event.is_draft %}
+        <!-- Review Button - drafts are approved from the edit screen -->
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}" 
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Revisar rascunho da anamnese e exame físico"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Revisar rascunho">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span class="visually-hidden">Revisar</span>
+            </a>
+        {% endif %}
+    {% else %}
+        <!-- Edit Button -->
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}" 
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Editar anamnese e exame físico"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Editar anamnese e exame físico">
+                <i class="bi bi-pencil" aria-hidden="true"></i>
+                <span class="visually-hidden">Editar</span>
+            </a>
+        {% endif %}
+    {% endif %}
+
+    <!-- Delete Button -->
+    {% if event_data.can_delete %}
+        <a href="{% url 'historyandphysicals:historyandphysical_delete' pk=event.pk %}" 
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir anamnese e exame físico"
            data-bs-toggle="tooltip" 
            data-bs-placement="top" 
-           title="Editar anamnese e exame físico">
-            <i class="bi bi-pencil" aria-hidden="true"></i>
-            <span class="visually-hidden">Editar</span>
+           title="Excluir anamnese e exame físico">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span class="visually-hidden">Excluir</span>
         </a>
     {% endif %}
 </div>

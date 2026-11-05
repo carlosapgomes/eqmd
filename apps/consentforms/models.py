@@ -76,9 +76,15 @@ class ConsentForm(Event):
             self.event_datetime = timezone.now()
 
         if self.pk:
-            original = ConsentForm.objects.filter(pk=self.pk).values_list(
-                "rendered_markdown", flat=True
-            ).first()
+            # The persisted row must be visible for drafts too: the default
+            # manager hides them, which would skip the immutability rule
+            # entirely (design D12).
+            original = (
+                ConsentForm.objects.with_drafts()
+                .filter(pk=self.pk)
+                .values_list("rendered_markdown", flat=True)
+                .first()
+            )
             if original is not None and original != self.rendered_markdown:
                 raise ValidationError("Rendered markdown is immutable")
 

@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 
 import logging
 
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.core.exceptions import PermissionDenied
 
 from .models import DailyNote
@@ -31,11 +31,30 @@ from apps.core.permissions import (
     can_edit_event,
     can_delete_event,
 )
+from apps.core.permissions.utils import is_doctor_or_resident
 from apps.patients.models import Patient
 from apps.sample_content.models import SampleContent
 from apps.events.models import Event
+from apps.events.services.event_deletion import delete_event_record
 
 logger = logging.getLogger(__name__)
+
+DRAFT_APPROVAL_DENIED_MESSAGE = (
+    "Apenas médicos e residentes podem aprovar rascunhos de evoluções."
+)
+
+
+def visible_daily_notes():
+    """Active daily notes with human drafts, bot drafts excluded (design D3).
+
+    The default manager hides every draft, and bot drafts must stay on their
+    own botauth promotion path, so the queryset re-admits human drafts only.
+    """
+    return (
+        DailyNote.objects.with_drafts()
+        .filter(Q(is_draft=False) | Q(draft_created_by_bot=""))
+        .select_related("patient", "created_by", "updated_by")
+    )
 
 
 class DailyNoteListView(LoginRequiredMixin, ListView):
@@ -184,8 +203,8 @@ class DailyNoteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailVie
         return obj
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return DailyNote.objects.select_related("patient", "created_by", "updated_by")
+        """Resolve definitive notes and human drafts (bot drafts stay 404)."""
+        return visible_daily_notes()
 
     def get_context_data(self, **kwargs):
         """Add additional context data including permission checks."""
@@ -210,9 +229,16 @@ class DailyNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
     template_name = "dailynotes/dailynote_update_form.html"
     permission_required = "events.change_event"
 
+    def get_queryset(self):
+        """Resolve definitive notes and human drafts (bot drafts stay 404)."""
+        return visible_daily_notes()
+
     def get_object(self, queryset=None):
         """Get object and check patient access and edit permissions."""
         obj = super().get_object(queryset)
+        # Capture the persisted status so the action dispatch and the
+        # re-rendered form agree with the stored record.
+        self.was_draft = obj.is_draft
 
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
@@ -244,28 +270,70 @@ class DailyNoteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
         )
 
     def get_context_data(self, **kwargs):
-        """Add sample content context."""
+        """Add sample content and draft action context."""
         context = super().get_context_data(**kwargs)
         context["sample_contents"] = SampleContent.objects.filter(
             event_type=Event.DAILY_NOTE_EVENT
         ).order_by("title")
+        context["is_draft_note"] = self.object.is_draft
+        context["can_finalize"] = self.object.is_draft and is_doctor_or_resident(
+            self.request.user
+        )
         return context
 
+    def _submitted_action(self):
+        """Return the update action submitted by the form buttons."""
+        if "save_final" in self.request.POST:
+            return "save_final"
+        if "save_draft" in self.request.POST:
+            return "save_draft"
+        return None
+
     def form_valid(self, form):
-        """Handle successful form submission with patient access validation."""
+        """Persist the note, keeping or promoting the supervised draft state."""
         # Check if user can access the selected patient (in case patient was changed)
         if not can_access_patient(self.request.user, form.instance.patient):
-            from django.core.exceptions import PermissionDenied
-
             raise PermissionDenied(
                 "You don't have permission to create daily notes for this patient"
             )
 
-        messages.success(
-            self.request,
-            f"Evolução para {form.instance.patient.name} atualizada com sucesso.",
-        )
-        return super().form_valid(form)
+        action = self._submitted_action()
+        was_draft = self.was_draft
+
+        # Approving a draft is a physician act; the update template hides the
+        # button, this gate enforces it (design D5).
+        if (
+            was_draft
+            and action == "save_final"
+            and not is_doctor_or_resident(self.request.user)
+        ):
+            raise PermissionDenied(DRAFT_APPROVAL_DENIED_MESSAGE)
+
+        self.object = form.save(commit=False)
+        self.object.updated_by = self.request.user
+
+        if was_draft and action == "save_final":
+            self.object.is_draft = False
+            self.object.draft_promoted_at = timezone.now()
+            self.object.draft_promoted_by = self.request.user
+            messages.success(
+                self.request,
+                f"Evolução para {self.object.patient.name} aprovada e registrada no prontuário.",
+            )
+        elif was_draft:
+            self.object.is_draft = True
+            messages.success(
+                self.request,
+                f"Rascunho da evolução para {self.object.patient.name} atualizado.",
+            )
+        else:
+            messages.success(
+                self.request,
+                f"Evolução para {self.object.patient.name} atualizada com sucesso.",
+            )
+
+        self.object.save()
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class DailyNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
@@ -307,15 +375,22 @@ class DailyNoteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
         return obj
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return DailyNote.objects.select_related("patient", "created_by")
+        """Resolve definitive notes and human drafts (bot drafts stay 404)."""
+        return visible_daily_notes()
 
-    def delete(self, request, *args, **kwargs):
-        """Handle successful deletion."""
-        dailynote = self.get_object()
-        patient_name = dailynote.patient.name
-        messages.success(request, f"Evolução para {patient_name} excluída com sucesso.")
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        """Delete the note, hard-deleting never-finalized drafts (design D7).
+
+        ``BaseDeleteView.form_valid`` would call ``self.object.delete()``
+        directly, so the method decision lives here instead.
+        """
+        dailynote = self.object
+        delete_event_record(dailynote, deleted_by=self.request.user)
+        messages.success(
+            self.request,
+            f"Evolução para {dailynote.patient.name} excluída com sucesso.",
+        )
+        return HttpResponseRedirect(self.get_success_url())
 
 
 # # class PatientDailyNoteListView(LoginRequiredMixin, ListView):
@@ -517,17 +592,23 @@ class DailyNoteDuplicateView(LoginRequiredMixin, PermissionRequiredMixin, Create
 
 
 class DailyNotePDFView(LoginRequiredMixin, View):
-    """Generate and return PDF for daily notes."""
+    """Generate and return PDF for daily notes.
+
+    Draft notes have no document output (design D10). The lookup runs through
+    the draft-excluding default manager, so a draft resource is a 404 for
+    every user; the object is resolved outside the generation guard below so
+    that denial is never downgraded to a generation error.
+    """
 
     def get(self, request, *args, **kwargs):
+        dailynote = get_object_or_404(DailyNote, pk=kwargs["pk"])
+
+        if not can_access_patient(request.user, dailynote.patient):
+            raise PermissionDenied(
+                "You don't have permission to access this patient's daily notes"
+            )
+
         try:
-            dailynote = get_object_or_404(DailyNote, pk=kwargs["pk"])
-
-            if not can_access_patient(request.user, dailynote.patient):
-                raise PermissionDenied(
-                    "You don't have permission to access this patient's daily notes"
-                )
-
             pdf_generator = DailyNotePDFGenerator()
             pdf_buffer = pdf_generator.generate_from_dailynote(dailynote)
 

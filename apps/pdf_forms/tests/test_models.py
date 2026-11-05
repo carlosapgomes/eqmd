@@ -304,13 +304,13 @@ class PDFFormModelIntegrationTests(TestCase):
         template.save()  # Should not raise due to skip validation
 
     def test_pdf_form_submission_get_edit_url(self):
-        """Test get_edit_url method."""
+        """get_edit_url targets the in-place update view (drafts and finals)."""
         submission = PDFFormSubmissionFactory(
             form_template=self.template, patient=self.patient, created_by=self.user
         )
 
         edit_url = submission.get_edit_url()
-        expected_url = f"/pdf-forms/submission/{submission.pk}/"
+        expected_url = f"/pdf-forms/submission/{submission.pk}/edit/"
         self.assertEqual(edit_url, expected_url)
 
     def test_pdf_form_submission_form_data_sanitization(self):

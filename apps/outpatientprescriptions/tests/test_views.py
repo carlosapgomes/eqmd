@@ -603,7 +603,7 @@ class OutpatientPrescriptionUpdateViewTest(TestCase):
         self.client = Client()
         self.client.login(username="user1", password="testpass123")
 
-    @patch("apps.core.permissions.decorators.can_edit_event")
+    @patch("apps.outpatientprescriptions.views.can_edit_event")
     def test_view_accessible_with_edit_permission(self, mock_can_edit):
         """Test that view is accessible when user has edit permission."""
         mock_can_edit.return_value = True
@@ -616,7 +616,7 @@ class OutpatientPrescriptionUpdateViewTest(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
-    @patch("apps.core.permissions.decorators.can_edit_event")
+    @patch("apps.outpatientprescriptions.views.can_edit_event")
     def test_view_not_accessible_without_edit_permission(self, mock_can_edit):
         """Test that view is not accessible without edit permission."""
         mock_can_edit.return_value = False
@@ -627,13 +627,13 @@ class OutpatientPrescriptionUpdateViewTest(TestCase):
                 kwargs={"pk": self.prescription.pk},
             )
         )
-        # can_edit_event_required denies with HttpResponseForbidden (403).
+        # The update view denies through can_edit_event (403).
         self.assertEqual(response.status_code, 403)
 
     def test_view_uses_correct_template(self):
         """Test that view uses correct template."""
         with patch(
-            "apps.core.permissions.decorators.can_edit_event", return_value=True
+            "apps.outpatientprescriptions.views.can_edit_event", return_value=True
         ):
             response = self.client.get(
                 reverse(
@@ -645,7 +645,7 @@ class OutpatientPrescriptionUpdateViewTest(TestCase):
                 response, "outpatientprescriptions/outpatientprescription_update.html"
             )
 
-    @patch("apps.core.permissions.decorators.can_edit_event")
+    @patch("apps.outpatientprescriptions.views.can_edit_event")
     def test_post_updates_prescription(self, mock_can_edit):
         """Test that POST request updates prescription."""
         mock_can_edit.return_value = True
@@ -1046,7 +1046,7 @@ class ViewIntegrationTest(TestCase):
         }
 
         with patch(
-            "apps.core.permissions.decorators.can_edit_event", return_value=True
+            "apps.outpatientprescriptions.views.can_edit_event", return_value=True
         ):
             response = self.client.post(
                 reverse(

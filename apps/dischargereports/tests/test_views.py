@@ -21,6 +21,7 @@ class DischargeReportViewTests(TestCase):
             password="testpass123",
             password_change_required=False,
             terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
         )
         self.patient = Patient.objects.create(
             name="Test Patient",
@@ -269,8 +270,8 @@ class DischargeReportViewTests(TestCase):
         response = self.client.get(final_url)
         self.assertEqual(response.status_code, 403)
 
-    def test_delete_view_allows_permission_override(self):
-        """Test that delete permission allows deletion beyond creator window."""
+    def test_delete_view_rejects_permission_override(self):
+        """D7: an `events.delete_event` holder cannot override ownership."""
         old_datetime = timezone.now() - timedelta(hours=25)
         final_report = DischargeReport.objects.create(
             patient=self.patient,
@@ -303,7 +304,7 @@ class DischargeReportViewTests(TestCase):
             kwargs={"pk": final_report.pk},
         )
         response = self.client.get(final_url)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 403)
 
     def test_detail_view_requires_login(self):
         """Test that detail view requires authentication"""
@@ -378,6 +379,7 @@ class DischargeReportViewTests(TestCase):
             inpatient_medical_history="Test medical history",
             discharge_status="Test status",
             discharge_recommendations="Test recommendations",
+            is_draft=False,
             created_by=self.user,
             updated_by=self.user,
         )
@@ -523,9 +525,10 @@ class DischargeReportViewTests(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
 
-        # Verify report is deleted (soft delete): hidden from the default
-        # manager, retained in all_objects for audit/retention.
+        # A never-finalized draft is hard-deleted (design D7): gone from the
+        # default manager and from all_objects alike.
         self.assertFalse(DischargeReport.objects.filter(pk=report.pk).exists())
+        self.assertFalse(DischargeReport.all_objects.filter(pk=report.pk).exists())
 
 
 class DischargeReportCollaborativeDraftViewTests(TestCase):
@@ -781,12 +784,12 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
         self.assertTrue(self.report.is_draft)
         self.assertEqual(self.report.problems_and_diagnosis, "d")
 
-    def test_change_event_holder_can_open_fresh_final_update(self):
-        """Finals keep the shipped window: creator or change_event holders.
+    def test_change_event_holder_cannot_open_final_update(self):
+        """D7: finals belong to the D6 owner; `events.change_event` adds nothing.
 
-        The pre-extraction model rule granted finals editing to
-        ``events.change_event`` holders inside the window; the shared
-        predicate must keep that right and stay window-bound.
+        The pre-supervision rule granted finals editing to ``events.change_event``
+        holders inside the window; the owner rule narrows it to the finalizer
+        (or the creator for legacy finals without a recorded finalizer).
         """
         fresh_final = self._create_final_report()
         old_final = self._create_final_report(
@@ -814,7 +817,7 @@ class DischargeReportCollaborativeDraftViewTests(TestCase):
             kwargs={"pk": old_final.pk},
         )
 
-        self.assertEqual(self.client.get(fresh_url).status_code, 200)
+        self.assertEqual(self.client.get(fresh_url).status_code, 403)
         self.assertEqual(self.client.get(old_url).status_code, 403)
 
     def test_final_update_without_action_keys_preserves_state_with_error(self):
@@ -958,8 +961,8 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
         )
 
     def test_finalizing_an_old_draft_records_the_anchor_and_opens_the_window(self):
-        """R2: a collaborator finalizes an old draft; creator and finalizer
-        keep the 24h correction window."""
+        """R2: a collaborator finalizes an old draft; the finalizer owns the
+        24h correction window and the creator is locked out."""
         old_draft = self._create_report(
             is_draft=True, created_at=timezone.now() - timedelta(days=3)
         )
@@ -976,13 +979,13 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
         self.assertEqual(old_draft.finalized_by, self.finalizer)
         self.assertEqual(self.client.get(self._update_url(old_draft)).status_code, 200)
         self.client.login(username="windowviewcreator", password="testpass123")
-        self.assertEqual(self.client.get(self._update_url(old_draft)).status_code, 200)
+        self.assertEqual(self.client.get(self._update_url(old_draft)).status_code, 403)
 
     def test_update_button_keeps_the_recorded_anchor(self):
         """R2/R4: editing a final does not restart its correction window."""
         anchored_at = timezone.now() - timedelta(hours=2)
         final = self._create_report(is_draft=False, finalized_at=anchored_at)
-        self.client.login(username="windowviewcreator", password="testpass123")
+        self.client.login(username="windowviewfinalizer", password="testpass123")
 
         response = self.client.post(
             self._update_url(final), self._post_data("update_final")
@@ -992,8 +995,9 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
         final.refresh_from_db()
         self.assertEqual(final.finalized_at, anchored_at)
 
-    def test_reverting_to_draft_clears_the_anchor_and_reanchors_next_finalize(self):
-        """R3: save_draft clears both fields; the next finalize re-anchors."""
+    def test_reverting_retains_the_anchor_and_reanchors_next_finalize(self):
+        """S7 R3: save_draft retains both fields as the last-finalization
+        record; the next finalize re-anchors the window."""
         first_anchor = timezone.now() - timedelta(hours=1)
         final = self._create_report(is_draft=False, finalized_at=first_anchor)
         self.client.login(username="windowviewfinalizer", password="testpass123")
@@ -1005,8 +1009,8 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         final.refresh_from_db()
         self.assertTrue(final.is_draft)
-        self.assertIsNone(final.finalized_at)
-        self.assertIsNone(final.finalized_by)
+        self.assertEqual(final.finalized_at, first_anchor)
+        self.assertEqual(final.finalized_by, self.finalizer)
         self.assertTrue(final.can_be_edited_by_user(self.creator))
 
         response = self.client.post(
@@ -1044,8 +1048,12 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
                 self.client.force_login(user)
                 self.assertEqual(self.client.get(url).status_code, 403)
 
-    def test_old_draft_freshly_finalized_is_editable_but_not_deletable(self):
-        """R6: delete stays creation-anchored while edit re-anchors."""
+    def test_old_draft_freshly_finalized_is_editable_and_deletable_by_owner(self):
+        """D6/D7: edit and delete share the finalization anchor.
+
+        The pre-supervision rule kept deletion creation-anchored while editing
+        re-anchored at finalization; both now follow the D6 owner window.
+        """
         old_draft = self._create_report(
             is_draft=True, created_at=timezone.now() - timedelta(days=3)
         )
@@ -1056,9 +1064,9 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
         old_draft.refresh_from_db()
         self.assertFalse(old_draft.is_draft)
         self.assertEqual(self.client.get(self._update_url(old_draft)).status_code, 200)
-        self.assertEqual(self.client.post(self._delete_url(old_draft)).status_code, 403)
+        self.assertEqual(self.client.post(self._delete_url(old_draft)).status_code, 302)
         old_draft.refresh_from_db()
-        self.assertFalse(old_draft.is_deleted)
+        self.assertTrue(old_draft.is_deleted)
 
     def test_detail_shows_the_finalization_line_for_finals_only(self):
         """R7: "Finalizado por X em Y" renders for finalized reports only."""

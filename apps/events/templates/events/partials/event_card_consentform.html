@@ -33,6 +33,7 @@
         <i class="bi bi-eye" aria-hidden="true"></i>
     </a>
 
+    {% if not event.is_draft %}
     <button type="button"
             class="btn btn-outline-danger btn-sm pdf-download-btn"
             data-pdf-url="{% url 'consentforms:consentform_pdf' event.pk %}"
@@ -48,8 +49,9 @@
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         </span>
     </button>
+    {% endif %}
 
-    {% if perms.events.add_event %}
+    {% if perms.events.add_event and not event.is_draft %}
         <a href="{% url 'consentforms:consentform_duplicate' event.pk %}"
            class="btn btn-outline-info btn-sm"
            aria-label="Duplicar termo de consentimento"
@@ -60,18 +62,33 @@
         </a>
     {% endif %}
 
-    {% if event_data.can_edit %}
-        <a href="{{ event.get_edit_url }}" 
-           class="btn btn-outline-warning btn-sm"
-           aria-label="Editar anexos"
-           data-bs-toggle="tooltip" 
-           data-bs-placement="top" 
-           title="Editar anexos">
-            <i class="bi bi-paperclip" aria-hidden="true"></i>
-        </a>
+    {% if event.is_draft %}
+        <!-- Review Button - drafts are approved from the edit screen -->
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}" 
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Revisar rascunho do termo"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Revisar rascunho">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span class="visually-hidden">Revisar</span>
+            </a>
+        {% endif %}
+    {% else %}
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}" 
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Editar anexos"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Editar anexos">
+                <i class="bi bi-paperclip" aria-hidden="true"></i>
+            </a>
+        {% endif %}
     {% endif %}
 
-    {% if perms.events.delete_event and event_data.can_delete %}
+    {% if event_data.can_delete %}
         <a href="{% url 'consentforms:consentform_delete' event.pk %}"
            class="btn btn-outline-danger btn-sm"
            aria-label="Excluir termo de consentimento"

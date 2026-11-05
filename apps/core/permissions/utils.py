@@ -64,19 +64,161 @@ def is_tag_audit_event(event: Any) -> bool:
     return getattr(event, 'event_type', None) in Event.TAG_AUDIT_EVENT_TYPES
 
 
+def is_human_draft(event: Any) -> bool:
+    """
+    Check whether an event is a draft of the human supervision flow.
+
+    Bot drafts keep their own promotion path, so only drafts without a
+    ``draft_created_by_bot`` marker belong to the normal draft workflow
+    (design D3).
+
+    Args:
+        event: The event object to inspect
+
+    Returns:
+        bool: True for human drafts, False otherwise
+    """
+    if event is None:
+        return False
+
+    if not getattr(event, 'is_draft', False):
+        return False
+
+    return not getattr(event, 'draft_created_by_bot', '')
+
+
+def is_student(user: Any) -> bool:
+    """
+    Check if a user holds the student profession.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if user is a student, False otherwise
+    """
+    if user is None:
+        return False
+
+    if not getattr(user, 'is_authenticated', False):
+        return False
+
+    profession_type = getattr(user, 'profession_type', None)
+    return profession_type == 4  # EqmdCustomUser.STUDENT
+
+
+def _can_act_on_human_draft(user: Any, event: Any) -> bool:
+    """
+    Check the human-draft rule: creator, or doctor/resident with access.
+
+    Neither branch has a time limit (design D4).
+
+    Args:
+        user: The user requesting the action
+        event: The human draft
+
+    Returns:
+        bool: True if the action is allowed, False otherwise
+    """
+    creator = getattr(event, 'created_by', None)
+    if creator is not None and creator == user:
+        return True
+
+    if not is_doctor_or_resident(user):
+        return False
+
+    return can_access_patient(user, getattr(event, 'patient', None))
+
+
+def event_finalizer(event: Any) -> Any:
+    """
+    Return the user recorded as finalizing an event (design D6).
+
+    Supervised approvals record ``draft_promoted_by``; discharge reports keep
+    their own ``finalized_by`` pair. Either present is the finalizer.
+
+    Args:
+        event: The event object to inspect
+
+    Returns:
+        The finalizing user, or None when no finalizer is recorded
+    """
+    if event is None:
+        return None
+
+    finalizer = getattr(event, 'draft_promoted_by', None)
+    if finalizer is not None:
+        return finalizer
+
+    return getattr(event, 'finalized_by', None)
+
+
+def event_finalization_anchor(event: Any) -> Any:
+    """
+    Return the timestamp that anchors the 24h owner window (design D6).
+
+    Args:
+        event: The event object to inspect
+
+    Returns:
+        The finalization timestamp, or None when none is recorded
+    """
+    if event is None:
+        return None
+
+    anchor = getattr(event, 'draft_promoted_at', None)
+    if anchor is not None:
+        return anchor
+
+    return getattr(event, 'finalized_at', None)
+
+
+def _owns_finalization_window(user: Any, event: Any) -> bool:
+    """
+    Check the post-final owner rule (design D6).
+
+    Owner = finalizer when recorded, else creator; anchor = finalization
+    timestamp when recorded, else ``created_at``. Only the owner acts, and only
+    inside the 24h window.
+
+    Args:
+        user: The user requesting the action
+        event: The definitive event
+
+    Returns:
+        bool: True if the action is allowed, False otherwise
+    """
+    owner = event_finalizer(event) or getattr(event, 'created_by', None)
+    if owner is None or owner != user:
+        return False
+
+    anchor = event_finalization_anchor(event) or getattr(event, 'created_at', None)
+    if anchor is None:
+        return False
+
+    time_limit = timedelta(hours=EVENT_EDIT_TIME_LIMIT)
+    return timezone.now() - anchor <= time_limit
+
+
 def can_edit_event(user: Any, event: Any) -> bool:
     """
     Check if a user can edit a specific event.
-    
+
     Rules:
-    - Only the event creator can edit events
-    - Events can only be edited within 24 hours of creation
     - Tag audit events are never editable
-    
+    - Human drafts (no bot marker) are editable by their creator or by any
+      doctor/resident with patient access, with no time limit (design D4)
+    - Definitive events follow the post-final owner rule: the owner (finalizer
+      when recorded, else creator) may edit within 24h of the anchor
+      (finalization timestamp when recorded, else creation; design D6)
+
+    Bot drafts keep the pre-existing creator-only rule; they belong to the
+    botauth promotion path (design D3).
+
     Args:
         user: The user requesting to edit
         event: The event object
-        
+
     Returns:
         bool: True if editing is allowed, False otherwise
     """
@@ -88,22 +230,11 @@ def can_edit_event(user: Any, event: Any) -> bool:
 
     if not getattr(user, 'is_authenticated', False):
         return False
-    
-    # Check if user is the creator
-    event_creator = getattr(event, 'created_by', None)
-    if event_creator != user:
-        return False
-    
-    # Check time limit
-    created_at = getattr(event, 'created_at', None)
-    if not created_at:
-        return False
-    
-    time_limit = timedelta(hours=EVENT_EDIT_TIME_LIMIT)
-    if timezone.now() - created_at > time_limit:
-        return False
-    
-    return True
+
+    if is_human_draft(event):
+        return _can_act_on_human_draft(user, event)
+
+    return _owns_finalization_window(user, event)
 
 
 def can_change_patient_status(user: Any, patient: Any, new_status: str) -> bool:
@@ -353,10 +484,10 @@ def can_delete_event(user: Any, event: Any) -> bool:
     """
     Check if a user can delete a specific event.
 
-    Rules:
-    - Only the event creator can delete events
-    - Events can only be deleted within 24 hours of creation
-    - Tag audit events are never deletable
+    Deletion rights follow the same state rules as editing (design D7): human
+    drafts are deletable by their creator or by any doctor/resident with
+    patient access, definitive events only by the owner inside the 24h window,
+    and tag audit events never.
 
     Args:
         user: The user requesting to delete
@@ -374,21 +505,10 @@ def can_delete_event(user: Any, event: Any) -> bool:
     if not getattr(user, 'is_authenticated', False):
         return False
 
-    # Check if user is the creator
-    event_creator = getattr(event, 'created_by', None)
-    if event_creator != user:
-        return False
+    if is_human_draft(event):
+        return _can_act_on_human_draft(user, event)
 
-    # Check time limit
-    created_at = getattr(event, 'created_at', None)
-    if not created_at:
-        return False
-
-    time_limit = timedelta(hours=EVENT_EDIT_TIME_LIMIT)
-    if timezone.now() - created_at > time_limit:
-        return False
-
-    return True
+    return _owns_finalization_window(user, event)
 
 
 def can_see_patient_in_search(user: Any, patient: Any) -> bool:

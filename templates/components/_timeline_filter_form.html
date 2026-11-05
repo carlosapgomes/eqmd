@@ -43,6 +43,23 @@ Context variables:
             {% endfor %}
         </div>
 
+        <!-- Drafts-only Filter -->
+        <div class="mb-3" role="group"
+             aria-labelledby="{{ filter_id_prefix|default:'' }}drafts-only-label">
+            <span id="{{ filter_id_prefix|default:'' }}drafts-only-label"
+                  class="form-label fw-semibold d-block">Rascunhos</span>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox"
+                       name="drafts_only" value="1"
+                       id="{{ filter_id_prefix|default:'' }}drafts_only"
+                       {% if current_filters.drafts_only %}checked{% endif %}>
+                <label class="form-check-label"
+                       for="{{ filter_id_prefix|default:'' }}drafts_only">
+                    Somente rascunhos
+                </label>
+            </div>
+        </div>
+
         <!-- Quick Date Filters -->
         <div class="mb-3">
             <fieldset>

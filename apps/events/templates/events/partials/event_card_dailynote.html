@@ -31,7 +31,8 @@ Extends the base event card and adds the duplicate button for DailyNote events
         <span class="visually-hidden">Copiar</span>
     </button>
 
-    <!-- PDF Button -->
+    <!-- PDF Button - export has no draft output (design D10) -->
+    {% if not event.is_draft %}
     <button type="button"
             class="btn btn-outline-danger btn-sm pdf-download-btn"
             data-pdf-url="{% url 'dailynotes:dailynote_pdf' pk=event.pk %}"
@@ -48,9 +49,10 @@ Extends the base event card and adds the duplicate button for DailyNote events
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         </span>
     </button>
+    {% endif %}
     
-    <!-- Duplicate Button - Only for users with add_event permission -->
-    {% if perms.events.add_event %}
+    <!-- Duplicate Button - definitive notes only (drafts cannot seed a copy) -->
+    {% if perms.events.add_event and not event.is_draft %}
         <a href="{% url 'dailynotes:dailynote_duplicate' pk=event.pk %}" 
            class="btn btn-outline-info btn-sm"
            aria-label="Duplicar evolução"
@@ -62,16 +64,44 @@ Extends the base event card and adds the duplicate button for DailyNote events
         </a>
     {% endif %}
     
-    <!-- Edit Button -->
-    {% if event_data.can_edit %}
-        <a href="{{ event.get_edit_url }}" 
-           class="btn btn-outline-warning btn-sm"
-           aria-label="Editar evolução"
+    {% if event.is_draft %}
+        <!-- Review Button - drafts are approved from the edit screen -->
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}" 
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Revisar rascunho da evolução"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Revisar rascunho">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span class="visually-hidden">Revisar</span>
+            </a>
+        {% endif %}
+    {% else %}
+        <!-- Edit Button -->
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}" 
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Editar evolução"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Editar evolução">
+                <i class="bi bi-pencil" aria-hidden="true"></i>
+                <span class="visually-hidden">Editar</span>
+            </a>
+        {% endif %}
+    {% endif %}
+
+    <!-- Delete Button -->
+    {% if event_data.can_delete %}
+        <a href="{% url 'dailynotes:dailynote_delete' pk=event.pk %}" 
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir evolução"
            data-bs-toggle="tooltip" 
            data-bs-placement="top" 
-           title="Editar evolução">
-            <i class="bi bi-pencil" aria-hidden="true"></i>
-            <span class="visually-hidden">Editar</span>
+           title="Excluir evolução">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span class="visually-hidden">Excluir</span>
         </a>
     {% endif %}
 </div>

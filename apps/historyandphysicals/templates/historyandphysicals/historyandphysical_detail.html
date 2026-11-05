@@ -114,6 +114,7 @@
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
     <div class="btn-group me-2">
+      {% if not historyandphysical.is_draft %}
       <a href="{% url 'historyandphysicals:historyandphysical_print' pk=historyandphysical.pk %}" 
          class="btn btn-outline-primary btn-sm" 
          target="_blank" 
@@ -121,6 +122,7 @@
         <i class="bi bi-printer me-1"></i>
         Imprimir
       </a>
+      {% endif %}
       <button type="button" 
               class="btn btn-outline-secondary btn-sm copy-content-btn" 
               title="Copiar conteúdo para área de transferência"
@@ -136,7 +138,7 @@
       Editar
     </a>
     {% endif %}
-    {% if perms.events.add_event %}
+    {% if perms.events.add_event and not historyandphysical.is_draft %}
     <a href="{% url 'historyandphysicals:historyandphysical_duplicate' pk=historyandphysical.pk %}" class="btn btn-outline-primary btn-sm me-2" title="Duplicar anamnese e exame físico">
       <i class="bi bi-files me-1"></i>
       Duplicar
@@ -173,6 +175,7 @@
           <i class="bi bi-clipboard me-1"></i>
           Copiar
         </button>
+        {% if not historyandphysical.is_draft %}
         <a href="{% url 'historyandphysicals:historyandphysical_print' pk=historyandphysical.pk %}" 
            class="btn btn-outline-primary" 
            target="_blank" 
@@ -180,6 +183,7 @@
           <i class="bi bi-printer me-1"></i>
           Imprimir
         </a>
+        {% endif %}
       </div>
       
       {% if perms.events.change_event and can_edit_historyandphysical or perms.events.add_event %}
@@ -190,7 +194,7 @@
           Editar
         </a>
         {% endif %}
-        {% if perms.events.add_event %}
+        {% if perms.events.add_event and not historyandphysical.is_draft %}
         <a href="{% url 'historyandphysicals:historyandphysical_duplicate' pk=historyandphysical.pk %}" class="btn btn-outline-primary" title="Duplicar">
           <i class="bi bi-files me-1"></i>
           Duplicar

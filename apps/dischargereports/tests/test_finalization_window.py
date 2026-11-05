@@ -185,15 +185,15 @@ class FinalizationWindowModelTests(TestCase):
             report.refresh_from_db()
         return report
 
-    def test_anchor_inside_window_allows_creator_and_finalizer_only(self):
-        """R2: the union opens for creator OR finalizer, not every doctor."""
+    def test_anchor_inside_window_allows_the_finalizer_only(self):
+        """R2: a recorded finalizer owns the window; the creator does not."""
         now = timezone.now()
         report = self._create_final(
             created_at=now - timedelta(days=30), finalized_at=now
         )
 
-        self.assertTrue(report.can_be_edited_by_user(self.creator))
         self.assertTrue(report.can_be_edited_by_user(self.finalizer))
+        self.assertFalse(report.can_be_edited_by_user(self.creator))
         self.assertFalse(report.can_be_edited_by_user(self.other_doctor))
 
     def test_anchor_past_the_window_denies_creator_and_finalizer(self):
@@ -207,8 +207,8 @@ class FinalizationWindowModelTests(TestCase):
         self.assertFalse(report.can_be_edited_by_user(self.creator))
         self.assertFalse(report.can_be_edited_by_user(self.finalizer))
 
-    def test_change_event_holder_is_window_bound(self):
-        """R4: events.change_event does not escape the finalization window."""
+    def test_change_event_holder_has_no_window_access(self):
+        """D7: events.change_event does not open the D6 owner window."""
         holder = User.objects.create_user(
             username="windowchanger",
             email="windowchanger@example.com",
@@ -227,7 +227,7 @@ class FinalizationWindowModelTests(TestCase):
             finalized_at=now - timedelta(hours=25),
         )
 
-        self.assertTrue(fresh.can_be_edited_by_user(holder))
+        self.assertFalse(fresh.can_be_edited_by_user(holder))
         self.assertFalse(expired.can_be_edited_by_user(holder))
 
     def test_null_anchor_falls_back_to_created_at(self):
@@ -237,6 +237,7 @@ class FinalizationWindowModelTests(TestCase):
         old_legacy = self._create_final(created_at=now - timedelta(hours=25))
 
         self.assertIsNone(fresh_legacy.finalized_at)
+        self.assertIsNone(fresh_legacy.finalized_by)
         self.assertTrue(fresh_legacy.can_be_edited_by_user(self.creator))
         self.assertFalse(fresh_legacy.can_be_edited_by_user(self.finalizer))
         self.assertFalse(old_legacy.can_be_edited_by_user(self.creator))

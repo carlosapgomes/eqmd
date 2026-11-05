@@ -34,6 +34,7 @@ Extends the base event card for discharge report events
     <span class="visually-hidden">Copiar</span>
   </button>
 
+  {% if not event.is_draft %}
   <button
     type="button"
     class="btn btn-outline-danger btn-sm pdf-download-btn"
@@ -51,6 +52,7 @@ Extends the base event card for discharge report events
       <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
     </span>
   </button>
+  {% endif %}
 
   <!-- Duplicate Button -->
   {% if perms.events.add_event %}
@@ -79,7 +81,7 @@ Extends the base event card for discharge report events
   {% endif %}
 
   <!-- Delete Button -->
-  {% if event_data.can_delete or perms.events.delete_event %}
+  {% if event_data.can_delete %}
   <a
     href="{% url 'apps.dischargereports:dischargereport_delete' pk=event.pk %}"
     class="btn btn-outline-danger btn-sm"

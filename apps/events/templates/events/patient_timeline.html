@@ -12,6 +12,10 @@
     border-left: 4px solid var(--bs-primary);
     transition: all 0.2s ease;
 }
+.timeline-card.timeline-card-draft {
+    border-left-color: var(--bs-warning);
+    background-color: #fffaf0;
+}
 .timeline-card:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     transform: translateY(-1px);
@@ -630,7 +634,7 @@
                             aria-label="Abrir filtros da timeline">
                         <i class="bi bi-funnel me-1" aria-hidden="true"></i>
                         Filtros
-                        {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator %}
+                        {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator or current_filters.drafts_only %}
                             <span class="badge bg-medical-primary rounded-pill ms-1">Ativos</span>
                         {% endif %}
                     </button>
@@ -677,7 +681,7 @@
                     <span class="text-medical-primary">Filtros</span>
                     <!-- Filter count badges -->
                     <div class="ms-2" id="filter-badges">
-                        {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator %}
+                        {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator or current_filters.drafts_only %}
                             <span class="badge bg-medical-primary rounded-pill" id="filter-count">
                                 Ativos
                             </span>
@@ -719,6 +723,19 @@
                                         </span>
                                     </div>
                                 {% endfor %}
+                            </div>
+
+                            <!-- Drafts-only Filter -->
+                            <div class="mb-3" role="group" aria-labelledby="mobile-drafts-only-label">
+                                <span id="mobile-drafts-only-label" class="form-label fw-semibold d-block">Rascunhos</span>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="drafts_only" value="1" id="mobile_drafts_only"
+                                           {% if current_filters.drafts_only %}checked{% endif %}>
+                                    <label class="form-check-label" for="mobile_drafts_only">
+                                        Somente rascunhos
+                                    </label>
+                                </div>
                             </div>
 
                             <!-- Quick Date Filters -->
@@ -933,7 +950,7 @@
                             <i class="bi bi-clock-history text-muted" style="font-size: 4rem;"></i>
                         </div>
                         <h4 class="text-muted mb-3">Nenhum evento encontrado</h4>
-                        {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator %}
+                        {% if current_filters.types or current_filters.quick_date or current_filters.date_from or current_filters.date_to or current_filters.creator or current_filters.drafts_only %}
                             <p class="text-muted mb-3">
                                 Nenhum evento corresponde aos filtros selecionados.
                             </p>

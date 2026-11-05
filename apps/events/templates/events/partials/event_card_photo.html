@@ -41,26 +41,28 @@ Parameters expected:
     </button>
     {% endif %}
     
-    <!-- Download Button -->
-    {% if event.get_secure_url %}
-    <a href="{{ event.get_secure_url }}?download=1" 
-       class="btn btn-outline-secondary btn-sm"
-       aria-label="Baixar foto original"
-       data-bs-toggle="tooltip" 
-       data-bs-placement="top" 
-       title="Baixar foto"
-       download="{{ event.original_filename }}">
-        <i class="bi bi-download" aria-hidden="true"></i>
-        <span class="visually-hidden">Baixar</span>
-    </a>
-    {% else %}
-    <button type="button" 
-            class="btn btn-outline-secondary btn-sm"
-            disabled
-            title="Arquivo não disponível">
-        <i class="bi bi-download" aria-hidden="true"></i>
-        <span class="visually-hidden">Arquivo não disponível</span>
-    </button>
+    <!-- Download Button - export actions are suppressed on drafts (design D10) -->
+    {% if not event.is_draft %}
+        {% if event.get_secure_url %}
+        <a href="{{ event.get_secure_url }}?download=1" 
+           class="btn btn-outline-secondary btn-sm"
+           aria-label="Baixar foto original"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Baixar foto"
+           download="{{ event.original_filename }}">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span class="visually-hidden">Baixar</span>
+        </a>
+        {% else %}
+        <button type="button" 
+                class="btn btn-outline-secondary btn-sm"
+                disabled
+                title="Arquivo não disponível">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span class="visually-hidden">Arquivo não disponível</span>
+        </button>
+        {% endif %}
     {% endif %}
     
     <!-- Detail View Button -->
@@ -74,8 +76,19 @@ Parameters expected:
         <span class="visually-hidden">Detalhes</span>
     </a>
     
-    <!-- Edit Button -->
+    <!-- Edit or Review Button - drafts are approved from the edit screen -->
     {% if event_data.can_edit %}
+        {% if event.is_draft %}
+        <a href="{{ event.get_edit_url }}" 
+           class="btn btn-outline-warning btn-sm"
+           aria-label="Revisar rascunho da foto"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Revisar rascunho">
+            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+            <span class="visually-hidden">Revisar</span>
+        </a>
+        {% else %}
         <a href="{{ event.get_edit_url }}" 
            class="btn btn-outline-warning btn-sm"
            aria-label="Editar foto"
@@ -84,6 +97,20 @@ Parameters expected:
            title="Editar foto">
             <i class="bi bi-pencil" aria-hidden="true"></i>
             <span class="visually-hidden">Editar</span>
+        </a>
+        {% endif %}
+    {% endif %}
+
+    <!-- Delete Button -->
+    {% if event_data.can_delete %}
+        <a href="{% url 'mediafiles:photo_delete' event.pk %}" 
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir foto"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Excluir foto">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span class="visually-hidden">Excluir</span>
         </a>
     {% endif %}
 </div>

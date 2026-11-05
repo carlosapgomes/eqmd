@@ -13,12 +13,11 @@ from django.shortcuts import get_object_or_404, redirect
 from django.db import transaction
 from django.db.models import Q, Func, TextField, Value
 from django.db.models.functions import Lower
-from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
 import logging
@@ -30,12 +29,12 @@ from .forms.prescription_forms import (
     PrescriptionItemFormSetHelper,
 )
 from apps.core.permissions import (
-    can_edit_event_required,
-    can_delete_event_required,
     can_access_patient,
     can_edit_event,
     can_delete_event,
 )
+from apps.core.permissions.utils import is_doctor_or_resident
+from apps.events.services.event_deletion import delete_event_record
 from apps.patients.models import Patient
 from apps.sample_content.models import SampleContent
 from apps.events.models import Event
@@ -51,6 +50,25 @@ class ImmutableUnaccent(Func):
 
     function = "immutable_unaccent"
     output_field = TextField()
+
+
+DRAFT_APPROVAL_DENIED_MESSAGE = (
+    "Apenas médicos e residentes podem aprovar rascunhos de receitas."
+)
+
+
+def visible_prescriptions():
+    """Active prescriptions with human drafts, bot drafts excluded (design D3).
+
+    The default manager hides every draft, and bot drafts must stay on their
+    own botauth promotion path, so the queryset re-admits human drafts only.
+    """
+    return (
+        OutpatientPrescription.objects.with_drafts()
+        .filter(Q(is_draft=False) | Q(draft_created_by_bot=""))
+        .select_related("patient", "created_by", "updated_by")
+        .prefetch_related("items")
+    )
 
 
 class OutpatientPrescriptionListView(LoginRequiredMixin, ListView):
@@ -424,10 +442,8 @@ class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "prescription"
 
     def get_queryset(self):
-        """Filter queryset to ensure proper permissions and optimized queries."""
-        return OutpatientPrescription.objects.select_related(
-            "patient", "created_by", "updated_by"
-        ).prefetch_related("items")
+        """Resolve definitive prescriptions and human drafts (bot drafts 404)."""
+        return visible_prescriptions()
 
     def get_object(self, queryset=None):
         """Get object and check patient access permissions."""
@@ -465,7 +481,6 @@ class OutpatientPrescriptionDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-@method_decorator(can_edit_event_required, name="dispatch")
 class OutpatientPrescriptionUpdateView(
     LoginRequiredMixin, PermissionRequiredMixin, UpdateView
 ):
@@ -481,10 +496,35 @@ class OutpatientPrescriptionUpdateView(
     permission_required = "events.change_event"
 
     def get_queryset(self):
-        """Filter queryset to ensure proper permissions and optimized queries."""
-        return OutpatientPrescription.objects.select_related(
-            "patient", "created_by", "updated_by"
-        ).prefetch_related("items")
+        """Resolve definitive prescriptions and human drafts (bot drafts 404)."""
+        return visible_prescriptions()
+
+    def get_object(self, queryset=None):
+        """Get object and check patient access and edit permissions."""
+        obj = super().get_object(queryset)
+        # Capture the persisted supervision flag and clinical status so the
+        # action dispatch, the finalize flips, and the re-rendered form agree
+        # with the stored record rather than with the submitted form.
+        self.was_draft = obj.is_draft
+        self.persisted_status = obj.status
+
+        # Check if user can access this patient
+        if not can_access_patient(self.request.user, obj.patient):
+            from django.core.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                "You don't have permission to access this patient's prescriptions"
+            )
+
+        # Check if user can edit this event
+        if not can_edit_event(self.request.user, obj):
+            from django.core.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                "You don't have permission to edit this prescription"
+            )
+
+        return obj
 
     def get_form_kwargs(self):
         """Pass user to form for permission checks."""
@@ -531,6 +571,13 @@ class OutpatientPrescriptionUpdateView(
         context["can_edit"] = can_edit_event(self.request.user, self.object)
         context["can_delete"] = can_delete_event(self.request.user, self.object)
 
+        # Draft supervision context: the finalize act lives in this screen
+        # (design D8) and is offered only to physicians (design D5).
+        context["is_draft_prescription"] = self.object.is_draft
+        context["can_finalize"] = self.object.is_draft and is_doctor_or_resident(
+            self.request.user
+        )
+
         # Add timeline URL for patient
         from django.urls import reverse
 
@@ -541,6 +588,18 @@ class OutpatientPrescriptionUpdateView(
 
         return context
 
+    def _submitted_action(self):
+        """Return the supervision action submitted by the form buttons.
+
+        The clinical ``status`` buttons keep their own role; only the
+        ``save_draft`` / ``save_final`` names drive supervision (design D11).
+        """
+        if "save_final" in self.request.POST:
+            return "save_final"
+        if "save_draft" in self.request.POST:
+            return "save_draft"
+        return None
+
     def form_valid(self, form):
         """Handle form validation including formset and audit trail."""
         context = self.get_context_data()
@@ -549,22 +608,58 @@ class OutpatientPrescriptionUpdateView(
         )
 
         if form.is_valid() and formset.is_valid():
+            action = self._submitted_action()
+            was_draft = self.was_draft
+
+            # Approving a draft is a physician act; the update template hides
+            # the button, this gate enforces it (design D5).
+            if (
+                was_draft
+                and action == "save_final"
+                and not is_doctor_or_resident(self.request.user)
+            ):
+                from django.core.exceptions import PermissionDenied
+
+                raise PermissionDenied(DRAFT_APPROVAL_DENIED_MESSAGE)
+
             # Save the main prescription
             self.object = form.save(commit=False)
             self.object.updated_by = self.request.user
             self.object.updated_at = timezone.now()
+
+            if was_draft and action == "save_final":
+                # R1/D11: supervision approval is orthogonal to the clinical
+                # status, so a submitted status change cannot ride along with
+                # it; the persisted value wins.
+                self.object.status = self.persisted_status
+                self.object.is_draft = False
+                self.object.draft_promoted_at = timezone.now()
+                self.object.draft_promoted_by = self.request.user
+                messages.success(
+                    self.request,
+                    f"Receita para {self.object.patient.name} aprovada e "
+                    "registrada no prontuário!",
+                )
+            elif was_draft:
+                self.object.is_draft = True
+                messages.success(
+                    self.request,
+                    f"Rascunho da receita para {self.object.patient.name} "
+                    "atualizado!",
+                )
+            else:
+                messages.success(
+                    self.request,
+                    f"Receita para {self.object.patient.name} atualizada com sucesso!",
+                )
+
             self.object.save()
 
             # Save the formset
             formset.instance = self.object
             formset.save()
 
-            messages.success(
-                self.request,
-                f"Receita para {self.object.patient.name} atualizada com sucesso!",
-            )
-
-            return super().form_valid(form)
+            return HttpResponseRedirect(self.get_success_url())
         else:
             # Add formset to context for error display
             formset_data = PrescriptionItemFormSetHelper.prepare_formset_data(formset)
@@ -582,8 +677,10 @@ class OutpatientPrescriptionUpdateView(
 
 
 class OutpatientPrescriptionPrintView(LoginRequiredMixin, DetailView):
-    """
-    Print view for OutpatientPrescription instances with print-optimized template.
+    """Print layout for definitive prescriptions.
+
+    Drafts have no document output (design D10): the lookup runs through the
+    draft-excluding default manager, so a draft is a 404 for every user.
     """
 
     model = OutpatientPrescription
@@ -664,18 +761,22 @@ class OutpatientPrescriptionDeleteView(
         return obj
 
     def get_queryset(self):
-        """Filter queryset to ensure proper permissions and optimized queries."""
-        return OutpatientPrescription.objects.select_related(
-            "patient", "created_by", "updated_by"
-        ).prefetch_related("items")
+        """Resolve definitive prescriptions and human drafts (bot drafts 404)."""
+        return visible_prescriptions()
 
-    def delete(self, request, *args, **kwargs):
-        """Handle successful deletion."""
-        prescription = self.get_object()
+    def form_valid(self, form):
+        """Delete the prescription, hard-deleting never-finalized drafts.
+
+        ``BaseDeleteView.form_valid`` would call ``self.object.delete()``
+        directly, so the method decision lives here instead (design D7).
+        """
+        prescription = self.object
+        delete_event_record(prescription, deleted_by=self.request.user)
         messages.success(
-            request, f"Receita para {prescription.patient.name} excluída com sucesso!"
+            self.request,
+            f"Receita para {prescription.patient.name} excluída com sucesso!",
         )
-        return super().delete(request, *args, **kwargs)
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class OutpatientPrescriptionDuplicateView(
@@ -781,14 +882,18 @@ def get_prescription_template_data(request, template_id):
 
 
 class OutpatientPrescriptionPDFView(LoginRequiredMixin, DetailView):
-    """
-    PDF generation view for OutpatientPrescription instances using the centralized PDF generator.
+    """PDF generation view for definitive prescriptions.
+
+    Drafts have no document output (design D10): the lookup runs through the
+    draft-excluding default manager, and the object is resolved outside the
+    generation guard so a draft resource is a 404 instead of a generation
+    error.
     """
 
     model = OutpatientPrescription
 
     def get_queryset(self):
-        """Filter queryset to ensure proper permissions and optimized queries."""
+        """Resolve definitive prescriptions only (drafts stay unreachable)."""
         return OutpatientPrescription.objects.select_related(
             "patient", "created_by", "updated_by"
         ).prefetch_related("items")
@@ -809,14 +914,15 @@ class OutpatientPrescriptionPDFView(LoginRequiredMixin, DetailView):
 
     def get(self, request, *args, **kwargs):
         """Generate and return PDF for the prescription."""
+        # Resolve the object before the generation guard so a draft (or a
+        # missing prescription) is denied with a 404, not a generation error.
+        prescription = self.get_object()
+
         try:
             # Import PDF generator services
             from apps.pdfgenerator.services.pdf_generator import (
                 HospitalLetterheadGenerator,
             )
-
-            # Get prescription object
-            prescription = self.get_object()
 
             # Initialize PDF generator
             pdf_generator = HospitalLetterheadGenerator()

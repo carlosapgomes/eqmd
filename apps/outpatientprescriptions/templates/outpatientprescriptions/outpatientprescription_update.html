@@ -160,7 +160,23 @@
 
     <form method="post" id="prescription-form" class="needs-validation" novalidate>
       {% csrf_token %}
-      
+
+      {% if is_draft_prescription %}
+      <!-- Draft supervision banner (design D8/D11) -->
+      <div class="alert alert-warning" role="alert" data-draft-supervision-banner="1">
+        <h6 class="alert-heading mb-2">
+          <i class="bi bi-shield-check me-2"></i>
+          Aguardando aprovação
+        </h6>
+        <p class="mb-0 small">
+          Esta receita permanece como rascunho supervisionado até que um médico
+          ou residente use <strong>Salvar definitivo</strong>. A aprovação
+          registra o aprovador responsável e mantém o autor original; o status
+          clínico da receita é independente desta aprovação.
+        </p>
+      </div>
+      {% endif %}
+
       <!-- Prescription Information Section -->
       <div class="form-section">
         <h6>
@@ -482,6 +498,18 @@
       <div class="d-flex justify-content-between flex-wrap gap-2">
         <div>
           {% if can_edit %}
+            {% if is_draft_prescription %}
+            <button type="submit" name="save_draft" value="1" class="btn btn-outline-primary me-2">
+              <i class="bi bi-save me-1"></i>
+              Salvar rascunho
+            </button>
+            {% if can_finalize %}
+            <button type="submit" name="save_final" value="1" class="btn btn-medical-primary">
+              <i class="bi bi-check-circle me-1"></i>
+              Salvar definitivo
+            </button>
+            {% endif %}
+            {% else %}
             <button type="submit" name="status" value="draft" class="btn btn-outline-primary me-2" id="draft-btn">
               <i class="bi bi-save me-1"></i>
               Salvar como Rascunho
@@ -490,6 +518,7 @@
               <i class="bi bi-check-circle me-1"></i>
               Finalizar Receita
             </button>
+            {% endif %}
           {% else %}
             <div class="text-muted">
               <i class="bi bi-info-circle me-1"></i>

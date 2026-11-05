@@ -1,13 +1,20 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DeleteView, DetailView, FormView, ListView, View
 
-from apps.core.permissions.utils import can_access_patient, can_delete_event
+from apps.core.permissions.utils import (
+    can_access_patient,
+    can_delete_event,
+    can_edit_event,
+    is_doctor_or_resident,
+)
+from apps.events.services.event_deletion import delete_event_record
 
 from ..models import PDFFormSubmission, PDFFormTemplate
 from ..permissions import (
@@ -23,6 +30,23 @@ from ..services.duplication import (
 )
 from ..services.form_generator import DynamicFormGenerator
 from ..services.pdf_overlay import PDFFormOverlay
+
+DRAFT_APPROVAL_DENIED_MESSAGE = (
+    "Apenas médicos e residentes podem aprovar rascunhos de formulários PDF."
+)
+
+
+def visible_pdf_submissions():
+    """Active submissions with human drafts, bot drafts excluded (design D3).
+
+    The default manager hides every draft, and bot drafts must stay on their
+    own botauth promotion path, so the queryset re-admits human drafts only.
+    """
+    return (
+        PDFFormSubmission.objects.with_drafts()
+        .filter(Q(is_draft=False) | Q(draft_created_by_bot=""))
+        .select_related("patient", "created_by", "form_template")
+    )
 
 
 class PDFFormTemplateListView(LoginRequiredMixin, ListView):
@@ -198,6 +222,145 @@ class PDFFormFillView(LoginRequiredMixin, FormView):
             return self.form_invalid(form)
 
 
+class PDFFormSubmissionUpdateView(LoginRequiredMixin, FormView):
+    """Edit a hospital PDF form submission in place.
+
+    Reuses the fill machinery, prefilled from the stored submission, and saves
+    the same row. Saving a draft keeps it supervised; a doctor/resident flips
+    it with the finalize action (design D5/D8).
+    """
+
+    template_name = "pdf_forms/form_fill.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+
+        self.submission = get_object_or_404(
+            visible_pdf_submissions(), pk=kwargs["pk"]
+        )
+
+        # Hospital dynamic forms only: national forms keep their own capture
+        # flow, whose form class carries the real fields.
+        if self.submission.form_template.is_national_form:
+            raise Http404("Dynamic form submission not found")
+
+        check_pdf_form_access(request.user, self.submission.patient)
+
+        if not can_edit_event(request.user, self.submission):
+            raise PermissionDenied(
+                "You don't have permission to edit this PDF form submission"
+            )
+
+        self.form_template = self.submission.form_template
+        self.patient = self.submission.patient
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_class(self):
+        generator = DynamicFormGenerator()
+        return generator.generate_form_class(
+            self.form_template, self.patient, self.request.user
+        )
+
+    def get_initial(self):
+        """Prefill the form from the stored submission through the fill service."""
+        initial = super().get_initial()
+
+        generator = DynamicFormGenerator()
+        form_class = generator.generate_form_class(
+            self.form_template,
+            self.patient,
+            self.request.user,
+        )
+        initial.update(
+            build_duplicate_initial_data(form_class, self.submission.form_data)
+        )
+
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "form_template": self.form_template,
+                "patient": self.patient,
+                "submission": self.submission,
+                "is_update": True,
+                "is_draft_submission": self.submission.is_draft,
+                "can_finalize": (
+                    self.submission.is_draft
+                    and is_doctor_or_resident(self.request.user)
+                ),
+            }
+        )
+
+        form = context.get("form")
+        if form and hasattr(form.__class__, "_linked_fields_map"):
+            context["linked_fields_map"] = form.__class__._linked_fields_map
+
+        return context
+
+    def _submitted_action(self):
+        """Return the supervision action submitted by the form buttons."""
+        if "save_final" in self.request.POST:
+            return "save_final"
+        if "save_draft" in self.request.POST:
+            return "save_draft"
+        return None
+
+    def post(self, request, *args, **kwargs):
+        """Reject a crafted student approval before the error guard."""
+        if (
+            self.submission.is_draft
+            and self._submitted_action() == "save_final"
+            and not is_doctor_or_resident(request.user)
+        ):
+            raise PermissionDenied(DRAFT_APPROVAL_DENIED_MESSAGE)
+
+        try:
+            return super().post(request, *args, **kwargs)
+        except Exception as e:  # noqa: BLE001 - view error path
+            messages.error(request, f"Erro ao processar formulário: {e!s}")
+            form = self.get_form()
+            return self.render_to_response(self.get_context_data(form=form))
+
+    def form_valid(self, form):
+        """Persist the corrected submission, keeping or promoting its state."""
+        action = self._submitted_action()
+        was_draft = self.submission.is_draft
+
+        try:
+            sanitized_data = PDFFormSecurity.sanitize_form_data(form.cleaned_data)
+
+            submission = self.submission
+            submission.form_data = sanitized_data
+            submission.updated_by = self.request.user
+
+            if was_draft and action == "save_final":
+                submission.is_draft = False
+                submission.draft_promoted_at = timezone.now()
+                submission.draft_promoted_by = self.request.user
+            elif was_draft:
+                submission.is_draft = True
+
+            submission.save()
+
+            messages.success(
+                self.request,
+                f"Formulário '{self.form_template.name}' atualizado com sucesso!",
+            )
+
+            return redirect("pdf_forms:submission_detail", pk=submission.pk)
+
+        except ValidationError as e:
+            messages.error(self.request, f"Erro de validação: {e!s}")
+            return self.form_invalid(form)
+        except Exception as e:  # noqa: BLE001 - view error path
+            messages.error(self.request, f"Erro ao processar formulário: {e!s}")
+            return self.form_invalid(form)
+
+
 class PDFFormSubmissionDuplicateView(LoginRequiredMixin, FormView):
     """
     Duplicate an existing PDF form submission.
@@ -332,11 +495,18 @@ class PDFFormSubmissionDuplicateView(LoginRequiredMixin, FormView):
 
 
 class PDFFormSubmissionDetailView(LoginRequiredMixin, DetailView):
-    """View completed PDF form submission."""
+    """View completed PDF form submission.
+
+    Human drafts resolve for review (design D8/D10); bot drafts keep their own
+    promotion path and stay 404 (design D3).
+    """
 
     model = PDFFormSubmission
     template_name = "pdf_forms/form_submission_detail.html"
     context_object_name = "submission"
+
+    def get_queryset(self):
+        return visible_pdf_submissions()
 
     def get_object(self):
         submission = super().get_object()
@@ -443,18 +613,21 @@ class PDFFormSubmissionDeleteView(
         return obj
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return PDFFormSubmission.objects.select_related(
-            "patient", "created_by", "form_template"
-        )
+        """Resolve definitive submissions and human drafts (bot drafts 404)."""
+        return visible_pdf_submissions()
 
     def form_valid(self, form):
-        """Add the success message before the object is deleted and redirected."""
+        """Delete the submission by the path its state and history require.
+
+        ``BaseDeleteView.form_valid`` would call ``self.object.delete()``
+        directly, so the method decision lives here instead (design D7).
+        """
         submission = self.object
         patient_name = submission.patient.name
         form_name = submission.form_template.name
+        delete_event_record(submission, deleted_by=self.request.user)
         messages.success(
             self.request,
             f"Formulário '{form_name}' para {patient_name} excluído com sucesso.",
         )
-        return super().form_valid(form)
+        return redirect(self.get_success_url())

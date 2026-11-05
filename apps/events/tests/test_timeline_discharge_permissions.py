@@ -145,8 +145,8 @@ class DischargeReportTimelinePermissionTests(TestCase):
         self.assertContains(response, f"event-{report.pk}-title")
         self.assertNotContains(response, self._update_url(report))
 
-    def test_bulk_check_dispatches_delete_for_discharge_drafts(self):
-        """R2: a delete-permission holder gets can_delete from the service."""
+    def test_bulk_check_denies_delete_holder_on_discharge_drafts(self):
+        """R3: the draft branch has no delete-permission override."""
         report = self._create_report(is_draft=True)
         delete_holder = User.objects.create_user(
             username="timelinedeleter",
@@ -162,7 +162,7 @@ class DischargeReportTimelinePermissionTests(TestCase):
 
         permissions = self._timeline_permissions(delete_holder, report)
 
-        self.assertTrue(permissions["can_delete"])
+        self.assertFalse(permissions["can_delete"])
         self.assertEqual(permissions["event"], report)
 
     def test_other_event_types_keep_the_generic_predicate(self):

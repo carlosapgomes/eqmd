@@ -25,6 +25,22 @@ from .promotion_service import DraftPromotionService
 from .services import MatrixBindingService
 
 
+def _bot_drafts():
+    """Drafts reachable through botauth: bot-created drafts only (design D3).
+
+    Human drafts belong to the supervision flow; letting them through here
+    would transfer authorship and bypass approval attribution.
+    """
+    from apps.events.models import Event
+
+    return (
+        Event.objects.with_drafts()
+        .filter(is_draft=True)
+        .exclude(draft_created_by_bot="")
+        .select_subclasses()
+    )
+
+
 class MatrixBindingCreateView(LoginRequiredMixin, CreateView):
     """View for creating a new Matrix binding."""
 
@@ -147,11 +163,7 @@ class DraftPromoteView(LoginRequiredMixin, View):
     """Promote a draft to definitive document."""
 
     def post(self, request, pk):
-        from apps.events.models import Event
-
-        draft = get_object_or_404(
-            Event.objects.with_drafts().filter(is_draft=True).select_subclasses(), pk=pk
-        )
+        draft = get_object_or_404(_bot_drafts(), pk=pk)
 
         try:
             promoted = DraftPromotionService.promote_draft(
@@ -171,11 +183,7 @@ class DraftRejectView(LoginRequiredMixin, View):
     """Reject and delete a draft."""
 
     def post(self, request, pk):
-        from apps.events.models import Event
-
-        draft = get_object_or_404(
-            Event.objects.with_drafts().filter(is_draft=True).select_subclasses(), pk=pk
-        )
+        draft = get_object_or_404(_bot_drafts(), pk=pk)
 
         reason = request.POST.get("reason", "")
 

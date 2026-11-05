@@ -34,6 +34,7 @@
         <i class="bi bi-eye" aria-hidden="true"></i>
     </a>
 
+    {% if not event.is_draft %}
     <button type="button"
             class="btn btn-outline-danger btn-sm pdf-download-btn"
             data-pdf-url="{% url 'pdf_forms:pdf_download' submission_id=event.pk %}"
@@ -49,8 +50,9 @@
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         </span>
     </button>
+    {% endif %}
 
-    {% if event_data.can_duplicate_pdf_submission %}
+    {% if event_data.can_duplicate_pdf_submission and not event.is_draft %}
         <a href="{% url 'pdf_forms:submission_duplicate' pk=event.pk %}"
            class="btn btn-outline-success btn-sm"
            aria-label="Duplicar formulário PDF"
@@ -61,7 +63,34 @@
         </a>
     {% endif %}
 
-    {% if perms.events.delete_event and event_data.can_delete %}
+    {% if event.is_draft %}
+        <!-- Review Button - drafts are approved from the update view -->
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}"
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Revisar rascunho do formulário PDF"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="Revisar rascunho">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span class="visually-hidden">Revisar</span>
+            </a>
+        {% endif %}
+    {% else %}
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}"
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Editar formulário PDF"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="Editar">
+                <i class="bi bi-pencil" aria-hidden="true"></i>
+                <span class="visually-hidden">Editar</span>
+            </a>
+        {% endif %}
+    {% endif %}
+
+    {% if event_data.can_delete %}
         <a href="{% url 'pdf_forms:submission_delete' pk=event.pk %}"
            class="btn btn-outline-danger btn-sm"
            aria-label="Excluir formulário PDF"

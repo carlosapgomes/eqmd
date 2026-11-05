@@ -2,17 +2,14 @@
 Tests for object-level permission functions.
 """
 
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest.mock import Mock
 
-from apps.core.permissions.utils import (
-    can_change_patient_personal_data,
-    can_delete_event,
-    can_see_patient_in_search,
-)
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
+from django.test import TestCase
+from django.utils import timezone
+
 from apps.core.permissions.constants import (
     MEDICAL_DOCTOR,
     RESIDENT,
@@ -26,6 +23,13 @@ from apps.core.permissions.constants import (
     TRANSFERRED,
     EVENT_EDIT_TIME_LIMIT,
 )
+from apps.core.permissions.utils import (
+    can_change_patient_personal_data,
+    can_delete_event,
+    can_see_patient_in_search,
+)
+from apps.events.models import Event
+from apps.patients.models import Patient
 
 User = get_user_model()
 
@@ -114,44 +118,96 @@ class TestCanChangePatientPersonalData(TestCase):
 
 
 class TestCanDeleteEvent(TestCase):
-    """Test can_delete_event function."""
-    
+    """Test can_delete_event function.
+
+    The predicate reads the finalization metadata of real rows, so these cases
+    use persisted events (``created_at`` is not nullable).
+    """
+
     def setUp(self):
-        self.user = Mock()
-        self.user.is_authenticated = True
-        self.event = Mock()
-        self.event.created_by = self.user
-        self.event.created_at = timezone.now()
-    
+        self.user = User.objects.create_user(
+            username="deletepredicateuser",
+            email="deletepredicateuser@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
+        )
+        self.other_user = User.objects.create_user(
+            username="deletepredicateother",
+            email="deletepredicateother@example.com",
+            password="testpass123",
+            password_change_required=False,
+            terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
+        )
+        self.patient = Patient.objects.create(
+            name="Delete Predicate Patient",
+            birthday=date(1990, 1, 1),
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+    def _create_owned_event(self, created_at):
+        event = Event.objects.create(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Delete predicate event",
+            event_type=Event.SIMPLE_NOTE_EVENT,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        Event.all_objects.filter(pk=event.pk).update(created_at=created_at)
+        event.refresh_from_db()
+        return event
+
     def test_unauthenticated_user_cannot_delete_event(self):
         """Test that unauthenticated users cannot delete events."""
-        self.user.is_authenticated = False
-        result = can_delete_event(self.user, self.event)
+        event = self._create_owned_event(timezone.now())
+
+        result = can_delete_event(AnonymousUser(), event)
+
         self.assertFalse(result)
-    
+
     def test_non_creator_cannot_delete_event(self):
         """Test that non-creators cannot delete events."""
-        other_user = Mock()
-        self.event.created_by = other_user
-        result = can_delete_event(self.user, self.event)
+        event = self._create_owned_event(timezone.now())
+
+        result = can_delete_event(self.other_user, event)
+
         self.assertFalse(result)
-    
+
     def test_creator_can_delete_recent_event(self):
         """Test that creators can delete recent events."""
-        self.event.created_at = timezone.now() - timedelta(hours=1)
-        result = can_delete_event(self.user, self.event)
+        event = self._create_owned_event(timezone.now() - timedelta(hours=1))
+
+        result = can_delete_event(self.user, event)
+
         self.assertTrue(result)
-    
+
     def test_creator_cannot_delete_old_event(self):
         """Test that creators cannot delete old events."""
-        self.event.created_at = timezone.now() - timedelta(hours=EVENT_EDIT_TIME_LIMIT + 1)
-        result = can_delete_event(self.user, self.event)
+        event = self._create_owned_event(
+            timezone.now() - timedelta(hours=EVENT_EDIT_TIME_LIMIT + 1)
+        )
+
+        result = can_delete_event(self.user, event)
+
         self.assertFalse(result)
-    
+
     def test_event_without_created_at_cannot_be_deleted(self):
         """Test that events without created_at cannot be deleted."""
-        self.event.created_at = None
-        result = can_delete_event(self.user, self.event)
+        unsaved_event = Event(
+            patient=self.patient,
+            event_datetime=timezone.now(),
+            description="Unsaved event",
+            event_type=Event.SIMPLE_NOTE_EVENT,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        result = can_delete_event(self.user, unsaved_event)
+
         self.assertFalse(result)
 
 

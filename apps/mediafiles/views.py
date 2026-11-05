@@ -21,9 +21,17 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.http import HttpRequest, HttpResponse, FileResponse, Http404
+from django.db.models import Q
+from django.http import (
+    HttpRequest,
+    HttpResponse,
+    HttpResponseRedirect,
+    FileResponse,
+    Http404,
+)
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.http import http_date
 from django.views import View
@@ -38,12 +46,67 @@ import re
 
 from .models import Photo, MediaFile, PhotoSeries, VideoClip
 from .forms import PhotoCreateForm, PhotoCreateFormNew, PhotoUpdateForm, PhotoSeriesCreateForm, PhotoSeriesCreateFormNew, PhotoSeriesUpdateForm, PhotoSeriesPhotoForm, VideoClipCreateForm, VideoClipUpdateForm
+from .services.media_deletion import delete_media_event_record
 from apps.patients.models import Patient
 from apps.core.permissions import (
     can_access_patient,
     can_edit_event,
     can_delete_event,
 )
+from apps.core.permissions.utils import is_doctor_or_resident
+
+DRAFT_APPROVAL_DENIED_MESSAGE = (
+    "Apenas médicos e residentes podem aprovar rascunhos de mídia."
+)
+
+
+def visible_photos():
+    """Definitive photos plus human drafts, bot drafts excluded (design D3).
+
+    ``PhotoManager`` subclasses plain ``models.Manager``: it excludes neither
+    drafts nor soft-deleted rows, so the supervision filter is written out
+    here instead of relying on an ``Event``-style ``with_drafts()``.
+    """
+    return Photo.objects.filter(
+        Q(is_draft=False) | Q(draft_created_by_bot="")
+    ).select_related("patient", "created_by", "updated_by")
+
+
+def visible_photo_series():
+    """Definitive series plus human drafts, bot drafts excluded (design D3)."""
+    return (
+        PhotoSeries.objects.filter(Q(is_draft=False) | Q(draft_created_by_bot=""))
+        .select_related("patient", "created_by", "updated_by")
+        .prefetch_related("photoseriesfile_set")
+    )
+
+
+def visible_video_clips():
+    """Definitive video clips plus human drafts, bot drafts excluded (design D3)."""
+    return VideoClip.objects.filter(
+        Q(is_draft=False) | Q(draft_created_by_bot="")
+    ).select_related("patient", "created_by", "updated_by")
+
+
+def downloadable_photos():
+    """Final photos only: downloads deny drafts for all users (design D10)."""
+    return Photo.objects.filter(is_draft=False).select_related(
+        "patient", "created_by", "updated_by"
+    )
+
+
+def downloadable_photo_series():
+    """Final series only: downloads deny drafts for all users (design D10)."""
+    return PhotoSeries.objects.filter(is_draft=False).select_related(
+        "patient", "created_by", "updated_by"
+    )
+
+
+def downloadable_video_clips():
+    """Final video clips only: downloads deny drafts for all users (design D10)."""
+    return VideoClip.objects.filter(is_draft=False).select_related(
+        "patient", "created_by", "updated_by"
+    )
 
 
 class SecureFileServeView(View):
@@ -1040,10 +1103,8 @@ class PhotoDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         return context
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return Photo.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve definitive photos and human drafts (bot drafts stay 404)."""
+        return visible_photos()
 
 
 class PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -1062,6 +1123,9 @@ class PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     def get_object(self, queryset=None):
         """Get object and check patient access and edit permissions."""
         obj = super().get_object(queryset)
+        # Capture the persisted status so the action dispatch and the
+        # re-rendered form agree with the stored record.
+        self.was_draft = obj.is_draft
 
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
@@ -1088,26 +1152,67 @@ class PhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context["is_update"] = True
         context["patient"] = self.object.patient
+        context["is_draft_media"] = self.object.is_draft
+        context["can_finalize"] = self.object.is_draft and is_doctor_or_resident(
+            self.request.user
+        )
         return context
 
     def get_success_url(self):
         """Redirect to patient timeline after successful update."""
         return reverse_lazy("apps.patients:patient_events_timeline", kwargs={"patient_id": self.object.patient.pk})
 
+    def _submitted_action(self):
+        """Return the update action submitted by the form buttons."""
+        if "save_final" in self.request.POST:
+            return "save_final"
+        if "save_draft" in self.request.POST:
+            return "save_draft"
+        return None
+
     def form_valid(self, form):
-        """Handle successful form submission."""
-        response = super().form_valid(form)
-        messages.success(
-            self.request,
-            "Foto atualizada com sucesso."
-        )
-        return response
+        """Persist the photo, keeping or promoting the supervised draft state."""
+        action = self._submitted_action()
+        was_draft = self.was_draft
+
+        # Approving a draft is a physician act; the update template hides the
+        # button, this gate enforces it (design D5).
+        if (
+            was_draft
+            and action == "save_final"
+            and not is_doctor_or_resident(self.request.user)
+        ):
+            raise PermissionDenied(DRAFT_APPROVAL_DENIED_MESSAGE)
+
+        self.object = form.save(commit=False)
+        self.object.updated_by = self.request.user
+
+        if was_draft and action == "save_final":
+            self.object.is_draft = False
+            self.object.draft_promoted_at = timezone.now()
+            self.object.draft_promoted_by = self.request.user
+            messages.success(
+                self.request,
+                f"Foto para {self.object.patient.name} aprovada e registrada no prontuário.",
+            )
+        elif was_draft:
+            self.object.is_draft = True
+            messages.success(
+                self.request,
+                f"Rascunho da foto para {self.object.patient.name} atualizado.",
+            )
+        else:
+            messages.success(
+                self.request,
+                "Foto atualizada com sucesso."
+            )
+
+        self.object.save()
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return Photo.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve definitive photos and human drafts (bot drafts stay 404)."""
+        return visible_photos()
 
 
 class PhotoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
@@ -1147,26 +1252,40 @@ class PhotoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
             kwargs={"patient_id": self.object.patient.pk}
         )
 
-    def delete(self, request, *args, **kwargs):
-        """Handle deletion with success message."""
-        photo = self.get_object()
-        patient_name = photo.patient.name
+    def form_valid(self, form):
+        """Delete the photo, hard-deleting never-finalized drafts (design D7).
 
-        # Perform deletion
-        response = super().delete(request, *args, **kwargs)
+        ``BaseDeleteView.form_valid`` would call ``self.object.delete()``
+        directly, so the method decision (and the stored-file cleanup) lives
+        here instead.
+        """
+        return self._delete_record()
+
+    def delete(self, request, *args, **kwargs):
+        """Route HTTP ``DELETE`` through the same method rule as the form.
+
+        ``DeletionMixin.delete`` would call ``self.object.delete()`` and
+        soft-delete a never-finalized draft while keeping its stored files,
+        so the request takes the same decision and response as ``form_valid``.
+        """
+        self.object = self.get_object()
+        return self._delete_record()
+
+    def _delete_record(self):
+        """Delete ``self.object`` by the path its state and history require."""
+        photo = self.object
+        delete_media_event_record(photo, deleted_by=self.request.user)
 
         messages.success(
-            request,
-            f"Foto removida com sucesso do prontuário de {patient_name}."
+            self.request,
+            f"Foto removida com sucesso do prontuário de {photo.patient.name}."
         )
 
-        return response
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return Photo.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve definitive photos and human drafts (bot drafts stay 404)."""
+        return visible_photos()
 
 
 class PhotoDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
@@ -1244,10 +1363,8 @@ class PhotoDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         security_logger.info(log_message)
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return Photo.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Serve final photos only: downloads deny drafts (design D10)."""
+        return downloadable_photos()
 
 
 # PhotoSeries CRUD Views
@@ -1355,12 +1472,8 @@ class PhotoSeriesDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
         return context
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return PhotoSeries.objects.select_related(
-            "patient", "created_by", "updated_by"
-        ).prefetch_related(
-            "photoseriesfile_set"
-        )
+        """Resolve definitive series and human drafts (bot drafts stay 404)."""
+        return visible_photo_series()
 
 
 class PhotoSeriesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -1380,6 +1493,9 @@ class PhotoSeriesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateV
     def get_object(self, queryset=None):
         """Get object and check patient access and edit permissions."""
         obj = super().get_object(queryset)
+        # Capture the persisted status so the action dispatch and the
+        # re-rendered form agree with the stored record.
+        self.was_draft = obj.is_draft
 
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
@@ -1409,28 +1525,67 @@ class PhotoSeriesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateV
         context["patient"] = self.object.patient
         context["ordered_photos"] = self.object.get_ordered_photos()
         context["photo_count"] = self.object.get_photo_count()
+        context["is_draft_media"] = self.object.is_draft
+        context["can_finalize"] = self.object.is_draft and is_doctor_or_resident(
+            self.request.user
+        )
         return context
 
     def get_success_url(self):
         """Redirect to patient timeline after successful update."""
         return reverse_lazy("apps.patients:patient_events_timeline", kwargs={"patient_id": self.object.patient.pk})
 
+    def _submitted_action(self):
+        """Return the update action submitted by the form buttons."""
+        if "save_final" in self.request.POST:
+            return "save_final"
+        if "save_draft" in self.request.POST:
+            return "save_draft"
+        return None
+
     def form_valid(self, form):
-        """Handle successful form submission."""
-        response = super().form_valid(form)
-        messages.success(
-            self.request,
-            "Série de fotos atualizada com sucesso."
-        )
-        return response
+        """Persist the series, keeping or promoting the supervised draft state."""
+        action = self._submitted_action()
+        was_draft = self.was_draft
+
+        # Approving a draft is a physician act; the update template hides the
+        # button, this gate enforces it (design D5).
+        if (
+            was_draft
+            and action == "save_final"
+            and not is_doctor_or_resident(self.request.user)
+        ):
+            raise PermissionDenied(DRAFT_APPROVAL_DENIED_MESSAGE)
+
+        self.object = form.save(commit=False)
+        self.object.updated_by = self.request.user
+
+        if was_draft and action == "save_final":
+            self.object.is_draft = False
+            self.object.draft_promoted_at = timezone.now()
+            self.object.draft_promoted_by = self.request.user
+            messages.success(
+                self.request,
+                f"Série de fotos para {self.object.patient.name} aprovada e registrada no prontuário.",
+            )
+        elif was_draft:
+            self.object.is_draft = True
+            messages.success(
+                self.request,
+                f"Rascunho da série de fotos para {self.object.patient.name} atualizado.",
+            )
+        else:
+            messages.success(
+                self.request,
+                "Série de fotos atualizada com sucesso."
+            )
+
+        self.object.save()
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return PhotoSeries.objects.select_related(
-            "patient", "created_by", "updated_by"
-        ).prefetch_related(
-            "photoseriesfile_set"
-        )
+        """Resolve definitive series and human drafts (bot drafts stay 404)."""
+        return visible_photo_series()
 
 
 class PhotoSeriesDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
@@ -1477,29 +1632,40 @@ class PhotoSeriesDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteV
             kwargs={"patient_id": self.object.patient.pk}
         )
 
-    def delete(self, request, *args, **kwargs):
-        """Handle deletion with success message."""
-        photoseries = self.get_object()
-        patient_name = photoseries.patient.name
-        photo_count = photoseries.get_photo_count()
+    def form_valid(self, form):
+        """Delete the series, hard-deleting never-finalized drafts (design D7).
 
-        # Perform deletion
-        response = super().delete(request, *args, **kwargs)
+        The stored-file cleanup covers every member original and thumbnail,
+        not just the parent row.
+        """
+        return self._delete_record()
+
+    def delete(self, request, *args, **kwargs):
+        """Route HTTP ``DELETE`` through the same method rule as the form.
+
+        ``DeletionMixin.delete`` would soft-delete a never-finalized draft and
+        keep its member files, so the request takes the same decision and
+        response as ``form_valid``.
+        """
+        self.object = self.get_object()
+        return self._delete_record()
+
+    def _delete_record(self):
+        """Delete ``self.object`` by the path its state and history require."""
+        photoseries = self.object
+        photo_count = photoseries.get_photo_count()
+        delete_media_event_record(photoseries, deleted_by=self.request.user)
 
         messages.success(
-            request,
-            f"Série de fotos com {photo_count} imagem(ns) removida com sucesso do prontuário de {patient_name}."
+            self.request,
+            f"Série de fotos com {photo_count} imagem(ns) removida com sucesso do prontuário de {photoseries.patient.name}."
         )
 
-        return response
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return PhotoSeries.objects.select_related(
-            "patient", "created_by", "updated_by"
-        ).prefetch_related(
-            "photoseriesfile_set"
-        )
+        """Resolve definitive series and human drafts (bot drafts stay 404)."""
+        return visible_photo_series()
 
 
 # AJAX Views for PhotoSeries Dynamic Management
@@ -1686,10 +1852,12 @@ def photoseries_download(request, pk):
     
     Serves all photos in series as ZIP file.
     """
+    # Drafts never leave the record: resolve final series only (design D10).
+    # Fetched before the try block so the denial stays a 404 instead of the
+    # ZIP failure path's redirect.
+    photoseries = get_object_or_404(downloadable_photo_series(), pk=pk)
+
     try:
-        # Get photo series and check permissions
-        photoseries = get_object_or_404(PhotoSeries, pk=pk)
-        
         # Check if user can access this patient
         if not can_access_patient(request.user, photoseries.patient):
             raise PermissionDenied(
@@ -1848,10 +2016,8 @@ class VideoClipDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailVie
         return context
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve definitive video clips and human drafts (bot drafts 404)."""
+        return visible_video_clips()
 
 
 class VideoClipUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -1870,6 +2036,9 @@ class VideoClipUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
     def get_object(self, queryset=None):
         """Get object and check patient access and edit permissions."""
         obj = super().get_object(queryset)
+        # Capture the persisted status so the action dispatch and the
+        # re-rendered form agree with the stored record.
+        self.was_draft = obj.is_draft
 
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
@@ -1897,26 +2066,67 @@ class VideoClipUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
         context["is_update"] = True
         context["is_video"] = True
         context["patient"] = self.object.patient
+        context["is_draft_media"] = self.object.is_draft
+        context["can_finalize"] = self.object.is_draft and is_doctor_or_resident(
+            self.request.user
+        )
         return context
 
     def get_success_url(self):
         """Redirect to patient timeline after successful update."""
         return reverse_lazy("apps.patients:patient_events_timeline", kwargs={"patient_id": self.object.patient.pk})
 
+    def _submitted_action(self):
+        """Return the update action submitted by the form buttons."""
+        if "save_final" in self.request.POST:
+            return "save_final"
+        if "save_draft" in self.request.POST:
+            return "save_draft"
+        return None
+
     def form_valid(self, form):
-        """Handle successful form submission."""
-        response = super().form_valid(form)
-        messages.success(
-            self.request,
-            "Vídeo atualizado com sucesso."
-        )
-        return response
+        """Persist the video, keeping or promoting the supervised draft state."""
+        action = self._submitted_action()
+        was_draft = self.was_draft
+
+        # Approving a draft is a physician act; the update template hides the
+        # button, this gate enforces it (design D5).
+        if (
+            was_draft
+            and action == "save_final"
+            and not is_doctor_or_resident(self.request.user)
+        ):
+            raise PermissionDenied(DRAFT_APPROVAL_DENIED_MESSAGE)
+
+        self.object = form.save(commit=False)
+        self.object.updated_by = self.request.user
+
+        if was_draft and action == "save_final":
+            self.object.is_draft = False
+            self.object.draft_promoted_at = timezone.now()
+            self.object.draft_promoted_by = self.request.user
+            messages.success(
+                self.request,
+                f"Vídeo para {self.object.patient.name} aprovado e registrado no prontuário.",
+            )
+        elif was_draft:
+            self.object.is_draft = True
+            messages.success(
+                self.request,
+                f"Rascunho do vídeo para {self.object.patient.name} atualizado.",
+            )
+        else:
+            messages.success(
+                self.request,
+                "Vídeo atualizado com sucesso."
+            )
+
+        self.object.save()
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve definitive video clips and human drafts (bot drafts 404)."""
+        return visible_video_clips()
 
 
 class VideoClipDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
@@ -1956,26 +2166,35 @@ class VideoClipDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
             kwargs={"patient_id": self.object.patient.pk}
         )
 
-    def delete(self, request, *args, **kwargs):
-        """Handle deletion with success message."""
-        videoclip = self.get_object()
-        patient_name = videoclip.patient.name
+    def form_valid(self, form):
+        """Delete the video, hard-deleting never-finalized drafts (design D7)."""
+        return self._delete_record()
 
-        # Perform deletion
-        response = super().delete(request, *args, **kwargs)
+    def delete(self, request, *args, **kwargs):
+        """Route HTTP ``DELETE`` through the same method rule as the form.
+
+        ``DeletionMixin.delete`` would soft-delete a never-finalized draft and
+        keep its stored file, so the request takes the same decision and
+        response as ``form_valid``.
+        """
+        self.object = self.get_object()
+        return self._delete_record()
+
+    def _delete_record(self):
+        """Delete ``self.object`` by the path its state and history require."""
+        videoclip = self.object
+        delete_media_event_record(videoclip, deleted_by=self.request.user)
 
         messages.success(
-            request,
-            f"Vídeo removido com sucesso do prontuário de {patient_name}."
+            self.request,
+            f"Vídeo removido com sucesso do prontuário de {videoclip.patient.name}."
         )
 
-        return response
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve definitive video clips and human drafts (bot drafts 404)."""
+        return visible_video_clips()
 
 
 class VideoClipDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
@@ -2041,10 +2260,8 @@ class VideoClipDownloadView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
         return response
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Serve final video clips only: downloads deny drafts (design D10)."""
+        return downloadable_video_clips()
 
 
 class VideoClipStreamView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
@@ -2120,10 +2337,12 @@ class VideoClipStreamView(LoginRequiredMixin, PermissionRequiredMixin, DetailVie
         return response
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return VideoClip.objects.select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve definitive clips and human drafts (bot drafts stay 404).
+
+        Streaming is the on-screen review path, so drafts stay playable for
+        authorized viewers (design D10).
+        """
+        return visible_video_clips()
 
 
 # Placeholder view for backward compatibility during transition

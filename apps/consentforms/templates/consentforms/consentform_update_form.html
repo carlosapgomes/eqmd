@@ -36,6 +36,21 @@
   </div>
 </div>
 
+{% if is_draft_consentform %}
+<div class="alert alert-warning" role="alert" data-draft-supervision-banner="1">
+  <h6 class="alert-heading mb-2">
+    <i class="bi bi-shield-check me-2"></i>
+    Aguardando aprovação
+  </h6>
+  <p class="mb-0 small">
+    Este termo permanece como rascunho supervisionado até que um médico ou
+    residente use <strong>Salvar definitivo</strong>. A aprovação registra o
+    aprovador responsável e mantém o autor original; o conteúdo clínico do
+    termo continua imutável e os anexos seguem sendo a única edição possível.
+  </p>
+</div>
+{% endif %}
+
 <div class="card shadow-sm mb-3">
   <div class="card-header bg-medical-light">
     <h6 class="card-title mb-0">
@@ -89,6 +104,14 @@
         <i class="bi bi-check-circle me-1"></i>
         Salvar Anexos
       </button>
+
+      {% if can_finalize %}
+      <!-- Approval needs no new files and is a separate action (design D12) -->
+      <button type="submit" name="save_final" value="1" class="btn btn-medical-primary ms-2">
+        <i class="bi bi-shield-check me-1"></i>
+        Salvar definitivo
+      </button>
+      {% endif %}
     </form>
   </div>
 </div>

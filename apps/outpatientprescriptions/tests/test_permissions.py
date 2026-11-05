@@ -241,7 +241,7 @@ class PatientAccessPermissionTest(PrescriptionPermissionTestCase):
 class EventEditPermissionTest(PrescriptionPermissionTestCase):
     """Test event edit permissions for prescriptions."""
 
-    @patch("apps.core.permissions.decorators.can_edit_event")
+    @patch("apps.outpatientprescriptions.views.can_edit_event")
     def test_creator_can_edit_recent_prescription(self, mock_can_edit):
         """Test that creators can edit recent prescriptions."""
         mock_can_edit.return_value = True
@@ -254,9 +254,11 @@ class EventEditPermissionTest(PrescriptionPermissionTestCase):
             )
         )
         self.assertEqual(response.status_code, 200)
-        mock_can_edit.assert_called_once()
+        # The predicate is evaluated for the access check and again for the
+        # template context, so the call count is at least one.
+        self.assertTrue(mock_can_edit.called)
 
-    @patch("apps.core.permissions.decorators.can_edit_event")
+    @patch("apps.outpatientprescriptions.views.can_edit_event")
     def test_cannot_edit_old_prescription(self, mock_can_edit):
         """Test that old prescriptions cannot be edited (24-hour rule)."""
         mock_can_edit.return_value = False  # Simulate 24-hour rule violation
@@ -268,10 +270,10 @@ class EventEditPermissionTest(PrescriptionPermissionTestCase):
                 kwargs={"pk": self.old_prescription.pk},
             )
         )
-        # can_edit_event_required denies with HttpResponseForbidden (403).
+        # The update view denies through can_edit_event (403).
         self.assertEqual(response.status_code, 403)
 
-    @patch("apps.core.permissions.decorators.can_edit_event")
+    @patch("apps.outpatientprescriptions.views.can_edit_event")
     def test_non_creator_cannot_edit(self, mock_can_edit):
         """Test that non-creators cannot edit prescriptions."""
         mock_can_edit.return_value = False
@@ -285,7 +287,7 @@ class EventEditPermissionTest(PrescriptionPermissionTestCase):
         )
         self.assertEqual(response.status_code, 403)
 
-    @patch("apps.core.permissions.decorators.can_edit_event")
+    @patch("apps.outpatientprescriptions.views.can_edit_event")
     def test_nurse_cannot_edit_prescriptions(self, mock_can_edit):
         """Test that nurses cannot edit prescriptions."""
         mock_can_edit.return_value = False
@@ -299,7 +301,7 @@ class EventEditPermissionTest(PrescriptionPermissionTestCase):
         )
         self.assertEqual(response.status_code, 403)
 
-    @patch("apps.core.permissions.decorators.can_edit_event")
+    @patch("apps.outpatientprescriptions.views.can_edit_event")
     def test_student_cannot_edit_prescriptions(self, mock_can_edit):
         """Test that students cannot edit prescriptions."""
         mock_can_edit.return_value = False
@@ -531,8 +533,8 @@ class PrescriptionStatusPermissionTest(PrescriptionPermissionTestCase):
     def test_finalized_prescription_immutable(self):
         """Test that prescriptions denied by the edit rule cannot be modified.
 
-        The update view enforces the edit window via can_edit_event_required;
-        a denial (24-hour rule / status immutability) maps to 403.
+        The update view enforces the edit window through the generic
+        can_edit_event predicate; a denial (24-hour rule) maps to 403.
         """
         finalized_prescription = OutpatientPrescription.objects.create(
             event_datetime=timezone.now(),
@@ -548,7 +550,7 @@ class PrescriptionStatusPermissionTest(PrescriptionPermissionTestCase):
         self._setup_session(self.doctor)
 
         with patch(
-            "apps.core.permissions.decorators.can_edit_event", return_value=False
+            "apps.outpatientprescriptions.views.can_edit_event", return_value=False
         ):
             response = self.client.get(
                 reverse(
@@ -637,7 +639,7 @@ class PermissionIntegrationTest(PrescriptionPermissionTestCase):
 
         # Step 3: Edit prescription (should succeed with edit permission)
         with patch(
-            "apps.core.permissions.decorators.can_edit_event", return_value=True
+            "apps.outpatientprescriptions.views.can_edit_event", return_value=True
         ):
             response = self.client.get(
                 reverse(
@@ -652,7 +654,7 @@ class PermissionIntegrationTest(PrescriptionPermissionTestCase):
 
         # Step 5: Try to edit (should fail without permission)
         with patch(
-            "apps.core.permissions.decorators.can_edit_event", return_value=False
+            "apps.outpatientprescriptions.views.can_edit_event", return_value=False
         ):
             response = self.client.get(
                 reverse(

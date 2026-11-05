@@ -112,11 +112,20 @@ class SimplifiedPermissionSystemTests(TestCase):
         self.recent_event.id = 'event-1'
         self.recent_event.created_by = self.doctor
         self.recent_event.created_at = timezone.now() - timedelta(hours=1)
+        # Definitive events: the predicate reads the finalization metadata.
+        self.recent_event.draft_promoted_at = None
+        self.recent_event.draft_promoted_by = None
+        self.recent_event.finalized_at = None
+        self.recent_event.finalized_by = None
         
         self.old_event = Mock()
         self.old_event.id = 'event-2'
         self.old_event.created_by = self.doctor
         self.old_event.created_at = timezone.now() - timedelta(hours=25)
+        self.old_event.draft_promoted_at = None
+        self.old_event.draft_promoted_by = None
+        self.old_event.finalized_at = None
+        self.old_event.finalized_by = None
 
     def test_universal_patient_access(self):
         """Test that all roles can access all patients regardless of status."""
@@ -346,6 +355,10 @@ class SimplifiedPermissionSystemTests(TestCase):
                 own_event = Mock()
                 own_event.created_by = user
                 own_event.created_at = timezone.now() - timedelta(hours=1)
+                own_event.draft_promoted_at = None
+                own_event.draft_promoted_by = None
+                own_event.finalized_at = None
+                own_event.finalized_by = None
                 
                 self.assertEqual(
                     can_edit_event(user, own_event),

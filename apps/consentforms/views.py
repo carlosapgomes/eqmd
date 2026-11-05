@@ -5,7 +5,8 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.http import HttpResponse, JsonResponse
+from django.db.models import Q
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -15,7 +16,13 @@ from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from django.utils.text import slugify
 
-from apps.core.permissions.utils import can_access_patient, can_edit_event, can_delete_event
+from apps.core.permissions.utils import (
+    can_access_patient,
+    can_delete_event,
+    can_edit_event,
+    is_doctor_or_resident,
+)
+from apps.events.services.event_deletion import delete_event_record
 from apps.patients.models import Patient
 from .services.pdf_generator import ConsentFormPDFGenerator
 
@@ -28,6 +35,23 @@ from .forms import (
 from .utils import normalize_filename
 
 logger = logging.getLogger(__name__)
+
+DRAFT_APPROVAL_DENIED_MESSAGE = (
+    "Apenas médicos e residentes podem aprovar rascunhos de termos de consentimento."
+)
+
+
+def visible_consent_forms():
+    """Active consent forms with human drafts, bot drafts excluded (design D3).
+
+    The default manager hides every draft, and bot drafts must stay on their
+    own botauth promotion path, so the queryset re-admits human drafts only.
+    """
+    return (
+        ConsentForm.objects.with_drafts()
+        .filter(Q(is_draft=False) | Q(draft_created_by_bot=""))
+        .select_related("patient", "created_by", "updated_by", "template")
+    )
 
 
 class ConsentTemplateListAPIView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -149,7 +173,8 @@ class ConsentFormDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
         return obj
 
     def get_queryset(self):
-        return ConsentForm.objects.select_related("patient", "created_by", "updated_by", "template")
+        """Resolve definitive forms and human drafts (bot drafts stay 404)."""
+        return visible_consent_forms()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -165,7 +190,10 @@ class ConsentFormUpdateView(LoginRequiredMixin, PermissionRequiredMixin, FormVie
     permission_required = "events.change_event"
 
     def dispatch(self, request, *args, **kwargs):
-        self.consent_form = get_object_or_404(ConsentForm, pk=kwargs["pk"])
+        """Resolve human drafts too (bot drafts keep their own path, design D3)."""
+        self.consent_form = get_object_or_404(
+            visible_consent_forms(), pk=kwargs["pk"]
+        )
         if not can_access_patient(request.user, self.consent_form.patient):
             raise PermissionDenied("You don't have permission to access this patient")
         if not can_edit_event(request.user, self.consent_form):
@@ -182,7 +210,54 @@ class ConsentFormUpdateView(LoginRequiredMixin, PermissionRequiredMixin, FormVie
         context["consentform"] = self.consent_form
         context["patient"] = self.consent_form.patient
         context["attachments"] = self.consent_form.attachments.all()
+        # Draft supervision context: approval is offered only to physicians
+        # and never requires new files (design D8/D12).
+        context["is_draft_consentform"] = self.consent_form.is_draft
+        context["can_finalize"] = (
+            self.consent_form.is_draft
+            and is_doctor_or_resident(self.request.user)
+        )
         return context
+
+    def _submitted_action(self):
+        """Return the supervision action submitted by the form buttons."""
+        if "save_final" in self.request.POST:
+            return "save_final"
+        return None
+
+    def post(self, request, *args, **kwargs):
+        """Finalize is an action distinct from the attachment upload.
+
+        Approval needs no new files, while an ordinary submission without
+        files stays invalid through the form's own validation (design D12).
+        """
+        if (
+            self.consent_form.is_draft
+            and self._submitted_action() == "save_final"
+        ):
+            return self._finalize_draft()
+        return super().post(request, *args, **kwargs)
+
+    def _finalize_draft(self):
+        """Flip the draft flag and record the approver, content untouched."""
+        if not is_doctor_or_resident(self.request.user):
+            raise PermissionDenied(DRAFT_APPROVAL_DENIED_MESSAGE)
+
+        with transaction.atomic():
+            self.consent_form.is_draft = False
+            self.consent_form.draft_promoted_at = timezone.now()
+            self.consent_form.draft_promoted_by = self.request.user
+            self.consent_form.updated_by = self.request.user
+            self.consent_form.save()
+
+        messages.success(
+            self.request,
+            f"Termo de consentimento de {self.consent_form.patient.name} "
+            "aprovado e registrado no prontuário.",
+        )
+        return redirect(
+            "consentforms:consentform_detail", pk=self.consent_form.pk
+        )
 
     def form_valid(self, form):
         files = form.cleaned_data["validated_files"]
@@ -229,13 +304,23 @@ class ConsentFormDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteV
         return obj
 
     def get_queryset(self):
-        return ConsentForm.objects.select_related("patient", "created_by")
+        """Resolve definitive forms and human drafts (bot drafts stay 404)."""
+        return visible_consent_forms()
 
-    def delete(self, request, *args, **kwargs):
-        consent_form = self.get_object()
+    def form_valid(self, form):
+        """Delete the form, hard-deleting never-finalized drafts (design D7).
+
+        ``BaseDeleteView.form_valid`` would call ``self.object.delete()``
+        directly, so the method decision lives here instead.
+        """
+        consent_form = self.object
         patient_name = consent_form.patient.name
-        messages.success(request, f"Termo de consentimento de {patient_name} excluído com sucesso.")
-        return super().delete(request, *args, **kwargs)
+        delete_event_record(consent_form, deleted_by=self.request.user)
+        messages.success(
+            self.request,
+            f"Termo de consentimento de {patient_name} excluído com sucesso.",
+        )
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class ConsentFormAttachmentsZipView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -291,13 +376,21 @@ class ConsentAttachmentDeleteView(LoginRequiredMixin, PermissionRequiredMixin, V
 
 
 class ConsentFormPDFView(LoginRequiredMixin, View):
+    """PDF output for definitive consent forms.
+
+    Drafts have no document output (design D10): the lookup runs through the
+    draft-excluding default manager, and the object is resolved outside the
+    generation guard so a draft resource is a 404 instead of a generation
+    error.
+    """
+
     def get(self, request, *args, **kwargs):
+        consent_form = get_object_or_404(ConsentForm, pk=kwargs["pk"])
+
+        if not can_access_patient(request.user, consent_form.patient):
+            raise PermissionDenied("You don't have permission to access this patient")
+
         try:
-            consent_form = get_object_or_404(ConsentForm, pk=kwargs["pk"])
-
-            if not can_access_patient(request.user, consent_form.patient):
-                raise PermissionDenied("You don't have permission to access this patient")
-
             pdf_generator = ConsentFormPDFGenerator()
             pdf_buffer = pdf_generator.generate_from_consent(consent_form)
 

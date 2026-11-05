@@ -7,10 +7,9 @@ from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 from django.utils import timezone
 
+from apps.core.permissions.utils import can_delete_event, can_edit_event
 from apps.pdf_forms.models import PDFFormSubmission
 from apps.pdf_forms.permissions import (
-    can_delete_pdf_submission,
-    can_edit_pdf_submission,
     check_pdf_download_access,
     check_pdf_form_access,
     check_pdf_form_creation,
@@ -155,24 +154,17 @@ class PDFFormPermissionTests(TestCase):
                 str(context.exception),
             )
 
-    def test_can_edit_pdf_submission_creator_within_time_window(self):
-        """Test editing is allowed for creator within 24 hours."""
-        # Create submission less than 24 hours ago
+    def test_generic_predicate_allows_the_creator_within_the_window(self):
+        """Editing a definitive submission follows the 24h owner window."""
         recent_submission = PDFFormSubmissionFactory(
             form_template=self.template,
             patient=self.patient,
             created_by=self.user,
-            created_at=timezone.now() - timedelta(hours=1),
         )
 
-        with patch("apps.pdf_forms.permissions.can_access_patient", return_value=True):
-            result = can_edit_pdf_submission(self.user, recent_submission)
-            self.assertTrue(result)
+        self.assertTrue(can_edit_event(self.user, recent_submission))
 
-    def test_can_edit_pdf_submission_creator_after_time_window(self):
-        """Test editing is denied for creator after 24 hours."""
-        # Create submission more than 24 hours ago (auto_now_add ignores the
-        # factory value, so backdate it with a queryset update).
+    def test_generic_predicate_denies_the_creator_after_the_window(self):
         old_submission = PDFFormSubmissionFactory(
             form_template=self.template,
             patient=self.patient,
@@ -183,24 +175,16 @@ class PDFFormPermissionTests(TestCase):
         )
         old_submission.refresh_from_db()
 
-        with patch("apps.pdf_forms.permissions.can_access_patient", return_value=True):
-            result = can_edit_pdf_submission(self.user, old_submission)
-            self.assertFalse(result)
+        self.assertFalse(can_edit_event(self.user, old_submission))
 
-    def test_can_edit_pdf_submission_non_creator(self):
-        """Test editing is denied for non-creator."""
+    def test_generic_predicate_denies_a_non_creator(self):
         other_user = UserFactory()
 
-        with patch("apps.pdf_forms.permissions.can_access_patient", return_value=True):
-            result = can_edit_pdf_submission(other_user, self.submission)
-            self.assertFalse(result)
+        self.assertFalse(can_edit_event(other_user, self.submission))
 
-    def test_can_edit_pdf_submission_superuser(self):
-        """Test editing is allowed for superuser regardless of time."""
+    def test_generic_predicate_gives_superusers_no_view_level_override(self):
+        """The removed helper's superuser override must not survive."""
         superuser = UserFactory(is_superuser=True)
-
-        # Create submission more than 24 hours ago (auto_now_add ignores the
-        # factory value, so backdate it with a queryset update).
         old_submission = PDFFormSubmissionFactory(
             form_template=self.template,
             patient=self.patient,
@@ -211,39 +195,49 @@ class PDFFormPermissionTests(TestCase):
         )
         old_submission.refresh_from_db()
 
-        with patch("apps.pdf_forms.permissions.can_access_patient", return_value=True):
-            result = can_edit_pdf_submission(superuser, old_submission)
-            self.assertTrue(result)
+        self.assertFalse(can_edit_event(superuser, old_submission))
 
-    def test_can_edit_pdf_submission_no_patient_access(self):
-        """Test editing is denied when user has no patient access."""
-        with patch("apps.pdf_forms.permissions.can_access_patient", return_value=False):
-            result = can_edit_pdf_submission(self.user, self.submission)
-            self.assertFalse(result)
+    def test_generic_predicate_denies_a_draft_reader_without_patient_access(self):
+        draft = PDFFormSubmissionFactory(
+            form_template=self.template,
+            patient=self.patient,
+            created_by=self.user,
+            is_draft=True,
+        )
 
-    def test_can_delete_pdf_submission_same_as_edit(self):
-        """Test that delete permissions follow the same rules as edit permissions."""
-        # Test creator within time window
+        with patch(
+            "apps.core.permissions.utils.can_access_patient", return_value=False
+        ):
+            self.assertFalse(can_edit_event(UserFactory(), draft))
+
+    def test_generic_delete_predicate_matches_the_edit_predicate(self):
         recent_submission = PDFFormSubmissionFactory(
             form_template=self.template,
             patient=self.patient,
             created_by=self.user,
-            created_at=timezone.now() - timedelta(hours=1),
         )
 
-        with patch("apps.pdf_forms.permissions.can_access_patient", return_value=True):
-            edit_result = can_edit_pdf_submission(self.user, recent_submission)
-            delete_result = can_delete_pdf_submission(self.user, recent_submission)
-            self.assertEqual(edit_result, delete_result)
-            self.assertTrue(delete_result)
+        self.assertTrue(can_delete_event(self.user, recent_submission))
+        self.assertEqual(
+            can_edit_event(self.user, recent_submission),
+            can_delete_event(self.user, recent_submission),
+        )
 
-    def test_can_delete_pdf_submission_superuser(self):
-        """Test that superuser can always delete."""
-        superuser = UserFactory(is_superuser=True)
+    def test_generic_predicates_allow_a_draft_author_without_time_limit(self):
+        """Drafts belong to the supervision rule: author, no time limit."""
+        old_draft = PDFFormSubmissionFactory(
+            form_template=self.template,
+            patient=self.patient,
+            created_by=self.user,
+            is_draft=True,
+        )
+        PDFFormSubmission.objects.filter(pk=old_draft.pk).update(
+            created_at=timezone.now() - timedelta(days=30)
+        )
+        old_draft.refresh_from_db()
 
-        with patch("apps.pdf_forms.permissions.can_access_patient", return_value=True):
-            result = can_delete_pdf_submission(superuser, self.submission)
-            self.assertTrue(result)
+        self.assertTrue(can_edit_event(self.user, old_draft))
+        self.assertTrue(can_delete_event(self.user, old_draft))
 
     def test_permission_functions_edge_cases(self):
         """Test edge cases for permission functions."""
