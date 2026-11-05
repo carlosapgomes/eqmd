@@ -34,7 +34,9 @@ class DraftPromotionService:
         # Validate draft
         if not draft.is_draft:
             raise ValueError("Event is not a draft")
-        
+
+        cls._validate_bot_draft(draft)
+
         if draft.draft_expires_at and draft.draft_expires_at < timezone.now():
             raise ValueError("Draft has expired")
         
@@ -112,6 +114,18 @@ class DraftPromotionService:
         #     raise ValueError("Only the delegating physician can approve this draft")
     
     @classmethod
+    def _validate_bot_draft(cls, draft):
+        """Accept bot-created drafts only (design D3).
+
+        Human drafts go through the supervision flow; promoting or rejecting
+        them here would change authorship or delete supervised content.
+        """
+        if not draft.draft_created_by_bot:
+            raise ValueError(
+                "Only bot-created drafts can be promoted or rejected here"
+            )
+
+    @classmethod
     def _clean_description(cls, draft):
         """Generate a clean description without bot references."""
         event_type = draft.get_event_type_display()
@@ -131,7 +145,9 @@ class DraftPromotionService:
         """
         if not draft.is_draft:
             raise ValueError("Event is not a draft")
-        
+
+        cls._validate_bot_draft(draft)
+
         logger.info(
             f"Draft rejected: id={draft.id}, "
             f"rejected_by={rejecting_user.email}, "

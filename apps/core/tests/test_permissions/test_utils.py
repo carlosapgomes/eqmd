@@ -87,6 +87,11 @@ class SimplifiedPermissionUtilsTestCase(TestCase):
         self.event = Mock()
         self.event.created_by = self.doctor
         self.event.created_at = timezone.now()
+        # Definitive event: the predicate reads the finalization metadata.
+        self.event.draft_promoted_at = None
+        self.event.draft_promoted_by = None
+        self.event.finalized_at = None
+        self.event.finalized_by = None
 
     def test_all_roles_can_access_all_patients(self):
         """All roles can access all patients regardless of status"""

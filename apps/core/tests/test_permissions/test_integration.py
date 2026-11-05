@@ -124,6 +124,11 @@ class SimplifiedPermissionSystemIntegrationTest(TestCase):
         self.event.id = 'event-1'
         self.event.created_by = self.doctor
         self.event.created_at = timezone.now() - timedelta(hours=1)
+        # Definitive event: the predicate reads the finalization metadata.
+        self.event.draft_promoted_at = None
+        self.event.draft_promoted_by = None
+        self.event.finalized_at = None
+        self.event.finalized_by = None
     
     def test_complete_patient_access_workflow_simplified(self):
         """Test complete patient access workflow for simplified system."""

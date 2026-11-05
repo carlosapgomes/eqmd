@@ -264,6 +264,64 @@ class Event(SoftDeleteModel):
     def __str__(self):
         return str(self.description)
 
+    def save(self, *args, **kwargs):
+        """Persist the student draft backstop before saving (design D1).
+
+        A student author acting as a student never persists a definitive
+        record; the force also covers restricted ``update_fields`` saves by
+        adding ``is_draft`` to the persisted field set.
+        """
+        update_fields = kwargs.get("update_fields")
+        if update_fields is None and len(args) > 3:
+            update_fields = args[3]
+
+        if self._needs_student_draft_force():
+            self.is_draft = True
+            if update_fields:
+                update_fields = sorted(set(update_fields) | {"is_draft"})
+                if len(args) > 3:
+                    args = args[:3] + (update_fields,) + args[4:]
+                else:
+                    kwargs["update_fields"] = update_fields
+
+        return super().save(*args, **kwargs)
+
+    def _needs_student_draft_force(self) -> bool:
+        """Whether authorship and acting user are both students (design D1)."""
+        from apps.core.permissions.utils import is_student
+
+        if self.created_by_id is None or self.updated_by_id is None:
+            return False
+
+        return is_student(self.created_by) and is_student(self.updated_by)
+
+    def finalizer(self):
+        """Return the user recorded as finalizing this event (design D6)."""
+        from apps.core.permissions.utils import event_finalizer
+
+        return event_finalizer(self)
+
+    def finalization_anchor(self):
+        """Return the timestamp anchoring the 24h owner window (design D6)."""
+        from apps.core.permissions.utils import event_finalization_anchor
+
+        return event_finalization_anchor(self)
+
+    def was_ever_finalized(self) -> bool:
+        """Whether retained finalization metadata proves a past finalization.
+
+        Reverts retain the finalization pair (design D5), so the signal
+        survives the draft state without depending on history (design D7).
+        """
+        return any(
+            (
+                self.draft_promoted_at is not None,
+                self.draft_promoted_by_id is not None,
+                getattr(self, "finalized_at", None) is not None,
+                getattr(self, "finalized_by_id", None) is not None,
+            )
+        )
+
     def delete(
         self,
         using: str | None = None,
