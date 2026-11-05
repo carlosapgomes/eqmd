@@ -20,7 +20,8 @@ Extends the base event card and adds PhotoSeries-specific content and actions
         <span class="visually-hidden">Visualizar</span>
     </a>
     
-    <!-- Download Button -->
+    <!-- Download Button - export actions are suppressed on drafts (design D10) -->
+    {% if not event.is_draft %}
     <a href="{% url 'mediafiles:photoseries_download' event.pk %}" 
        class="btn btn-outline-success btn-sm"
        aria-label="Baixar série de fotos"
@@ -30,9 +31,21 @@ Extends the base event card and adds PhotoSeries-specific content and actions
         <i class="bi bi-download" aria-hidden="true"></i>
         <span class="visually-hidden">Baixar</span>
     </a>
+    {% endif %}
     
-    <!-- Edit Button -->
+    <!-- Edit or Review Button - drafts are approved from the edit screen -->
     {% if event_data.can_edit %}
+        {% if event.is_draft %}
+        <a href="{% url 'mediafiles:photoseries_update' event.pk %}" 
+           class="btn btn-outline-warning btn-sm"
+           aria-label="Revisar rascunho da série de fotos"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Revisar rascunho">
+            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+            <span class="visually-hidden">Revisar</span>
+        </a>
+        {% else %}
         <a href="{% url 'mediafiles:photoseries_update' event.pk %}" 
            class="btn btn-outline-warning btn-sm"
            aria-label="Editar série de fotos"
@@ -41,6 +54,20 @@ Extends the base event card and adds PhotoSeries-specific content and actions
            title="Editar série">
             <i class="bi bi-pencil" aria-hidden="true"></i>
             <span class="visually-hidden">Editar</span>
+        </a>
+        {% endif %}
+    {% endif %}
+
+    <!-- Delete Button -->
+    {% if event_data.can_delete %}
+        <a href="{% url 'mediafiles:photoseries_delete' event.pk %}" 
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir série de fotos"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Excluir série de fotos">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span class="visually-hidden">Excluir</span>
         </a>
     {% endif %}
 </div>

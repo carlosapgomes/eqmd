@@ -243,9 +243,11 @@
                 <button type="submit" name="save_draft" class="btn btn-warning">
                   <i class="bi bi-pencil-square"></i> Salvar Rascunho
                 </button>
+                {% if can_finalize %}
                 <button type="submit" name="save_final" class="btn btn-success">
                   <i class="bi bi-check-circle"></i> Salvar Definitivo
                 </button>
+                {% endif %}
               {% else %}
                 <button type="submit" name="update_final" class="btn btn-primary">
                   <i class="bi bi-pencil-square"></i> Atualizar

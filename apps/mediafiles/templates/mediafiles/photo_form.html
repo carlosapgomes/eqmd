@@ -81,6 +81,22 @@
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data" id="photoForm" novalidate>
                     {% csrf_token %}
+
+                    {% if is_draft_media %}
+                    <div class="alert alert-warning" role="alert" data-draft-supervision-banner="1">
+                        <h6 class="alert-heading mb-2">
+                            <i class="bi bi-shield-check me-2"></i>
+                            Rascunho aguardando aprovação
+                        </h6>
+                        <p class="mb-0 small">
+                            Este conteúdo permanece como rascunho e não integra o prontuário
+                            definitivo até que um médico ou residente use
+                            <strong>Salvar definitivo</strong>. A aprovação registra o aprovador
+                            responsável e mantém o autor original do registro. O arquivo da foto
+                            não é substituído nesta tela.
+                        </p>
+                    </div>
+                    {% endif %}
                     
                     <!-- Image Upload Section (only for new photos) -->
                     {% if not form.instance.pk %}
@@ -241,6 +257,18 @@
                             <i class="bi bi-arrow-left me-1"></i>
                             Cancelar
                         </a>
+                        {% if is_draft_media %}
+                        <button type="submit" name="save_draft" value="1" class="btn btn-outline-medical-primary" id="submitBtn">
+                            <i class="bi bi-save me-1"></i>
+                            Salvar rascunho
+                        </button>
+                        {% if can_finalize %}
+                        <button type="submit" name="save_final" value="1" class="btn btn-medical-primary ms-2">
+                            <i class="bi bi-check-circle me-1"></i>
+                            Salvar definitivo
+                        </button>
+                        {% endif %}
+                        {% else %}
                         <button type="submit" class="btn btn-medical-primary" id="submitBtn">
                             <i class="bi bi-{% if form.instance.pk %}check-circle{% else %}plus-circle{% endif %} me-1"></i>
                             {% if form.instance.pk %}
@@ -249,6 +277,7 @@
                                 Criar Foto
                             {% endif %}
                         </button>
+                        {% endif %}
                     </div>
                 </form>
             </div>

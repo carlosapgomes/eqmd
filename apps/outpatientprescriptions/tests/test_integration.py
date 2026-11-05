@@ -207,7 +207,7 @@ class OutpatientPrescriptionWorkflowTest(TestCase):
 
         # Step 4: Update prescription status to finalized
         with patch(
-            "apps.core.permissions.decorators.can_edit_event", return_value=True
+            "apps.outpatientprescriptions.views.can_edit_event", return_value=True
         ):
             # Get existing items for formset
             items = prescription.items.all().order_by("order")
@@ -386,7 +386,7 @@ class OutpatientPrescriptionWorkflowTest(TestCase):
 
         # Step 3: Test permission restrictions
         with patch(
-            "apps.core.permissions.decorators.can_edit_event", return_value=False
+            "apps.outpatientprescriptions.views.can_edit_event", return_value=False
         ):
             response = self.client.get(
                 reverse(
@@ -394,7 +394,7 @@ class OutpatientPrescriptionWorkflowTest(TestCase):
                     kwargs={"pk": prescription.pk},
                 )
             )
-            # can_edit_event_required denies with HttpResponseForbidden (403).
+            # The update view denies through can_edit_event (403).
             self.assertEqual(response.status_code, 403)
 
     def test_prescription_search_and_filtering_workflow(self):

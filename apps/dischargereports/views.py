@@ -3,7 +3,8 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, HttpResponseRedirect
+from django.db.models import Q
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -17,6 +18,8 @@ from django.views.generic import (
 )
 
 from apps.core.permissions import can_access_patient
+from apps.core.permissions.utils import is_doctor_or_resident
+from apps.events.services.event_deletion import delete_event_record
 
 from .forms import (
     DischargeReportCreateForm,
@@ -31,6 +34,35 @@ from .services.permissions import (
 )
 
 logger = logging.getLogger(__name__)
+
+FINALIZE_DENIED_MESSAGE = (
+    "Apenas médicos e residentes podem finalizar ou reverter relatórios de alta."
+)
+
+
+def _deny_non_physician_finalization(user, *, finalizing=False, reverting=False):
+    """Server gate for finalize and revert-finalize actions (design D5).
+
+    Template hiding is role-aware UX only; this predicate is the authorization
+    boundary on the create, duplicate and update paths.
+    """
+    if not (finalizing or reverting):
+        return
+    if not is_doctor_or_resident(user):
+        raise PermissionDenied(FINALIZE_DENIED_MESSAGE)
+
+
+def visible_discharge_reports():
+    """Active discharge reports with human drafts, bot drafts excluded (D3).
+
+    The default manager hides every draft, and bot drafts must stay on their
+    own botauth promotion path, so the queryset re-admits human drafts only.
+    """
+    return (
+        DischargeReport.objects.with_drafts()
+        .filter(Q(is_draft=False) | Q(draft_created_by_bot=""))
+        .select_related("patient", "created_by", "updated_by")
+    )
 
 
 class DischargeReportListView(LoginRequiredMixin, ListView):
@@ -59,9 +91,8 @@ class DischargeReportDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "report"
 
     def get_queryset(self):
-        return DischargeReport.objects.with_drafts().select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve finals and human drafts (bot drafts stay 404)."""
+        return visible_discharge_reports()
 
     def get_context_data(self, **kwargs):
         """Add additional context data including permission checks."""
@@ -111,6 +142,7 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
         """Add patient context."""
         context = super().get_context_data(**kwargs)
         context["patient"] = self.patient
+        context["can_finalize"] = is_doctor_or_resident(self.request.user)
         return context
 
     def get_success_url(self):
@@ -122,6 +154,9 @@ class DischargeReportCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """Handle successful form submission."""
+        _deny_non_physician_finalization(
+            self.request.user, finalizing="save_final" in self.request.POST
+        )
         is_draft = "save_final" not in self.request.POST
 
         # Handle draft vs final save
@@ -164,7 +199,7 @@ class DischargeReportDuplicateView(LoginRequiredMixin, CreateView):
     def dispatch(self, request, *args, **kwargs):
         """Load the source report and check patient access (design D1)."""
         self.source = get_object_or_404(
-            DischargeReport.objects.with_drafts(), pk=kwargs["pk"]
+            visible_discharge_reports(), pk=kwargs["pk"]
         )
         self.patient = self.source.patient
 
@@ -187,6 +222,7 @@ class DischargeReportDuplicateView(LoginRequiredMixin, CreateView):
         context = super().get_context_data(**kwargs)
         context["patient"] = self.patient
         context["source"] = self.source
+        context["can_finalize"] = is_doctor_or_resident(self.request.user)
         return context
 
     def get_success_url(self):
@@ -198,6 +234,9 @@ class DischargeReportDuplicateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """Create the copy with the create-form draft/final semantics (D2)."""
+        _deny_non_physician_finalization(
+            self.request.user, finalizing="save_final" in self.request.POST
+        )
         is_draft = "save_final" not in self.request.POST
 
         if is_draft:
@@ -236,9 +275,8 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
     context_object_name = "report"
 
     def get_queryset(self):
-        return DischargeReport.objects.with_drafts().select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve finals and human drafts (bot drafts stay 404)."""
+        return visible_discharge_reports()
 
     def get_object(self):
         obj = super().get_object()
@@ -258,7 +296,9 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["can_finalize"] = self.object.is_draft
+        context["can_finalize"] = self.object.is_draft and is_doctor_or_resident(
+            self.request.user
+        )
         return context
 
     def get_success_url(self):
@@ -293,6 +333,14 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
         action = self._submitted_action()
         is_draft = self.was_draft
 
+        # Finalizing a draft and reverting a final are physician acts; the
+        # template hides the buttons, this gate enforces it (design D5).
+        _deny_non_physician_finalization(
+            self.request.user,
+            finalizing=action == "save_final" and is_draft,
+            reverting=action == "save_draft" and not is_draft,
+        )
+
         if action is None:
             # Restore the persisted status the bound form copied onto the
             # shared instance, so the error page keeps the matching actions.
@@ -315,15 +363,14 @@ class DischargeReportUpdateView(LoginRequiredMixin, UpdateView):
         self.object = form.save(commit=False)
         self.object.updated_by = self.request.user
         self.object.is_draft = is_draft
-        if is_draft:
-            # Reverting to draft clears the anchor, so the next finalize starts
-            # a fresh 24h correction window (design D6).
-            self.object.finalized_at = None
-            self.object.finalized_by = None
-        elif finalized_now:
+        if finalized_now:
             # Draft-to-final flip anchors the correction window at finalization.
             self.object.finalized_at = timezone.now()
             self.object.finalized_by = self.request.user
+        # Reverting to draft RETAINS ``finalized_at/by`` untouched as the
+        # last-finalization record (design D5): the loaded values pass through
+        # ``form.save`` unchanged, so ever-finalized state stays derivable for
+        # the deletion method (design D7) without new persistence.
         self.object.save()
 
         return HttpResponseRedirect(self.get_success_url())
@@ -337,9 +384,8 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
     context_object_name = "report"
 
     def get_queryset(self):
-        return DischargeReport.objects.with_drafts().select_related(
-            "patient", "created_by", "updated_by"
-        )
+        """Resolve finals and human drafts (bot drafts stay 404)."""
+        return visible_discharge_reports()
 
     def get_object(self):
         obj = super().get_object()
@@ -354,9 +400,17 @@ class DischargeReportDeleteView(LoginRequiredMixin, DeleteView):
             kwargs={"patient_id": self.object.patient.pk},
         )
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, "Relatório de alta excluído com sucesso.")
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        """Delete by the path the record's history requires (design D7).
+
+        ``BaseDeleteView.form_valid`` would call ``self.object.delete()``
+        directly, so the method decision lives here instead: never-finalized
+        drafts lose the row, finals and reverted drafts keep soft-delete.
+        """
+        report = self.object
+        delete_event_record(report, deleted_by=self.request.user)
+        messages.success(self.request, "Relatório de alta excluído com sucesso.")
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class DischargeReportPDFView(LoginRequiredMixin, View):
@@ -364,9 +418,7 @@ class DischargeReportPDFView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         try:
-            report = get_object_or_404(
-                DischargeReport.objects.with_drafts(), pk=kwargs["pk"]
-            )
+            report = get_object_or_404(DischargeReport.objects, pk=kwargs["pk"])
 
             if not can_access_patient(request.user, report.patient):
                 raise PermissionDenied(
@@ -384,7 +436,7 @@ class DischargeReportPDFView(LoginRequiredMixin, View):
             filename = f"Relatorio_Alta_{safe_name}_{date_str}.pdf"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
-        except PermissionDenied:
+        except (PermissionDenied, Http404):
             raise
         except Exception as exc:
             logger.exception("Discharge report PDF generation error")

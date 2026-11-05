@@ -203,10 +203,17 @@ class PDFFormSubmission(Event):
         return reverse('pdf_forms:submission_detail', kwargs={'pk': self.pk})
 
     def get_edit_url(self):
-        """Return the edit URL for this PDF form submission."""
+        """Return the in-place update URL for this PDF form submission.
+
+        Drafts and definitive submissions share the same target (design D8):
+        the APAC capture update flow for APAC templates, the dynamic form
+        update flow for everything else.
+        """
         from django.urls import reverse
-        # PDF submissions are read-only, so edit URL points to detail view
-        return reverse('pdf_forms:submission_detail', kwargs={'pk': self.pk})
+
+        if self.form_template.form_type == 'APAC':
+            return reverse('pdf_forms:apac_submission_update', kwargs={'pk': self.pk})
+        return reverse('pdf_forms:submission_update', kwargs={'pk': self.pk})
 
     class Meta:
         verbose_name = "Submissão de Formulário PDF"

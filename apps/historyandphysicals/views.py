@@ -5,9 +5,11 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
+from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.utils.decorators import method_decorator
@@ -27,9 +29,28 @@ from apps.core.permissions import (
     can_edit_event,
     can_delete_event,
 )
+from apps.core.permissions.utils import is_doctor_or_resident
 from apps.patients.models import Patient
 from apps.sample_content.models import SampleContent
 from apps.events.models import Event
+from apps.events.services.event_deletion import delete_event_record
+
+DRAFT_APPROVAL_DENIED_MESSAGE = (
+    "Apenas médicos e residentes podem aprovar rascunhos de anamnese e exame físico."
+)
+
+
+def visible_history_and_physicals():
+    """Active H&Ps with human drafts, bot drafts excluded (design D3).
+
+    The default manager hides every draft, and bot drafts must stay on their
+    own botauth promotion path, so the queryset re-admits human drafts only.
+    """
+    return (
+        HistoryAndPhysical.objects.with_drafts()
+        .filter(Q(is_draft=False) | Q(draft_created_by_bot=""))
+        .select_related("patient", "created_by", "updated_by")
+    )
 
 
 class HistoryAndPhysicalListView(LoginRequiredMixin, ListView):
@@ -183,8 +204,8 @@ class HistoryAndPhysicalDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
         return obj
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return HistoryAndPhysical.objects.select_related("patient", "created_by", "updated_by")
+        """Resolve definitive records and human drafts (bot drafts stay 404)."""
+        return visible_history_and_physicals()
 
     def get_context_data(self, **kwargs):
         """Add additional context data including permission checks."""
@@ -209,9 +230,16 @@ class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, 
     template_name = "historyandphysicals/historyandphysical_update_form.html"
     permission_required = "events.change_event"
 
+    def get_queryset(self):
+        """Resolve definitive records and human drafts (bot drafts stay 404)."""
+        return visible_history_and_physicals()
+
     def get_object(self, queryset=None):
         """Get object and check patient access and edit permissions."""
         obj = super().get_object(queryset)
+        # Capture the persisted status so the action dispatch and the
+        # re-rendered form agree with the stored record.
+        self.was_draft = obj.is_draft
 
         # Check if user can access this patient
         if not can_access_patient(self.request.user, obj.patient):
@@ -243,28 +271,70 @@ class HistoryAndPhysicalUpdateView(LoginRequiredMixin, PermissionRequiredMixin, 
         )
 
     def get_context_data(self, **kwargs):
-        """Add sample content context."""
+        """Add sample content and draft action context."""
         context = super().get_context_data(**kwargs)
         context["sample_contents"] = SampleContent.objects.filter(
             event_type=Event.HISTORY_AND_PHYSICAL_EVENT
         ).order_by("title")
+        context["is_draft_note"] = self.object.is_draft
+        context["can_finalize"] = self.object.is_draft and is_doctor_or_resident(
+            self.request.user
+        )
         return context
 
+    def _submitted_action(self):
+        """Return the update action submitted by the form buttons."""
+        if "save_final" in self.request.POST:
+            return "save_final"
+        if "save_draft" in self.request.POST:
+            return "save_draft"
+        return None
+
     def form_valid(self, form):
-        """Handle successful form submission with patient access validation."""
+        """Persist the record, keeping or promoting the supervised draft state."""
         # Check if user can access the selected patient (in case patient was changed)
         if not can_access_patient(self.request.user, form.instance.patient):
-            from django.core.exceptions import PermissionDenied
-
             raise PermissionDenied(
                 "You don't have permission to create history and physicals for this patient"
             )
 
-        messages.success(
-            self.request,
-            f"Anamnese e Exame Físico para {form.instance.patient.name} atualizada com sucesso.",
-        )
-        return super().form_valid(form)
+        action = self._submitted_action()
+        was_draft = self.was_draft
+
+        # Approving a draft is a physician act; the update template hides the
+        # button, this gate enforces it (design D5).
+        if (
+            was_draft
+            and action == "save_final"
+            and not is_doctor_or_resident(self.request.user)
+        ):
+            raise PermissionDenied(DRAFT_APPROVAL_DENIED_MESSAGE)
+
+        self.object = form.save(commit=False)
+        self.object.updated_by = self.request.user
+
+        if was_draft and action == "save_final":
+            self.object.is_draft = False
+            self.object.draft_promoted_at = timezone.now()
+            self.object.draft_promoted_by = self.request.user
+            messages.success(
+                self.request,
+                f"Anamnese e Exame Físico para {self.object.patient.name} aprovada e registrada no prontuário.",
+            )
+        elif was_draft:
+            self.object.is_draft = True
+            messages.success(
+                self.request,
+                f"Rascunho da anamnese e exame físico para {self.object.patient.name} atualizado.",
+            )
+        else:
+            messages.success(
+                self.request,
+                f"Anamnese e Exame Físico para {self.object.patient.name} atualizada com sucesso.",
+            )
+
+        self.object.save()
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class HistoryAndPhysicalDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
@@ -306,15 +376,22 @@ class HistoryAndPhysicalDeleteView(LoginRequiredMixin, PermissionRequiredMixin, 
         return obj
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
-        return HistoryAndPhysical.objects.select_related("patient", "created_by")
+        """Resolve definitive records and human drafts (bot drafts stay 404)."""
+        return visible_history_and_physicals()
 
-    def delete(self, request, *args, **kwargs):
-        """Handle successful deletion."""
-        historyandphysical = self.get_object()
-        patient_name = historyandphysical.patient.name
-        messages.success(request, f"Anamnese e Exame Físico para {patient_name} excluída com sucesso.")
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        """Delete the record, hard-deleting never-finalized drafts (design D7).
+
+        ``BaseDeleteView.form_valid`` would call ``self.object.delete()``
+        directly, so the method decision lives here instead.
+        """
+        historyandphysical = self.object
+        delete_event_record(historyandphysical, deleted_by=self.request.user)
+        messages.success(
+            self.request,
+            f"Anamnese e Exame Físico para {historyandphysical.patient.name} excluída com sucesso.",
+        )
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class PatientHistoryAndPhysicalCreateView(
@@ -462,7 +539,11 @@ class HistoryAndPhysicalPrintView(LoginRequiredMixin, DetailView):
         return obj
 
     def get_queryset(self):
-        """Optimize queryset with related objects."""
+        """Serve final records only (design D10).
+
+        The default manager excludes every draft, so printing a human or bot
+        draft is a 404 for every user while finals render as before.
+        """
         return HistoryAndPhysical.objects.select_related("patient", "created_by", "updated_by")
 
 

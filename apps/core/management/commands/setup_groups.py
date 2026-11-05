@@ -122,7 +122,7 @@ class Command(BaseCommand):
         self._set_group_permissions(group, permissions, 'Physiotherapists')
 
     def _create_student_group(self):
-        """Create Students group with read-only clinical permissions."""
+        """Create Students group with supervised clinical permissions."""
         group, created = Group.objects.get_or_create(name='Students')
         
         if created:
@@ -359,6 +359,15 @@ class Command(BaseCommand):
         # View-only events
         permissions.append('events.view_event')
         
+        # Coarse event permissions: the create/update/delete views keep their
+        # PermissionRequiredMixin gates, while the supervised-draft restriction
+        # lives in the draft predicates and the model backstop (design D2).
+        permissions.extend([
+            'events.add_event',
+            'events.change_event',
+            'events.delete_event',
+        ])
+        
         # View all medical documentation (learning purposes)
         permissions.extend(self._get_view_permissions('dailynotes'))
         permissions.extend(self._get_view_permissions('historyandphysicals'))
@@ -386,7 +395,9 @@ class Command(BaseCommand):
         # Template viewing
         permissions.append('sample_content.view_samplecontent')
         
-        # NO daily notes creation (too formal for students)
+        # NO daily notes creation (too formal for students); every other
+        # user-authored type is reachable through the coarse event permissions
+        # above and persists as a supervised draft until a physician approves.
         # NO form submissions (not essential for supervised learning)
         # NO patient management or status changes
         # NO personal data editing

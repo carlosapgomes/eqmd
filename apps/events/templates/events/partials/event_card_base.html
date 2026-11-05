@@ -5,7 +5,7 @@ Parameters expected:
 - event_data: Object containing event, can_edit, can_delete, excerpt
 {% endcomment %}
 
-<article class="timeline-card card card-medical mb-3" 
+<article class="timeline-card card card-medical mb-3{% if event.is_draft %} timeline-card-draft{% endif %}" 
          role="article"
          aria-labelledby="event-{{ event.pk }}-title"
          aria-describedby="event-{{ event.pk }}-content">
@@ -28,6 +28,15 @@ Parameters expected:
                     <i class="bi bi-clock me-1" aria-hidden="true"></i>
                     {{ event.event_datetime|date:"d/m/Y H:i" }}
                 </time>
+                {% if event.is_draft %}
+                    <span class="badge bg-warning text-dark draft-badge ms-2"
+                          data-bs-toggle="tooltip"
+                          data-bs-placement="top"
+                          title="Rascunho aguardando aprovação">
+                        <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>
+                        Rascunho · há {{ event.created_at|timesince }}
+                    </span>
+                {% endif %}
             </div>
             
             <!-- Event Actions - This block can be overridden by specific event types -->

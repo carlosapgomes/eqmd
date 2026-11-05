@@ -62,6 +62,20 @@
       </div>
       {% endif %}
 
+      {% if is_update and is_draft_submission %}
+      <div class="alert alert-warning" role="alert" data-draft-supervision-banner="1">
+        <h6 class="alert-heading mb-2">
+          <i class="bi bi-shield-check me-2"></i>
+          Aguardando aprovação
+        </h6>
+        <p class="mb-0 small">
+          Este formulário permanece como rascunho supervisionado até que um
+          médico ou residente use <strong>Salvar definitivo</strong>. A
+          aprovação registra o aprovador responsável e mantém o autor original.
+        </p>
+      </div>
+      {% endif %}
+
       <!-- Form -->
       <div class="card">
         <div class="card-body">
@@ -138,10 +152,32 @@
                 Voltar
               </a>
 
+              {% if is_update %}
+                {% if is_draft_submission %}
+                <div>
+                  <button type="submit" name="save_draft" value="1" class="btn btn-outline-primary">
+                    <i class="bi bi-save me-1"></i>
+                    Salvar rascunho
+                  </button>
+                  {% if can_finalize %}
+                  <button type="submit" name="save_final" value="1" class="btn btn-primary ms-2">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Salvar definitivo
+                  </button>
+                  {% endif %}
+                </div>
+                {% else %}
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-check-circle me-1"></i>
+                  Salvar alterações
+                </button>
+                {% endif %}
+              {% else %}
               <button type="submit" class="btn btn-primary">
                 <i class="bi bi-file-earmark-pdf me-1"></i>
                 Gerar PDF
               </button>
+              {% endif %}
             </div>
           </form>
         </div>

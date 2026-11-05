@@ -113,8 +113,46 @@ class SetupGroupsCommandTestCase(TestCase):
                 f'Medical Doctors has admin permission: {perm_codename}'
             )
 
+    def test_setup_groups_grants_students_event_draft_permissions(self):
+        """Students hold the coarse event permissions the draft flow needs.
+
+        Fine-grained restriction comes from the draft predicates plus the
+        model backstop (design D2), so the guard here is that the grant stays
+        scoped to Students: no other profession group gains event write
+        access.
+        """
+        call_command('setup_groups', verbosity=0)
+
+        students = Group.objects.get(name='Students')
+        student_event_codenames = set(
+            students.permissions.filter(
+                content_type__app_label='events'
+            ).values_list('codename', flat=True)
+        )
+        self.assertTrue(
+            {'view_event', 'add_event', 'change_event', 'delete_event'}.issubset(
+                student_event_codenames
+            ),
+            f'Students missing event permissions: {student_event_codenames}',
+        )
+
+        # The grant stays scoped to Students: every other profession group
+        # keeps its pre-existing event permissions.
+        def event_codenames(group_name):
+            return set(
+                Group.objects.get(name=group_name).permissions.filter(
+                    content_type__app_label='events'
+                ).values_list('codename', flat=True)
+            )
+
+        self.assertEqual(
+            event_codenames('Nurses'), {'view_event', 'add_event', 'change_event'}
+        )
+        self.assertEqual(event_codenames('Physiotherapists'), {'view_event'})
+        self.assertEqual(event_codenames('User Managers'), set())
+
     def test_setup_groups_assigns_limited_permissions_to_students(self):
-        """Test that Students group gets only view permissions"""
+        """Test that Students group gets view permissions plus supervised writes"""
         call_command('setup_groups', verbosity=0)
         
         students_group = Group.objects.get(name='Students')
@@ -129,12 +167,17 @@ class SetupGroupsCommandTestCase(TestCase):
         
         # All student permissions should be view permissions, except the
         # documented supervised-learning additions (simple notes and wound/
-        # surgery media documentation) granted by setup_groups.
+        # surgery media documentation) and the coarse event write permissions
+        # that make the supervised draft lifecycle reachable (design D2; the
+        # draft predicates and the model backstop carry the real restriction).
         allowed_non_view = {
             'add_simplenote',
             'change_simplenote',
             'add_photo',
             'add_photoseries',
+            'add_event',
+            'change_event',
+            'delete_event',
         }
         student_permissions = students_group.permissions.all()
         for permission in student_permissions:

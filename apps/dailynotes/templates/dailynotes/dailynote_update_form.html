@@ -115,6 +115,21 @@
 
     <form method="post" class="needs-validation" novalidate>
       {% csrf_token %}
+
+      {% if is_draft_note %}
+      <div class="alert alert-warning" role="alert" data-draft-supervision-banner="1">
+        <h6 class="alert-heading mb-2">
+          <i class="bi bi-shield-check me-2"></i>
+          Rascunho aguardando aprovação
+        </h6>
+        <p class="mb-0 small">
+          Este conteúdo permanece como rascunho e não integra o prontuário
+          definitivo até que um médico ou residente use
+          <strong>Salvar definitivo</strong>. A aprovação registra o aprovador
+          responsável e mantém o autor original do registro.
+        </p>
+      </div>
+      {% endif %}
       
       <!-- Basic Information Section -->
       <div class="form-section">
@@ -186,10 +201,23 @@
       <!-- Form Actions -->
       <div class="d-flex justify-content-between flex-wrap gap-2">
         <div>
+          {% if is_draft_note %}
+          <button type="submit" name="save_draft" value="1" class="btn btn-outline-medical-primary">
+            <i class="bi bi-save me-1"></i>
+            Salvar rascunho
+          </button>
+          {% if can_finalize %}
+          <button type="submit" name="save_final" value="1" class="btn btn-medical-primary ms-2">
+            <i class="bi bi-check-circle me-1"></i>
+            Salvar definitivo
+          </button>
+          {% endif %}
+          {% else %}
           <button type="submit" class="btn btn-medical-primary">
             <i class="bi bi-check-circle me-1"></i>
             Atualizar Evolução
           </button>
+          {% endif %}
           <a href="{% url 'patients:patient_events_timeline' patient_id=form.instance.patient.pk %}" class="btn btn-outline-secondary ms-2">
             <i class="bi bi-x-circle me-1"></i>
             Cancelar

@@ -21,6 +21,7 @@ class DischargeReportViewTests(TestCase):
             password="testpass123",
             password_change_required=False,
             terms_accepted=True,
+            profession_type=User.MEDICAL_DOCTOR,
         )
         self.patient = Patient.objects.create(
             name="Test Patient",
@@ -378,6 +379,7 @@ class DischargeReportViewTests(TestCase):
             inpatient_medical_history="Test medical history",
             discharge_status="Test status",
             discharge_recommendations="Test recommendations",
+            is_draft=False,
             created_by=self.user,
             updated_by=self.user,
         )
@@ -523,9 +525,10 @@ class DischargeReportViewTests(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
 
-        # Verify report is deleted (soft delete): hidden from the default
-        # manager, retained in all_objects for audit/retention.
+        # A never-finalized draft is hard-deleted (design D7): gone from the
+        # default manager and from all_objects alike.
         self.assertFalse(DischargeReport.objects.filter(pk=report.pk).exists())
+        self.assertFalse(DischargeReport.all_objects.filter(pk=report.pk).exists())
 
 
 class DischargeReportCollaborativeDraftViewTests(TestCase):
@@ -992,8 +995,9 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
         final.refresh_from_db()
         self.assertEqual(final.finalized_at, anchored_at)
 
-    def test_reverting_to_draft_clears_the_anchor_and_reanchors_next_finalize(self):
-        """R3: save_draft clears both fields; the next finalize re-anchors."""
+    def test_reverting_retains_the_anchor_and_reanchors_next_finalize(self):
+        """S7 R3: save_draft retains both fields as the last-finalization
+        record; the next finalize re-anchors the window."""
         first_anchor = timezone.now() - timedelta(hours=1)
         final = self._create_report(is_draft=False, finalized_at=first_anchor)
         self.client.login(username="windowviewfinalizer", password="testpass123")
@@ -1005,8 +1009,8 @@ class DischargeReportFinalizationWindowViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         final.refresh_from_db()
         self.assertTrue(final.is_draft)
-        self.assertIsNone(final.finalized_at)
-        self.assertIsNone(final.finalized_by)
+        self.assertEqual(final.finalized_at, first_anchor)
+        self.assertEqual(final.finalized_by, self.finalizer)
         self.assertTrue(final.can_be_edited_by_user(self.creator))
 
         response = self.client.post(

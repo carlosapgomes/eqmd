@@ -304,10 +304,12 @@
             <i class="bi bi-pencil-square me-1"></i>
             Salvar Rascunho
           </button>
+          {% if can_finalize %}
           <button type="submit" name="save_final" class="btn btn-success ms-2">
             <i class="bi bi-check-circle me-1"></i>
             Salvar Definitivo
           </button>
+          {% endif %}
         </div>
         <div>
           <a href="{% url 'patients:patient_events_timeline' patient_id=patient.pk %}" class="btn btn-outline-secondary">

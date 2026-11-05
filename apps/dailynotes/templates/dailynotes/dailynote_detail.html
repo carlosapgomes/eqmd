@@ -116,6 +116,7 @@
   </h1>
   <div class="btn-toolbar mb-2 mb-md-0">
     <div class="btn-group me-2">
+      {% if not dailynote.is_draft %}
       <button type="button"
               class="btn btn-outline-danger pdf-download-btn"
               data-pdf-url="{% url 'dailynotes:dailynote_pdf' pk=dailynote.pk %}"
@@ -129,6 +130,7 @@
           Gerando...
         </span>
       </button>
+      {% endif %}
       <button type="button"
               class="btn btn-outline-secondary btn-sm copy-content-btn"
               title="Copiar conteúdo para área de transferência"
@@ -144,7 +146,7 @@
       Editar
     </a>
     {% endif %}
-    {% if perms.events.add_event %}
+    {% if perms.events.add_event and not dailynote.is_draft %}
     <a href="{% url 'dailynotes:dailynote_duplicate' pk=dailynote.pk %}" class="btn btn-outline-primary btn-sm me-2" title="Duplicar evolução">
       <i class="bi bi-files me-1"></i>
       Duplicar
@@ -174,6 +176,7 @@
   <div class="mobile-action-buttons">
     <div class="btn-group-vertical btn-group-sm d-grid gap-1">
       <div class="btn-group" role="group">
+        {% if not dailynote.is_draft %}
         <button type="button"
                 class="btn btn-outline-danger pdf-download-btn"
                 data-pdf-url="{% url 'dailynotes:dailynote_pdf' pk=dailynote.pk %}"
@@ -187,6 +190,7 @@
             Gerando...
           </span>
         </button>
+        {% endif %}
         <button type="button"
                 class="btn btn-outline-secondary copy-content-btn"
                 title="Copiar conteúdo"
@@ -203,7 +207,7 @@
           Editar
         </a>
         {% endif %}
-        {% if perms.events.add_event %}
+        {% if perms.events.add_event and not dailynote.is_draft %}
         <a href="{% url 'dailynotes:dailynote_duplicate' pk=dailynote.pk %}" class="btn btn-outline-primary" title="Duplicar">
           <i class="bi bi-files me-1"></i>
           Duplicar

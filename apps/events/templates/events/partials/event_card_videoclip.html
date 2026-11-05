@@ -12,7 +12,8 @@ Parameters expected:
 
 {% block event_actions %}
 <div class="btn-group btn-group-sm">
-    <!-- Download Button -->
+    <!-- Download Button - export actions are suppressed on drafts (design D10) -->
+    {% if not event.is_draft %}
     <a href="{% url 'mediafiles:videoclip_download' event.pk %}" 
        class="btn btn-outline-secondary btn-sm"
        aria-label="Baixar vídeo original"
@@ -23,6 +24,7 @@ Parameters expected:
         <i class="bi bi-download" aria-hidden="true"></i>
         <span class="visually-hidden">Baixar</span>
     </a>
+    {% endif %}
     
     <!-- Detail View Button -->
     <a href="{{ event.get_absolute_url }}" 
@@ -35,8 +37,19 @@ Parameters expected:
         <span class="visually-hidden">Detalhes</span>
     </a>
     
-    <!-- Edit Button -->
+    <!-- Edit or Review Button - drafts are approved from the edit screen -->
     {% if event_data.can_edit %}
+        {% if event.is_draft %}
+        <a href="{{ event.get_edit_url }}" 
+           class="btn btn-outline-warning btn-sm"
+           aria-label="Revisar rascunho do vídeo"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Revisar rascunho">
+            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+            <span class="visually-hidden">Revisar</span>
+        </a>
+        {% else %}
         <a href="{{ event.get_edit_url }}" 
            class="btn btn-outline-warning btn-sm"
            aria-label="Editar vídeo"
@@ -45,6 +58,20 @@ Parameters expected:
            title="Editar vídeo">
             <i class="bi bi-pencil" aria-hidden="true"></i>
             <span class="visually-hidden">Editar</span>
+        </a>
+        {% endif %}
+    {% endif %}
+
+    <!-- Delete Button -->
+    {% if event_data.can_delete %}
+        <a href="{% url 'mediafiles:videoclip_delete' event.pk %}" 
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir vídeo"
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Excluir vídeo">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span class="visually-hidden">Excluir</span>
         </a>
     {% endif %}
 </div>
@@ -152,11 +179,13 @@ Parameters expected:
                 <video class="w-100" controls preload="metadata" id="modalVideo{{ event.pk }}">
                     <source src="{% url 'mediafiles:videoclip_stream' event.pk %}" type="video/mp4">
                     <p class="text-center p-4">
-                        Seu navegador não suporta o elemento de vídeo. 
+                        Seu navegador não suporta o elemento de vídeo.
+                        {% if not event.is_draft %}
                         <a href="{% url 'mediafiles:videoclip_download' event.pk %}" class="btn btn-primary btn-sm ms-2">
                             <i class="bi bi-download me-1"></i>
                             Baixar Vídeo
                         </a>
+                        {% endif %}
                     </p>
                 </video>
             </div>
@@ -173,10 +202,12 @@ Parameters expected:
                         {% endif %}
                     </small>
                 </div>
+                {% if not event.is_draft %}
                 <a href="{% url 'mediafiles:videoclip_download' event.pk %}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-download me-1"></i>
                     Download
                 </a>
+                {% endif %}
                 <a href="{{ event.get_absolute_url }}" class="btn btn-primary btn-sm">
                     <i class="bi bi-info-circle me-1"></i>
                     Ver Detalhes

@@ -3,7 +3,9 @@
 
 {% comment %}
 SimpleNote-specific event card template
-Extends the base event card and adds the duplicate button for SimpleNote events
+Extends the base event card and adds the duplicate, review and delete actions
+for SimpleNote events. Approval never happens here: drafts are approved with
+``Salvar definitivo`` inside the edit screen (design D8).
 {% endcomment %}
 
 {% block event_actions %}
@@ -31,8 +33,8 @@ Extends the base event card and adds the duplicate button for SimpleNote events
         <span class="visually-hidden">Copiar</span>
     </button>
     
-    <!-- Duplicate Button - Only for users with add_event permission -->
-    {% if perms.events.add_event %}
+    <!-- Duplicate Button - definitive notes only (drafts cannot seed a copy) -->
+    {% if perms.events.add_event and not event.is_draft %}
         <a href="{% url 'simplenotes:simplenote_duplicate' pk=event.pk %}" 
            class="btn btn-outline-info btn-sm"
            aria-label="Duplicar nota"
@@ -44,16 +46,44 @@ Extends the base event card and adds the duplicate button for SimpleNote events
         </a>
     {% endif %}
     
-    <!-- Edit Button -->
-    {% if event_data.can_edit %}
-        <a href="{{ event.get_edit_url }}" 
-           class="btn btn-outline-warning btn-sm"
-           aria-label="Editar nota"
+    {% if event.is_draft %}
+        <!-- Review Button - drafts are approved from the edit screen -->
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}" 
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Revisar rascunho da nota"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Revisar rascunho">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span class="visually-hidden">Revisar</span>
+            </a>
+        {% endif %}
+    {% else %}
+        <!-- Edit Button -->
+        {% if event_data.can_edit %}
+            <a href="{{ event.get_edit_url }}" 
+               class="btn btn-outline-warning btn-sm"
+               aria-label="Editar nota"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Editar nota">
+                <i class="bi bi-pencil" aria-hidden="true"></i>
+                <span class="visually-hidden">Editar</span>
+            </a>
+        {% endif %}
+    {% endif %}
+
+    <!-- Delete Button -->
+    {% if event_data.can_delete %}
+        <a href="{% url 'simplenotes:simplenote_delete' pk=event.pk %}" 
+           class="btn btn-outline-danger btn-sm"
+           aria-label="Excluir nota"
            data-bs-toggle="tooltip" 
            data-bs-placement="top" 
-           title="Editar nota">
-            <i class="bi bi-pencil" aria-hidden="true"></i>
-            <span class="visually-hidden">Editar</span>
+           title="Excluir nota">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span class="visually-hidden">Excluir</span>
         </a>
     {% endif %}
 </div>
