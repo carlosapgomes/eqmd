@@ -5,6 +5,10 @@ import { probePatient } from './lib/probe.mjs';
 import { createSimplenote, noteCard } from './lib/actions.mjs';
 
 const NOTE_TEXT = 'VERIFICACAO J3 nota do aluno criada pelo fluxo real da timeline.';
+// scaffold.py gives the two verify accounts these display names, so the card
+// attribution lines can be asserted verbatim (no username fallback involved).
+const STUDENT_DISPLAY_NAME = 'Estudante Verificação';
+const DOCTOR_DISPLAY_NAME = 'Médico Verificação';
 
 await runScript('j3-doctor-finalizes-draft', 'Doctor opens a student draft and approves it', async (j) => {
   const patient = j.scaffold.patient;
@@ -31,7 +35,10 @@ await runScript('j3-doctor-finalizes-draft', 'Doctor opens a student draft and a
     j.assert((await card.locator('a[aria-label="Revisar rascunho da nota"]').count()) === 1, 'Revisar link missing');
     j.assert((await card.getByText('Salvar definitivo').count()) === 0, 'timeline must not offer one-click approval');
     j.assert((await card.getByText('Aprovar', { exact: true }).count()) === 0, 'timeline must not offer Aprovar');
-    return [`badge="${badgeText}"`, 'tint class timeline-card-draft present', 'Revisar link present', 'no one-click approve'];
+    j.assert((await card.locator('.event-approver').count()) === 0, 'a draft card must not show an approver');
+    const creator = (await card.locator('.event-creator').innerText()).trim();
+    j.assert(creator === STUDENT_DISPLAY_NAME, `draft creator mismatch: ${creator}`);
+    return [`badge="${badgeText}"`, 'tint class timeline-card-draft present', 'Revisar link present', 'no one-click approve', `creator="${creator}"`, 'no approver line on a draft'];
   });
 
   await j.step('student review screen offers drafts only (no Salvar definitivo)', async () => {
@@ -75,6 +82,31 @@ await runScript('j3-doctor-finalizes-draft', 'Doctor opens a student draft and a
     );
     await j.shot(page, 'timeline-after-approval');
     return [`alerts=${JSON.stringify(alerts.map((a) => a.trim()).filter(Boolean))}`];
+  });
+
+  await j.step('approved card shows creator and approver display names', async () => {
+    const page = j.page('doctor');
+    const card = noteCard(page);
+    j.assert((await card.count()) === 1, 'expected exactly one note card after approval');
+    const creator = (await card.locator('.event-creator').innerText()).trim();
+    j.assert(creator === STUDENT_DISPLAY_NAME, `creator line mismatch: ${creator}`);
+    const approver = (await card.locator('.event-approver').innerText()).trim();
+    j.assert(approver === DOCTOR_DISPLAY_NAME, `approver line mismatch: ${approver}`);
+    const footer = (await card.locator('footer').innerText()).replace(/\s+/g, ' ').trim();
+    j.assert(
+      footer.includes(`Criado por ${STUDENT_DISPLAY_NAME}`),
+      `creator attribution missing from the footer: ${footer}`,
+    );
+    j.assert(
+      footer.includes(`Aprovado por ${DOCTOR_DISPLAY_NAME} em `),
+      `approver attribution missing from the footer: ${footer}`,
+    );
+    j.assert(
+      /Aprovado por M\u00e9dico Verifica\u00e7\u00e3o em \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/.test(footer),
+      `approver attribution must carry the approval date: ${footer}`,
+    );
+    await j.shot(page, 'timeline-approved-card-attribution');
+    return [`creator="${creator}"`, `approver="${approver}"`, `footer="${footer}"`];
   });
 
   await j.step('database records author kept and approver set', async () => {

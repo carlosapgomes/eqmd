@@ -123,7 +123,16 @@ class PatientEventsTimelineView(ListView):
         queryset = (
             self._get_timeline_base_queryset()
             .select_subclasses()
-            .select_related("created_by", "updated_by", "patient")
+            .select_related(
+                "created_by",
+                "updated_by",
+                "patient",
+                # Approver FKs rendered in the card footer: the promotion
+                # metadata and the discharge report's own finalizer, so a
+                # promoted card costs no extra query.
+                "draft_promoted_by",
+                "dischargereport__finalized_by",
+            )
             .prefetch_related("created_by__groups")
             .order_by("-created_at")
         )

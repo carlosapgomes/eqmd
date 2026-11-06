@@ -15,6 +15,12 @@ its original author intact and the approver recorded.
 - The author does not change: `created_by` stays the student.
 - The approver is recorded: `draft_promoted_by` = the doctor,
   `draft_promoted_at` = the approval timestamp.
+- The approved card footer names both people: `Criado por Estudante
+  Verificação` (the student created it) and `Aprovado por Médico Verificação em
+  <data>` (the doctor approved it). Those exact strings come from the scaffold
+  display names, so the assertions never depend on a username fallback.
+- A draft card shows no approver line at all, even while the approval metadata
+  is still empty.
 - The student is locked out afterwards: the edit URL returns `403` with the
   `Acesso Negado / Permissão Insuficiente` page, because post-finalization
   ownership belongs to the finalizer within the 24h window.
@@ -28,7 +34,9 @@ its original author intact and the approver recorded.
 3. As a doctor, open the same patient timeline and click **Revisar** on the same
    card. The same page now also offers **Salvar definitivo**.
 4. Click **Salvar definitivo**: you return to the timeline, the card is a normal
-   final event, and the success message confirms the approval.
+   final event, and the success message confirms the approval. The card footer
+   now reads `Criado por Estudante Verificação` and `Aprovado por Médico
+   Verificação em <data> <hora>`.
 5. Back as the student, reload the edit URL — `403`.
 
 ## Driving it with the Playwright harness
@@ -42,21 +50,26 @@ npm run verify -- --journeys j3     # recommended proof journey
 What the script does (`journey-j3-finalize.mjs`):
 
 1. Student session creates the note from the timeline dropdown and asserts the
-   badge/tint/`Revisar` state (the J1 checkpoints).
+   badge/tint/`Revisar` state (the J1 checkpoints), plus a footer that names the
+   student and carries no approver line.
 2. Student review screen: banner present, exactly one submit button
    (`Salvar rascunho`), no `button[name="save_final"]`.
 3. Doctor session: same card is badged, `Revisar` opens the same URL, banner
    present, `Salvar definitivo` present.
 4. Doctor clicks `save_final`; timeline has no `.draft-badge`, no
    `timeline-card-draft`, no `Revisar`, and shows the approval message.
-5. Read-only probe: one `Nota/Observação` row with `is_draft=false`,
+5. The approved card footer is read from the DOM: `.event-creator` is
+   `Estudante Verificação`, `.event-approver` is `Médico Verificação`, and the
+   footer text matches `Aprovado por Médico Verificação em dd/mm/aaaa hh:mm`
+   (screenshot `timeline-approved-card-attribution.png`).
+6. Read-only probe: one `Nota/Observação` row with `is_draft=false`,
    `created_by=verify.student@…`, `draft_promoted_by=verify.doctor@…`,
    `draft_promoted_at` set.
-6. Student re-opens the edit URL and gets `403` with `Acesso Negado` on screen.
+7. Student re-opens the edit URL and gets `403` with `Acesso Negado` on screen.
 
-Evidence: `j3-doctor-finalizes-draft/` (six screenshots including
-`student-403-after-approval.png`, the two context traces, `report.json`) plus
-`db/after-j3-finalize.json`.
+Evidence: `j3-doctor-finalizes-draft/` (seven screenshots including
+`timeline-approved-card-attribution.png`, the two context traces, `report.json`)
+plus `db/after-j3-finalize.json`.
 
 ## Gotchas
 
@@ -74,6 +87,10 @@ Evidence: `j3-doctor-finalizes-draft/` (six screenshots including
 - The success message text is asserted verbatim
   (`aprovada e registrada no prontuário`); if the copy changes, update the
   journey and this page together.
+- The two attribution strings depend on the scaffold display names
+  (`scaffold.py`): "Estudante Verificação" and "Médico Verificação". Without
+  them the footer falls back to the `.invalid` username, which the assertions
+  would reject.
 - The 403 page is the project's own template (`Acesso Negado`,
   `Permissão Insuficiente`), not Django's debug page — `DEBUG` is irrelevant
   here, the status code is what matters.

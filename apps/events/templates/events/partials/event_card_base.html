@@ -83,13 +83,25 @@ Parameters expected:
         <!-- Event Metadata -->
         <footer class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
             {% block event_metadata %}
-            <small class="text-muted">
-                <i class="bi bi-person me-1" aria-hidden="true"></i>
-                <span aria-label="Criado por">{{ event.updated_by.get_full_name }}</span>
-                {% if event.created_by.profession %}
-                    <span aria-label="Profissão">({{ event.updated_by.profession }})</span>
+            <div class="d-flex flex-column">
+                <small class="text-muted">
+                    <i class="bi bi-person me-1" aria-hidden="true"></i>
+                    Criado por <span class="event-creator">{% firstof event.created_by.get_full_name event.created_by.username "usuário removido" %}</span>
+                    {% if event.created_by.profession %}
+                        <span class="event-creator-profession">({{ event.created_by.profession }})</span>
+                    {% endif %}
+                </small>
+                {% if not event.is_draft %}
+                    {% with approver=event.finalizer %}
+                    {% if approver %}
+                        <small class="text-muted mt-1">
+                            <i class="bi bi-patch-check me-1" aria-hidden="true"></i>
+                            Aprovado por <span class="event-approver">{% firstof approver.get_full_name approver.username "usuário removido" %}</span> em <time datetime="{{ event.finalization_anchor|date:'c' }}">{{ event.finalization_anchor|date:"d/m/Y H:i" }}</time>
+                        </small>
+                    {% endif %}
+                    {% endwith %}
                 {% endif %}
-            </small>
+            </div>
             {% if event.updated_at != event.created_at %}
                 <small class="text-muted">
                     <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>
