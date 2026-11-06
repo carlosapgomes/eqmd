@@ -1,0 +1,22 @@
+{
+  "name": "verify-eqmd-harness",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright harness that drives the running EquipeMed dev stack (system Chrome, no browser download).",
+  "type": "module",
+  "scripts": {
+    "doctor": "node doctor.mjs",
+    "setup": "node setup.mjs",
+    "cleanup": "node cleanup.mjs",
+    "journey:j1": "node journey-j1-draft-create.mjs",
+    "journey:j2": "node journey-j2-drafts-only.mjs",
+    "journey:j3": "node journey-j3-finalize.mjs",
+    "journey:j4": "node journey-j4-discharge.mjs",
+    "journey:j5": "node journey-j5-photo-draft.mjs",
+    "journey:j6": "node journey-j6-apac-update.mjs",
+    "verify": "node run.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.65.0"
+  }
+}
