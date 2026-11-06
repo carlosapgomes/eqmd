@@ -200,16 +200,28 @@ Extends the base event card and adds PhotoSeries-specific content and actions
 {% endblock event_content %}
 
 {% block event_metadata %}
-<small class="text-muted">
-    <i class="bi bi-person me-1" aria-hidden="true"></i>
-    <span aria-label="Criado por">{{ event.created_by.get_full_name }}</span>
-    {% if event.created_by.profession %}
-        <span aria-label="Profissão">({{ event.created_by.profession }})</span>
+<div class="d-flex flex-column">
+    <small class="text-muted">
+        <i class="bi bi-person me-1" aria-hidden="true"></i>
+        Criado por <span class="event-creator">{% firstof event.created_by.get_full_name event.created_by.username "usuário removido" %}</span>
+        {% if event.created_by.profession %}
+            <span class="event-creator-profession">({{ event.created_by.profession }})</span>
+        {% endif %}
+        <span class="badge bg-secondary ms-2">
+            {{ event.get_photo_count }} foto{{ event.get_photo_count|pluralize:"s" }}
+        </span>
+    </small>
+    {% if not event.is_draft %}
+        {% with approver=event.finalizer %}
+        {% if approver %}
+            <small class="text-muted mt-1">
+                <i class="bi bi-patch-check me-1" aria-hidden="true"></i>
+                Aprovado por <span class="event-approver">{% firstof approver.get_full_name approver.username "usuário removido" %}</span> em <time datetime="{{ event.finalization_anchor|date:'c' }}">{{ event.finalization_anchor|date:"d/m/Y H:i" }}</time>
+            </small>
+        {% endif %}
+        {% endwith %}
     {% endif %}
-    <span class="badge bg-secondary ms-2">
-        {{ event.get_photo_count }} foto{{ event.get_photo_count|pluralize:"s" }}
-    </span>
-</small>
+</div>
 {% if event.updated_at != event.created_at %}
     <small class="text-muted">
         <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>

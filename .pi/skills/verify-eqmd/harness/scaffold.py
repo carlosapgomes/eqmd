@@ -8,6 +8,8 @@ configured, database reachable). Writes one machine-readable line to stdout:
 Constraints:
 - Creates only disposable scaffolding: two users whose e-mail addresses use the
   reserved ``.invalid`` TLD and one patient named ``VERIFICACAO Skill <run-id>``.
+- The two accounts carry fixed display names ("Estudante Verificação",
+  "Médico Verificação") so the card attribution lines can be asserted verbatim.
 - Idempotent for the users (get_or_create keyed by e-mail), fresh patient per
   run so reruns never share clinical rows.
 - Never adopts an existing patient. If the run's exact name is already taken,
@@ -40,6 +42,14 @@ DOCTOR_EMAIL = os.environ.get(
     "EQMD_VERIFY_DOCTOR_EMAIL", "verify.doctor@eqmd-verify.invalid"
 )
 PATIENT_NAME = os.environ.get("EQMD_VERIFY_PATIENT_NAME", f"VERIFICACAO Skill {RUN_ID}")
+# Fixed display names: the card footer renders names (falling back to the
+# username), so the journeys assert these two strings verbatim instead of the
+# ``.invalid`` e-mail addresses. Users created by an earlier run are refreshed
+# by ``ensure_user`` because it always saves.
+STUDENT_FIRST_NAME = "Estudante"
+STUDENT_LAST_NAME = "Verificação"
+DOCTOR_FIRST_NAME = "Médico"
+DOCTOR_LAST_NAME = "Verificação"
 
 # apps.accounts.models.EqmdCustomUser profession codes.
 STUDENT = 4
@@ -48,13 +58,15 @@ MEDICAL_DOCTOR = 0
 User = get_user_model()
 
 
-def ensure_user(email, profession_type, group_name):
+def ensure_user(email, profession_type, group_name, first_name, last_name):
     """Create or refresh one disposable account and make it login-ready."""
     user, _created = User.objects.get_or_create(
         username=email, defaults={"email": email}
     )
     user.email = email
     user.profession_type = profession_type
+    user.first_name = first_name
+    user.last_name = last_name
     user.is_active = True
     # Both flags default to True/False in ways that redirect the login to
     # /password-change-required/ or /accept-terms/, which would hide every
@@ -121,8 +133,20 @@ def create_patient(name, creator):
 # Checked before any insert: a refused setup must leave the database as it was.
 refuse_if_patient_name_taken(PATIENT_NAME)
 
-student = ensure_user(STUDENT_EMAIL, STUDENT, "Students")
-doctor = ensure_user(DOCTOR_EMAIL, MEDICAL_DOCTOR, "Medical Doctors")
+student = ensure_user(
+    STUDENT_EMAIL,
+    STUDENT,
+    "Students",
+    STUDENT_FIRST_NAME,
+    STUDENT_LAST_NAME,
+)
+doctor = ensure_user(
+    DOCTOR_EMAIL,
+    MEDICAL_DOCTOR,
+    "Medical Doctors",
+    DOCTOR_FIRST_NAME,
+    DOCTOR_LAST_NAME,
+)
 patient = create_patient(PATIENT_NAME, doctor)
 
 payload = {
@@ -131,6 +155,7 @@ payload = {
     "student": {
         "id": student.pk,
         "email": student.email,
+        "display_name": student.get_full_name(),
         "profession_type": student.profession_type,
         "can_add_event": student.has_perm("events.add_event"),
         "can_change_event": student.has_perm("events.change_event"),
@@ -139,6 +164,7 @@ payload = {
     "doctor": {
         "id": doctor.pk,
         "email": doctor.email,
+        "display_name": doctor.get_full_name(),
         "profession_type": doctor.profession_type,
         "can_add_event": doctor.has_perm("events.add_event"),
         "can_change_event": doctor.has_perm("events.change_event"),
