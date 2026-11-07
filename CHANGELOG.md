@@ -6,6 +6,80 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-07
+
+### Added — student draft supervision
+
+- **Supervisão de rascunhos de estudante** (change
+  `add-student-draft-supervision`; S1 `6052532`, S2–S7 `4fe836a`
+  atômicas por design D13): estudantes criam rascunhos supervisionados
+  em todo o app — timeline humana com badge/idade/tinta e filtro de
+  rascunhos, PDF detail legível com negação de output, finalização de
+  alta bloqueada para rascunho pendente, rollout end-to-end para
+  SimpleNote/DailyNote/H&P (incl. negação de PDF/impressão), rascunhos
+  de mídia com limpeza de arquivo em hard delete, receita com
+  finalização ortogonal ao status, consentimento sem arquivos e
+  imutabilidade inclusiva de rascunhos, round trip de update de PDF
+  (hospital + APAC) e verificação de ativação com permissões exatas,
+  auditoria e dry-run de rollback. Núcleo de permissão draft-aware
+  (can_edit/can_delete_event sem limite de 24h para rascunhos
+  humanos, regra pós-final de quatro casos, backstop em
+  `Event.save()`).
+
+### Added — SUS exam request batch (chequinho)
+
+- **Solicitação de exames em lote** (change
+  `exam-request-batch-chequinho`; S1 `098e99f`, S2 `4a9e724`,
+  S3 `602d675`, docs/ADR `5e3f67f`, UX `cb62cca`): página dedicada
+  com campos compartilhados (motivo/data/médico com auto-fill atual)
+  e formset dinâmico de 1–12 exames criando uma
+  `PDFFormSubmission` por exame em transação, todas com o mesmo
+  `batch_id`; supervisão com paridade APAC (rascunho/definitivo);
+  download do lote compondo até **3 vias por folha A4** com linha de
+  corte tracejada (`ceil(N/3)` páginas); ações de lote na timeline e
+  no detalhe com ícone bi-stack padronizado. Guia de fluxo e ADR de
+  impressão 3-up documentados.
+
+### Added — timeline attribution and copy
+
+- **Atribuição de criador/aprovador nos cards** (`0aa7057`, change
+  `add-approval-attribution-display`): rodapé do card renderiza
+  `created_by` (+profissão) com checagem coerente; metadados de
+  aprovação passam a ser exibidos.
+- **Copiar conteúdo do relatório de alta** (`97aeac0`):
+  `DischargeReport.get_copy_text()` exporta texto puro (cabeçalho de
+  especialidade, datas de internação/alta com permanência, 7 seções
+  rotuladas na ordem do PDF, seções vazias omitidas) com botão de
+  clipboard no card da timeline e no detalhe.
+
+### Security — protected media serving
+
+- **Mídia protegida por autenticação** (change
+  `serve-protected-media`, `c106916`): produção (`DEBUG=False`) não
+  tinha rota `/media/` enquanto o nginx faz proxy para o Django —
+  todo `FileField.url` cru retornava 404. Superfícies agora são
+  servidas por views autenticadas: preview de template PDF
+  (`template/<uuid>/preview/`), anexos de termo de consentimento
+  assinado (`attachments/<uuid>/serve/`, `events.view_event` +
+  acesso ao paciente) e previews admin de mídia via
+  `get_thumbnail_url()` do FilePond com reparo mínimo de refs
+  obsoletas.
+
+### Added — deploy and verification tooling
+
+- **Upgrade de produção EON** (`26efbd1`): script `upgrade.sh`
+  (tags resolvidas para digests, backup primeiro, migrate com gate,
+  health check estrito) + runbook de upgrade.
+- **Skill de verificação no navegador** (`93a733f`): harness
+  Playwright + Chrome do sistema (`verify-eqmd`) que dirige a stack
+  dev real para provar comportamento UI/UX ponta a ponta
+  (rascunhos de estudante, aprovação médica, chequinho, alta/APAC).
+
+### Changed — housekeeping
+
+- `.gitignore`: ignora `.pi/subagents/` e versiona config do MCP
+  chrome-devtools (`915635f`).
+
 ## [0.4.1] - 2026-11-03
 
 ### Changed — legal content
