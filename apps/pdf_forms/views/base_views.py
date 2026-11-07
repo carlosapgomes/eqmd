@@ -1,8 +1,10 @@
+import os
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
-from django.http import Http404
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -76,6 +78,36 @@ class PDFFormTemplateListView(LoginRequiredMixin, ListView):
             )
             .order_by("name")
         )
+
+
+class PDFFormTemplatePreviewView(LoginRequiredMixin, View):
+    """Serve a template's blank PDF inline for authenticated users (design D2).
+
+    No ``is_active`` filter: the list shows active templates only, while staff
+    still needs to preview inactive ones from the admin.
+    """
+
+    def get(self, request, pk):
+        template = get_object_or_404(PDFFormTemplate, pk=pk)
+        check_pdf_form_template_access(request.user)
+
+        pdf_file = template.pdf_file
+        if not pdf_file:
+            raise Http404("PDF template has no file")
+
+        try:
+            file_handle = pdf_file.open("rb")
+        except FileNotFoundError as exc:
+            raise Http404("PDF template file not found") from exc
+
+        response = FileResponse(
+            file_handle,
+            content_type="application/pdf",
+            filename=os.path.basename(pdf_file.name),
+            as_attachment=False,
+        )
+        response["Cache-Control"] = "private"
+        return response
 
 
 class PDFFormSelectView(LoginRequiredMixin, View):

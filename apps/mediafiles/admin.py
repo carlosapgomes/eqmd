@@ -143,7 +143,7 @@ class PhotoAdmin(admin.ModelAdmin):
     search_fields = [
         'description',
         'patient__name',
-        'media_file__original_filename',
+        'original_filename',
         'caption',
     ]
 
@@ -170,7 +170,7 @@ class PhotoAdmin(admin.ModelAdmin):
         }),
         ('Photo Details', {
             'fields': (
-                'media_file',
+                'file_id',
                 'caption',
                 'thumbnail_preview_large',
                 'file_info_display',
@@ -187,20 +187,22 @@ class PhotoAdmin(admin.ModelAdmin):
 
     def thumbnail_preview(self, obj):
         """Display small thumbnail in list view."""
-        if obj.media_file and obj.media_file.thumbnail:
+        thumbnail_url = obj.get_thumbnail_url()
+        if thumbnail_url:
             return format_html(
                 '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />',
-                obj.media_file.thumbnail.url
+                thumbnail_url
             )
         return "No thumbnail"
     thumbnail_preview.short_description = "Preview"
 
     def thumbnail_preview_large(self, obj):
         """Display large thumbnail in detail view."""
-        if obj.media_file and obj.media_file.thumbnail:
+        thumbnail_url = obj.get_thumbnail_url()
+        if thumbnail_url:
             return format_html(
                 '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px;" />',
-                obj.media_file.thumbnail.url
+                thumbnail_url
             )
         return "No thumbnail available"
     thumbnail_preview_large.short_description = "Photo Preview"
@@ -215,32 +217,30 @@ class PhotoAdmin(admin.ModelAdmin):
 
     def get_file_info_display(self, obj):
         """Display file information in list view."""
-        if obj.media_file:
-            return f"{obj.media_file.get_display_size()} • {obj.media_file.get_dimensions_display()}"
+        if obj.file_id:
+            return f"{obj.get_display_size()} • {obj.get_dimensions_display()}"
         return "No file"
     get_file_info_display.short_description = "File Info"
 
     def file_info_display(self, obj):
         """Display detailed file information."""
-        if obj.media_file:
+        if obj.file_id:
             return format_html(
                 '''
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
                     <h4 style="margin-top: 0;">File Details</h4>
+                    <p><strong>File ID:</strong> <code>{}</code></p>
                     <p><strong>Original Filename:</strong> {}</p>
                     <p><strong>File Size:</strong> {}</p>
                     <p><strong>Dimensions:</strong> {}</p>
-                    <p><strong>MIME Type:</strong> {}</p>
-                    <p><strong>File Hash:</strong> <code>{}</code></p>
                     <p><strong>Secure URL:</strong> <a href="{}" target="_blank">View File</a></p>
                 </div>
                 ''',
-                obj.media_file.original_filename,
-                obj.media_file.get_display_size(),
-                obj.media_file.get_dimensions_display(),
-                obj.media_file.mime_type,
-                obj.media_file.file_hash[:16] + '...',
-                obj.media_file.get_secure_url(),
+                obj.file_id,
+                obj.original_filename,
+                obj.get_display_size(),
+                obj.get_dimensions_display(),
+                obj.get_secure_url(),
             )
         return "No file information available"
     file_info_display.short_description = "File Information"
@@ -248,7 +248,6 @@ class PhotoAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset for admin list view."""
         return super().get_queryset(request).select_related(
-            'media_file',
             'patient',
             'created_by',
             'updated_by'
@@ -267,16 +266,18 @@ class PhotoSeriesFileInline(admin.TabularInline):
     
     model = PhotoSeriesFile
     extra = 0
-    fields = ['thumbnail_preview', 'media_file', 'order', 'description']
+    fields = ['thumbnail_preview', 'file_id', 'order', 'description']
     readonly_fields = ['thumbnail_preview']
     ordering = ['order']
     
     def thumbnail_preview(self, obj):
-        """Display thumbnail preview for media file."""
-        if obj.media_file and obj.media_file.thumbnail:
+        """Display thumbnail preview for the series file."""
+        # PhotoSeriesFile.get_thumbnail_url() only checks thumbnail_path but
+        # reverses with file_id, so both references must exist before calling it.
+        if obj.file_id and obj.thumbnail_path:
             return format_html(
                 '<img src="{}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" />',
-                obj.media_file.thumbnail.url
+                obj.get_thumbnail_url()
             )
         return "No thumbnail"
     thumbnail_preview.short_description = "Preview"
@@ -346,9 +347,22 @@ class PhotoSeriesAdmin(admin.ModelAdmin):
     
     inlines = [PhotoSeriesFileInline]
     
+    def get_primary_thumbnail_url(self, obj):
+        """Return the primary thumbnail URL, guarding a partial reference.
+
+        Mirrors PhotoSeries.get_primary_thumbnail() (first ``order``-sorted
+        file) but checks both references first: the file getter reverses with
+        file_id whenever thumbnail_path is set, so a thumbnail path without a
+        file ID would raise NoReverseMatch and break the admin page.
+        """
+        first_file = obj.get_photos().first()
+        if first_file and first_file.file_id and first_file.thumbnail_path:
+            return first_file.get_thumbnail_url()
+        return None
+
     def primary_thumbnail_preview(self, obj):
         """Display primary thumbnail in list view."""
-        thumbnail_url = obj.get_primary_thumbnail()
+        thumbnail_url = self.get_primary_thumbnail_url(obj)
         if thumbnail_url:
             return format_html(
                 '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />',
@@ -359,7 +373,7 @@ class PhotoSeriesAdmin(admin.ModelAdmin):
     
     def primary_thumbnail_large(self, obj):
         """Display large primary thumbnail in detail view."""
-        thumbnail_url = obj.get_primary_thumbnail()
+        thumbnail_url = self.get_primary_thumbnail_url(obj)
         if thumbnail_url:
             return format_html(
                 '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px;" />',
@@ -388,8 +402,6 @@ class PhotoSeriesAdmin(admin.ModelAdmin):
             'patient',
             'created_by',
             'updated_by'
-        ).prefetch_related(
-            'photoseriesfile_set__media_file'
         )
     
     def save_model(self, request, obj, form, change):

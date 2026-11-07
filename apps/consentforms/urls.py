@@ -12,4 +12,5 @@ urlpatterns = [
     path("<uuid:pk>/attachments/zip/", views.ConsentFormAttachmentsZipView.as_view(), name="consentform_attachments_zip"),
     path("<uuid:pk>/pdf/", views.ConsentFormPDFView.as_view(), name="consentform_pdf"),
     path("attachments/<uuid:pk>/delete/", views.ConsentAttachmentDeleteView.as_view(), name="consentattachment_delete"),
+    path("attachments/<uuid:pk>/serve/", views.ConsentAttachmentServeView.as_view(), name="consentattachment_serve"),
 ]

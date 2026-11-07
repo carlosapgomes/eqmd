@@ -1,12 +1,13 @@
 import io
 import logging
+import mimetypes
 import zipfile
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -352,6 +353,44 @@ class ConsentFormAttachmentsZipView(LoginRequiredMixin, PermissionRequiredMixin,
         response["Content-Disposition"] = (
             f'attachment; filename="termo-assinado-{safe_patient}-{date_str}.zip"'
         )
+        return response
+
+
+class ConsentAttachmentServeView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Serve a consent scan inline for users with patient access (design D3).
+
+    The lookup reuses ``visible_consent_forms()`` so visibility matches the
+    detail/update pages: definitive forms and human drafts serve, while bot
+    drafts and soft-deleted parents are 404.
+    """
+
+    permission_required = "events.view_event"
+
+    def get(self, request, *args, **kwargs):
+        attachment = get_object_or_404(
+            ConsentAttachment,
+            pk=kwargs["pk"],
+            consent_form__in=visible_consent_forms(),
+        )
+        if not can_access_patient(request.user, attachment.consent_form.patient):
+            raise PermissionDenied("You don't have permission to access this patient")
+
+        try:
+            file_handle = attachment.file.open("rb")
+        except FileNotFoundError as exc:
+            raise Http404("Attachment file not found") from exc
+
+        response = FileResponse(
+            file_handle,
+            content_type=(
+                attachment.mime_type
+                or mimetypes.guess_type(attachment.file.name)[0]
+                or "application/octet-stream"
+            ),
+            filename=attachment.original_filename,
+            as_attachment=False,
+        )
+        response["Cache-Control"] = "private"
         return response
 
 

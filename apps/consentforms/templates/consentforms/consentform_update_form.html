@@ -137,12 +137,12 @@
                     {% else %}
                       <i class="bi bi-image text-primary me-1"></i>
                     {% endif %}
-                    <a href="{{ attachment.file.url }}" target="_blank" rel="noopener">
+                    <a href="{% url 'consentforms:consentattachment_serve' attachment.pk %}" target="_blank" rel="noopener">
                       {{ attachment.original_filename }}
                     </a>
                   </p>
                   {% if attachment.file_type == 'image' %}
-                    <img src="{{ attachment.file.url }}" alt="{{ attachment.original_filename }}" class="img-fluid rounded" style="max-height: 200px;">
+                    <img src="{% url 'consentforms:consentattachment_serve' attachment.pk %}" alt="{{ attachment.original_filename }}" class="img-fluid rounded" style="max-height: 200px;">
                   {% endif %}
                 </div>
                 <form method="post" action="{% url 'consentforms:consentattachment_delete' attachment.pk %}">

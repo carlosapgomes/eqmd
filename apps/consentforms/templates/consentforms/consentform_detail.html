@@ -102,7 +102,7 @@
                 {% else %}
                   <i class="bi bi-image me-1 text-primary"></i>
                 {% endif %}
-                <a href="{{ attachment.file.url }}" target="_blank" rel="noopener">
+                <a href="{% url 'consentforms:consentattachment_serve' attachment.pk %}" target="_blank" rel="noopener">
                   {{ attachment.original_filename }}
                 </a>
               </li>

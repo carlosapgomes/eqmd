@@ -85,7 +85,7 @@ class PDFFormsURLTests(TestCase):
     def test_urlpatterns_count(self):
         """Test that all expected URL patterns are present."""
         urlpatterns = urls.urlpatterns
-        self.assertEqual(len(urlpatterns), 11)
+        self.assertEqual(len(urlpatterns), 12)
 
     def test_urlpatterns_names(self):
         """Test that all URL patterns have names."""

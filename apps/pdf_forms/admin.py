@@ -2,6 +2,7 @@ import json
 
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.forms import ClearableFileInput
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import path, reverse
@@ -11,6 +12,34 @@ from django.utils.safestring import mark_safe
 
 from .models import PDFFormSubmission, PDFFormTemplate
 from .services.field_mapping import DataFieldMapper
+
+
+class TemplatePreviewLink:
+    """File value whose ``url`` resolves to the authenticated preview route.
+
+    ``ClearableFileInput`` renders ``value.url`` for the existing-file link, so
+    swapping only that attribute reroutes the link without touching the stored
+    field (design D2).
+    """
+
+    def __init__(self, file_field, url):
+        self._file_field = file_field
+        self.url = url
+
+    def __str__(self):
+        return str(self._file_field)
+
+
+class TemplatePreviewFileInput(ClearableFileInput):
+    """Existing-file link for templates points at ``template_preview``."""
+
+    def format_value(self, value):
+        instance = getattr(value, "instance", None)
+        if instance is None or not instance.pk:
+            return super().format_value(value)
+        return TemplatePreviewLink(
+            value, reverse("pdf_forms:template_preview", kwargs={"pk": instance.pk})
+        )
 
 
 @admin.register(PDFFormTemplate)
@@ -296,11 +325,17 @@ class PDFFormTemplateAdmin(admin.ModelAdmin):
             if not is_valid:
                 raise ValidationError("; ".join(errors))
 
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == "pdf_file":
+            kwargs.setdefault("widget", TemplatePreviewFileInput)
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
     @admin.display(description="PDF Preview")
     def pdf_preview(self, obj):
         if obj.pdf_file:
             return format_html(
-                '<a href="{}" target="_blank">View PDF</a>', obj.pdf_file.url
+                '<a href="{}" target="_blank">View PDF</a>',
+                reverse("pdf_forms:template_preview", kwargs={"pk": obj.pk}),
             )
         return "No PDF"
 

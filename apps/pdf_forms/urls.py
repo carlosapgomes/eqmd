@@ -7,6 +7,7 @@ app_name = 'pdf_forms'
 urlpatterns = [
     # Template management
     path('templates/', views.PDFFormTemplateListView.as_view(), name='template_list'),
+    path('template/<uuid:pk>/preview/', views.PDFFormTemplatePreviewView.as_view(), name='template_preview'),
 
     # Form workflow (hospital forms)
     path('select/<uuid:patient_id>/', views.PDFFormSelectView.as_view(), name='form_select'),
