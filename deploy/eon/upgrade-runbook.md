@@ -39,6 +39,9 @@ export EQMD_APP_DIR=<diretorio-de-implantacao>
 Tags são **resolvidas para digest** antes de qualquer mudança (a
 resolução aparece no gate e fica registrada em `tag-resolved.txt`);
 o compose sempre recebe o **digest imutável**, nunca a tag mutável.
+O script aceita a grafia com ou sem `v` (`v0.5.0` ou `0.5.0`): o CI
+publica ambas a partir da adição de `v{{version}}` ao workflow — as
+imagens anteriores a `v0.5.0` só existem sem o prefixo.
 
 O script executa, em ordem: lock exclusivo por implantação → checagem
 de coerência dos digests (todos os serviços iguais) → preflight

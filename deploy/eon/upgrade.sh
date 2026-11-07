@@ -39,10 +39,24 @@ case "$NEW_IMAGE" in
   *)
     TAG_INPUT="$NEW_IMAGE"
     echo "== resolvendo tag $TAG_INPUT -> digest =="
-    NEW_DIGEST="$(docker manifest inspect -v "$IMAGE_REPO:$TAG_INPUT" 2>/dev/null \
-      | grep -m1 '"digest"' | sed 's/.*"digest": "\([^"]*\)".*/\1/')"
-    [[ "$NEW_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] \
-      || fail "nao consegui resolver $IMAGE_REPO:$TAG_INPUT para um digest (tag existe?)"
+    # CI publica tags semver SEM o 'v' (docker/metadata-action type=semver);
+    # tentamos a grafia recebida e, para vX.Y.Z, tambem a sem prefixo.
+    # O '|| true' evita que pipefail+set -e encerrem o script em silencio
+    # antes do fail() reportar o problema.
+    RESOLVED_TAG=""
+    for t in "$TAG_INPUT" "${TAG_INPUT#v}"; do
+      NEW_DIGEST="$(docker manifest inspect -v "$IMAGE_REPO:$t" 2>/dev/null \
+        | grep -m1 '"digest"' | sed 's/.*"digest": "\([^"]*\)".*/\1/' || true)"
+      if [[ "$NEW_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+        RESOLVED_TAG="$t"
+        break
+      fi
+      NEW_DIGEST=""
+    done
+    if [[ -z "$RESOLVED_TAG" ]]; then
+      fail "nao consegui resolver $IMAGE_REPO:$TAG_INPUT (nem ${TAG_INPUT#v}) para um digest (tag existe?)"
+    fi
+    TAG_INPUT="$RESOLVED_TAG"
     echo "   $IMAGE_REPO:$TAG_INPUT -> $NEW_DIGEST" ;;
 esac
 [ "$APP_DIR" = "/" ] && fail "EQMD_APP_DIR invalido"
