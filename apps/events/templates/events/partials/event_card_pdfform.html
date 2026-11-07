@@ -50,6 +50,17 @@
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         </span>
     </button>
+
+    {% if event_data.batch_info %}
+    <a href="{% url 'pdf_forms:exam_batch_download' batch_id=event_data.batch_info.batch_id %}"
+       class="btn btn-outline-danger btn-sm"
+       aria-label="Imprimir os {{ event_data.batch_info.count }} exames do lote em um único PDF"
+       data-bs-toggle="tooltip"
+       data-bs-placement="top"
+       title="Imprimir os {{ event_data.batch_info.count }} exames juntos">
+        <i class="bi bi-stack" aria-hidden="true"></i>
+    </a>
+    {% endif %}
     {% endif %}
 
     {% if event_data.can_duplicate_pdf_submission and not event.is_draft %}

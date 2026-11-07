@@ -1,0 +1,225 @@
+{% extends "pdf_forms/base.html" %}
+{% load static %}
+
+{% block page_title %}Solicitação de Exames em Lote - {{ patient.name }}{% endblock %}
+
+{% block app_content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'apps.patients:patient_events_timeline' patient_id=patient.id %}">
+        <i class="bi bi-clock-history me-1"></i>
+        Timeline do Paciente
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'pdf_forms:form_select' patient.id %}">
+        Formulários PDF
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      Solicitação de Exames em Lote
+    </li>
+  </ol>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Patient header -->
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-stack me-2"></i>
+            Solicitação de Exames em Lote - {{ patient.name }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-0">
+            Preencha o motivo, a data e o médico uma vez e adicione de 1 a {{ max_items }} exames.
+            Cada exame gera uma solicitação individual no mesmo lote.
+          </p>
+        </div>
+      </div>
+
+      <!-- Batch form -->
+      <div class="card">
+        <div class="card-body">
+          <form method="post" id="exam-batch-form">
+            {% csrf_token %}
+
+            {% if shared_form.non_field_errors %}
+            <div class="alert alert-danger">{{ shared_form.non_field_errors }}</div>
+            {% endif %}
+            {% if formset.non_form_errors %}
+            <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+            {% endif %}
+
+            <!-- Shared fields -->
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <i class="bi bi-clipboard2-data me-2"></i>
+                Dados compartilhados do lote
+              </div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <label for="{{ shared_form.requestReason.id_for_label }}" class="form-label">
+                      {{ shared_form.requestReason.label }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    {{ shared_form.requestReason }}
+                    {% if shared_form.requestReason.errors %}
+                    <div class="text-danger small">{{ shared_form.requestReason.errors }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <label for="{{ shared_form.currentDate.id_for_label }}" class="form-label">
+                      {{ shared_form.currentDate.label }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    {{ shared_form.currentDate }}
+                    {% if shared_form.currentDate.errors %}
+                    <div class="text-danger small">{{ shared_form.currentDate.errors }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-md-5">
+                    <label for="{{ shared_form.doctor.id_for_label }}" class="form-label">
+                      {{ shared_form.doctor.label }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    {{ shared_form.doctor }}
+                    {% if shared_form.doctor.errors %}
+                    <div class="text-danger small">{{ shared_form.doctor.errors }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-md-3">
+                    <label for="{{ shared_form.doctorRegistrationNumber.id_for_label }}" class="form-label">
+                      {{ shared_form.doctorRegistrationNumber.label }}
+                    </label>
+                    {{ shared_form.doctorRegistrationNumber }}
+                    {% if shared_form.doctorRegistrationNumber.errors %}
+                    <div class="text-danger small">{{ shared_form.doctorRegistrationNumber.errors }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Exam rows -->
+            <div class="card mb-3">
+              <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <span>
+                  <i class="bi bi-journal-medical me-2"></i>
+                  Exames do lote
+                </span>
+                <button type="button" class="btn btn-outline-success btn-sm" id="add-exam-row">
+                  <i class="bi bi-plus-circle me-1"></i>
+                  Adicionar exame
+                </button>
+              </div>
+              <div class="card-body">
+                {{ formset.management_form }}
+                <div id="exam-rows">
+                  {% for form in formset %}
+                  <div class="row exam-row mb-2">
+                    <div class="col-md-8">
+                      <label for="{{ form.examRequested.id_for_label }}" class="form-label">
+                        {{ form.examRequested.label }}
+                        <span class="text-danger">*</span>
+                      </label>
+                      {{ form.examRequested }}
+                      {% if form.examRequested.errors %}
+                      <div class="text-danger small">{{ form.examRequested.errors }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                      <label for="{{ form.examCode.id_for_label }}" class="form-label">
+                        {{ form.examCode.label }}
+                      </label>
+                      {{ form.examCode }}
+                      {% if form.examCode.errors %}
+                      <div class="text-danger small">{{ form.examCode.errors }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div id="exam-empty-form" class="d-none">
+                  <div class="row exam-row mb-2">
+                    <div class="col-md-8">
+                      <label class="form-label">
+                        {{ formset.empty_form.examRequested.label }}
+                        <span class="text-danger">*</span>
+                      </label>
+                      {{ formset.empty_form.examRequested }}
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">
+                        {{ formset.empty_form.examCode.label }}
+                      </label>
+                      {{ formset.empty_form.examCode }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="row">
+              <div class="col-12">
+                <hr>
+                <div class="d-flex justify-content-between">
+                  <a href="{% url 'pdf_forms:form_select' patient.id %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Cancelar
+                  </a>
+                  <div>
+                    <button type="submit" name="save_draft" value="1" class="btn btn-outline-success">
+                      <i class="bi bi-save me-1"></i>
+                      Salvar rascunho
+                    </button>
+                    {% if can_finalize %}
+                    <button type="submit" name="save_final" value="1" class="btn btn-success ms-2">
+                      <i class="bi bi-check-circle me-1"></i>
+                      Salvar lote definitivo
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var maxItems = {{ max_items }};
+    var totalInput = document.getElementById('id_exams-TOTAL_FORMS');
+    var rowsContainer = document.getElementById('exam-rows');
+    var emptyTemplate = document.getElementById('exam-empty-form').innerHTML;
+    var addButton = document.getElementById('add-exam-row');
+
+    addButton.addEventListener('click', function() {
+        var total = parseInt(totalInput.value, 10) || 0;
+        if (total >= maxItems) {
+            alert('O lote comporta no máximo ' + maxItems + ' exames.');
+            return;
+        }
+        var html = emptyTemplate.replace(/__prefix__/g, total);
+        rowsContainer.insertAdjacentHTML('beforeend', html);
+        totalInput.value = total + 1;
+    });
+});
+</script>
+{% endblock %}

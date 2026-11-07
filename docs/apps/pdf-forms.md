@@ -1,6 +1,7 @@
 # PDF Forms App - Implementation Guide
 
-**Hospital-specific PDF form overlay functionality with dynamic form generation**
+Hospital-specific PDF form overlay functionality with dynamic form
+generation
 
 ## Overview
 
@@ -13,14 +14,22 @@
 
 ## Key Features
 
-- **Manual Field Configuration**: Coordinate-based positioning using centimeter measurements for precise PDF overlay
-- **Dynamic Forms**: Generate Django forms from PDF template field mappings with support for text, choice, boolean, date, and textarea fields
-- **On-Demand PDF Generation**: PDFs generated dynamically during downloads using ReportLab and PyPDF2 for optimal storage efficiency
-- **Data-Only Storage**: Only form submission data stored in database, achieving 95%+ storage reduction compared to file-based approach
-- **Event Integration**: PDF submissions appear in patient timeline with generate-and-download capabilities
-- **Hospital Configuration**: Enable/disable per hospital installation with environment variable control
-- **Security**: Comprehensive permission checks, data validation, and secure PDF generation
-- **Universal PDF Support**: Works with any PDF format including scanned documents and legacy hospital forms
+- **Manual Field Configuration**: Coordinate-based positioning using
+  centimeter measurements for precise PDF overlay
+- **Dynamic Forms**: Generate Django forms from PDF template field mappings
+  with support for text, choice, boolean, date, and textarea fields
+- **On-Demand PDF Generation**: PDFs generated dynamically during downloads
+  using ReportLab and PyPDF2 for optimal storage efficiency
+- **Data-Only Storage**: Only form submission data stored in database,
+  achieving 95%+ storage reduction compared to file-based approach
+- **Event Integration**: PDF submissions appear in patient timeline with
+  generate-and-download capabilities
+- **Hospital Configuration**: Enable/disable per hospital installation with
+  environment variable control
+- **Security**: Comprehensive permission checks, data validation, and secure
+  PDF generation
+- **Universal PDF Support**: Works with any PDF format including scanned
+  documents and legacy hospital forms
 
 ## Field Configuration Structure
 
@@ -28,7 +37,7 @@ The system supports two configuration formats:
 
 ### 1. Section-Based Configuration (Recommended)
 
-**NEW: Organize form fields into collapsible sections for better UX**
+NEW: Organize form fields into collapsible sections for better UX
 
 ```json
 {
@@ -203,7 +212,7 @@ Backward-compatible keys:
 
 ## Section-Based Form Organization
 
-**NEW: Enhanced UX with collapsible accordion sections**
+NEW: Enhanced UX with collapsible accordion sections
 
 ### Features
 
@@ -352,9 +361,9 @@ sectioned_config = SectionUtils.migrate_unsectioned_form(legacy_config)
 - **Optional sections**: `collapsed: true` (initially hidden)
 - **Reference sections**: `collapsed: true` (rarely modified)
 
-### Troubleshooting
+### Section Troubleshooting
 
-#### Common Issues
+#### Common Section Issues
 
 **Section Not Displaying**:
 
@@ -383,23 +392,34 @@ sectioned_config = SectionUtils.migrate_unsectioned_form(legacy_config)
 ## Implementation Benefits
 
 - **Storage Efficiency**: 95%+ reduction in storage usage through data-only approach
-- **Reliability**: Works with any PDF format - scanned, image-based, or digitally created
-- **Precision**: Exact positioning using centimeter coordinates for predictable results
-- **Hospital-Friendly**: Perfect for legacy hospital forms that are often scanned documents
-- **User Control**: Complete control over field positioning, formatting, and appearance
-- **No Dependency Issues**: Doesn't rely on PDF form field detection or specific PDF structures
-- **Professional Output**: ReportLab integration provides professional-grade PDF generation
-- **Template Flexibility**: Can update PDF templates without affecting existing form data
-- **Simplified Deployment**: No file migration between environments, only database backup needed
+- **Reliability**: Works with any PDF format - scanned, image-based, or
+  digitally created
+- **Precision**: Exact positioning using centimeter coordinates for
+  predictable results
+- **Hospital-Friendly**: Perfect for legacy hospital forms that are often
+  scanned documents
+- **User Control**: Complete control over field positioning, formatting,
+  and appearance
+- **No Dependency Issues**: Doesn't rely on PDF form field detection or
+  specific PDF structures
+- **Professional Output**: ReportLab integration provides
+  professional-grade PDF generation
+- **Template Flexibility**: Can update PDF templates without affecting
+  existing form data
+- **Simplified Deployment**: No file migration between environments, only
+  database backup needed
 
 ## Visual Field Configuration Interface
 
-**NEW: Drag-and-drop visual PDF field configurator for admin users**
+NEW: Drag-and-drop visual PDF field configurator for admin users
 
 - **Visual PDF Preview**: PDF-to-image conversion with interactive overlay editing
-- **Drag-and-Drop Fields**: Click to add fields, drag to position, real-time coordinate calculation
-- **Property Panels**: User-friendly forms for field configuration (type, label, validation)
-- **Automatic JSON Generation**: Converts visual layout to coordinate-based JSON configuration
+- **Drag-and-Drop Fields**: Click to add fields, drag to position,
+  real-time coordinate calculation
+- **Property Panels**: User-friendly forms for field configuration (type,
+  label, validation)
+- **Automatic JSON Generation**: Converts visual layout to
+  coordinate-based JSON configuration
 - **Field Management**: Add, edit, delete, duplicate fields with visual feedback
 - **Grid System**: Optional grid snapping and alignment helpers for precise positioning
 
@@ -421,7 +441,8 @@ uv add pdf2image  # For PDF-to-image conversion
 - **Intuitive Interface**: No manual coordinate entry required
 - **Real-time Preview**: See field positioning immediately (requires Poppler)
 - **Fallback JSON Editor**: Manual JSON editor when PDF preview is unavailable
-- **Field Types**: Support for text, textarea, number, date, choice, boolean, email fields
+- **Field Types**: Support for text, textarea, number, date, choice,
+  boolean, email fields
 - **Validation**: Real-time field validation and conflict detection
 - **Import/Export**: Load and export field configurations as JSON
 - **Responsive Design**: Works on desktop and tablet devices
@@ -431,7 +452,8 @@ uv add pdf2image  # For PDF-to-image conversion
 
 ### Poppler (Required for PDF Preview)
 
-The visual field configurator requires Poppler to convert PDF pages to images for the drag-and-drop interface.
+The visual field configurator requires Poppler to convert PDF pages to
+images for the drag-and-drop interface.
 
 **Installation by Platform:**
 
@@ -466,7 +488,8 @@ pdftoppm -h
 
 - **With Poppler**: Full visual drag-and-drop interface with PDF preview
 - **Without Poppler**: Automatic fallback to manual JSON editor with validation
-- **No Loss of Functionality**: All field configuration features available through JSON editor
+- **No Loss of Functionality**: All field configuration features available
+  through JSON editor
 
 ## Configuration
 
@@ -475,17 +498,26 @@ pdftoppm -h
 PDF_FORMS_CONFIG = {
     'enabled': os.getenv('HOSPITAL_PDF_FORMS_ENABLED', 'false').lower() == 'true',
     'templates_path': os.getenv('HOSPITAL_PDF_FORMS_PATH', ''),
-    'max_template_size': int(os.getenv('PDF_FORMS_MAX_TEMPLATE_SIZE', 10 * 1024 * 1024)),  # 10MB template limit
+    'max_template_size': int(
+        os.getenv('PDF_FORMS_MAX_TEMPLATE_SIZE', 10 * 1024 * 1024)
+    ),  # 10MB template limit
     'allowed_extensions': ['.pdf'],
-    'require_form_validation': os.getenv('PDF_FORMS_REQUIRE_VALIDATION', 'true').lower() == 'true',
-    'generation_timeout': int(os.getenv('PDF_FORMS_GENERATION_TIMEOUT', 30)),  # 30 seconds
-    'cache_templates': os.getenv('PDF_FORMS_CACHE_TEMPLATES', 'true').lower() == 'true',
+    'require_form_validation': os.getenv(
+        'PDF_FORMS_REQUIRE_VALIDATION', 'true'
+    ).lower() == 'true',
+    'generation_timeout': int(
+        os.getenv('PDF_FORMS_GENERATION_TIMEOUT', 30)
+    ),  # 30 seconds
+    'cache_templates': os.getenv(
+        'PDF_FORMS_CACHE_TEMPLATES', 'true'
+    ).lower() == 'true',
 }
 ```
 
 ## Performance Characteristics
 
-- **Storage**: Only JSON form data stored (~1-5KB per submission vs ~100KB-2MB for PDF files)
+- **Storage**: Only JSON form data stored (~1-5KB per submission vs
+  ~100KB-2MB for PDF files)
 - **Generation Time**: 1-3 seconds per PDF download (acceptable for on-demand approach)
 - **Memory Usage**: ReportLab processing requires ~10-50MB during generation
 - **Concurrency**: Multiple PDF generations can run simultaneously
@@ -564,11 +596,15 @@ PDF_FORMS_CONFIG = {
 
 ## Data Sources and Linked Fields
 
-**NEW: Advanced data relationship functionality for automatic field population**
+NEW: Advanced data relationship functionality for automatic field
+population
 
-Data Sources enable creation of reusable datasets that automatically populate related fields when a user selects a value. This creates "linked field" functionality where selecting one value automatically fills multiple related fields.
+Data Sources enable creation of reusable datasets that automatically
+populate related fields when a user selects a value. This creates
+"linked field" functionality where selecting one value automatically
+fills multiple related fields.
 
-### Features
+### Data Source Features
 
 - **Reusable Datasets**: Define data once, use across multiple fields
 - **Automatic Population**: Select one value, related fields auto-fill
@@ -826,7 +862,7 @@ Configure fields that auto-populate based on the selection:
 - **Professional Forms**: Ensures standardized data entry
 - **Reduced Training**: Users only need to know primary selections
 
-### Best Practices
+### Data Source Best Practices
 
 #### Data Source Design
 
@@ -856,7 +892,8 @@ Configure fields that auto-populate based on the selection:
 
 ```json
 "medications": [
-  {"name": "Drug Name", "dosage": "Amount", "frequency": "Schedule", "warnings": "Notes"}
+  {"name": "Drug Name", "dosage": "Amount", "frequency": "Schedule",
+   "warnings": "Notes"}
 ]
 ```
 
@@ -891,6 +928,61 @@ Data sources are implemented using:
 - JavaScript frontend for real-time field linking
 - JSON storage within form template configuration
 - Section-aware field grouping support
+
+## Solicitação de Exames em Lote (chequinho)
+
+Fluxo dedicado para solicitar N exames SUS ("Solicitação de Exames
+SUS") com uma única justificativa/data/médico, imprimindo até 3 vias
+por folha A4. O motor genérico não foi alterado: o lote reaproveita o
+template configurado, o overlay e o modelo de submission.
+
+### Entrada
+
+`Formulários PDF` (`form_select`) → seção "Solicitação de Exames
+Múltiplos SUS" → card "Solicitação de Exames SUS (chequinho)" →
+`pdf_forms:exam_batch`. Após criar, redireciona à timeline do paciente.
+
+### Captura (`views/exam_batch.py`)
+
+- Campos compartilhados (motivo, data, médico) com os auto-fills
+  atuais + formset dinâmico de 1–12 exames (texto livre + código
+  opcional), com botão "+ Adicionar exame".
+- POST válido cria N `PDFFormSubmission` (1 por exame) em transação
+  atômica, cada uma no formato `form_data` atual acrescido de
+  `batch_id` (UUID compartilhado, sem migration).
+- Supervisão com paridade APAC: estudante cria rascunhos
+  (`save_draft`); `save_final` exige médico/residente.
+- Template resolvido por setting `EXAM_REQUEST_BATCH_TEMPLATE_ID`,
+  prefixo do id `dde2a393` ou fallback por nome (dev/teste).
+
+### Impressão 3-up (`services/exam_batch_imposition.py`)
+
+- Rota `exam-batch/download/<batch_id>/` compõe só finals do lote
+  (gating: rascunhos nunca imprimem; lote só de rascunhos → 404).
+- Técnica fill → crop → stack: cada via usa o overlay atual, é
+  recortada no bbox fixo (topo 1,0 cm / base 10,0 cm, conteúdo real
+  1,19–9,88 cm) e empilhada a 100% (sem redução) via `pypdf`;
+  linhas de corte tracejadas (ReportLab) só entre vias impressas.
+- Paginação `ceil(N/3)`, determinística: exame N no slot `(N-1)%3`
+  da folha `(N-1)//3`, ordenado por `(created_at, pk)`.
+- Fallback: template com tamanho/contagem de páginas inesperado cai
+  para 1 via por página, sem erro.
+- Vias idênticas ao download avulso (mesmo overlay, mesmo tamanho).
+
+### Timeline e detalhe
+
+- Botão PDF avulso inalterado (só a via do card; some em rascunho).
+- Botão "Baixar lote 3-up (N vias)" em todos os cards do lote
+  (só quando há `batch_id` com irmãos finals); `batch_info` montado
+  em bulk (1 query agrupada por página, sem N+1).
+- `submission_detail` de exame em lote mostra o banner "Parte do
+  lote de N exames" com download do lote e links dos irmãos.
+
+### Referências
+
+- ADR: `docs/adr/ADR-0006-exam-batch-fill-crop-stack-3up-printing.md`.
+- Código: `views/exam_batch.py`, `views/exam_batch_download.py`,
+  `services/exam_batch_imposition.py`.
 
 ## Troubleshooting
 

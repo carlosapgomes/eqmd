@@ -553,7 +553,34 @@ class PDFFormSubmissionDetailView(LoginRequiredMixin, DetailView):
         context["can_delete_submission"] = can_delete_event(
             self.request.user, self.object
         )
+        context["batch_info"] = self._get_batch_info()
         return context
+
+    def _get_batch_info(self):
+        """Batch banner context (S3): finals sharing this submission's batch.
+
+        Returns ``{"batch_id", "count", "siblings"}`` when the submission
+        is a final exam whose ``batch_id`` has at least two final
+        submissions (deterministic ``created_at, pk`` order, same as the
+        batch download); ``None`` otherwise, so singles render no banner.
+        The default manager already excludes drafts, mirroring the
+        download gating.
+        """
+        batch_id = (self.object.form_data or {}).get("batch_id")
+        if not batch_id or self.object.is_draft:
+            return None
+        siblings = list(
+            PDFFormSubmission.objects.filter(
+                form_data__batch_id=str(batch_id)
+            ).order_by("created_at", "pk")
+        )
+        if len(siblings) < 2:
+            return None
+        return {
+            "batch_id": str(batch_id),
+            "count": len(siblings),
+            "siblings": siblings,
+        }
 
 
 class PDFFormDownloadView(LoginRequiredMixin, View):
