@@ -50,6 +50,17 @@
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         </span>
     </button>
+
+    {% if event_data.batch_info %}
+    <a href="{% url 'pdf_forms:exam_batch_download' batch_id=event_data.batch_info.batch_id %}"
+       class="btn btn-outline-danger btn-sm"
+       aria-label="Baixar lote 3-up ({{ event_data.batch_info.count }} vias)"
+       data-bs-toggle="tooltip"
+       data-bs-placement="top"
+       title="Baixar lote 3-up — {{ event_data.batch_info.count }} vias">
+        <i class="bi bi-files" aria-hidden="true"></i>
+    </a>
+    {% endif %}
     {% endif %}
 
     {% if event_data.can_duplicate_pdf_submission and not event.is_draft %}

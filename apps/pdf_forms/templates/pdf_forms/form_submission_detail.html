@@ -22,6 +22,32 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
+      {% if batch_info %}
+      <!-- Batch banner (S3): this exam belongs to a batch -->
+      <div class="alert alert-info" role="alert">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div>
+            <i class="bi bi-files me-2" aria-hidden="true"></i>
+            <strong>Parte do lote de {{ batch_info.count }} exames</strong>
+          </div>
+          <a href="{% url 'pdf_forms:exam_batch_download' batch_id=batch_info.batch_id %}" class="btn btn-success btn-sm">
+            <i class="bi bi-download me-1" aria-hidden="true"></i>
+            Baixar lote 3-up
+          </a>
+        </div>
+        <hr>
+        <div class="small mb-1">Exames do lote:</div>
+        <div class="d-flex flex-wrap gap-2">
+          {% for sibling in batch_info.siblings %}
+            {% if sibling.pk == submission.pk %}
+              <span class="badge bg-primary">Atual: {{ sibling.form_data.examRequested|default:sibling.description }}</span>
+            {% else %}
+              <a href="{% url 'pdf_forms:submission_detail' pk=sibling.pk %}" class="badge bg-light text-dark border text-decoration-none">{{ sibling.form_data.examRequested|default:sibling.description }}</a>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
       <!-- Header -->
       <div class="card mb-4">
         <div class="card-header bg-success text-white">

@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
@@ -81,6 +82,40 @@ def user_events_list(request):
             "events": events,
         },
     )
+
+
+def get_pdf_batch_info(events):
+    """Bulk batch download info for timeline PDF form cards (S3).
+
+    Returns ``{event_pk: {"batch_id": str, "count": int}}`` for final PDF
+    form events whose ``batch_id`` has at least two final submissions (the
+    card's own final siblings). Costs exactly one grouped query per call,
+    never one per card; returns ``{}`` without touching the database when
+    no card carries a ``batch_id``.
+    """
+    from apps.pdf_forms.models import PDFFormSubmission
+
+    candidates = {}
+    for event in events:
+        if getattr(event, "event_type", None) != Event.PDF_FORM_EVENT:
+            continue
+        if getattr(event, "is_draft", False):
+            continue
+        batch_id = (getattr(event, "form_data", None) or {}).get("batch_id")
+        if batch_id:
+            candidates[event.pk] = str(batch_id)
+    if not candidates:
+        return {}
+    counts = Counter(
+        PDFFormSubmission.objects.filter(
+            form_data__batch_id__in=sorted(set(candidates.values()))
+        ).values_list("form_data__batch_id", flat=True)
+    )
+    return {
+        pk: {"batch_id": batch_id, "count": counts[batch_id]}
+        for pk, batch_id in candidates.items()
+        if counts[batch_id] >= 2
+    }
 
 
 class PatientEventsTimelineView(ListView):
@@ -269,6 +304,7 @@ class PatientEventsTimelineView(ListView):
     def _bulk_permission_check(self, events):
         """Bulk permission checking to avoid N+1 queries."""
         events_with_permissions = []
+        batch_info_map = get_pdf_batch_info(events)
         tag_audit_presentation.attach_tag_audit_presentations(
             events, viewer=self.request.user
         )
@@ -288,6 +324,7 @@ class PatientEventsTimelineView(ListView):
                 "can_delete": delete_permissions.get(event.pk, False),
                 "excerpt": event.get_excerpt(150),
                 "tag_audit": event.get_tag_audit_presentation(),
+                "batch_info": batch_info_map.get(event.pk),
             }
 
             # Add PDF form duplicate permission for PDF form events
