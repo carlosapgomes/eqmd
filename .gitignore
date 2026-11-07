@@ -69,3 +69,4 @@ openspec/changes/*/
 !openspec/changes/archive/
 .claude/
 temp/
+.pi/subagents/
