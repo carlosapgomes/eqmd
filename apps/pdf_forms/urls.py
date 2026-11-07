@@ -1,6 +1,8 @@
 from django.urls import path
+
 from . import views
 from .views import national_forms
+from .views.exam_batch import ExamRequestBatchView
 
 app_name = 'pdf_forms'
 
@@ -11,6 +13,9 @@ urlpatterns = [
     # Form workflow (hospital forms)
     path('select/<uuid:patient_id>/', views.PDFFormSelectView.as_view(), name='form_select'),
     path('fill/<uuid:template_id>/<uuid:patient_id>/', views.PDFFormFillView.as_view(), name='form_fill'),
+
+    # Batch exam requests (chequinho lot capture, S1)
+    path('exam-batch/<uuid:patient_id>/', ExamRequestBatchView.as_view(), name='exam_batch'),
 
     # National forms (APAC/AIH)
     path('apac/<uuid:patient_id>/', national_forms.APACFormView.as_view(), name='apac_form'),

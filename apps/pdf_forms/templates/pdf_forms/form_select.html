@@ -150,6 +150,42 @@
       </div>
       {% endif %}
 
+      <!-- Batch Exam Request Section -->
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0">
+            <i class="bi bi-files me-2"></i>
+            Solicitação de Exames Múltiplos SUS
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 col-lg-4 mb-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                    Solicitação de Exames SUS (chequinho)
+                  </h6>
+                  <p class="card-text text-muted small">
+                    Solicite vários exames em um único lote, com um motivo, uma data e um médico.
+                  </p>
+                </div>
+                <div class="card-footer">
+                  <a
+                    href="{% url 'pdf_forms:exam_batch' patient.id %}"
+                    class="btn btn-success btn-sm"
+                  >
+                    <i class="bi bi-pencil me-1"></i>
+                    Solicitar exames em lote
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- No forms available message -->
       {% if not hospital_forms and not national_forms %}
       <div class="alert alert-info">
