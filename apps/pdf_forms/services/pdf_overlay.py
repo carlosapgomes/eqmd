@@ -75,6 +75,49 @@ class PDFFormOverlay:
             template_path, form_data, field_config, output_filename
         )
 
+    def render_filled_pdf_bytes(self, template_path, form_data, field_config):
+        """Render a filled single-print PDF and return its raw bytes.
+
+        Shared fill path for the single download and the batch 3-up
+        composition (S2): every batch via is produced here, so batch vias
+        stay identical to the single print (R4).
+
+        Args:
+            template_path (str): Path to blank PDF form template
+            form_data (dict): Form data to fill
+            field_config (dict): Field configuration with coordinates
+
+        Returns:
+            bytes: Filled single-page PDF content
+        """
+        if not os.path.exists(template_path):
+            raise FileNotFoundError(f"PDF template not found: {template_path}")
+
+        if not field_config:
+            raise ValueError(
+                "Field configuration is required for coordinate-based overlay"
+            )
+
+        # Get cached template information or read from file
+        template_info = self._get_template_info(template_path)
+        page_width = template_info["page_width"]
+        page_height = template_info["page_height"]
+
+        # Create overlay PDF with form data
+        overlay_buffer = self._create_overlay_pdf(
+            form_data, field_config, page_width, page_height
+        )
+
+        try:
+            # Merge overlay with original PDF
+            filled_pdf_buffer = self._merge_pdfs(template_path, overlay_buffer)
+            try:
+                return filled_pdf_buffer.getvalue()
+            finally:
+                filled_pdf_buffer.close()
+        finally:
+            overlay_buffer.close()
+
     def generate_pdf_response(
         self, template_path, form_data, field_config, filename=None
     ):
@@ -99,18 +142,9 @@ class PDFFormOverlay:
             )
 
         try:
-            # Get cached template information or read from file
-            template_info = self._get_template_info(template_path)
-            page_width = template_info["page_width"]
-            page_height = template_info["page_height"]
-
-            # Create overlay PDF with form data
-            overlay_buffer = self._create_overlay_pdf(
-                form_data, field_config, page_width, page_height
+            pdf_bytes = self.render_filled_pdf_bytes(
+                template_path, form_data, field_config
             )
-
-            # Merge overlay with original PDF
-            filled_pdf_buffer = self._merge_pdfs(template_path, overlay_buffer)
 
             # Generate output filename if not provided
             if not filename:
@@ -118,17 +152,11 @@ class PDFFormOverlay:
                 filename = f"filled_form_{timestamp}.pdf"
 
             # Create HTTP response with PDF content
-            response = HttpResponse(
-                filled_pdf_buffer.getvalue(), content_type="application/pdf"
-            )
+            response = HttpResponse(pdf_bytes, content_type="application/pdf")
 
             # Set proper headers for download
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            response["Content-Length"] = len(filled_pdf_buffer.getvalue())
-
-            # Ensure proper cleanup of buffers
-            filled_pdf_buffer.close()
-            overlay_buffer.close()
+            response["Content-Length"] = len(pdf_bytes)
 
             return response
 
@@ -202,19 +230,18 @@ class PDFFormOverlay:
                 "Field configuration is required for coordinate-based overlay"
             )
 
-        try:
-            # Get cached template information or read from file
-            template_info = self._get_template_info(template_path)
-            page_width = template_info["page_width"]
-            page_height = template_info["page_height"]
+        if not os.path.exists(template_path):
+            raise FileNotFoundError(f"PDF template not found: {template_path}")
 
-            # Create overlay PDF with form data
-            overlay_buffer = self._create_overlay_pdf(
-                form_data, field_config, page_width, page_height
+        if not field_config:
+            raise ValueError(
+                "Field configuration is required for coordinate-based overlay"
             )
 
-            # Merge overlay with original PDF
-            filled_pdf_buffer = self._merge_pdfs(template_path, overlay_buffer)
+        try:
+            pdf_bytes = self.render_filled_pdf_bytes(
+                template_path, form_data, field_config
+            )
 
             # Generate output filename if not provided
             if not output_filename:
@@ -222,13 +249,7 @@ class PDFFormOverlay:
                 output_filename = f"filled_form_{timestamp}.pdf"
 
             # Return as ContentFile for legacy compatibility
-            content_file = ContentFile(
-                filled_pdf_buffer.getvalue(), name=output_filename
-            )
-
-            # Cleanup buffers
-            filled_pdf_buffer.close()
-            overlay_buffer.close()
+            content_file = ContentFile(pdf_bytes, name=output_filename)
 
             return content_file
 

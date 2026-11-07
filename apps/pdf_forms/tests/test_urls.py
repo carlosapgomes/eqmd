@@ -95,10 +95,23 @@ class PDFFormsURLTests(TestCase):
         resolver = resolve(url)
         self.assertEqual(resolver.func.view_class, ExamRequestBatchView)
 
+    def test_exam_batch_download_url(self):
+        """Test batch 3-up download URL (S2 download do lote)."""
+        import uuid
+
+        from apps.pdf_forms.views.exam_batch_download import ExamBatchDownloadView
+
+        batch_id = uuid.uuid4()
+        url = reverse("pdf_forms:exam_batch_download", kwargs={"batch_id": batch_id})
+        self.assertEqual(url, f"/pdf-forms/exam-batch/download/{batch_id}/")
+
+        resolver = resolve(url)
+        self.assertEqual(resolver.func.view_class, ExamBatchDownloadView)
+
     def test_urlpatterns_count(self):
         """Test that all expected URL patterns are present."""
         urlpatterns = urls.urlpatterns
-        self.assertEqual(len(urlpatterns), 12)
+        self.assertEqual(len(urlpatterns), 13)
 
     def test_urlpatterns_names(self):
         """Test that all URL patterns have names."""
