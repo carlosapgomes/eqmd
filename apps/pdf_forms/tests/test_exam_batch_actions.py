@@ -99,7 +99,8 @@ class ExamBatchTimelineActionsTests(TestCase):
         batch_id, _ = self._create_batch(3)
         html = self._timeline_html()
         self.assertEqual(html.count(self._batch_url(batch_id)), 3)
-        self.assertIn("Baixar lote 3-up (3 vias)", html)
+        self.assertIn("Imprimir os 3 exames juntos", html)
+        self.assertIn("Imprimir os 3 exames do lote em um único PDF", html)
 
     def test_single_button_unchanged_for_finals_and_hidden_for_drafts(self):
         """R2: single download stays per-exam; drafts keep hiding it."""
@@ -183,6 +184,7 @@ class ExamBatchDetailBannerTests(TestCase):
         submissions = [self._create_submission(n, batch_id) for n in (1, 2, 3)]
         html = self._detail_html(submissions[0])
         self.assertIn("Parte do lote de 3 exames", html)
+        self.assertIn("Imprimir os 3 exames juntos", html)
         self.assertIn(
             reverse("pdf_forms:exam_batch_download", kwargs={"batch_id": batch_id}),
             html,

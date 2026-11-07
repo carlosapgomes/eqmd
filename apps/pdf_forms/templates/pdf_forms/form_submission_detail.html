@@ -27,12 +27,12 @@
       <div class="alert alert-info" role="alert">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
           <div>
-            <i class="bi bi-files me-2" aria-hidden="true"></i>
+            <i class="bi bi-stack me-2" aria-hidden="true"></i>
             <strong>Parte do lote de {{ batch_info.count }} exames</strong>
           </div>
           <a href="{% url 'pdf_forms:exam_batch_download' batch_id=batch_info.batch_id %}" class="btn btn-success btn-sm">
-            <i class="bi bi-download me-1" aria-hidden="true"></i>
-            Baixar lote 3-up
+            <i class="bi bi-stack me-1" aria-hidden="true"></i>
+            Imprimir os {{ batch_info.count }} exames juntos
           </a>
         </div>
         <hr>
