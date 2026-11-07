@@ -17,7 +17,11 @@ Registros de decisões arquiteturais importantes do projeto.
 - [ADR-0005 — Migração de produção para o eon: etapa 1 declarativa
   e gated][adr-0005]
   — _Accepted (2026-10-31)_
+- [ADR-0006 — Impressão 3-up do lote de exames via
+  fill-crop-stack][adr-0006]
+  — _Accepted (2026-11-07)_
 
+[adr-0006]: ADR-0006-exam-batch-fill-crop-stack-3up-printing.md
 [adr-0005]: ADR-0005-migracao-producao-eon-etapa1.md
 [adr-0004]: ADR-0004-bounded-production-image-security-remediation.md
 [adr-0001]: ADR-0001-deterministic-development-quality-gates.md
