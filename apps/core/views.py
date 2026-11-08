@@ -113,7 +113,7 @@ def manifest_json(request):
     manifest = {
         "name": pwa_names["name"],
         "short_name": pwa_names["short_name"],
-        "description": "Plataforma de colaboração médica para rastreamento de pacientes e gestão hospitalar",
+        "description": "Plataforma de colaboração médica para acompanhamento de pacientes",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#ffffff",

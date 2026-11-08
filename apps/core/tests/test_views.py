@@ -79,6 +79,70 @@ class LandingPageViewTestCase(TestCase):
         self.assertContains(response, 'Rastreamento de Pacientes')
         self.assertContains(response, 'Gestão de Eventos Clínicos')
 
+    def test_landing_page_access_control_copy(self) -> None:
+        """Describe access controls without promising total security."""
+        response = self.client.get(reverse('core:landing_page'))
+
+        self.assertContains(response, 'Controle de acesso')
+        self.assertContains(
+            response,
+            'Acesso mediante autenticação, com permissões conforme o perfil do usuário.',
+        )
+        self.assertNotContains(response, 'Segurança Total')
+        self.assertNotContains(response, 'Proteção avançada de dados médicos')
+
+    def test_landing_page_history_copy(self) -> None:
+        """Describe change history without claiming universal audit coverage."""
+        response = self.client.get(reverse('core:landing_page'))
+
+        self.assertContains(response, 'Histórico de alterações')
+        self.assertContains(
+            response,
+            'Registro de alterações em dados do sistema para apoiar a rastreabilidade.',
+        )
+        self.assertNotContains(response, 'Auditoria Completa')
+        self.assertNotContains(
+            response, 'Rastreamento completo de todas as alterações de dados'
+        )
+
+    def test_landing_page_omits_unverified_security_claims(self) -> None:
+        """Avoid unsupported encryption and active monitoring claims."""
+        response = self.client.get(reverse('core:landing_page'))
+
+        self.assertContains(response, 'Acesso autenticado e histórico de alterações')
+        for claim in (
+            'Criptografia Avançada',
+            'criptografia de nível hospitalar',
+            'monitoramento de auditoria',
+            'Plataforma segura',
+            'de forma segura e eficiente',
+        ):
+            with self.subTest(claim=claim):
+                self.assertNotContains(response, claim)
+
+    def test_landing_page_collaboration_copy(self) -> None:
+        """Describe collaboration without enumerating professional categories."""
+        response = self.client.get(reverse('core:landing_page'))
+
+        self.assertContains(
+            response,
+            'Compartilhe informações clínicas com sua equipe para apoiar a continuidade do cuidado.',
+        )
+        self.assertNotContains(response, 'médicos, enfermeiros e especialistas')
+
+    def test_landing_page_support_and_section_copy(self) -> None:
+        """Describe direct support without implying a team or constant availability."""
+        response = self.client.get(reverse('core:landing_page'))
+
+        self.assertContains(response, 'Suporte direto')
+        self.assertContains(response, 'Sobre a Plataforma')
+        self.assertContains(
+            response,
+            'Dúvidas e sugestões podem ser encaminhadas diretamente ao responsável pelo sistema.',
+        )
+        self.assertNotContains(response, 'Equipe especializada disponível sempre que precisar')
+        self.assertNotContains(response, 'Recursos de Segurança da Plataforma')
+
     def test_landing_page_cta_sections(self):
         """Test that landing page contains call-to-action sections."""
         url = reverse('core:landing_page')

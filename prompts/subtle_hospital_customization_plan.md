@@ -2,7 +2,9 @@
 
 ## Overview
 
-Minimal customization to maintain EquipeMed branding while adding subtle hospital-specific information. Focus on hospital identification in manifest and landing page without changing color themes or major branding elements.
+Minimal customization to maintain EquipeMed branding while adding subtle
+hospital-specific information. Focus on hospital identification in manifest and
+landing page without changing color themes or major branding elements.
 
 ## Design Philosophy
 
@@ -113,7 +115,9 @@ def manifest_json(request):
     manifest = {
         "name": name,
         "short_name": short_name,
-        "description": "Plataforma de colaboração médica para rastreamento de pacientes e gestão hospitalar",
+        "description": (
+            "Plataforma de colaboração médica para acompanhamento de pacientes"
+        ),
         "start_url": "/",
         "display": "standalone",
         "background_color": "#ffffff",
@@ -190,23 +194,26 @@ Around line 41, after the security indicator:
 {% endif %}
 ```
 
-**Option B: Add hospital info in features section**
+##### Option B: Add hospital info in features section
 
 Around line 66, update the lead text:
 
 ```html
 <!-- OLD -->
 <p class="lead text-medical-gray">
-  Ferramentas especializadas que facilitam o trabalho da equipe médica e melhoram o atendimento ao paciente.
+  Ferramentas especializadas que facilitam o trabalho da equipe médica
+  e melhoram o atendimento ao paciente.
 </p>
 
 <!-- NEW -->
 <p class="lead text-medical-gray">
   {% hospital_name as hospital %}
   {% if hospital and hospital != "Medical Center" %}
-    Ferramentas especializadas do {{ hospital }} que facilitam o trabalho da equipe médica e melhoram o atendimento ao paciente.
+    Ferramentas especializadas do {{ hospital }} que facilitam o trabalho
+    da equipe médica e melhoram o atendimento ao paciente.
   {% else %}
-    Ferramentas especializadas que facilitam o trabalho da equipe médica e melhoram o atendimento ao paciente.
+    Ferramentas especializadas que facilitam o trabalho da equipe médica
+    e melhoram o atendimento ao paciente.
   {% endif %}
 </p>
 ```
@@ -247,7 +254,8 @@ Around line 66, update the lead text:
 ### Minimal Changes Required
 
 1. **`config/settings.py`** - Add `short_identifier` to `HOSPITAL_CONFIG`
-2. **`apps/core/templatetags/hospital_tags.py`** - Add `hospital_pwa_short_name` tag
+2. **`apps/core/templatetags/hospital_tags.py`** - Add
+   `hospital_pwa_short_name` tag
 3. **`apps/core/views/manifest.py`** - New file for dynamic manifest
 4. **`apps/core/urls.py`** - Add manifest route
 5. **`templates/base.html`** - Update manifest link (1 line change)
