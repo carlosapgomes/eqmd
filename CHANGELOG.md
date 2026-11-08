@@ -6,6 +6,39 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-08
+
+### Fixed — deploy upgrade script
+
+- **Upgrade por tag aceita grafias com/sem prefixo `v`**
+  (`37fea62`): o CI (`docker/metadata-action type=semver`)
+  publica tags sem o `v` (ex: `0.5.0`), mas `upgrade.sh`/runbook
+  esperavam `vX.Y.Z` — nenhuma imagem com `v` existia no GHCR e o
+  upgrade por tag morria em silêncio (`2>/dev/null` + pipefail +
+  `set -e` encerravam o script na atribuição do digest, antes do
+  `fail()` e do trap ERR). O script agora tenta a grafia recebida
+  e também a sem `v` (fallback), com `|| true` no pipeline para o
+  `fail()` reportar a mensagem; o workflow passa a publicar também
+  a grafia `v{{version}}` (mantém a sem prefixo por
+  compatibilidade); runbook documenta as duas grafias aceitas.
+
+### Fixed — landing page copy
+
+- **Textos da landing page sem alegações de segurança não
+  verificáveis** (`775bd15`): remove "Segurança Total",
+  "criptografia" e "auditoria completa"; substitui por
+  "Controle de acesso", "Histórico de alterações" e "Suporte
+  direto" com descrições factuais (autenticação, permissões por
+  perfil, rastreabilidade). Descrição do PWA/manifest e meta
+  `description` passam a "acompanhamento de pacientes".
+  Cobertura: 5 testes de copy (`assertContains`/`assertNotContains`
+  para os textos novos e as alegações removidas).
+
+### Changed — docs
+
+- **Guia de migração de domínio** (`27c299e`): branding atualizado
+  e formatação revisada (sem mudanças de código ou comportamento).
+
 ## [0.5.0] - 2026-11-07
 
 ### Added — student draft supervision
