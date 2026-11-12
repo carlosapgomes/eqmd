@@ -36,7 +36,6 @@ from django.views.generic import (
 )
 
 from apps.accounts.services import tag_preferences
-from apps.core.permissions.decorators import doctor_required
 
 # from apps.hospitals.models import Hospital  # Removed for single-hospital refactor
 from apps.core.permissions.utils import (
@@ -463,10 +462,20 @@ class PatientUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
 
 
 class PatientDeleteView(LoginRequiredMixin, View):
-    """Soft delete patient with confirmation."""
+    """Soft delete patient (administrator only).
 
-    @method_decorator(doctor_required)
+    Deletion through the clinical route is restricted to Django admin
+    (superuser), matching ``PatientRestoreView``. The check lives inside
+    ``post()`` so the route stays POST-only: ``GET`` keeps returning 405 and
+    authenticated non-superusers get 403 instead of a login redirect.
+    """
+
     def post(self, request, pk):
+        if not request.user.is_superuser:
+            raise PermissionDenied(
+                "Patient deletion requires administrator privileges."
+            )
+
         patient = get_object_or_404(Patient, pk=pk)
 
         # Require deletion reason
