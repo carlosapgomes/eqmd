@@ -103,7 +103,7 @@ class PatientStatusTemplateTagsTests(TestCase):
         # transfers exist and those preserve the current status)
         action_statuses = [action["status"] for action in actions]
         self.assertIn(Patient.Status.INPATIENT, action_statuses)
-        self.assertIn(Patient.Status.EMERGENCY, action_statuses)
+        self.assertNotIn(Patient.Status.EMERGENCY, action_statuses)
         self.assertIn(Patient.Status.DISCHARGED, action_statuses)
         self.assertIn(Patient.Status.DECEASED, action_statuses)
         self.assertNotIn(Patient.Status.TRANSFERRED, action_statuses)
@@ -120,6 +120,7 @@ class PatientStatusTemplateTagsTests(TestCase):
         # Should include all other statuses except current
         self.assertNotIn(Patient.Status.INPATIENT, action_statuses)
         self.assertIn(Patient.Status.OUTPATIENT, action_statuses)
+        self.assertNotIn(Patient.Status.EMERGENCY, action_statuses)
 
     def test_available_status_actions_deceased(self):
         """Test available status actions for deceased patient"""
@@ -150,7 +151,6 @@ class PatientStatusTemplateTagsTests(TestCase):
         # Map status to expected label
         expected_labels = {
             Patient.Status.INPATIENT: "Internar",
-            Patient.Status.EMERGENCY: "Emergência",
             Patient.Status.DISCHARGED: "Dar Alta",
             Patient.Status.TRANSFERRED: "Transferir",
             Patient.Status.OUTPATIENT: "Ambulatorial",

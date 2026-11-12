@@ -58,7 +58,6 @@ def available_status_actions(user, patient):
     # Define possible status transitions with their display information
     status_transitions = [
         (Patient.Status.INPATIENT, 'Internar', 'hospital', 'btn-success'),
-        (Patient.Status.EMERGENCY, 'Emergência', 'exclamation-triangle', 'btn-danger'),
         (Patient.Status.DISCHARGED, 'Dar Alta', 'door-open', 'btn-info'),
         (Patient.Status.OUTPATIENT, 'Ambulatorial', 'person-check', 'btn-secondary'),
         (Patient.Status.DECEASED, 'Declarar Óbito', 'heart-pulse', 'btn-dark'),
@@ -94,7 +93,6 @@ def _get_action_name(current_status, target_status):
     """Generate action name for status transition"""
     action_names = {
         Patient.Status.INPATIENT: 'admit_patient',
-        Patient.Status.EMERGENCY: 'emergency_admission',
         Patient.Status.DISCHARGED: 'discharge_patient',
         Patient.Status.TRANSFERRED: 'transfer_patient',
         Patient.Status.OUTPATIENT: 'set_outpatient',
