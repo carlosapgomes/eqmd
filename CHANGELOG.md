@@ -6,6 +6,59 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-12
+
+### Added — patient profile clinical safety
+
+- **Ação de status Emergência oculta do perfil do paciente**
+  (change `hide-emergency-status-action`; `7ea7972`): o botão
+  `Emergência` da seção "Status & Gerenciamento de Internação"
+  apenas trocava a flag de status — sem criar `PatientAdmission`,
+  descartava o motivo digitado (campo `reason` do formulário
+  ignorado pela view) e permitia estados inconsistentes (paciente
+  internado com admissão ativa marcado "Em Emergência"). Os fluxos
+  `Internar` (admissão formal com tipo "Emergência") e
+  `Transferir Internamente` cobrem a mesma necessidade. A
+  transição `EMERGENCY` sai da template tag
+  `available_status_actions` (única superfície de UI onde era
+  renderizada) e o modal órfão `emergency_admissionModal` do
+  partial `admission_section.html` é removido; o backend (view,
+  URL, formulário, signals) permanece intacto e testado,
+  permitindo reativação futura. Nova spec `patient-status-actions`
+  em `openspec/specs/`; testes da template tag ajustados ao novo
+  contrato (emergência não oferecida para nenhum status).
+
+- **Exclusão clínica de paciente restrita ao admin Django** (change
+  `restrict-patient-delete-to-admin`; `b1e15ca`): o botão
+  `Excluir` do perfil/lista devolvia `405 Method Not Allowed`
+  (a view só implementava `post()`, mas as entradas eram links
+  GET) e um `POST` forjado com `deletion_reason` por médico
+  soft-deletava qualquer paciente. Agora `PatientDeleteView`
+  exige superuser — `403` para autenticados não-superuser
+  (incluindo médicos com `patients.delete_patient`), espelhando o
+  `PatientRestoreView` já existente; os anchors `Excluir` saem de
+  `patient_detail.html` e `patient_list.html` (sem atalho clínico,
+  nem para superuser) e o template órfão
+  `patient_confirm_delete.html` é removido. O bulk action do
+  Django admin permanece o caminho suportado de exclusão. Nova
+  spec `patient-delete` em `openspec/specs/`; +13 testes focados
+  (403 médico/staff, soft-delete e reason vazio para superuser,
+  GET 405/redirects, HTML sem controle `Excluir` preservando
+  timeline/edição).
+
+### Changed — deploy docs
+
+- **Plano de upgrade do PostgreSQL 15 para 18** (`c528187`): novo
+  `docs/deployment/postgres-18-upgrade-plan.md` com dry-run
+  completo (dump de 1,6 GB, restore em PG 18.6 efêmero,
+  `migrate --check`, suíte integral aprovada no 18.6). Conclusão:
+  upgrade viável, exigindo um ajuste de código quando executado
+  (a migration `drugtemplates/0007` quebra ao rodar do zero no PG
+  18, avaliador de funções SQL mais estrito) e com risco
+  operacional principal no novo `PGDATA` da imagem oficial 18.
+  Apenas documentação — produção permanece no PostgreSQL 15 nesta
+  release.
+
 ## [0.5.1] - 2026-11-08
 
 ### Fixed — deploy upgrade script
