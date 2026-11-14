@@ -57,6 +57,7 @@
             <tr>
               <td>
                 <strong>{{ template.name }}</strong>
+                {% include "components/_report_template_tags.html" with badges=template.visible_tag_badges %}
               </td>
               <td>{{ template.created_by.get_full_name|default:template.created_by.username }}</td>
               <td>{{ template.created_at|date:"d/m/Y H:i" }}</td>

@@ -2,12 +2,32 @@
 Forms for reports app.
 """
 
+from typing import Any, cast
+
 from django import forms
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 from .models import ReportTemplate, Report
 from .services.report_service import can_user_use_template
+from .services.template_tag_projection import editor_tag_choices
+from .services.template_tags import GENERIC_TAG_ERROR_MESSAGE
+
+
+class _TagIdsField(forms.MultipleChoiceField):
+    """Choice field whose membership check is deferred to ``clean_tag_ids``.
+
+    The stock ``MultipleChoiceField`` validation echoes the submitted
+    value in its error message, which would leak forged identities and
+    distinguish them from unknown ones. Membership is therefore checked
+    in ``ReportTemplateForm.clean_tag_ids`` with one generic message.
+    """
+
+    def valid_value(
+        self, value: Any
+    ) -> bool:  # Any: Django passes arbitrary submitted values; all accepted here.
+        return True
 
 
 class ReportUpdateForm(forms.ModelForm):
@@ -48,7 +68,21 @@ class ReportUpdateForm(forms.ModelForm):
 
 
 class ReportTemplateForm(forms.ModelForm):
-    """Form for creating and updating report templates."""
+    """Form for creating and updating report templates.
+
+    ``tag_ids`` is a bounded, non-model field: its choices are the
+    actor's current editor choices (active assignable tags plus
+    editable historical selections). It never maps onto the model M2M,
+    so the relation cannot be replaced through an unrestricted
+    ``ModelForm`` save; persistence goes through the atomic
+    association service in the view.
+    """
+
+    tag_ids = _TagIdsField(
+        required=False,
+        label="Tags",
+        widget=forms.SelectMultiple(attrs={"class": "form-select"}),
+    )
 
     class Meta:
         model = ReportTemplate
@@ -60,10 +94,42 @@ class ReportTemplateForm(forms.ModelForm):
             'is_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
-    def __init__(self, *args, **kwargs):
-        """Initialize form with user instance."""
+    def __init__(
+        self, *args: Any, **kwargs: Any
+    ) -> None:  # Any: Django form kwargs forwarded to ModelForm.
+        """Initialize form with user instance and bounded tag choices."""
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        template = self.instance if self.instance.pk else None
+        choices = editor_tag_choices(actor=self.user, template=template)
+        tag_ids_field = cast(_TagIdsField, self.fields['tag_ids'])
+        tag_ids_field.choices = [
+            (
+                str(choice.tag_id),
+                choice.display_name
+                + (f" ({choice.state_label})" if choice.state_label else ""),
+            )
+            for choice in choices
+        ]
+        tag_ids_field.initial = [
+            str(choice.tag_id) for choice in choices if choice.is_selected
+        ]
+
+    def clean_tag_ids(self) -> frozenset[int]:
+        """Accept only currently offered identities, with a generic error."""
+        raw_values = self.cleaned_data.get('tag_ids') or []
+        parsed: set[int] = set()
+        for value in raw_values:
+            try:
+                parsed.add(int(value))
+            except (TypeError, ValueError):
+                raise ValidationError(GENERIC_TAG_ERROR_MESSAGE) from None
+        tag_ids_field = cast(_TagIdsField, self.fields['tag_ids'])
+        offered = cast(list[tuple[Any, Any]], tag_ids_field.choices)
+        allowed = {int(value) for value, _label in offered}
+        if not parsed <= allowed:
+            raise ValidationError(GENERIC_TAG_ERROR_MESSAGE)
+        return frozenset(parsed)
 
     def save(self, commit=True):
         """Save template with creator/updater fields."""

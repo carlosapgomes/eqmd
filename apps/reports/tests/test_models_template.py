@@ -226,3 +226,31 @@ class TestReportTemplateModel(TestCase):
 
         saved_template = ReportTemplate.objects.get(pk=template.pk)
         self.assertIsInstance(saved_template.id, uuid.UUID)
+
+    def test_reporttemplate_tags_link_to_allowed_tags(self):
+        """Templates link to catalogue tags by integer identity."""
+        from django.db import IntegrityError, transaction
+
+        from apps.patients.models import AllowedTag
+        from apps.reports.models import ReportTemplate
+        from apps.reports.tests.tag_fixtures import make_tag
+
+        template = ReportTemplate(
+            name="Tagged Template",
+            markdown_body="Patient: {{patient_name}}",
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        template.save()
+        tag = make_tag(self.user, "Model Tag")
+        template.tags.add(tag)
+        self.assertEqual(set(template.tags.values_list("pk", flat=True)), {tag.pk})
+        self.assertEqual(
+            set(tag.report_templates.values_list("pk", flat=True)),
+            {template.pk},
+        )
+        with transaction.atomic(), self.assertRaises(IntegrityError):
+            ReportTemplate.tags.through.objects.create(
+                reporttemplate=template, allowedtag=tag
+            )
+        self.assertEqual(AllowedTag.objects.count(), 1)

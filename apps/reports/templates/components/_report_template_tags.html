@@ -1,0 +1,18 @@
+{% comment %}
+  Requester-safe tag badges for one report template.
+
+  Expects ``badges``: the visible TemplateTagBadge objects for the
+  template (see services/template_tag_projection.py). Only badges the
+  current actor may read are passed in; nothing here adds hidden counts
+  or restricted metadata.
+{% endcomment %}
+{% if badges %}
+  <span class="report-template-tags" aria-label="Tags">
+    {% for badge in badges %}
+      <span
+        class="badge"
+        style="background-color: {{ badge.color|default:'#007bff' }}; color: #fff;"
+      >{{ badge.display_name }}{% if badge.state_label %} ({{ badge.state_label }}){% endif %}</span>
+    {% endfor %}
+  </span>
+{% endif %}

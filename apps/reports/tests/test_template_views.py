@@ -130,6 +130,23 @@ class TemplateViewTests(TestCase):
         self.assertEqual(template.markdown_body, 'Test: {{patient_name}}, {{patient_record_number}}')
         self.assertFalse(template.is_public)
 
+    def test_template_create_success_message_says_created(self):
+        """Creation success message says "created", not "updated"."""
+        self.client.login(username='doctor', password='testpass123')
+        response = self.client.post(
+            reverse('reports:template_create'),
+            {
+                'name': 'Messaged Template',
+                'markdown_body': 'Test: {{patient_name}}, {{patient_record_number}}',
+                'is_active': True,
+                'is_public': False,
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'created successfully')
+        self.assertNotContains(response, 'updated successfully')
+
     def test_template_create_forbidden_for_non_manager(self):
         """Template creation is forbidden for users who cannot manage templates."""
         self.client.login(username='nurse', password='testpass123')

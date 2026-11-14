@@ -40,9 +40,16 @@ class ReportTemplate(models.Model):
         null=True,
         blank=True,
     )
+    tags = models.ManyToManyField(
+        "patients.AllowedTag",
+        related_name="report_templates",
+        blank=True,
+        verbose_name="Tags",
+    )
 
     history = HistoricalRecords(
         history_change_reason_field=models.TextField(null=True),
+        m2m_fields=["tags"],
     )
 
     def clean(self):
