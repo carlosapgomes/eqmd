@@ -8,12 +8,15 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
+from apps.patients.services import tag_filters, tag_projection
 from apps.reports.models import ReportTemplate
 from apps.reports.forms import ReportTemplateForm
 from apps.reports.services.permissions import can_manage_report_templates
+from apps.reports.services import template_discovery
 from apps.reports.services.template_tag_projection import template_tag_badges
 from apps.reports.services.template_tags import (
     GENERIC_TAG_ERROR_MESSAGE,
@@ -23,22 +26,55 @@ from apps.reports.services.template_tags import (
 
 
 class TemplateListView(LoginRequiredMixin, ListView):
-    """List view for report templates."""
+    """Catalogue of report templates with tag/name discovery (S2, D4/D5)."""
 
     model = ReportTemplate
     template_name = 'reports/reporttemplate_list.html'
+    results_partial = 'reports/partials/_reporttemplate_results.html'
     context_object_name = 'templates'
-    paginate_by = 20
+    paginate_by = template_discovery.PAGE_SIZE
+
+    discovery: template_discovery.DiscoveryState
+
+    def dispatch(self, request, *args, **kwargs):
+        """Resolve discovery state first; malformed filters never query results."""
+        self.discovery = template_discovery.resolve_discovery_state(
+            request.user, request.GET
+        )
+        if self.discovery.error:
+            return HttpResponse(self.discovery.error, status=400)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        """Render the full page or the results fragment at the same URL."""
+        if template_discovery.is_fragment_request(request.GET):
+            self.object_list = self.get_queryset()
+            context = self.get_context_data()
+            return render(request, self.results_partial, context)
+        return super().get(request, *args, **kwargs)
+
+    def paginate_queryset(self, queryset, page_size):
+        """Forgiving page normalization: out-of-range pages clamp, not 404."""
+        paginator = self.get_paginator(queryset, page_size)
+        page_obj = paginator.get_page(self.request.GET.get(self.page_kwarg))
+        return (
+            paginator,
+            page_obj,
+            page_obj.object_list,
+            page_obj.has_other_pages(),
+        )
 
     def get_queryset(self):
-        """Filter to show public templates and user's own private templates."""
-        queryset = ReportTemplate.objects.select_related('created_by', 'updated_by')
-        return queryset.filter(is_public=True) | queryset.filter(created_by=self.request.user)
+        """Public-or-own base plus the resolved tag/name predicates."""
+        base = template_discovery.catalogue_base_queryset(self.request.user)
+        return template_discovery.apply_discovery_filters(
+            base, self.discovery.selection, self.discovery.name_query
+        )
 
     def get_context_data(
         self, **kwargs: Any
     ) -> dict[str, Any]:  # Any: Django template context.
-        """Attach requester-safe tag badges for the current page only."""
+        """Attach requester-safe badges and the canonical discovery state."""
         context = super().get_context_data(**kwargs)
         badges = template_tag_badges(
             actor=self.request.user,
@@ -47,6 +83,47 @@ class TemplateListView(LoginRequiredMixin, ListView):
         context['template_tag_badges'] = badges
         for template in context['object_list']:
             template.visible_tag_badges = badges.get(template.pk, [])
+        selection = self.discovery.selection
+        query = self.request.GET
+        include_historical = template_discovery.parse_include_historical(query)
+        context.update(
+            {
+                'discovery_selection': selection,
+                'discovery_name_query': self.discovery.name_query,
+                'discovery_warning': self.discovery.warning,
+                'discovery_specialty': self.discovery.specialty,
+                'discovery_has_saved_preference': (
+                    self.discovery.has_saved_preference
+                ),
+                'discovery_is_manual': selection.is_manual,
+                'discovery_state_label': selection.state_label,
+                'discovery_mode_label': selection.mode_label,
+                'discovery_include_historical': include_historical,
+                'discovery_tag_options': template_discovery.discovery_tag_options(
+                    self.request.user,
+                    selected_ids=selection.tag_ids,
+                    include_historical=include_historical,
+                ),
+                'discovery_selected_tags': [
+                    {
+                        'badge': tag_projection.tag_badge(tag),
+                        'remove_querystring': tag_filters.remove_tag_query(
+                            query, selection, tag.pk
+                        ),
+                    }
+                    for tag in selection.tags
+                ],
+                'discovery_filter_querystring': tag_filters.encoded_query(
+                    query, selection
+                ),
+                'discovery_clear_querystring': tag_filters.manual_empty_query(
+                    query, selection
+                ),
+                'discovery_reapply_querystring': tag_filters.effective_query(
+                    query, tag_filters.TagFilterSelection()
+                ).urlencode(),
+            }
+        )
         return context
 
 

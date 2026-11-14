@@ -98,6 +98,11 @@ module.exports = {
           from: "assets/js/tag-selector.js",
           to: "js/tag-selector.js",
         },
+        // Report-template catalogue discovery (S2)
+        {
+          from: "assets/js/report-template-discovery.js",
+          to: "js/report-template-discovery.js",
+        },
         {
           from: "assets/css/ward_patient_map.css",
           to: "css/ward_patient_map.css",

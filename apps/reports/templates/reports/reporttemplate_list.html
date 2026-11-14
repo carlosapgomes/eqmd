@@ -1,5 +1,6 @@
 {% extends 'base_app.html' %}
 {% load reports_extras %}
+{% load static %}
 
 {% block title %}Modelos de Relatório{% endblock %}
 
@@ -31,143 +32,19 @@
   </div>
 </div>
 
-<div class="card shadow-sm">
-  <div class="card-header bg-medical-light">
-    <h5 class="card-title mb-0">
-      <i class="bi bi-list-ul me-2"></i>
-      Lista de Templates
-    </h5>
-  </div>
-  <div class="card-body">
-    {% if templates %}
-      <div class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Criado por</th>
-              <th>Criado em</th>
-              <th>Status</th>
-              <th>Visibilidade</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for template in templates %}
-            <tr>
-              <td>
-                <strong>{{ template.name }}</strong>
-                {% include "components/_report_template_tags.html" with badges=template.visible_tag_badges %}
-              </td>
-              <td>{{ template.created_by.get_full_name|default:template.created_by.username }}</td>
-              <td>{{ template.created_at|date:"d/m/Y H:i" }}</td>
-              <td>
-                {% if template.is_active %}
-                  <span class="badge bg-success">Ativo</span>
-                {% else %}
-                  <span class="badge bg-secondary">Inativo</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if template.is_public %}
-                  <span class="badge bg-info">Público</span>
-                {% else %}
-                  <span class="badge bg-warning text-dark">Privado</span>
-                {% endif %}
-              </td>
-              <td>
-                <div class="btn-group btn-group-sm" role="group">
-                  {% if user|can_manage_report_templates and template.created_by == user %}
-                    <a href="{% url 'reports:template_update' pk=template.pk %}" class="btn btn-outline-primary">
-                      <i class="bi bi-pencil"></i>
-                      Editar
-                    </a>
-                    <a href="{% url 'reports:template_delete' pk=template.pk %}" class="btn btn-outline-danger">
-                      <i class="bi bi-trash"></i>
-                      Excluir
-                    </a>
-                  {% else %}
-                    <button
-                      type="button"
-                      class="btn btn-outline-info"
-                      data-bs-toggle="modal"
-                      data-bs-target="#templateContentModal-{{ template.pk }}"
-                    >
-                      <i class="bi bi-eye"></i>
-                      Ver
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-outline-secondary copy-content-btn"
-                      data-content="{{ template.markdown_body|escape }}"
-                    >
-                      <i class="bi bi-clipboard"></i>
-                      Copiar
-                    </button>
-                    <div class="modal fade" id="templateContentModal-{{ template.pk }}" tabindex="-1" aria-labelledby="templateContentLabel-{{ template.pk }}" aria-hidden="true">
-                      <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                        <div class="modal-content">
-                          <div class="modal-header">
-                            <h5 class="modal-title" id="templateContentLabel-{{ template.pk }}">
-                              {{ template.name }}
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                          </div>
-                          <div class="modal-body">
-                            <pre class="mb-0" style="white-space: pre-wrap;">{{ template.markdown_body }}</pre>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+<div data-report-template-discovery>
+  {% include "components/_report_template_filters.html" %}
 
-      {% if is_paginated %}
-      <nav aria-label="Page navigation" class="mt-3">
-        <ul class="pagination justify-content-center">
-          {% if page_obj.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?page=1">Primeira</a>
-            </li>
-            <li class="page-item">
-              <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-            </li>
-          {% else %}
-            <li class="page-item disabled"><span class="page-link">Primeira</span></li>
-            <li class="page-item disabled"><span class="page-link">Anterior</span></li>
-          {% endif %}
-
-          <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
-
-          {% if page_obj.has_next %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
-            </li>
-            <li class="page-item">
-              <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
-            </li>
-          {% else %}
-            <li class="page-item disabled"><span class="page-link">Próxima</span></li>
-            <li class="page-item disabled"><span class="page-link">Última</span></li>
-          {% endif %}
-        </ul>
-      </nav>
-      {% endif %}
-    {% else %}
-      <div class="alert alert-info" role="alert">
-        <i class="bi bi-info-circle me-2"></i>
-        Nenhum template encontrado.
-        {% if user|can_manage_report_templates %}
-          <a href="{% url 'reports:template_create' %}" class="alert-link">Crie o primeiro template</a>.
-        {% endif %}
-      </div>
-    {% endif %}
+  <div class="card shadow-sm">
+    <div class="card-header bg-medical-light">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-list-ul me-2"></i>
+        Lista de Templates
+      </h5>
+    </div>
+    <div class="card-body">
+      {% include "reports/partials/_reporttemplate_results.html" %}
+    </div>
   </div>
 </div>
 
@@ -182,34 +59,37 @@
 </div>
 {% endif %}
 
+<script src="{% static 'js/report-template-discovery.js' %}" defer></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const copyButtons = document.querySelectorAll('.copy-content-btn');
+    // Delegate from document, which fragment replacement never removes, so
+    // copy buttons rendered by a later results fragment still work.
+    document.addEventListener('click', function(event) {
+      const button = event.target.closest('.copy-content-btn');
+      if (!button) {
+        return;
+      }
+      const content = button.getAttribute('data-content');
 
-    copyButtons.forEach(function(button) {
-      button.addEventListener('click', function() {
-        const content = this.getAttribute('data-content');
-
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(content).then(function() {
-            showToast('Conteúdo copiado para a área de transferência!', 'success');
-          }).catch(function() {
-            showToast('Erro ao copiar conteúdo.', 'error');
-          });
-        } else {
-          const textArea = document.createElement('textarea');
-          textArea.value = content;
-          document.body.appendChild(textArea);
-          textArea.select();
-          try {
-            document.execCommand('copy');
-            showToast('Conteúdo copiado para a área de transferência!', 'success');
-          } catch (err) {
-            showToast('Erro ao copiar conteúdo.', 'error');
-          }
-          document.body.removeChild(textArea);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(content).then(function() {
+          showToast('Conteúdo copiado para a área de transferência!', 'success');
+        }).catch(function() {
+          showToast('Erro ao copiar conteúdo.', 'error');
+        });
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          showToast('Conteúdo copiado para a área de transferência!', 'success');
+        } catch (err) {
+          showToast('Erro ao copiar conteúdo.', 'error');
         }
-      });
+        document.body.removeChild(textArea);
+      }
     });
 
     function showToast(message, type) {

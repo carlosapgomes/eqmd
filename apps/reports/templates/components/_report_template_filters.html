@@ -1,0 +1,100 @@
+{% comment %}
+  Report-template discovery filters (S2, design D5).
+
+  The native GET form is the no-JavaScript contract: repeated ``tags``,
+  ``tag_mode`` and the manual marker round-trip through the query string,
+  while automatic specialty defaults stay out of it and are recomputed on
+  every request. Typed values are rendered through Django escaping only.
+  ``assets/js/report-template-discovery.js`` enhances this form in place.
+
+  Native Apply carries ``tag_filter=manual`` on the submit button itself:
+  a browser submits a named submit button only when it is the submitter,
+  so Apply with every tag deselected is explicitly manual-empty, while
+  initial entry (no form submission) has no marker and defaults apply.
+  The ``data-discovery-marker`` input has no name, so it never submits; it
+  only carries the current automatic/manual origin for the enhancement.
+{% endcomment %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form method="get" data-discovery-form>
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label for="report-template-search" class="form-label">
+            <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar por nome
+          </label>
+          <input type="search"
+                 id="report-template-search"
+                 class="form-control"
+                 name="q"
+                 value="{{ discovery_name_query }}"
+                 data-discovery-q
+                 autocomplete="off">
+        </div>
+        <div class="col-md-4">
+          <label for="report-template-tags" class="form-label">
+            <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
+          </label>
+          <select id="report-template-tags"
+                  name="tags"
+                  multiple
+                  class="form-select"
+                  data-discovery-tags>
+            {% for option in discovery_tag_options %}
+              <option value="{{ option.tag_id }}" {% if option.is_selected %}selected{% endif %}>
+                {{ option.display_name }}{% if option.state_label %} — {{ option.state_label }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label for="report-template-mode" class="form-label">Correspondência</label>
+          <select id="report-template-mode"
+                  name="tag_mode"
+                  class="form-select"
+                  data-discovery-mode>
+            <option value="any" {% if discovery_selection.mode == "any" %}selected{% endif %}>Qualquer tag</option>
+            <option value="all" {% if discovery_selection.mode == "all" %}selected{% endif %}>Todas as tags</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <div class="btn-group w-100" role="group">
+            <button type="submit"
+                    name="tag_filter"
+                    value="manual"
+                    class="btn btn-medical-primary"
+                    data-discovery-apply>
+              <i class="bi bi-search me-1" aria-hidden="true"></i>Aplicar
+            </button>
+          </div>
+        </div>
+      </div>
+      <input type="hidden"
+             value="{% if discovery_selection.is_manual %}manual{% endif %}"
+             data-discovery-marker>
+      <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
+        <div class="form-check form-check-inline mb-0">
+          <input class="form-check-input"
+                 type="checkbox"
+                 id="report-template-historical"
+                 name="include_historical"
+                 value="1"
+                 data-discovery-historical
+                 {% if discovery_include_historical %}checked{% endif %}>
+          <label class="form-check-label small" for="report-template-historical">
+            Incluir tags antigas
+          </label>
+        </div>
+        <a href="?{{ discovery_clear_querystring }}"
+           class="btn btn-sm btn-outline-secondary"
+           data-discovery-clear>Limpar tags</a>
+        <a href="?{{ discovery_reapply_querystring }}"
+           class="btn btn-sm btn-outline-secondary"
+           data-discovery-reapply>Reaplicar preferências</a>
+        <p class="small text-muted mb-0 ms-auto"
+           data-discovery-status
+           aria-live="polite"
+           aria-atomic="true"></p>
+      </div>
+    </form>
+  </div>
+</div>
