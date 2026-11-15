@@ -2,6 +2,7 @@
 Forms for reports app.
 """
 
+import uuid
 from typing import Any, cast
 
 from django import forms
@@ -11,8 +12,10 @@ from django.utils import timezone
 
 from .models import ReportTemplate, Report
 from .services.report_service import can_user_use_template
+from .services.template_discovery import PAGE_SIZE
 from .services.template_tag_projection import editor_tag_choices
 from .services.template_tags import GENERIC_TAG_ERROR_MESSAGE
+from .widgets import BoundedTemplateSelect
 
 
 class _TagIdsField(forms.MultipleChoiceField):
@@ -158,7 +161,7 @@ class ReportCreateForm(forms.ModelForm):
         required=False,
         label="Template",
         help_text="Select a template to pre-fill the content (optional)",
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=BoundedTemplateSelect(attrs={'class': 'form-control'}),
     )
 
     class Meta:
@@ -184,9 +187,13 @@ class ReportCreateForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """Initialize form with user and patient."""
+        """Initialize form with user, patient and bounded selector page."""
         self.user = kwargs.pop('user', None)
         self.patient = kwargs.pop('patient', None)
+        self._selection_templates = kwargs.pop('selection_templates', None)
+        self._selected_template = kwargs.pop('selected_template', None)
+        self._selected_template_id = kwargs.pop('selected_template_id', '')
+        self._selected_unavailable = kwargs.pop('selected_unavailable', False)
         super().__init__(*args, **kwargs)
 
         self.fields['document_date'].input_formats = ['%m-%d-%Y']
@@ -203,13 +210,61 @@ class ReportCreateForm(forms.ModelForm):
         self.fields['content'].help_text = "Conteúdo do relatório (suporte a Markdown)"
 
         # Filter templates to show only public and user's own
-        # (the field is absent in subclasses, e.g. ReportDuplicateForm)
+        # (the field is absent in subclasses, e.g. ReportDuplicateForm).
+        # This is the complete validation queryset; the widget renders
+        # only the bounded discovery page plus the current selection.
         if self.user and 'template' in self.fields:
-            self.fields['template'].queryset = ReportTemplate.objects.filter(
+            full_queryset = ReportTemplate.objects.filter(
                 is_active=True
             ).filter(
                 models.Q(is_public=True) | models.Q(created_by=self.user)
             )
+            self.fields['template'].queryset = full_queryset
+            self._configure_bounded_widget(full_queryset)
+
+    def _configure_bounded_widget(self, full_queryset) -> None:
+        """Render only the discovery page plus the current selection."""
+        widget = self.fields['template'].widget
+        if not isinstance(widget, BoundedTemplateSelect):
+            return
+        if self._selection_templates is None:
+            bounded = list(full_queryset.order_by('name', 'pk')[:PAGE_SIZE])
+        else:
+            bounded = list(self._selection_templates)
+        selected = self._selected_template
+        selected_id = ''
+        if self.is_bound:
+            selected_id = str(self.data.get('template') or '')
+        elif self.initial.get('template') is not None:
+            initial = self.initial.get('template')
+            selected_id = str(getattr(initial, 'pk', initial))
+        elif self.instance.pk and getattr(self.instance, 'template_id', None):
+            selected_id = str(self.instance.template_id)
+        if not selected_id and self._selected_template_id:
+            selected_id = str(self._selected_template_id)
+        unavailable = bool(self._selected_unavailable)
+        # A known-unavailable or malformed identity (see the create
+        # view's revalidation) must not be queried here: filtering by a
+        # malformed UUID raises before bound-form validation can reject
+        # it normally. Skip the query and let field validation reject it.
+        if selected_id and selected is None and not unavailable:
+            try:
+                selected_uuid = uuid.UUID(selected_id)
+            except (ValueError, AttributeError, TypeError):
+                unavailable = True
+            else:
+                selected = full_queryset.filter(pk=selected_uuid).first()
+                if selected is None:
+                    unavailable = True
+        if selected is not None:
+            selected_id = str(selected.pk)
+            unavailable = False
+        widget.set_bounded_choices(
+            bounded,
+            selected_template=selected,
+            selected_template_id=selected_id,
+            selected_unavailable=unavailable,
+        )
 
     def clean_template(self):
         """Validate that selected template is accessible."""

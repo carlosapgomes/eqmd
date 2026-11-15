@@ -17,12 +17,14 @@ from .views.report_views import (
     ReportDeleteView,
 )
 from .views.pdf_views import ReportPDFView
+from .views.template_selection_views import TemplateSelectionView
 
 app_name = 'reports'
 
 urlpatterns = [
     # Template URLs
     path('templates/', TemplateListView.as_view(), name='template_list'),
+    path('templates/select/', TemplateSelectionView.as_view(), name='template_select'),
     path('templates/create/', TemplateCreateView.as_view(), name='template_create'),
     path('templates/<uuid:pk>/update/', TemplateUpdateView.as_view(), name='template_update'),
     path('templates/<uuid:pk>/delete/', TemplateDeleteView.as_view(), name='template_delete'),

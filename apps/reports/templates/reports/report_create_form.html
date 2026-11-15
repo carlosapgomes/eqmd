@@ -79,6 +79,98 @@
   </div>
 </div>
 
+<!-- Template discovery (S3): filter controls live outside the clinical
+     POST form and never submit it. Without JavaScript this separate GET
+     form navigates, so the warning below must be read before editing. -->
+<div data-report-template-discovery
+     data-template-selection
+     data-template-selection-url="{% url 'reports:template_select' %}">
+  <div class="alert alert-warning" role="alert" data-template-selection-warning>
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+    Sem JavaScript, filtrar recarrega a página e pode perder edições não salvas —
+    filtrar antes de editar.
+  </div>
+  {% include "components/_report_template_filters.html" %}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header bg-medical-light">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-collection me-2"></i>
+        Modelos disponíveis
+      </h5>
+    </div>
+    <div class="card-body">
+      <div data-template-selection-results
+           data-discovery-mode="{{ discovery_selection.mode }}"
+           data-discovery-source="{{ discovery_selection.source }}"
+           data-discovery-applied="{{ discovery_filter_querystring }}"
+           data-discovery-count="{{ selection_count }}"
+           data-template-selection-page="{{ selection_page_obj.number }}">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3" data-discovery-summary>
+          <span class="badge bg-secondary" data-discovery-state>{{ discovery_state_label }} · {{ discovery_mode_label }}</span>
+          {% for selected_tag in discovery_selected_tags %}
+            <span class="badge bg-medical-teal" data-active-tag-badge>
+              {{ selected_tag.badge.display_name }}{% if selected_tag.badge.state_label %} ({{ selected_tag.badge.state_label }}){% endif %}
+              <a href="?{{ selected_tag.remove_querystring }}"
+                 class="text-white text-decoration-none ms-1"
+                 data-discovery-remove
+                 aria-label="Remover {{ selected_tag.badge.display_name }}">×</a>
+            </span>
+          {% endfor %}
+        </div>
+        {# Always render warning/notice/list/empty/nav containers so the
+           enhanced client can rebuild them from every lookup response
+           (empty->match, single->multi-page, notice transitions);
+           hidden marks the server-rendered initial state for no-JS. #}
+        <div class="alert alert-warning" role="alert" data-discovery-warning{% if not discovery_warning %} hidden{% endif %}>
+          <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+          {{ discovery_warning }}
+        </div>
+        <div class="alert alert-warning" role="alert" data-selected-template-unavailable{% if not selected_template_unavailable %} hidden{% endif %}>
+          Modelo selecionado indisponível. Para criar manualmente, limpar a seleção atual.
+        </div>
+        <div class="alert alert-info" role="status" data-selected-template-outside{% if selected_template_unavailable or not selected_template or not selected_template_outside_results %} hidden{% endif %}>
+          Modelo selecionado fora dos resultados atuais:
+          <strong>{{ selected_template.name }}</strong> (fora dos resultados atuais)
+          {% include "components/_report_template_tags.html" with badges=selected_template_badges %}
+        </div>
+        <ul class="list-group" data-template-selection-list>
+          {% for template in selection_templates %}
+            <li class="list-group-item">
+              {{ template.name }}
+              {% include "components/_report_template_tags.html" with badges=template.visible_tag_badges %}
+            </li>
+          {% endfor %}
+        </ul>
+        <div class="alert alert-info" role="alert" data-template-selection-empty{% if selection_templates %} hidden{% endif %}>Nenhum template encontrado.</div>
+        <nav aria-label="Page navigation" class="mt-3" data-template-selection-nav{% if not selection_page_obj.has_other_pages %} hidden{% endif %}>
+          <ul class="pagination justify-content-center">
+            {% if selection_page_obj.has_previous %}
+              <li class="page-item"><a class="page-link" href="?{% if discovery_filter_querystring %}{{ discovery_filter_querystring }}&{% endif %}page=1">Primeira</a></li>
+              <li class="page-item"><a class="page-link" href="?{% if discovery_filter_querystring %}{{ discovery_filter_querystring }}&{% endif %}page={{ selection_page_obj.previous_page_number }}">Anterior</a></li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">Primeira</span></li>
+              <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ selection_page_obj.number }}</span></li>
+            {% if selection_page_obj.has_next %}
+              <li class="page-item"><a class="page-link" href="?{% if discovery_filter_querystring %}{{ discovery_filter_querystring }}&{% endif %}page={{ selection_page_obj.next_page_number }}">Próxima</a></li>
+              <li class="page-item"><a class="page-link" href="?{% if discovery_filter_querystring %}{{ discovery_filter_querystring }}&{% endif %}page={{ selection_page_obj.paginator.num_pages }}">Última</a></li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">Próxima</span></li>
+              <li class="page-item disabled"><span class="page-link">Última</span></li>
+            {% endif %}
+          </ul>
+        </nav>
+        <template data-template-tag-options>
+          {% for option in discovery_tag_options %}
+            <option value="{{ option.tag_id }}" {% if option.is_selected %}selected{% endif %}>{{ option.display_name }}{% if option.state_label %} — {{ option.state_label }}{% endif %}</option>
+          {% endfor %}
+        </template>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Form Card -->
 <div class="card shadow-sm">
   <div class="card-header bg-medical-light">
@@ -256,6 +348,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{% static 'js/report-template-discovery.js' %}" defer></script>
 <script src="{% static 'js/easymde.min.js' %}"></script>
 <script>
   let easyMDE;

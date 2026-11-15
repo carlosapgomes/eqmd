@@ -9,7 +9,11 @@ from django.contrib.auth.mixins import (
     PermissionRequiredMixin,
     UserPassesTestMixin,
 )
+import uuid
+
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, UpdateView, DeleteView
@@ -23,7 +27,10 @@ from apps.reports.forms import (
     ReportDuplicateForm,
     ReportUpdateForm,
 )
+from apps.patients.services import tag_filters, tag_projection
+from apps.reports.services import template_discovery
 from apps.reports.services.report_service import get_template_for_initial_content
+from apps.reports.services.template_tag_projection import template_tag_badges
 
 
 class ReportDetailView(LoginRequiredMixin, DetailView):
@@ -124,31 +131,159 @@ class ReportCreateView(LoginRequiredMixin, CreateView):
     template_name = 'reports/report_create_form.html'
 
     def dispatch(self, request, *args, **kwargs):
-        """Get patient from URL and store it."""
+        """Get patient, resolve discovery and reject malformed filters."""
         self.patient = get_object_or_404(
             Patient, pk=self.kwargs['patient_id']
         )
+        if not request.user.is_authenticated:
+            # Let LoginRequiredMixin issue the redirect before any
+            # discovery query is built with an anonymous actor.
+            return super().dispatch(request, *args, **kwargs)
+        self.discovery = template_discovery.resolve_discovery_state(
+            request.user, request.GET
+        )
+        if self.discovery.error:
+            return HttpResponse(self.discovery.error, status=400)
+        self._selection_page, self._selected_template = self._resolve_selection()
         return super().dispatch(request, *args, **kwargs)
 
+    def _resolve_selection(self):
+        """Page of selectable templates plus the separately pinned choice.
+
+        The current choice comes from the GET prefill parameter on an
+        unbound form and from the submitted value on a bound form. It
+        is revalidated against current selectable eligibility on every
+        request; an unavailable choice is reported generically.
+        """
+        base = template_discovery.selectable_base_queryset(self.request.user)
+        filtered = template_discovery.apply_discovery_filters(
+            base, self.discovery.selection, self.discovery.name_query
+        )
+        paginator = Paginator(filtered, template_discovery.PAGE_SIZE)
+        page_obj = paginator.get_page(self.request.GET.get('page'))
+        if self.request.method == 'POST':
+            raw = self.request.POST.get('template')
+        else:
+            raw = self.request.GET.get('template')
+        selected = None
+        unavailable = False
+        if raw:
+            try:
+                selected_uuid = uuid.UUID(str(raw))
+            except (ValueError, AttributeError, TypeError):
+                unavailable = True
+            else:
+                selected = base.filter(pk=selected_uuid).first()
+                if selected is None:
+                    unavailable = True
+        self._selected_unavailable = unavailable
+        self._selected_raw = str(raw or '')
+        return page_obj, selected
+
     def get_form_kwargs(self):
-        """Pass user and patient to form."""
+        """Pass user, patient and bounded selector page to the form."""
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
         kwargs['patient'] = self.patient
+        kwargs['selection_templates'] = list(self._selection_page.object_list)
+        kwargs['selected_template'] = self._selected_template
+        kwargs['selected_template_id'] = self._selected_raw
+        kwargs['selected_unavailable'] = self._selected_unavailable
         return kwargs
 
     def get_context_data(self, **kwargs):
-        """Add patient to context."""
+        """Add patient, discovery state and bounded selection context."""
         context = super().get_context_data(**kwargs)
         context['patient'] = self.patient
+        templates = list(self._selection_page.object_list)
+        badges = template_tag_badges(
+            actor=self.request.user, templates=templates
+        )
+        context['template_tag_badges'] = badges
+        for template in templates:
+            template.visible_tag_badges = badges.get(template.pk, [])
+        selection = self.discovery.selection
+        query = self.request.GET
+        include_historical = template_discovery.parse_include_historical(query)
+        page_ids = {template.pk for template in templates}
+        selected = self._selected_template
+        context.update(
+            {
+                'discovery_selection': selection,
+                'discovery_name_query': self.discovery.name_query,
+                'discovery_warning': self.discovery.warning,
+                'discovery_specialty': self.discovery.specialty,
+                'discovery_has_saved_preference': (
+                    self.discovery.has_saved_preference
+                ),
+                'discovery_is_manual': selection.is_manual,
+                'discovery_state_label': selection.state_label,
+                'discovery_mode_label': selection.mode_label,
+                'discovery_include_historical': include_historical,
+                'discovery_tag_options': template_discovery.discovery_tag_options(
+                    self.request.user,
+                    selected_ids=selection.tag_ids,
+                    include_historical=include_historical,
+                ),
+                'discovery_selected_tags': [
+                    {
+                        'badge': tag_projection.tag_badge(tag),
+                        'remove_querystring': tag_filters.remove_tag_query(
+                            query, selection, tag.pk
+                        ),
+                    }
+                    for tag in selection.tags
+                ],
+                'discovery_filter_querystring': tag_filters.encoded_query(
+                    query, selection
+                ),
+                'discovery_clear_querystring': tag_filters.manual_empty_query(
+                    query, selection
+                ),
+                'discovery_reapply_querystring': tag_filters.effective_query(
+                    query, tag_filters.TagFilterSelection()
+                ).urlencode(),
+                'selection_templates': templates,
+                'selection_page_obj': self._selection_page,
+                'selection_count': self._selection_page.paginator.count,
+                'selected_template': selected,
+                'selected_template_badges': (
+                    template_tag_badges(
+                        actor=self.request.user, templates=[selected]
+                    ).get(selected.pk, [])
+                    if selected is not None
+                    else []
+                ),
+                'selected_template_unavailable': self._selected_unavailable,
+                'selected_template_outside_results': bool(
+                    selected is not None and selected.pk not in page_ids
+                ),
+            }
+        )
         return context
 
     def get_initial(self):
-        """Set initial content if template is selected via GET."""
+        """Set initial content if template is selected via GET.
+
+        Only a currently selectable template (active public-or-own,
+        the S2 selectable semantics) may prefill title/content. An
+        unavailable identity is left for the generic-unavailable
+        notice and the full validation queryset, revealing no name
+        or rendered body and without clearing the submitted identity.
+        """
         initial = super().get_initial()
         template_id = self.request.GET.get('template')
 
         if template_id:
+            try:
+                template_uuid = uuid.UUID(str(template_id))
+            except (ValueError, AttributeError, TypeError):
+                return initial
+            selectable = template_discovery.selectable_base_queryset(
+                self.request.user
+            ).filter(pk=template_uuid)
+            if not selectable.exists():
+                return initial
             doc_date = initial.get('document_date')
             if isinstance(doc_date, str):
                 try:
