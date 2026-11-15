@@ -21,7 +21,7 @@
         <a href="?{{ selected.remove_querystring }}"
            class="text-white text-decoration-none ms-1"
            data-discovery-remove
-           aria-label="Remover {{ selected.badge.display_name }}">×</a>
+           aria-label="Remover {{ selected.badge.display_name }} dos filtros aplicados">×</a>
       </span>
     {% endfor %}
   </div>
@@ -152,6 +152,18 @@
     </nav>
     {% endif %}
   {% else %}
+    {% if discovery_name_query or discovery_selection.has_predicate %}
+    <div class="alert alert-info" role="alert">
+      <i class="bi bi-info-circle me-2"></i>
+      Nenhum modelo corresponde aos filtros atuais.
+      {% if discovery_selection.has_predicate %}
+        <a href="?{{ discovery_clear_querystring }}" class="alert-link" data-discovery-clear>Remover filtro de tags</a>.
+      {% endif %}
+      {% if discovery_selection.is_manual %}
+        <a href="?{{ discovery_reapply_querystring }}" class="alert-link" data-discovery-reapply>Restaurar padrão da especialidade</a>.
+      {% endif %}
+    </div>
+    {% else %}
     <div class="alert alert-info" role="alert">
       <i class="bi bi-info-circle me-2"></i>
       Nenhum template encontrado.
@@ -159,6 +171,7 @@
         <a href="{% url 'reports:template_create' %}" class="alert-link">Crie o primeiro template</a>.
       {% endif %}
     </div>
+    {% endif %}
   {% endif %}
   <template data-template-tag-options>
     {% for option in discovery_tag_options %}

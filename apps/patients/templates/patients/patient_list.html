@@ -59,9 +59,9 @@
           <div class="col-md-3 d-flex align-items-end">
             <div class="btn-group w-100" role="group">
               <button type="submit" class="btn btn-medical-outline-primary">
-                <i class="bi bi-search"></i>
+                <i class="bi bi-search" aria-hidden="true"></i> Aplicar filtros
               </button>
-              <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-outline-secondary" title="Limpar filtros">
+              <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-outline-secondary" title="Limpar filtros" aria-label="Limpar filtros">
                 <i class="bi bi-x-circle"></i>
               </a>
             </div>
@@ -77,6 +77,7 @@
               <span class="badge bg-medical-teal">
                 Busca: "{{ search_query }}"
                 <a href="?{{ search_remove_querystring }}"
+                   aria-label="Remover busca dos filtros aplicados"
                    class="text-white text-decoration-none ms-1">×</a>
               </span>
             {% endif %}
@@ -84,6 +85,7 @@
               <span class="badge bg-medical-teal">
                 Status: {% if status_filter == "1" %}Ambulatorial{% elif status_filter == "2" %}Internado{% elif status_filter == "3" %}Emergência{% elif status_filter == "4" %}Alta{% elif status_filter == "5" %}Transferido{% elif status_filter == "6" %}Óbito{% endif %}
                 <a href="?{{ status_remove_querystring }}"
+                   aria-label="Remover filtro de status dos filtros aplicados"
                    class="text-white text-decoration-none ms-1">×</a>
               </span>
             {% endif %}
@@ -91,6 +93,7 @@
               <span class="badge bg-medical-teal" data-active-tag-badge>
                 {{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}
                 <a href="?{{ selected.remove_querystring }}"
+                   aria-label="Remover {{ selected.badge.display_name }} dos filtros aplicados"
                    class="text-white text-decoration-none ms-1">×</a>
               </span>
             {% endfor %}
@@ -98,11 +101,11 @@
               <span class="badge bg-secondary" data-tag-mode-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
               <a href="?{{ clear_tags_querystring }}"
                  class="badge bg-light text-dark text-decoration-none"
-                 data-clear-tag-filter>Limpar tags</a>
+                 data-clear-tag-filter>Remover filtro de tags</a>
               {% if tag_preference_specialty %}
                 <a href="?{{ reapply_tags_querystring }}"
                    class="badge bg-light text-dark text-decoration-none"
-                   data-reapply-tag-preferences>Reaplicar preferências</a>
+                   data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
               {% endif %}
             {% elif tag_selection.has_predicate %}
               <span class="badge bg-secondary" data-tag-default-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
@@ -261,11 +264,23 @@
         <div class="card-body text-center py-5">
           <i class="bi bi-person-lines-fill display-1 text-muted mb-3"></i>
           <h4 class="text-muted mb-3">Nenhum paciente encontrado</h4>
+          {% if search_query or status_filter or admission_filter or tag_selection.has_predicate or tag_filter_error %}
+          <p class="text-muted mb-4">Nenhum paciente corresponde aos filtros atuais.</p>
+          <div class="d-flex flex-wrap justify-content-center gap-2">
+            {% if tag_selection.has_predicate %}
+            <a href="?{{ clear_tags_querystring }}" class="btn btn-outline-secondary" data-clear-tag-filter>Remover filtro de tags</a>
+            {% endif %}
+            {% if tag_filter_is_manual and tag_preference_specialty %}
+            <a href="?{{ reapply_tags_querystring }}" class="btn btn-outline-secondary" data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
+            {% endif %}
+          </div>
+          {% else %}
           <p class="text-muted mb-4">Comece adicionando o primeiro paciente ao sistema.</p>
           <a href="{% url 'apps.patients:patient_create' %}" class="btn btn-medical-primary">
             <i class="bi bi-person-plus me-2"></i>
             Adicionar Paciente
           </a>
+          {% endif %}
         </div>
       </div>
     {% endif %}

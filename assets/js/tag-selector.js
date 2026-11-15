@@ -233,7 +233,10 @@
       button.type = "button";
       button.className = "btn-close btn-close-white";
       button.style.fontSize = "0.55rem";
-      button.setAttribute("aria-label", "Remover " + tag.display_name);
+      button.setAttribute(
+        "aria-label",
+        "Remover " + tag.display_name + " da seleção"
+      );
       button.setAttribute("data-tag-remove", "");
       chip.appendChild(button);
 

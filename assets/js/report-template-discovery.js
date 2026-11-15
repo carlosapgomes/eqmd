@@ -811,6 +811,32 @@
         outside.style.display = "none";
       }
     }
+    // Canonical pt-BR labels for the dynamic summary, mirroring
+    // TagFilterSelection.state_label/mode_label on the server.
+    // The JSON contract is unchanged: only source, mode and
+    // selected_tags from payload.filter are read.
+    function discoveryModeLabel(modeValue) {
+      return modeValue === "all"
+        ? "Todas as selecionadas (E)"
+        : "Pelo menos uma selecionada (OU)";
+    }
+    function discoveryStateLabel(filter) {
+      var hasSelected = (filter.selected_tags || []).length > 0;
+      if (filter.source === "manual") {
+        return hasSelected
+          ? "Filtro personalizado"
+          : "Sem filtro de tags (personalizado)";
+      }
+      if (filter.source === "saved") {
+        return hasSelected
+          ? "Padrão salvo da especialidade"
+          : "Sem filtro de tags (preferência salva)";
+      }
+      if (filter.source === "principal") {
+        return "Padrão inicial da especialidade";
+      }
+      return "Sem filtro de tag";
+    }
     function updateResults(payload) {
       // Rebuild list, empty state and navigation from every response
       // so empty->match, single->multi-page and page transitions
@@ -860,7 +886,9 @@
         state.className = "badge bg-secondary";
         state.setAttribute("data-discovery-state", "");
         state.textContent =
-          payload.filter.source + " · " + payload.filter.mode;
+          discoveryStateLabel(payload.filter) +
+          " · " +
+          discoveryModeLabel(payload.filter.mode);
         summary.appendChild(state);
         (payload.filter.selected_tags || []).forEach(function (tag) {
           var badge = document.createElement("span");
@@ -879,7 +907,7 @@
             removeLink.setAttribute("data-discovery-remove", "");
             removeLink.setAttribute(
               "aria-label",
-              "Remover " + tag.display_name
+              "Remover " + tag.display_name + " dos filtros aplicados"
             );
             removeLink.textContent = "×";
             badge.appendChild(removeLink);

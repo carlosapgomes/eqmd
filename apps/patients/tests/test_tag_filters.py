@@ -222,7 +222,7 @@ class TagFilterParserTests(TagFilterSelectionFixture):
         )
 
         self.assertEqual(selection.mode, "all")
-        self.assertEqual(selection.mode_label, "Todas as tags")
+        self.assertEqual(selection.mode_label, "Todas as selecionadas (E)")
 
     def test_tags_take_precedence_over_legacy_tag(self) -> None:
         selection = self.selection(
@@ -516,7 +516,7 @@ class PatientListFilterStateTests(TagFilterSelectionFixture):
         )
 
         self.assertTrue(response.context["tag_filter_is_manual"])
-        self.assertEqual(response.context["tag_filter_state_label"], "Sem tags (filtro manual)")
+        self.assertEqual(response.context["tag_filter_state_label"], "Sem filtro de tags (personalizado)")
         parsed = parse_qs(
             response.context["filter_querystring"], keep_blank_values=True
         )
@@ -670,7 +670,7 @@ class PatientListTagFilterFlowTests(TagFilterSelectionFixture):
             [self.patient_both.pk],
         )
         self.assertEqual(len(both_all.context["selected_tags"]), 2)
-        self.assertIn("Todas as tags", both_all.content.decode())
+        self.assertIn("Todas as selecionadas (E)", both_all.content.decode())
 
         both_any = self.client.get(
             list_url,
@@ -811,7 +811,7 @@ class SpecialtyPreferenceDefaultTests(TagFilterSelectionFixture):
         self.assertTrue(response.context["tag_preference_has_saved"])
         self.assertEqual(
             response.context["tag_filter_state_label"],
-            "Sem tags (padrão salvo)",
+            "Sem filtro de tags (preferência salva)",
         )
         self.assertEqual(len(response.context["patients"]), 5)
         self.assertNotIn(
@@ -881,7 +881,7 @@ class SpecialtyPreferenceDefaultTests(TagFilterSelectionFixture):
             reapplied.context["tag_selection"].tag_ids, (self.cirger_tag.pk,)
         )
         self.assertFalse(reapplied.context["tag_filter_is_manual"])
-        self.assertIn("Reaplicar preferências", manual.content.decode())
+        self.assertIn("Restaurar padrão da especialidade", manual.content.decode())
 
     def test_unavailable_saved_tag_is_omitted_with_generic_warning(self) -> None:
         preference = self.save_preference(
@@ -1037,3 +1037,119 @@ class SpecialtyPreferenceDefaultTests(TagFilterSelectionFixture):
         )
         self.assertEqual(parsed, {"q": ["Paciente"]})
         self.assertFalse(response.context["tag_filter_is_manual"])
+
+
+class PatientListLanguageAndRecoveryTests(TagFilterSelectionFixture):
+    """TFUX S1 R1-R3: canonical wording and filtered-empty recovery."""
+
+    def test_canonical_wording_and_visible_correspondencia(self) -> None:
+        self.login(self.member)
+        response = self.client.get(
+            reverse("patients:patient_list"),
+            {"tags": [self.cirger_tag.pk], "tag_mode": "all"},
+        )
+        self.assertContains(response, "Pelo menos uma selecionada (OU)")
+        self.assertContains(response, "Todas as selecionadas (E)")
+        self.assertContains(response, "Correspondência")
+        self.assertContains(response, "Filtro personalizado")
+        self.assertContains(response, "Remover filtro de tags")
+        self.assertContains(response, "Mostrar inativas e arquivadas no seletor")
+        self.assertNotContains(response, "Qualquer tag")
+        self.assertNotContains(response, "Incluir tags antigas")
+        self.assertNotContains(response, "Limpar tags")
+
+    def test_apply_button_has_visible_text(self) -> None:
+        self.login(self.member)
+        response = self.client.get(reverse("patients:patient_list"))
+        self.assertContains(response, "Aplicar filtros")
+        body = response.content.decode()
+        self.assertRegex(body, r'(?s)<button[^>]*type="submit"[^>]*>.*?Aplicar filtros.*?</button>')
+
+    def test_tag_removal_names_distinguish_draft_and_applied(self) -> None:
+        self.login(self.member)
+        response = self.client.get(
+            reverse("patients:patient_list"),
+            {"tags": [self.cirger_tag.pk]},
+        )
+        self.assertContains(
+            response,
+            'aria-label="Remover Estável CIRGER [CIRGER] da seleção"',
+        )
+        self.assertContains(
+            response,
+            'aria-label="Remover Estável CIRGER [CIRGER] dos filtros aplicados"',
+        )
+
+    def test_filtered_zero_explains_no_match_without_first_patient_cta(self) -> None:
+        self.login(self.member)
+        response = self.client.get(
+            reverse("patients:patient_list"), {"q": "zzz-sem-correspondencia"}
+        )
+        self.assertEqual(list(response.context["patients"]), [])
+        self.assertContains(
+            response, "Nenhum paciente corresponde aos filtros atuais"
+        )
+        self.assertNotContains(response, "Comece adicionando o primeiro paciente")
+        self.assertNotContains(response, "Adicionar Paciente")
+
+    def test_filtered_zero_with_tags_offers_scoped_recovery(self) -> None:
+        self.login(self.member)
+        response = self.client.get(
+            reverse("patients:patient_list"),
+            {
+                "q": "zzz-sem-correspondencia",
+                "tags": [self.cirger_tag.pk],
+                "tag_mode": "any",
+            },
+        )
+        self.assertEqual(list(response.context["patients"]), [])
+        self.assertContains(
+            response, "Nenhum paciente corresponde aos filtros atuais"
+        )
+        body = response.content.decode()
+        empty_start = body.index("Nenhum paciente corresponde aos filtros atuais")
+        empty_section = body[empty_start : empty_start + 2000]
+        self.assertIn("Remover filtro de tags", empty_section)
+        self.assertNotContains(response, "Adicionar Paciente")
+
+    def test_manual_empty_wording_is_not_an_untagged_predicate(self) -> None:
+        self.login(self.member)
+        response = self.client.get(
+            reverse("patients:patient_list"), {"tag_filter": "manual"}
+        )
+        self.assertContains(response, "Sem filtro de tags (personalizado)")
+        self.assertEqual(len(response.context["patients"]), 5)
+
+    def test_saved_empty_wording(self) -> None:
+        profile = self.member.profile
+        profile.current_specialty = self.cirger
+        profile.save(update_fields=["current_specialty"])
+        membership = UserSpecialty.objects.get(
+            user=self.member, specialty=self.cirger
+        )
+        preference = UserSpecialtyTagPreference.objects.create(
+            membership=membership, mode="any"
+        )
+        preference.tags.set([])
+        self.login(self.member)
+        response = self.client.get(reverse("patients:patient_list"))
+        self.assertContains(response, "Sem filtro de tags (preferência salva)")
+        self.assertEqual(len(response.context["patients"]), 5)
+
+
+class PatientListUnfilteredEmptyTests(TestCase):
+    """TFUX S1 R3 guard: genuinely unfiltered empty keeps creation CTA."""
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.user = make_user("tag-filter-empty-user")
+
+    def test_unfiltered_empty_keeps_creation_cta(self) -> None:
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("patients:patient_list"))
+        self.assertEqual(list(response.context["patients"]), [])
+        self.assertContains(response, "Comece adicionando o primeiro paciente")
+        self.assertContains(response, "Adicionar Paciente")
+        self.assertNotContains(
+            response, "Nenhum paciente corresponde aos filtros atuais"
+        )

@@ -412,7 +412,7 @@ class TagPreferenceOverviewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.cirger.name)
         self.assertContains(response, self.public_tag.name)
-        self.assertContains(response, "Todas as tags")
+        self.assertContains(response, "Todas as selecionadas (E)")
         self.assertContains(response, self.cardio.name)
         self.assertContains(response, "Sem preferência")
 

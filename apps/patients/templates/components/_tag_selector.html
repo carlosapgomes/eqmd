@@ -52,12 +52,12 @@ resubmit keeps filtering by them.
                  id="include-historical-tags"
                  data-tag-historical>
           <label class="form-check-label small" for="include-historical-tags">
-            Incluir tags antigas
+            Mostrar inativas e arquivadas no seletor
           </label>
         </div>
         <a class="btn btn-sm btn-outline-secondary"
            href="?{{ clear_tags_querystring }}"
-           data-tag-clear>Limpar tags</a>
+           data-tag-clear>Remover filtro de tags</a>
       </div>
       <div class="d-flex flex-wrap gap-1 mt-2" data-tag-chips>
         {% for selected in selected_tags %}
@@ -68,7 +68,7 @@ resubmit keeps filtering by them.
             <button type="button"
                     class="btn-close btn-close-white"
                     style="font-size: 0.55rem;"
-                    aria-label="Remover {{ selected.badge.display_name }}"
+                    aria-label="Remover {{ selected.badge.display_name }} da seleção"
                     data-tag-remove></button>
           </span>
         {% endfor %}
@@ -96,13 +96,17 @@ resubmit keeps filtering by them.
            data-tag-marker>
   </div>
 
-  <div class="d-flex align-items-center justify-content-between mt-1 gap-2">
-    <select name="tag_mode"
-            class="form-select form-select-sm w-auto"
-            aria-label="Modo de correspondência">
-      <option value="any" {% if tag_filter_mode == "any" %}selected{% endif %}>Qualquer tag</option>
-      <option value="all" {% if tag_filter_mode == "all" %}selected{% endif %}>Todas as tags</option>
-    </select>
-    <small class="text-muted text-end" data-tag-state>{{ tag_filter_state_label }}</small>
+  <div class="d-flex flex-column gap-2 mt-1 mw-100">
+    <div class="d-flex flex-column gap-1 mw-100">
+      <label for="tag-mode" class="form-label small mb-0">Correspondência</label>
+      <select id="tag-mode"
+              name="tag_mode"
+              class="form-select form-select-sm w-100 mw-100"
+              aria-label="Correspondência">
+        <option value="any" {% if tag_filter_mode == "any" %}selected{% endif %}>Pelo menos uma selecionada (OU)</option>
+        <option value="all" {% if tag_filter_mode == "all" %}selected{% endif %}>Todas as selecionadas (E)</option>
+      </select>
+    </div>
+    <small class="text-muted text-break" data-tag-state>{{ tag_filter_state_label }}</small>
   </div>
 </div>

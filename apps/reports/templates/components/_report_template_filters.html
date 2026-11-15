@@ -52,8 +52,8 @@
                   name="tag_mode"
                   class="form-select"
                   data-discovery-mode>
-            <option value="any" {% if discovery_selection.mode == "any" %}selected{% endif %}>Qualquer tag</option>
-            <option value="all" {% if discovery_selection.mode == "all" %}selected{% endif %}>Todas as tags</option>
+            <option value="any" {% if discovery_selection.mode == "any" %}selected{% endif %}>Pelo menos uma selecionada (OU)</option>
+            <option value="all" {% if discovery_selection.mode == "all" %}selected{% endif %}>Todas as selecionadas (E)</option>
           </select>
         </div>
         <div class="col-md-2">
@@ -63,7 +63,7 @@
                     value="manual"
                     class="btn btn-medical-primary"
                     data-discovery-apply>
-              <i class="bi bi-search me-1" aria-hidden="true"></i>Aplicar
+              <i class="bi bi-search me-1" aria-hidden="true"></i>Aplicar filtros
             </button>
           </div>
         </div>
@@ -81,15 +81,15 @@
                  data-discovery-historical
                  {% if discovery_include_historical %}checked{% endif %}>
           <label class="form-check-label small" for="report-template-historical">
-            Incluir tags antigas
+            Mostrar inativas e arquivadas no seletor
           </label>
         </div>
         <a href="?{{ discovery_clear_querystring }}"
            class="btn btn-sm btn-outline-secondary"
-           data-discovery-clear>Limpar tags</a>
+           data-discovery-clear>Remover filtro de tags</a>
         <a href="?{{ discovery_reapply_querystring }}"
            class="btn btn-sm btn-outline-secondary"
-           data-discovery-reapply>Reaplicar preferências</a>
+           data-discovery-reapply>Restaurar padrão da especialidade</a>
         <p class="small text-muted mb-0 ms-auto"
            data-discovery-status
            aria-live="polite"

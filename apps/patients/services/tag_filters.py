@@ -45,13 +45,16 @@ SOURCE_INITIAL = "initial"
 SOURCE_MANUAL = "manual"
 SOURCE_SAVED = "saved"
 SOURCE_PRINCIPAL = "principal"
-MODE_LABELS = {MATCH_ANY: "Qualquer tag", MATCH_ALL: "Todas as tags"}
+MODE_LABELS = {
+    MATCH_ANY: "Pelo menos uma selecionada (OU)",
+    MATCH_ALL: "Todas as selecionadas (E)",
+}
 MODE_CHOICES = tuple((mode, MODE_LABELS[mode]) for mode in MATCH_MODES)
 STATE_INITIAL_LABEL = "Sem filtro de tag"
-STATE_MANUAL_LABEL = "Filtro manual"
-STATE_MANUAL_EMPTY_LABEL = "Sem tags (filtro manual)"
+STATE_MANUAL_LABEL = "Filtro personalizado"
+STATE_MANUAL_EMPTY_LABEL = "Sem filtro de tags (personalizado)"
 STATE_SAVED_LABEL = "Padrão salvo da especialidade"
-STATE_SAVED_EMPTY_LABEL = "Sem tags (padrão salvo)"
+STATE_SAVED_EMPTY_LABEL = "Sem filtro de tags (preferência salva)"
 STATE_PRINCIPAL_LABEL = "Padrão inicial da especialidade"
 SOURCE_LABELS = {
     SOURCE_MANUAL: STATE_MANUAL_LABEL,

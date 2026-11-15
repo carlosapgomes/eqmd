@@ -686,3 +686,104 @@ class WardMapEligibilityAndStateTests(WardMapTagFilterFixture):
         body = response.content.decode()
         self.assertIn("Nenhum paciente encontrado", body)
         self.assertEqual(self.totals_attribute(body, "data-total-patients"), "0")
+
+
+class WardMapLanguageAndRecoveryTests(WardMapTagFilterFixture):
+    """TFUX S1 R1-R3: canonical wording and filtered-empty recovery."""
+
+    def test_canonical_wording_and_visible_correspondencia(self) -> None:
+        response = self.map_response(
+            tags=[self.cirger_tag.pk], tag_mode="all"
+        )
+        body = response.content.decode()
+        for text in (
+            "Pelo menos uma selecionada (OU)",
+            "Todas as selecionadas (E)",
+            "Correspondência",
+            "Filtro personalizado",
+            "Remover filtro de tags",
+            "Mostrar inativas e arquivadas no seletor",
+            "Aplicar filtros",
+        ):
+            self.assertIn(text, body)
+        self.assertNotIn("Qualquer tag", body)
+        self.assertNotIn("Incluir tags antigas", body)
+        self.assertNotIn("Limpar tags", body)
+
+    def test_apply_button_has_visible_text(self) -> None:
+        body = self.map_response().content.decode()
+        self.assertRegex(
+            body,
+            r'(?s)<button[^>]*type="submit"[^>]*>.*?Aplicar filtros.*?</button>',
+        )
+
+    def test_tag_removal_names_distinguish_draft_and_applied(self) -> None:
+        body = self.map_response(tags=[self.cirger_tag.pk]).content.decode()
+        self.assertIn(
+            'aria-label="Remover Estável CIRGER [CIRGER] da seleção"', body
+        )
+        self.assertIn(
+            'aria-label="Remover Estável CIRGER [CIRGER] dos filtros aplicados"', body
+        )
+
+    def test_filtered_zero_explains_no_match_with_scoped_recovery(self) -> None:
+        response = self.map_response(tags=[self.outpatient_tag.pk])
+        body = response.content.decode()
+        self.assertEqual(list(response.context["ward_data"]), [])
+        self.assertIn(
+            "Nenhum paciente internado corresponde aos filtros atuais", body
+        )
+        empty_start = body.index("Nenhum paciente encontrado")
+        empty_section = body[empty_start : empty_start + 2500]
+        self.assertIn("Remover filtro de tags", empty_section)
+        self.assertNotIn("Nenhuma ala cadastrada", body)
+
+    def test_tree_only_filtered_zero_matches_full_map_recovery(self) -> None:
+        # TFUX S1 review correction: the AJAX tree-only partial
+        # must present the same filtered-empty recovery as the
+        # full map, reusing the existing querystrings.
+        response = self.ajax_response(tags=[self.outpatient_tag.pk])
+        body = response.content.decode()
+        self.assertEqual(list(response.context["ward_data"]), [])
+        self.assertIn(
+            "Nenhum paciente internado corresponde aos filtros atuais", body
+        )
+        empty_start = body.index("Nenhum paciente encontrado")
+        empty_section = body[empty_start : empty_start + 2500]
+        self.assertIn("Remover filtro de tags", empty_section)
+        self.assertIn("Limpar filtros", empty_section)
+        self.assertNotIn("Nenhum paciente internado no momento", body)
+        self.assertNotIn("Nenhuma ala cadastrada", body)
+
+    def test_tree_only_manual_empty_is_not_filtered_empty(self) -> None:
+        response = self.ajax_response(tag_filter="manual")
+        body = response.content.decode()
+        self.assertTrue(response.context["tag_filter_is_manual"])
+        self.assertFalse(response.context["tag_selection"].has_predicate)
+        self.assertNotIn("Nenhum paciente encontrado", body)
+        self.assertEqual(
+            self.rendered_patient_names(response),
+            {patient.name for patient in self.inpatients},
+        )
+
+    def test_tree_only_unfiltered_empty_distinct_from_filtered(self) -> None:
+        seed_warm_cache([(self.ward_a, []), (self.ward_b, [])])
+        response = self.ajax_response()
+        body = response.content.decode()
+        self.assertEqual(list(response.context["ward_data"]), [])
+        self.assertIn("Nenhum paciente internado no momento", body)
+        self.assertNotIn(
+            "Nenhum paciente internado corresponde aos filtros atuais", body
+        )
+        self.assertNotIn("Remover filtro de tags", body)
+        self.assertNotIn("Nenhuma ala cadastrada", body)
+
+    def test_tree_only_manual_empty_with_empty_wards_is_unfiltered(self) -> None:
+        seed_warm_cache([(self.ward_a, []), (self.ward_b, [])])
+        response = self.ajax_response(tag_filter="manual")
+        body = response.content.decode()
+        self.assertEqual(list(response.context["ward_data"]), [])
+        self.assertIn("Nenhum paciente internado no momento", body)
+        self.assertNotIn(
+            "Nenhum paciente internado corresponde aos filtros atuais", body
+        )

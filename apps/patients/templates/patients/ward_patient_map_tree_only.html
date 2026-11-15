@@ -144,9 +144,27 @@
 <div class="text-center py-5" data-map-empty-results>
   <i class="bi bi-search display-4 text-muted mb-3"></i>
   <h4>Nenhum paciente encontrado</h4>
+  {% if search_query or ward_filter or tag_selection.has_predicate %}
   <p class="text-muted">
     Nenhum paciente internado corresponde aos filtros atuais.
+    Ajuste a busca, a ala ou as tags para ver resultados.
   </p>
+  <div class="d-flex flex-wrap justify-content-center gap-2">
+    {% if tag_selection.has_predicate %}
+    <a href="?{{ clear_tags_querystring }}" class="btn btn-outline-secondary" data-clear-tag-filter>Remover filtro de tags</a>
+    {% endif %}
+    {% if tag_filter_is_manual and tag_preference_specialty %}
+    <a href="?{{ reapply_tags_querystring }}" class="btn btn-outline-secondary" data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
+    {% endif %}
+    <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar filtros
+    </a>
+  </div>
+  {% else %}
+  <p class="text-muted">
+    Nenhum paciente internado no momento.
+  </p>
+  {% endif %}
 </div>
 {% endif %}
 {% else %}

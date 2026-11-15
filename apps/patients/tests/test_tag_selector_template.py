@@ -11,6 +11,7 @@ fallback is asserted unchanged.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
 from django.contrib.auth.models import Permission
@@ -113,6 +114,80 @@ class TagSelectorTemplateTests(TestCase):
         list_end = markup.index("</ul>", markup.index("data-tag-results"))
         self.assertGreater(markup.index("data-tag-more"), list_end)
         self.assertLess(markup.index("Carregar mais"), markup.index("data-tag-status"))
+
+    def test_canonical_filter_language(self) -> None:
+        markup = self.component_markup()
+        self.assertIn("Correspondência", markup)
+        self.assertIn("Pelo menos uma selecionada (OU)", markup)
+        self.assertIn("Todas as selecionadas (E)", markup)
+        self.assertIn("Mostrar inativas e arquivadas no seletor", markup)
+        self.assertIn("Remover filtro de tags", markup)
+        self.assertNotIn("Qualquer tag", markup)
+        self.assertNotIn("Incluir tags antigas", markup)
+        self.assertNotIn("Limpar tags", markup)
+
+    def test_draft_chip_removal_names_the_selection_scope(self) -> None:
+        response = self.client.get(
+            reverse("patients:patient_list"), {"tags": [self.team_tag.pk]}
+        )
+        self.assertIn(
+            'aria-label="Remover Cir Vascular [CIRGER] da seleção"',
+            response.content.decode(),
+        )
+
+    def test_dynamic_chip_removal_uses_selection_scope_label(self) -> None:
+        # TFUX S1 review correction: chips recreated by the
+        # enhancement must match the server-rendered scope name.
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "js" / "tag-selector.js").read_text()
+        normalized = re.sub(r"\s+", " ", source)
+        self.assertIn(
+            '"Remover " + tag.display_name + " da seleção"', normalized
+        )
+        self.assertNotIn('"Remover " + tag.display_name);', source)
+
+    def test_mode_and_state_block_is_vertical_and_width_constrained(self) -> None:
+        # TFUX S1 layout correction: the longer canonical text must
+        # not overflow the narrow tag column into the Apply/tree
+        # columns. Static class assertions can only constrain the
+        # structure (vertical block, full-width select, wrapping
+        # state); real geometry still requires browser proof.
+        markup = self.component_markup()
+        mode_select = re.search(r'<select[^>]*id="tag-mode"[^>]*>', markup)
+        self.assertIsNotNone(mode_select)
+        classes = mode_select.group(0)
+        self.assertIn("w-100", classes)
+        self.assertIn("mw-100", classes)
+        self.assertNotIn("w-auto", classes)
+        self.assertIn('name="tag_mode"', classes)
+        # Vertical enclosing block: label, select and state in
+        # document order, without the old row justify-between.
+        block_start = markup.index('class="d-flex flex-column')
+        label_at = markup.index('for="tag-mode"', block_start)
+        select_at = markup.index('id="tag-mode"', block_start)
+        state_at = markup.index("data-tag-state", block_start)
+        self.assertLess(block_start, label_at)
+        self.assertLess(label_at, select_at)
+        self.assertLess(select_at, state_at)
+        block = markup[block_start:state_at]
+        self.assertNotIn("justify-content-between", block)
+        state_tag = re.search(r'<small[^>]*data-tag-state[^>]*>', markup)
+        self.assertIsNotNone(state_tag)
+        self.assertIn("text-break", state_tag.group(0))
+
+    def test_map_renders_same_constrained_mode_block(self) -> None:
+        response = self.client.get(reverse("patients:patient_map"))
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        mode_select = re.search(r'<select[^>]*id="tag-mode"[^>]*>', body)
+        self.assertIsNotNone(mode_select)
+        self.assertIn("w-100", mode_select.group(0))
+        self.assertIn("mw-100", mode_select.group(0))
+        self.assertNotIn("w-auto", mode_select.group(0))
+        self.assertIn('class="d-flex flex-column', body)
+        self.assertIn("Correspondência", body)
+        self.assertIn("Pelo menos uma selecionada (OU)", body)
+        self.assertIn('name="tag_mode"', body)
 
     def test_native_multiselect_fallback_is_unchanged(self) -> None:
         select = self.matches(NATIVE_SELECT)[0]

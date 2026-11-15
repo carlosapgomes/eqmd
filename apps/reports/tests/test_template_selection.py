@@ -1318,3 +1318,65 @@ class RuntimeFixProductRegressionTests(SelectionFixturesMixin, TestCase):
         selected = [v for v, _l, sel in parser.options if sel]
         self.assertEqual(selected, [str(self.tpl_inactive.pk)])
         self.assertIn("Modelo selecionado indisponível", body)
+
+
+class ReportCreateLanguageTests(SelectionFixturesMixin, TestCase):
+    """TFUX S1 R1-R2: creation shares canonical discovery wording."""
+
+    def test_create_page_uses_canonical_discovery_language(self) -> None:
+        response = self.client.get(self.create_url())
+        for text in (
+            "Pelo menos uma selecionada (OU)",
+            "Todas as selecionadas (E)",
+            "Correspondência",
+            "Mostrar inativas e arquivadas no seletor",
+            "Remover filtro de tags",
+            "Restaurar padrão da especialidade",
+            "Aplicar filtros",
+        ):
+            self.assertContains(response, text)
+        self.assertNotContains(response, "Qualquer tag")
+        self.assertNotContains(response, "Limpar tags")
+
+    def test_create_applied_badge_removal_names_the_applied_scope(self) -> None:
+        response = self.client.get(
+            self.create_url(), {"tags": [self.tag_x.pk]}
+        )
+        self.assertContains(
+            response,
+            'aria-label="Remover S3 X dos filtros aplicados"',
+        )
+
+    def test_dynamic_applied_badge_removal_uses_applied_scope_label(self) -> None:
+        # TFUX S1 review correction: badges recreated by the
+        # enhanced selection controller must match the server
+        # scope name, not the legacy bare label.
+        update_results = _js_function(_js_source(), "updateResults")
+        normalized = re.sub(r"\s+", " ", update_results)
+        self.assertIn(
+            '"Remover " + tag.display_name + " dos filtros aplicados"',
+            normalized,
+        )
+        self.assertNotIn('"Remover " + tag.display_name\n', update_results)
+
+    def test_dynamic_state_summary_uses_canonical_labels(self) -> None:
+        # TFUX S1 review correction: the dynamic summary must not
+        # regress to raw source/mode values, and must map every
+        # payload source/mode to the canonical pt-BR labels.
+        source = _js_source()
+        self.assertNotIn(
+            'payload.filter.source + " · " + payload.filter.mode', source
+        )
+        for label in (
+            "Filtro personalizado",
+            "Sem filtro de tags (personalizado)",
+            "Sem filtro de tags (preferência salva)",
+            "Padrão salvo da especialidade",
+            "Padrão inicial da especialidade",
+            "Sem filtro de tag",
+            "Pelo menos uma selecionada (OU)",
+            "Todas as selecionadas (E)",
+        ):
+            self.assertIn(label, source)
+        update_results = _js_function(source, "updateResults")
+        self.assertIn("data-discovery-state", update_results)

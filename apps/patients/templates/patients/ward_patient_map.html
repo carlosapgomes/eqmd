@@ -99,11 +99,12 @@
             <div class="col-md-2 d-flex align-items-end">
               <div class="btn-group w-100" role="group">
                 <button type="submit" class="btn btn-medical-outline-primary">
-                  <i class="bi bi-search"></i>
+                  <i class="bi bi-search" aria-hidden="true"></i> Aplicar filtros
                 </button>
                 <a href="{% url 'apps.patients:patient_map' %}"
                    class="btn btn-outline-secondary"
-                   title="Limpar filtros">
+                   title="Limpar filtros"
+                   aria-label="Limpar filtros">
                   <i class="bi bi-x-circle"></i>
                 </a>
               </div>
@@ -194,6 +195,7 @@
                 <span class="badge bg-primary">
                   Busca: {{ search_query }}
                   <a href="?{{ search_remove_querystring }}"
+                     aria-label="Remover busca dos filtros aplicados"
                      class="text-white text-decoration-none ms-1">
                     <i class="bi bi-x"></i>
                   </a>
@@ -205,6 +207,7 @@
                     <span class="badge bg-secondary">
                       Ala: {{ ward.abbreviation }}
                       <a href="?{{ ward_remove_querystring }}"
+                         aria-label="Remover filtro de ala dos filtros aplicados"
                          class="text-white text-decoration-none ms-1">
                         <i class="bi bi-x"></i>
                       </a>
@@ -216,6 +219,7 @@
                 <span class="badge" style="background-color: {{ selected.badge.color }};" data-active-tag-badge>
                   {{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}
                   <a href="?{{ selected.remove_querystring }}"
+                     aria-label="Remover {{ selected.badge.display_name }} dos filtros aplicados"
                      class="text-white text-decoration-none ms-1">
                     <i class="bi bi-x"></i>
                   </a>
@@ -225,11 +229,11 @@
                 <span class="badge bg-secondary" data-tag-mode-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
                 <a href="?{{ clear_tags_querystring }}"
                    class="badge bg-light text-dark text-decoration-none"
-                   data-clear-tag-filter>Limpar tags</a>
+                   data-clear-tag-filter>Remover filtro de tags</a>
                 {% if tag_preference_specialty %}
                   <a href="?{{ reapply_tags_querystring }}"
                      class="badge bg-light text-dark text-decoration-none"
-                     data-reapply-tag-preferences>Reaplicar preferências</a>
+                     data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
                 {% endif %}
               {% elif tag_selection.has_predicate %}
                 <span class="badge bg-secondary" data-tag-default-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
@@ -385,13 +389,27 @@
           <div class="text-center py-5" data-map-empty-results>
             <i class="bi bi-search display-4 text-muted mb-3"></i>
             <h4>Nenhum paciente encontrado</h4>
+            {% if search_query or ward_filter or tag_selection.has_predicate %}
             <p class="text-muted">
               Nenhum paciente internado corresponde aos filtros atuais.
               Ajuste a busca, a ala ou as tags para ver resultados.
             </p>
-            <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-outline-secondary">
-              <i class="bi bi-x-circle me-1"></i>Limpar filtros
-            </a>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+              {% if tag_selection.has_predicate %}
+              <a href="?{{ clear_tags_querystring }}" class="btn btn-outline-secondary" data-clear-tag-filter>Remover filtro de tags</a>
+              {% endif %}
+              {% if tag_filter_is_manual and tag_preference_specialty %}
+              <a href="?{{ reapply_tags_querystring }}" class="btn btn-outline-secondary" data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
+              {% endif %}
+              <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar filtros
+              </a>
+            </div>
+            {% else %}
+            <p class="text-muted">
+              Nenhum paciente internado no momento.
+            </p>
+            {% endif %}
           </div>
           {% endif %}
           {% else %}

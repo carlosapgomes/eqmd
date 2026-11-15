@@ -396,7 +396,7 @@ class DiscoveryDefaultsTests(DiscoveryFixturesMixin, TestCase):
         response = self.get_list()
         self.assertEqual(self.result_ids(response), [self.tpl_a.pk])
         self.assertContains(response, "Padrão salvo da especialidade")
-        self.assertContains(response, "Todas as tags")
+        self.assertContains(response, "Todas as selecionadas (E)")
 
     def test_saved_empty_suppresses_principal(self) -> None:
         self.set_current(self.team_a)
@@ -404,7 +404,7 @@ class DiscoveryDefaultsTests(DiscoveryFixturesMixin, TestCase):
         response = self.get_list()
         self.assertFalse(response.context["discovery_selection"].has_predicate)
         self.assertEqual(set(self.result_ids(response)), self.all_eligible_ids())
-        self.assertContains(response, "Sem tags (padrão salvo)")
+        self.assertContains(response, "Sem filtro de tags (preferência salva)")
 
     def test_manual_overrides_saved_without_database_write(self) -> None:
         self.set_current(self.team_a)
@@ -640,7 +640,9 @@ class DiscoveryStateTests(DiscoveryFixturesMixin, TestCase):
         response = self.get_list(q="zzz-sem-correspondencia")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["object_list"]), [])
-        self.assertContains(response, "Nenhum template encontrado")
+        self.assertContains(
+            response, "Nenhum modelo corresponde aos filtros atuais"
+        )
         self.assertContains(response, "Sem filtro de tag")
 
     def test_existing_copy_and_view_actions_remain(self) -> None:
@@ -666,7 +668,7 @@ class DiscoveryStateTests(DiscoveryFixturesMixin, TestCase):
         self.assertTrue(selection.is_manual)
         self.assertFalse(selection.has_predicate)
         self.assertEqual(set(self.result_ids(response)), self.all_eligible_ids())
-        self.assertContains(response, "Sem tags (filtro manual)")
+        self.assertContains(response, "Sem filtro de tags (personalizado)")
 
     def test_copy_handler_delegates_from_stable_ancestor(self) -> None:
         # Copy clicks must survive results-fragment replacement, so the
@@ -915,3 +917,94 @@ class DiscoveryServiceTests(DiscoveryFixturesMixin, TestCase):
             self.viewer, make_query(tags=["999999"])
         )
         self.assertTrue(bad.error)
+
+
+class DiscoveryLanguageAndRecoveryTests(DiscoveryFixturesMixin, TestCase):
+    """TFUX S1 R1-R3: canonical wording and filtered-empty recovery."""
+
+    def test_canonical_wording_and_visible_correspondencia(self) -> None:
+        response = self.get_list(tags=[self.tag_x.pk], tag_mode="all")
+        for text in (
+            "Pelo menos uma selecionada (OU)",
+            "Todas as selecionadas (E)",
+            "Correspondência",
+            "Filtro personalizado",
+            "Remover filtro de tags",
+            "Restaurar padrão da especialidade",
+            "Mostrar inativas e arquivadas no seletor",
+            "Aplicar filtros",
+        ):
+            self.assertContains(response, text)
+        self.assertNotContains(response, "Qualquer tag")
+        self.assertNotContains(response, "Incluir tags antigas")
+        self.assertNotContains(response, "Limpar tags")
+        self.assertNotContains(response, "Reaplicar preferências")
+
+    def test_applied_badge_removal_names_the_applied_scope(self) -> None:
+        response = self.get_list(tags=[self.tag_x.pk])
+        self.assertContains(
+            response,
+            'aria-label="Remover S2 X dos filtros aplicados"',
+        )
+
+    def test_filtered_zero_explains_no_match_without_first_template_cta(self) -> None:
+        response = self.get_list(q="zzz-sem-correspondencia")
+        self.assertEqual(list(response.context["object_list"]), [])
+        self.assertContains(
+            response, "Nenhum modelo corresponde aos filtros atuais"
+        )
+        self.assertNotContains(response, "Crie o primeiro template")
+        self.assertNotContains(response, "Nenhum template encontrado")
+
+    def test_filtered_zero_with_tags_offers_scoped_recovery(self) -> None:
+        response = self.get_list(
+            q="zzz-sem-correspondencia",
+            tags=[self.tag_x.pk],
+            tag_mode="any",
+        )
+        self.assertEqual(list(response.context["object_list"]), [])
+        self.assertContains(
+            response, "Nenhum modelo corresponde aos filtros atuais"
+        )
+        body = response.content.decode()
+        empty_start = body.index(
+            "Nenhum modelo corresponde aos filtros atuais"
+        )
+        empty_section = body[empty_start : empty_start + 2000]
+        self.assertIn("Remover filtro de tags", empty_section)
+        self.assertNotContains(response, "Crie o primeiro template")
+
+    def test_manual_empty_is_unfiltered_and_keeps_all_models(self) -> None:
+        response = self.get_list(tag_filter="manual")
+        self.assertContains(response, "Sem filtro de tags (personalizado)")
+        self.assertEqual(set(self.result_ids(response)), self.all_eligible_ids())
+        self.assertNotContains(
+            response, "Nenhum modelo corresponde aos filtros atuais"
+        )
+
+    def test_saved_empty_wording(self) -> None:
+        self.set_current(self.team_a)
+        self.save_preference(())
+        response = self.get_list()
+        self.assertContains(response, "Sem filtro de tags (preferência salva)")
+        self.assertEqual(set(self.result_ids(response)), self.all_eligible_ids())
+
+
+class DiscoveryUnfilteredEmptyTests(TestCase):
+    """TFUX S1 R3 guard: genuinely unfiltered empty keeps creation CTA."""
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.viewer = make_user("s2-empty-viewer")
+
+    def setUp(self) -> None:
+        self.client.force_login(self.viewer)
+
+    def test_unfiltered_empty_keeps_creation_cta_for_manager(self) -> None:
+        response = self.client.get(reverse(LIST_URL))
+        self.assertEqual(list(response.context["object_list"]), [])
+        self.assertContains(response, "Nenhum template encontrado")
+        self.assertContains(response, "Crie o primeiro template")
+        self.assertNotContains(
+            response, "Nenhum modelo corresponde aos filtros atuais"
+        )
