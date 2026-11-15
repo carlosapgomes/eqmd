@@ -778,6 +778,29 @@ class WardMapLanguageAndRecoveryTests(WardMapTagFilterFixture):
         self.assertNotIn("Remover filtro de tags", body)
         self.assertNotIn("Nenhuma ala cadastrada", body)
 
+    def test_map_filter_form_exposes_dirty_state_and_show_empty_never_submits(self) -> None:
+        # TFUX S2 R1/R2: the map host form carries draft/applied hooks
+        # for q/ward/tags/mode/show-empty and the empty-ward toggle is
+        # a pending predicate, never an implicit submission.
+        body = self.map_response().content.decode()
+        form = re.search(r'<form[^>]*data-patient-filter-form[^>]*>', body)
+        self.assertIsNotNone(form)
+        self.assertIn('method="get"', form.group(0))
+        dirty = re.search(r'<p[^>]*data-patient-filter-dirty[^>]*>', body)
+        self.assertIsNotNone(dirty)
+        self.assertIn("hidden", dirty.group(0))
+        self.assertIn("Alterações não aplicadas", body)
+        self.assertIn("patient-filter-form.js", body)
+        self.assertIn('name="q"', body)
+        self.assertIn('name="ward"', body)
+        self.assertIn('name="show_empty_wards"', body)
+        show_empty = re.search(
+            r'<input[^>]*id="show-empty-wards"[^>]*>', body
+        )
+        self.assertIsNotNone(show_empty)
+        self.assertNotIn("onchange", show_empty.group(0))
+        self.assertNotIn("form.submit", show_empty.group(0))
+
     def test_tree_only_manual_empty_with_empty_wards_is_unfiltered(self) -> None:
         seed_warm_cache([(self.ward_a, []), (self.ward_b, [])])
         response = self.ajax_response(tag_filter="manual")

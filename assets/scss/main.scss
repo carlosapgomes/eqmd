@@ -590,3 +590,94 @@ body.app-layout { // Add a class to body for authenticated layout to avoid affec
 .modal.show ~ .page-loading-overlay {
   z-index: 1040; // Below Bootstrap modal backdrop (1050)
 }
+
+// Patient tag filter selector (TFUX S2)
+// --------------------------------------------------
+// The option results are a selector-anchored overlay: opening the
+// panel or loading more rows overlays following content instead of
+// growing the host filter card. Selected chips use one neutral
+// light surface with dark text; a tag's custom color never
+// determines chip text contrast.
+.tag-selector-panel {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  width: 100%;
+  max-height: min(18rem, 50vh);
+  z-index: 1030;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.tag-selector-panel [data-tag-results] {
+  width: 100%;
+  max-height: min(18rem, 50vh);
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  margin-bottom: 0;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 0;
+}
+
+.tag-selector-panel [data-tag-more] {
+  margin: 0.25rem auto;
+  padding: 0.25rem 0.75rem;
+}
+
+.tag-filter-chip {
+  background-color: #eef2f7;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  max-width: 100%;
+  // Override Bootstrap's badge nowrap only for filter-editor chips.
+  white-space: normal;
+}
+
+.tag-filter-chip-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+[data-tag-mode-badge],
+[data-tag-default-badge] {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.tag-filter-chip-remove {
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.125rem 0.375rem;
+  color: #1e293b;
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  line-height: 1;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.tag-filter-chip-remove:hover,
+.tag-filter-chip-remove:focus-visible {
+  color: #0f172a;
+  background-color: #dbe4ef;
+}
+
+@media (pointer: coarse) {
+  .tag-filter-chip-remove {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

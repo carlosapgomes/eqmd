@@ -98,6 +98,11 @@ module.exports = {
           from: "assets/js/tag-selector.js",
           to: "js/tag-selector.js",
         },
+        // Patient/map host draft/applied filter form (TFUX S2)
+        {
+          from: "assets/js/patient-filter-form.js",
+          to: "js/patient-filter-form.js",
+        },
         // Report-template catalogue discovery (S2)
         {
           from: "assets/js/report-template-discovery.js",

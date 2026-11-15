@@ -55,6 +55,7 @@
     var search = root.querySelector("[data-tag-search]");
     var historical = root.querySelector("[data-tag-historical]");
     var results = root.querySelector("[data-tag-results]");
+    var panel = root.querySelector("[data-tag-panel]");
     var chips = root.querySelector("[data-tag-chips]");
     var hidden = root.querySelector("[data-tag-hidden-inputs]");
     var marker = root.querySelector("[data-tag-marker]");
@@ -83,6 +84,19 @@
       }
     }
 
+    function setPanelVisible(visible) {
+      results.hidden = !visible;
+      if (panel) {
+        panel.hidden = !visible;
+      }
+    }
+
+    function notifySelectionChanged() {
+      root.dispatchEvent(
+        new CustomEvent("tag-selector:change", { bubbles: true })
+      );
+    }
+
     function markManual() {
       if (marker && marker.value !== "manual") {
         marker.value = "manual";
@@ -93,7 +107,7 @@
       return selectedInput(hidden, tagId) !== null;
     }
 
-    function addInput(tagId) {
+    function addInput(tagId, markAsManual) {
       if (selectedInput(hidden, tagId)) {
         return;
       }
@@ -103,7 +117,12 @@
       input.value = String(tagId);
       input.setAttribute("data-tag-input", "");
       hidden.appendChild(input);
-      markManual();
+      // Seeding the server-rendered applied selection during
+      // initialization must not convert an automatic origin into a
+      // manual one; only a user-initiated change marks manual state.
+      if (markAsManual) {
+        markManual();
+      }
     }
 
     function removeInput(tagId) {
@@ -164,10 +183,12 @@
     }
 
     function chipLabel(chip) {
-      if (!chip || !chip.firstChild) {
+      if (!chip) {
         return "";
       }
-      return (chip.firstChild.nodeValue || "").replace(/\s+/g, " ").trim();
+      var label = chip.querySelector("[data-tag-chip-label]");
+      var text = label ? label.textContent : chip.textContent;
+      return (text || "").replace(/\s+/g, " ").trim();
     }
 
     function nextRemoveButton(chip) {
@@ -193,6 +214,7 @@
         }
         setStatus(message);
         syncResult(tagId);
+        notifySelectionChanged();
         if (next) {
           next.focus();
         } else if (search) {
@@ -204,7 +226,7 @@
     Array.prototype.forEach.call(
       chips.querySelectorAll("[data-tag-chip]"),
       function (chip) {
-        addInput(chip.getAttribute("data-tag-id"));
+        addInput(chip.getAttribute("data-tag-id"), false);
         var button = chip.querySelector("[data-tag-remove]");
         if (button) {
           attachRemove(button, chip.getAttribute("data-tag-id"));
@@ -218,21 +240,22 @@
       }
       var chip = document.createElement("span");
       chip.className =
-        "badge bg-medical-teal d-inline-flex align-items-center gap-1";
+        "badge tag-filter-chip d-inline-flex align-items-center gap-1";
       chip.setAttribute("data-tag-chip", "");
       chip.setAttribute("data-tag-id", String(tag.id));
 
-      var label = document.createTextNode(
-        tag.state_label
-          ? tag.display_name + " (" + tag.state_label + ")"
-          : tag.display_name
-      );
+      var label = document.createElement("span");
+      label.className = "tag-filter-chip-label";
+      label.setAttribute("data-tag-chip-label", "");
+      label.textContent = tag.state_label
+        ? tag.display_name + " (" + tag.state_label + ")"
+        : tag.display_name;
       chip.appendChild(label);
 
       var button = document.createElement("button");
       button.type = "button";
-      button.className = "btn-close btn-close-white";
-      button.style.fontSize = "0.55rem";
+      button.className = "tag-filter-chip-remove";
+      button.textContent = "×";
       button.setAttribute(
         "aria-label",
         "Remover " + tag.display_name + " da seleção"
@@ -248,8 +271,9 @@
       if (!tag || tag.id === undefined) {
         return;
       }
-      addInput(tag.id);
+      addInput(tag.id, true);
       addChip(tag);
+      notifySelectionChanged();
     }
 
     function resultButton(tag) {
@@ -330,7 +354,7 @@
     }
 
     function openResults(position) {
-      results.hidden = false;
+      setPanelVisible(true);
       if (focusResult(position)) {
         return;
       }
@@ -373,7 +397,7 @@
             syncResult(tag.id);
           });
           more.hidden = !payload.has_next;
-          results.hidden = false;
+          setPanelVisible(true);
           if (!payload.count) {
             setStatus(EMPTY_MESSAGE);
           } else if (reset) {
@@ -410,17 +434,32 @@
           load(true);
         }, SEARCH_DELAY_MS);
       });
-      search.addEventListener("focus", function () {
-        if (!results.childElementCount && page === 1) {
+      function reopenLoadedOrLoad() {
+        // After Escape or a click-outside close, focusing or clicking
+        // the search field reopens already-loaded results instead of
+        // requiring another query; an empty list starts the lookup
+        // (which also retries after a lookup failure).
+        if (results.childElementCount) {
+          setPanelVisible(true);
+          return;
+        }
+        if (page === 1) {
           load(true);
         }
-      });
+      }
+      search.addEventListener("focus", reopenLoadedOrLoad);
+      search.addEventListener("click", reopenLoadedOrLoad);
       search.addEventListener("keydown", function (event) {
         if (event.altKey || event.ctrlKey || event.metaKey) {
           return;
         }
         if (event.key === "Escape" || event.key === "Esc") {
-          results.hidden = true;
+          // The search field already has focus (search keydown),
+          // so closing preserves its term and any selected chips.
+          // preventDefault suppresses the native input[type=search]
+          // Escape behavior, which would otherwise clear the term.
+          event.preventDefault();
+          setPanelVisible(false);
           return;
         }
         if (event.key === "ArrowDown") {
@@ -440,7 +479,7 @@
       }
       if (event.key === "Escape" || event.key === "Esc") {
         event.preventDefault();
-        results.hidden = true;
+        setPanelVisible(false);
         if (search) {
           search.focus();
         }
@@ -475,8 +514,20 @@
       }
     });
 
+    // Clicking outside the selector closes the panel without
+    // changing the selection, the option-search term or any draft.
+    document.addEventListener("click", function (event) {
+      var target = event.target;
+      if (!target || !root.contains(target)) {
+        setPanelVisible(false);
+      }
+    });
+
     if (historical) {
       historical.addEventListener("change", function () {
+        // Historical lookup is option-only: it refreshes the choices
+        // (and keeps a selected readable historical tag represented
+        // through the chips) but never marks the host filter draft.
         load(true);
       });
     }

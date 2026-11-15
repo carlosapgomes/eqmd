@@ -189,6 +189,184 @@ class TagSelectorTemplateTests(TestCase):
         self.assertIn("Pelo menos uma selecionada (OU)", body)
         self.assertIn('name="tag_mode"', body)
 
+    def test_option_panel_wraps_results_and_load_more(self) -> None:
+        # TFUX S2 R3: option results live in a selector-anchored overlay
+        # panel so opening/loading rows cannot grow the host card.
+        markup = self.component_markup()
+        panel = re.search(r'<div[^>]*data-tag-panel[^>]*>', markup)
+        self.assertIsNotNone(panel)
+        self.assertIn("hidden", panel.group(0))
+        panel_start = panel.start()
+        results_at = markup.index("data-tag-results", panel_start)
+        more_at = markup.index("data-tag-more", panel_start)
+        status_at = markup.index("data-tag-status", panel_start)
+        self.assertLess(results_at, more_at)
+        self.assertLess(more_at, status_at)
+        self.assertIn('aria-controls="tag-search-results"', markup)
+
+    def test_draft_chip_uses_neutral_surface_and_sized_remove_target(self) -> None:
+        # TFUX S2 R4: draft chips use a neutral light surface with dark
+        # text (not the white-on-teal combination) and a sized remove
+        # target with the S1 selection-scope accessible name.
+        response = self.client.get(
+            reverse("patients:patient_list"), {"tags": [self.team_tag.pk]}
+        )
+        markup = response.content.decode()
+        chip = re.search(r'<span[^>]*data-tag-chip[^>]*>', markup)
+        self.assertIsNotNone(chip)
+        self.assertIn("tag-filter-chip", chip.group(0))
+        self.assertNotIn("bg-medical-teal", chip.group(0))
+        remove = re.search(
+            r'<button[^>]*data-tag-remove[^>]*>.*?</button>', markup
+        )
+        self.assertIsNotNone(remove)
+        self.assertIn("tag-filter-chip-remove", remove.group(0))
+        self.assertNotIn("btn-close-white", remove.group(0))
+        self.assertIn(
+            'aria-label="Remover Cir Vascular [CIRGER] da seleção"',
+            remove.group(0),
+        )
+        self.assertIn(">×</span></button>", remove.group(0))
+        self.assertIn("tag-filter-chip-label", markup)
+        self.assertNotIn('class="tag-filter-chip-label text-break"', markup)
+
+    def test_map_draft_chip_uses_the_same_neutral_surface(self) -> None:
+        response = self.client.get(
+            reverse("patients:patient_map"), {"tags": [self.team_tag.pk]}
+        )
+        self.assertEqual(response.status_code, 200)
+        markup = response.content.decode()
+        chip = re.search(r'<span[^>]*data-tag-chip[^>]*>', markup)
+        self.assertIsNotNone(chip)
+        self.assertIn("tag-filter-chip", chip.group(0))
+        self.assertNotIn("bg-medical-teal", chip.group(0))
+        self.assertIn("data-tag-panel", markup)
+
+    def test_selector_panel_and_chip_styles_are_bounded_and_sized(self) -> None:
+        # TFUX S2 R3/R4: the bounded overlay, neutral chip colors and
+        # 24/44px remove targets live in the scoped stylesheet.
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "scss" / "main.scss").read_text()
+        normalized = re.sub(r"\s+", " ", source)
+        self.assertIn(".tag-selector-panel", normalized)
+        self.assertIn("width: 100%", normalized)
+        self.assertIn("max-height: min(18rem, 50vh)", normalized)
+        self.assertIn("overflow-y: auto", normalized)
+        self.assertIn(".tag-filter-chip", normalized)
+        self.assertIn("background-color: #eef2f7", normalized)
+        self.assertIn("color: #1e293b", normalized)
+        self.assertIn(".tag-filter-chip-remove", normalized)
+        self.assertIn("min-width: 24px", normalized)
+        self.assertIn("min-height: 24px", normalized)
+        self.assertIn("@media (pointer: coarse)", normalized)
+        self.assertIn("min-width: 44px", normalized)
+        self.assertIn("min-height: 44px", normalized)
+
+    def test_filter_labels_avoid_conflicting_nowrap_styles(self) -> None:
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "js" / "tag-selector.js").read_text()
+        self.assertNotIn(
+            'label.className = "tag-filter-chip-label text-break"',
+            source,
+        )
+        selector = self.matches(NATIVE_SELECT)[0]
+        self.assertIsNotNone(selector)
+        markup = self.component_markup()
+        self.assertNotIn('class="tag-filter-chip-label text-break"', markup)
+        styles = (root / "assets" / "scss" / "main.scss").read_text()
+        self.assertIn("white-space: normal", styles)
+        self.assertIn("[data-tag-mode-badge]", styles)
+        self.assertIn("[data-tag-default-badge]", styles)
+
+    def test_selector_js_reopens_loaded_results_and_closes_outside(self) -> None:
+        # TFUX S2 R3: focus/click reopens loaded results, click-outside
+        # and Escape close without losing the term or selection, and
+        # selection changes notify the host filter form.
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "js" / "tag-selector.js").read_text()
+        normalized = re.sub(r"\s+", " ", source)
+        self.assertIn("tag-selector:change", normalized)
+        self.assertIn("document.addEventListener(\"click\"", normalized)
+        self.assertIn("contains(", normalized)
+        self.assertIn("childElementCount", normalized)
+        self.assertIn("data-tag-panel", normalized)
+
+    def test_search_escape_prevents_native_term_clear(self) -> None:
+        # TFUX S2 browser fix (supplement to the executable
+        # harness): native Chrome clears input[type=search] text
+        # on Escape unless the keydown is prevented, so the
+        # search-field Escape branch must preventDefault while
+        # closing the panel (result-row Escape already does).
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "js" / "tag-selector.js").read_text()
+        start = source.index('search.addEventListener("keydown"')
+        end = source.index('results.addEventListener("keydown"')
+        branch = source[start:end]
+        normalized = re.sub(r"\s+", " ", branch)
+        escape_at = normalized.index('"Escape"')
+        arrow_at = normalized.index("ArrowDown")
+        escape_block = normalized[escape_at:arrow_at]
+        self.assertIn("event.preventDefault()", escape_block)
+        self.assertIn("setPanelVisible(false)", escape_block)
+
+    def test_dynamic_chip_recreation_uses_neutral_surface(self) -> None:
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "js" / "tag-selector.js").read_text()
+        normalized = re.sub(r"\s+", " ", source)
+        self.assertIn("tag-filter-chip", normalized)
+        self.assertIn("tag-filter-chip-remove", normalized)
+        self.assertIn('"×"', source)
+
+    def test_patient_list_filter_form_exposes_dirty_state(self) -> None:
+        # TFUX S2 R1: the host form carries the draft/applied hooks and
+        # the persistent unapplied-changes text near Apply.
+        markup = self.component_markup()
+        form = re.search(r'<form[^>]*data-patient-filter-form[^>]*>', markup)
+        self.assertIsNotNone(form)
+        self.assertIn('method="get"', form.group(0))
+        dirty = re.search(r'<p[^>]*data-patient-filter-dirty[^>]*>', markup)
+        self.assertIsNotNone(dirty)
+        self.assertIn("hidden", dirty.group(0))
+        self.assertIn("Alterações não aplicadas", markup)
+        self.assertIn("patient-filter-form.js", markup)
+        self.assertIn('name="q"', markup)
+        self.assertIn('name="status"', markup)
+
+    def test_filter_form_js_normalizes_state_and_short_circuits_clean_apply(self) -> None:
+        # TFUX S2 R1/R2: normalized comparison (trimmed q, deduplicated
+        # tag ids) and a clean Apply that issues no result request.
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "js" / "patient-filter-form.js").read_text()
+        normalized = re.sub(r"\s+", " ", source)
+        self.assertIn("data-patient-filter-form", normalized)
+        self.assertIn("data-patient-filter-dirty", normalized)
+        self.assertIn("tag-selector:change", normalized)
+        self.assertIn(".trim()", normalized)
+        self.assertIn("preventDefault", normalized)
+        self.assertIn("show_empty_wards", normalized)
+        self.assertNotIn("form.submit()", normalized)
+
+    def test_filter_form_enhanced_selection_includes_empty(self) -> None:
+        # TFUX S2 review fix: in the enhanced form the hidden
+        # repeated inputs are authoritative, including the empty
+        # selection after the last chip is removed. Only the
+        # unenhanced native select is a fallback, because
+        # enhancement disables it without deselecting the
+        # server-rendered applied options.
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "js" / "patient-filter-form.js").read_text()
+        start = source.index("function selectedTagIds")
+        end = source.index("function readState")
+        reader = source[start:end]
+        normalized = re.sub(r"\s+", " ", reader)
+        self.assertIn("if (isEnhanced(form))", normalized)
+        self.assertIn("[data-tag-input]", normalized)
+        self.assertLess(
+            normalized.index("isEnhanced(form)"),
+            normalized.index("option:checked"),
+        )
+        self.assertNotIn("if (inputs.length)", normalized)
+
     def test_native_multiselect_fallback_is_unchanged(self) -> None:
         select = self.matches(NATIVE_SELECT)[0]
         markup = self.component_markup()

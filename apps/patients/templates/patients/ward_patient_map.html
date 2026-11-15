@@ -14,6 +14,7 @@
 {{ block.super }}
 <script src="{% static 'js/ward_patient_map.js' %}"></script>
 <script src="{% static 'js/tag-selector.js' %}" defer></script>
+<script src="{% static 'js/patient-filter-form.js' %}" defer></script>
 {% endblock %}
 
 {% block patient_content %}
@@ -64,7 +65,7 @@
     <div class="col-12">
       <div class="card">
         <div class="card-body">
-          <form method="get" class="row g-3">
+          <form method="get" class="row g-3" data-patient-filter-form>
             <!-- Search -->
             <div class="col-md-3">
               <label for="search" class="form-label">
@@ -125,8 +126,9 @@
               </div>
             </div>
 
-            <!-- Empty Wards Toggle: part of the same GET form so the effective
-                 filters survive the reload, with or without JavaScript. -->
+            <!-- Empty Wards Toggle: a pending predicate of the same
+                 GET form. It only becomes part of the applied state
+                 through Aplicar filtros, with or without JavaScript. -->
             <div class="col-12 mt-3">
               <div class="form-check">
                 <input class="form-check-input border-primary"
@@ -134,13 +136,13 @@
                        id="show-empty-wards"
                        name="show_empty_wards"
                        value="true"
-                       {% if show_empty_wards %}checked{% endif %}
-                       onchange="this.form.submit()">
+                       {% if show_empty_wards %}checked{% endif %}>
                 <label class="form-check-label" for="show-empty-wards">
                   <i class="bi bi-building me-1"></i>
                   Mostrar alas vazias
                 </label>
               </div>
+              <p class="small text-muted mb-0 mt-1" data-patient-filter-dirty role="status" hidden>Alterações não aplicadas</p>
             </div>
           </form>
 
@@ -216,12 +218,12 @@
                 {% endfor %}
               {% endif %}
               {% for selected in selected_tags %}
-                <span class="badge" style="background-color: {{ selected.badge.color }};" data-active-tag-badge>
-                  {{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}
+                <span class="badge tag-filter-chip" data-active-tag-badge>
+                  <span class="tag-filter-chip-label">{{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}</span>
                   <a href="?{{ selected.remove_querystring }}"
                      aria-label="Remover {{ selected.badge.display_name }} dos filtros aplicados"
-                     class="text-white text-decoration-none ms-1">
-                    <i class="bi bi-x"></i>
+                     class="tag-filter-chip-remove text-decoration-none ms-1">
+                    <span aria-hidden="true">×</span>
                   </a>
                 </span>
               {% endfor %}

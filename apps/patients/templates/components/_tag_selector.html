@@ -61,28 +61,31 @@ resubmit keeps filtering by them.
       </div>
       <div class="d-flex flex-wrap gap-1 mt-2" data-tag-chips>
         {% for selected in selected_tags %}
-          <span class="badge bg-medical-teal d-inline-flex align-items-center gap-1"
+          <span class="badge tag-filter-chip d-inline-flex align-items-center gap-1"
                 data-tag-chip
                 data-tag-id="{{ selected.badge.tag_id }}">
-            {{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}
+            <span class="tag-filter-chip-label" data-tag-chip-label>{{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}</span>
             <button type="button"
-                    class="btn-close btn-close-white"
-                    style="font-size: 0.55rem;"
+                    class="tag-filter-chip-remove"
                     aria-label="Remover {{ selected.badge.display_name }} da seleção"
-                    data-tag-remove></button>
+                    data-tag-remove><span aria-hidden="true">×</span></button>
           </span>
         {% endfor %}
       </div>
-      <ul class="list-group mt-2 shadow-sm"
-          id="tag-search-results"
-          role="list"
-          data-tag-results
-          aria-label="Resultados de tags"
-          hidden></ul>
-      <button type="button"
-              class="btn btn-link btn-sm p-0 mt-1"
-              data-tag-more
-              hidden>Carregar mais</button>
+      <div class="tag-selector-panel shadow-sm"
+           data-tag-panel
+           hidden>
+        <ul class="list-group"
+            id="tag-search-results"
+            role="list"
+            data-tag-results
+            aria-label="Resultados de tags"
+            hidden></ul>
+        <button type="button"
+                class="btn btn-link btn-sm p-0"
+                data-tag-more
+                hidden>Carregar mais</button>
+      </div>
       <p class="small text-muted mb-0 mt-1"
          data-tag-status
          aria-live="polite"
