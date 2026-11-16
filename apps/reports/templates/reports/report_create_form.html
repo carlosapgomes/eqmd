@@ -79,9 +79,14 @@
   </div>
 </div>
 
-<!-- Template discovery (S3): filter controls live outside the clinical
+<!-- Template discovery (S3/S4): filter controls live outside the clinical
      POST form and never submit it. Without JavaScript this separate GET
-     form navigates, so the warning below must be read before editing. -->
+     form navigates, so the warning below must be read before editing.
+     Report creation stays on its accepted native select + JSON controller
+     until S4: the shared filter form renders the native select here, but
+     creation opts OUT of the catalogue selector enhancement
+     (``selector_plain`` skips the ``data-tag-selector`` root, so
+     ``tag-selector.js`` never enhances this form). -->
 <div data-report-template-discovery
      data-template-selection
      data-template-selection-url="{% url 'reports:template_select' %}">
@@ -90,7 +95,7 @@
     Sem JavaScript, filtrar recarrega a página e pode perder edições não salvas —
     filtrar antes de editar.
   </div>
-  {% include "components/_report_template_filters.html" %}
+  {% include "components/_report_template_filters.html" with selector_plain=1 %}
   <div class="card shadow-sm mb-3">
     <div class="card-header bg-medical-light">
       <h5 class="card-title mb-0">

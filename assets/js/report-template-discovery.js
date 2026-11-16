@@ -1,42 +1,28 @@
 /**
- * Progressive enhancement for report-template catalogue discovery (S2, D5).
+ * Progressive enhancement for report-template catalogue discovery (S3, D5).
  *
  * The server-rendered GET form and results partial are the no-JavaScript
- * contract. This script only refreshes the results fragment in place:
- * debounced name search (250 ms), Apply, clear/reapply, badge removal and
- * pagination fetch ``fragment=results``; the historical toggle fetches the
- * same fragment but replaces only the native select options, preserving
- * focus, selections, query, mode and automatic/manual origin. Each request
- * carries a generation number so stale responses never replace newer ones;
- * typing a new query bumps that generation and aborts the in-flight
- * request immediately, so an obsolete response cannot render during the
- * debounce window. A failed request keeps the current results and
- * selections while announcing a generic error. Labels are moved as DOM
- * nodes (cloneNode / textContent), never assembled as raw HTML.
+ * contract. The catalogue controller only refreshes the results fragment
+ * in place on explicit Apply, scoped clear/reapply/badge-removal and
+ * pagination; the selector owns tag-option lookup (250 ms) and row/chip
+ * rendering through the reports-owned lookup view. Typing the model-name
+ * query never issues a model-result request. Each request carries a
+ * generation number so stale responses never replace newer ones. A failed
+ * request keeps the current results and selections while announcing a
+ * generic error. Labels are moved as DOM nodes (cloneNode / textContent),
+ * never assembled as raw HTML.
  *
- * Last-applied state (``data-discovery-applied`` on the results root,
- * updated after each successful refresh) is the single source of truth.
- * Only Apply moves pending choices into the applied state; search, the
- * historical toggle and delegated clear/reapply/badge-remove/pagination
- * clicks all build their requests from it plus only their own parameter
- * (``q`` / ``include_historical`` / cleared predicate / page / removed
- * tag), preserving pending selections in the controls. Every
- * non-search request cancels a pending search debounce first, so a
- * timer scheduled by typing cannot abort a later Apply. Cancelling
- * that timer (or aborting an in-flight search) records the outstanding
- * search intent instead of losing it: after the intervening request
- * succeeds and ``rememberApplied`` has run, the recorded intent is
- * replayed at once through the normal search path against the newly
- * applied state plus the current input ``q``. The replay is dropped
- * when it would be redundant -- notably after a successful Apply,
- * whose request already carries the input ``q``, so applied and input
- * ``q`` agree and no second search is needed; if they differ, the
- * intent is kept and replayed. A failed intervening request keeps the recorded
- * intent for the next successful refresh. After each
- * successful refresh the historical checkbox and every canonical link
- * href are reconciled to the new applied state, so links outside the
- * replaced results root (clear/reapply) and links inside a fragment
- * kept by an options-only toggle (pagination/badge) never go stale.
+ * Controls are user-owned (TFUX S3 fix3 invariant): the transport NEVER
+ * writes the visible controls (q input, chips, hidden tag inputs, mode
+ * select, historical checkbox) — with exactly ONE exception, popstate,
+ * which performs a full synchronous restore of the navigated applied
+ * state from the fragment's inert option data (ids AND display
+ * names/state labels, no network). Reconciliation therefore moves only
+ * the applied baseline, the results fragment (summary/links included),
+ * and URL/history. Draft-vs-applied dirty semantics fall out of the
+ * catalogue host comparing current controls against that baseline, so
+ * pending edits (additions AND removals, made before OR after
+ * submission) survive every successful applied change visibly pending.
  * Server-rendered hrefs stay canonical for the no-JS flow; delegated
  * clicks re-derive from applied state instead of trusting them.
  */
@@ -48,32 +34,60 @@
   var SEARCH_DELAY_MS = 250;
   var EMPTY_MESSAGE = "Nenhum template encontrado.";
 
+  // Catalogue explicit Apply/draft transport (TFUX S3, design D1/D2/D6).
+  //
+  // Typing the model-name query never issues a model-result request: the
+  // name input is a pending draft control owned by the catalogue host
+  // controller (`report-catalogue-filter-form.js`), which shows
+  // `Alterações não aplicadas` and short-circuits clean Apply. Tag-option
+  // search text inside the selector is likewise never a predicate. Only
+  // explicit Apply (and the scoped canonical links below) fetch the
+  // results fragment; the historical toggle refreshes selector options
+  // only. Each request carries a generation number so stale responses
+  // never replace newer ones. A failed request keeps the current results
+  // and URL while announcing a generic error. `pushState` runs only when
+  // a successful applied change actually changes the canonical URL
+  // (pagination keeps `page` in the pushed URL); option-only historical
+  // updates use `replaceState`; draft edits and failed/no-op requests
+  // add no entry. `popstate` fetches the canonical URL's results without
+  // pushing another entry.
+  //
+  // Last-applied state (`data-discovery-applied` on the results root,
+  // updated after each successful applied refresh) is the single source
+  // of truth for the predicate baseline. Only Apply moves pending
+  // choices into the applied state; clear/reapply/badge-remove/
+  // pagination build their requests from the last-applied state plus
+  // only their own named parameter. Controls are user-owned: every
+  // successful refresh moves only the baseline (via `catalogue:applied`
+  // to the host), replaces the results fragment, reconciles links and
+  // manages history — except popstate, which additionally restores the
+  // controls synchronously from the fragment. The selector owns
+  // rows/chips: this controller only consumes hidden `[data-tag-input]`
+  // IDs and the `tag-selector:change` notice via the host controller,
+  // and never renders tag-result rows itself. The reports lookup's
+  // Badge hydration via the lookup is gone: the fragment's inert
+  // option data already carries every selected id with its display
+  // name/state label, so no reconciliation needs the network (S4 may
+  // still use selected-ids on the selector's own lookup path).
   function initializeDiscovery(root) {
-    var form = root.querySelector("[data-discovery-form]");
+    var form = root.querySelector(
+      "form[data-discovery-form][data-catalogue-filter-form]"
+    );
     var search = root.querySelector("[data-discovery-q]");
-    var select = root.querySelector("[data-discovery-tags]");
     var mode = root.querySelector("[data-discovery-mode]");
     var marker = root.querySelector("[data-discovery-marker]");
-    var historical = root.querySelector("[data-discovery-historical]");
     var status = root.querySelector("[data-discovery-status]");
+    var errorSlot = root.querySelector("[data-catalogue-filter-error]");
     var results = root.querySelector("[data-discovery-results]");
 
-    if (!form || !search || !select || !mode || !marker || !results) {
+    if (!form || !search || !mode || !marker || !results) {
       return;
     }
 
-    var timer = null;
     var generation = 0;
     var controller = null;
-    var inFlightIsSearch = false;
-    // Outstanding typed-search intent dropped by cancelling its
-    // debounce timer or by aborting an in-flight search. Replayed
-    // once after the intervening request succeeds; kept across a
-    // failed intervening request so a later success can still honour
-    // it. See the success handler in applyFragment.
-    var pendingSearchWanted = false;
     // Last-applied canonical state, seeded from the server-rendered
-    // results root. Pending tag/mode edits in the controls never enter
+    // results root. Pending q/tag/mode edits in the controls never enter
     // it until Apply (or a canonical link) succeeds.
     var appliedParams = new URLSearchParams(
       results.getAttribute("data-discovery-applied") || ""
@@ -81,74 +95,97 @@
     appliedParams.delete("fragment");
     appliedParams.delete("page");
 
-    function abortInFlight() {
-      // Aborting an in-flight search drops the same typed intent as
-      // cancelling its timer would; record it so the action that
-      // superseded the search can replay it against the newly
-      // applied state once that action succeeds. Record and clear
-      // the search flag independently of AbortController: without
-      // a controller the generation guard already ignores the
-      // superseded search response, but the intent must still be
-      // recorded so the replay can honour the typed query.
-      if (inFlightIsSearch) {
-        pendingSearchWanted = true;
-      }
-      inFlightIsSearch = false;
-      if (controller) {
-        controller.abort();
-        controller = null;
-      }
-    }
-
     function setStatus(message) {
       if (status) {
         status.textContent = message || "";
       }
     }
 
+    function setError(message) {
+      if (errorSlot) {
+        errorSlot.textContent = message || "";
+        errorSlot.hidden = !message;
+      }
+      setStatus(message || "");
+    }
+
+    function selectedTagIds() {
+      var ids = [];
+      Array.prototype.forEach.call(
+        form.querySelectorAll("[data-tag-input]"),
+        function (input) {
+          var value = String(input.value).trim();
+          if (value && ids.indexOf(value) === -1) {
+            ids.push(value);
+          }
+        }
+      );
+      // Unenhanced (no-JS) fallback: without the selector's hidden
+      // inputs, the native multi-select carries the submission. The
+      // selector disables the native select when it enhances the form.
+      if (!ids.length) {
+        var native = form.querySelector("[data-tag-native]");
+        if (native && !native.disabled) {
+          Array.prototype.forEach.call(
+            native.querySelectorAll("option:checked"),
+            function (option) {
+              if (ids.indexOf(option.value) === -1) {
+                ids.push(option.value);
+              }
+            }
+          );
+        }
+      }
+      return ids;
+    }
+
     // Pending form controls: only the explicit Apply flow may build a
-    // request from these, so unapplied tag/mode edits stay unapplied.
+    // request from these, so unapplied q/tag/mode edits stay unapplied.
+    // Tag-option search text is never read here: it lives inside the
+    // selector and is not a model-name predicate.
     function pendingParams() {
       var params = new URLSearchParams();
       var query = search.value.trim();
       if (query) {
         params.set("q", query);
       }
-      // Only an explicit Apply (or a manual-origin link) makes tag state
-      // manual; typing q or paginating never converts automatic defaults.
-      if (marker.value === "manual") {
+      var tagIds = selectedTagIds();
+      if (marker.value === "manual" || tagIds.length) {
         params.set("tag_filter", "manual");
         params.set("tag_mode", mode.value);
-        Array.prototype.forEach.call(select.selectedOptions, function (option) {
-          params.append("tags", option.value);
+        tagIds.forEach(function (tagId) {
+          params.append("tags", tagId);
         });
       }
-      if (historical && historical.checked) {
+      if (selectorHistoricalChecked()) {
         params.set("include_historical", "1");
       }
       return params;
     }
 
-    // Search builds from the last-applied predicate, changing only q.
-    function searchParams() {
-      var params = new URLSearchParams(appliedParams);
-      params.delete("page");
-      var query = search.value.trim();
-      if (query) {
-        params.set("q", query);
-      } else {
-        params.delete("q");
-      }
-      return params;
+    function selectorHistorical() {
+      return form.querySelector("[data-tag-historical]");
     }
 
-    // The historical toggle builds from the last-applied predicate,
-    // changing only include_historical, so the canonical URL it writes
-    // cannot commit pending tag/mode choices.
+    function selectorHistoricalChecked() {
+      var historical = selectorHistorical();
+      return !!(historical && historical.checked);
+    }
+
+    // The historical toggle builds from the CURRENT DISPLAYED URL
+    // (window.location.search), changing only include_historical, so
+    // its canonical URL cannot commit pending q/tag/mode choices, it
+    // preserves the displayed page (a page-2 entry keeps page=2), and
+    // during an in-flight popstate it builds from the popped entry
+    // the browser already displays rather than the stale predicate
+    // baseline. Predicate-changing links still derive from the
+    // page-less appliedParams baseline (linkParams, unchanged);
+    // rememberApplied still strips page from the baseline this
+    // toggle records.
     function historicalParams() {
-      var params = new URLSearchParams(appliedParams);
-      params.delete("page");
-      if (historical && historical.checked) {
+      var params = new URLSearchParams(window.location.search);
+      params.delete("fragment");
+      if (selectorHistoricalChecked()) {
         params.set("include_historical", "1");
       } else {
         params.delete("include_historical");
@@ -156,38 +193,110 @@
       return params;
     }
 
+    // The last user-visible historical choice wins across any pending
+    // fragment request: an in-flight Apply/clear/badge/page sent with
+    // the older flag must never push the stale flag when its (older)
+    // response reconciles (the checkbox itself is user-owned and is
+    // never written back, except on popstate). The toggle handler
+    // below stamps every toggle; reconciliation then keeps the flag
+    // newer than the request that is landing instead of replaying a
+    // model query.
+    var historicalStamp = 0;
+
     function rememberApplied(params) {
       appliedParams = new URLSearchParams(params);
       appliedParams.delete("fragment");
       appliedParams.delete("page");
     }
 
-    // A non-search action must cancel a pending search debounce: the
-    // timer was scheduled from the pre-Apply applied state and would
-    // otherwise abort the Apply request when it fires. Dropping the
-    // timer must not drop the search itself, so record the intent for
-    // replay after this action succeeds (see applyFragment).
-    function cancelPendingSearch() {
-      if (timer !== null) {
-        window.clearTimeout(timer);
-        timer = null;
-        pendingSearchWanted = true;
+    // Parse the fresh fragment's EFFECTIVE applied selection, the
+    // single source of truth for the applied baseline (TFUX S3 fix3).
+    // The request params cannot carry it: automatic defaults
+    // intentionally carry no tag params in the canonical URL, while
+    // the fragment is server-rendered from the resolved selection
+    // (effective tag ids incl. automatic defaults via the
+    // `data-template-tag-options` selected states, mode/source via
+    // `data-discovery-mode/source`, q via the canonical
+    // `data-discovery-applied` querystring). The returned object
+    // mirrors a canonical params shape: `{ q, tags, tag_mode, source,
+    // includeHistorical, badges }` where `badges` maps each selected
+    // id to its `{ id, display_name, state_label }`. The automatic
+    // canonical URL and origin are retained: tags from an automatic
+    // (non-manual) state NEVER become request params; the baseline
+    // keeps q/tags/mode with the automatic source preserved by
+    // leaving the marker empty. `badges` is consumed ONLY by the
+    // popstate control restore; every other success leaves the
+    // controls untouched, so no lookup fetch is ever needed here.
+    function effectiveAppliedFromFragment(fresh) {
+      var appliedQuery = new URLSearchParams(
+        fresh.getAttribute("data-discovery-applied") || ""
+      );
+      appliedQuery.delete("fragment");
+      appliedQuery.delete("page");
+      var query = appliedQuery.get("q") || "";
+      var template = fresh.querySelector("[data-template-tag-options]");
+      var tags = [];
+      if (template && template.content) {
+        var content = template.content;
+        var selected = content.querySelectorAll
+          ? content.querySelectorAll("option[selected]")
+          : [];
+        Array.prototype.forEach.call(selected, function (option) {
+          var value = String(
+            option.getAttribute("value") || option.value || ""
+          ).trim();
+          if (value && tags.indexOf(value) === -1) {
+            tags.push(value);
+          }
+        });
       }
+      var fragmentMode = fresh.getAttribute("data-discovery-mode") || "any";
+      var badges = {};
+      var templateOptions = template && template.content
+        ? template.content.querySelectorAll
+          ? template.content.querySelectorAll("option")
+          : []
+        : [];
+      Array.prototype.forEach.call(templateOptions, function (option) {
+        var value = String(
+          option.getAttribute("value") || option.value || ""
+        ).trim();
+        if (!value) {
+          return;
+        }
+        var text = (option.textContent || "").trim();
+        var separator = text.lastIndexOf(" — ");
+        badges[value] = {
+          id: value,
+          display_name: separator === -1 ? text : text.slice(0, separator),
+          state_label: separator === -1 ? "" : text.slice(separator + 3),
+        };
+      });
+      return {
+        q: query,
+        tags: tags,
+        tag_mode: fragmentMode,
+        source: fresh.getAttribute("data-discovery-source") || "",
+        includeHistorical: appliedQuery.has("include_historical"),
+        badges: badges,
+      };
     }
 
     // Delegated link clicks derive their request from the last-applied
     // state plus the link's own single parameter, instead of trusting a
-    // href that predates the latest search/toggle/Apply. Server-rendered
-    // hrefs stay canonical for the no-JS flow; this only re-derives the
+    // href that predates the latest Apply/toggle. Server-rendered hrefs
+    // stay canonical for the no-JS flow; this only re-derives the
     // enhanced request at click time.
     function linkParams(link) {
       var hrefParams = new URLSearchParams(
         new URL(link.getAttribute("href"), window.location.href).search
       );
-      if (link.hasAttribute("data-discovery-clear")) {
+      if (link.hasAttribute("data-discovery-clear") || link.hasAttribute("data-tag-clear")) {
         // Clear preserves the applied q/historical and the applied mode
         // (falling back to the server-rendered mode for an automatic
-        // applied state, which carries no tag_mode of its own).
+        // applied state, which carries no tag_mode of its own). The
+        // selector's own [data-tag-clear] link routes here too, so the
+        // manual-empty request never replays pending draft tags.
         var clear = new URLSearchParams(appliedParams);
         clear.delete("tags");
         clear.delete("tag");
@@ -233,15 +342,9 @@
       return pageParams;
     }
 
-    function syncHistoricalCheckbox() {
-      if (historical) {
-        historical.checked = appliedParams.has("include_historical");
-      }
-    }
-
     // Keep canonical hrefs in the live DOM reconciled to the applied
     // state, including clear/reapply outside the results root and
-    // pagination/badge links inside a fragment kept by a toggle.
+    // pagination/badge links inside the replaced results root.
     function reconcileLinks() {
       Array.prototype.forEach.call(
         root.querySelectorAll(
@@ -257,27 +360,160 @@
     }
 
     function fragmentUrl(params) {
-      params.set("fragment", "results");
-      return window.location.pathname + "?" + params.toString();
+      var fragment = new URLSearchParams(params);
+      fragment.set("fragment", "results");
+      return window.location.pathname + "?" + fragment.toString();
+    }
+
+    function canonicalQueryString(params) {
+      var canonical = new URLSearchParams(params);
+      canonical.delete("fragment");
+      return canonical.toString();
     }
 
     function canonicalUrl(params) {
-      params.delete("fragment");
-      var queryString = params.toString();
+      var queryString = canonicalQueryString(params);
       return window.location.pathname + (queryString ? "?" + queryString : "");
     }
 
-    function syncControls(fragmentRoot, preservePending) {
-      var source = fragmentRoot.getAttribute("data-discovery-source");
-      var fragmentMode = fragmentRoot.getAttribute("data-discovery-mode");
-      // A search refresh is not Apply: keep the pending mode/selections
-      // visible in the controls while the results use the applied state.
-      if (fragmentMode && !preservePending) {
-        mode.value = fragmentMode;
+    function currentUrlQuery() {
+      return new URLSearchParams(window.location.search);
+    }
+
+    function sameCanonical(left, right) {
+      var leftParams = new URLSearchParams(left);
+      var rightParams = new URLSearchParams(right);
+      leftParams.delete("fragment");
+      leftParams.delete("page");
+      rightParams.delete("fragment");
+      rightParams.delete("page");
+      leftParams.sort();
+      rightParams.sort();
+      return leftParams.toString() === rightParams.toString();
+    }
+
+    // Deliberate history (D6): successful applied changes push only when
+    // the canonical applied URL actually changed; option-only updates
+    // replace the current entry; failures never touch history. The
+    // pushed canonical URL keeps `page` whenever the request carried
+    // it (pagination); predicate-changing requests already omit `page`
+    // via linkParams/pendingParams, so they restart at page 1. Only
+    // the predicate baseline (rememberApplied) strips `page`.
+    // sameCanonical compares canonical querystrings ignoring page and
+    // fragment params and parameter order; the harness `same-canonical`
+    // scenario pins that contract directly.
+    function pushAppliedHistory(params) {
+      var nextQuery = canonicalQueryString(params);
+      var currentQuery = currentUrlQuery();
+      currentQuery.delete("fragment");
+      if (nextQuery === currentQuery.toString()) {
+        return;
       }
-      marker.value = source === "manual" ? "manual" : "";
-      replaceOptions(fragmentRoot, preservePending);
+      window.history.pushState(null, "", canonicalUrl(params));
+    }
+
+    function replaceAppliedHistory(params) {
+      window.history.replaceState(null, "", canonicalUrl(params));
+    }
+
+    // Reconcile one successful EFFECTIVE applied state parsed from the
+    // fresh fragment, without pushing history. Controls are
+    // user-owned: except on popstate (below), NO control is written —
+    // the q input, chips, hidden tag inputs, mode select and
+    // historical checkbox keep whatever the user last set, so pending
+    // drafts (additions AND removals, before or after submission)
+    // survive every success. Only the applied baseline moves (via
+    // rememberApplied + `catalogue:applied` to the host, which reads
+    // dirty as current-controls-vs-baseline), plus the replaced
+    // results fragment, its summary/status and the canonical links.
+    // The effective selection comes from the fragment's canonical
+    // applied querystring plus its inert `data-template-tag-options`
+    // selected states (automatic defaults carry no tag params but ARE
+    // selected there); it never comes from the pending controls or
+    // from the request params, which may hold preserved draft values
+    // or a stale pre-toggle flag.
+    function reconcileAppliedState(effective, isPopstate) {
+      rememberApplied(effective.canonical);
+      if (isPopstate) {
+        restoreControlsFromFragment(effective);
+      }
+      reconcileLinks();
+      // The baseline notification goes LAST: on popstate the host
+      // refresh must already see the restored controls (clean).
+      notifyAppliedBaseline(effective);
+      reconcileSummary(results);
+    }
+
+    // Popstate is the ONLY path that writes controls: restore the
+    // navigated applied state fully and synchronously from the
+    // fragment — q, mode, both origin markers, the historical
+    // checkbox, and chips/hidden inputs through the shared selector's
+    // opt-in `tag-selector:set-selection` event using the inert
+    // option data (ids AND display names/state labels). No network:
+    // the fragment already carries everything. The selector rebuild
+    // never marks manual and never dispatches `tag-selector:change`,
+    // so restored chips keep working remove buttons and the host
+    // rebaselines via `catalogue:applied` to a clean state.
+    function restoreControlsFromFragment(effective) {
+      search.value = effective.q || "";
+      mode.value = effective.tag_mode || "any";
+      var manual = effective.source === "manual" ? "manual" : "";
+      marker.value = manual;
+      var tagMarker = form.querySelector("[data-tag-marker]");
+      if (tagMarker) {
+        tagMarker.value = manual;
+      }
+      var historical = selectorHistorical();
+      if (historical) {
+        historical.checked = !!effective.includeHistorical;
+      }
+      var selectorRoot = form.querySelector("[data-tag-selector]");
+      if (selectorRoot) {
+        var tags = effective.tags.map(function (tagId) {
+          var badge = effective.badges[tagId] || {};
+          return {
+            id: tagId,
+            display_name: badge.display_name || "Tag " + tagId,
+            state_label: badge.state_label || "",
+          };
+        });
+        selectorRoot.dispatchEvent(
+          new CustomEvent("tag-selector:set-selection", {
+            bubbles: false,
+            detail: { tags: tags },
+          })
+        );
+      }
+    }
+
+    // Host baseline: the catalogue host controller owns draft vs applied
+    // and re-baselines from this event after every successful applied
+    // change (Apply, clear/reapply/badge, pagination, popstate). The
+    // baseline is the EFFECTIVE applied selection parsed from the fresh
+    // fragment — including automatic defaults — never the request
+    // params, and the automatic origin is preserved by leaving the
+    // marker empty for non-manual states. Final contract:
+    // `catalogue:applied` on the catalogue form, detail
+    // `{ q: string, tags: string[], mode: string }` where `mode` is
+    // the server canonical `tag_mode` normalized to the submitted
+    // control name (`any` default). The host (`report-catalogue-
+    // filter-form.js`) compares it against the current controls; the
+    // transport never writes the controls it compares.
+    function notifyAppliedBaseline(effective) {
+      form.dispatchEvent(
+        new CustomEvent("catalogue:applied", {
+          bubbles: false,
+          detail: { q: effective.q || "", tags: effective.tags, mode: effective.tag_mode || "any" },
+        })
+      );
+    }
+
+    // Summary/status from the fresh fragment root (which replaces the
+    // old results node, summary included). This is not a control:
+    // the count line is reconciled, the error is cleared on success.
+    function reconcileSummary(fragmentRoot) {
       var count = fragmentRoot.getAttribute("data-discovery-count");
+      setError("");
       if (count === "0") {
         setStatus(EMPTY_MESSAGE);
       } else if (count !== null) {
@@ -285,61 +521,25 @@
       }
     }
 
-    function replaceOptions(fragmentRoot, preserveSelection) {
-      var template = fragmentRoot.querySelector(
-        "template[data-template-tag-options]"
-      );
-      if (!template || !template.content) {
-        return;
-      }
-      // A historical-toggle refresh is not Apply: keep the selections the
-      // user currently sees, whatever the server's effective selections
-      // are. A preserved identity the fragment does not offer (for
-      // example a selected readable historical option while historical
-      // choices are toggled off on an automatic-default page) is retained
-      // as its own option so the choice itself is never discarded.
-      var preservedOptions = [];
-      var preservedIds = [];
-      if (preserveSelection) {
-        preservedOptions = Array.prototype.slice.call(select.selectedOptions);
-        preservedIds = preservedOptions.map(function (option) {
-          return option.value;
-        });
-      }
-      var options = template.content.querySelectorAll("option");
-      var seen = {};
-      select.replaceChildren();
-      Array.prototype.forEach.call(options, function (option) {
-        var clone = option.cloneNode(true);
-        seen[clone.value] = true;
-        if (preserveSelection) {
-          clone.selected = preservedIds.indexOf(clone.value) !== -1;
-        }
-        select.appendChild(clone);
-      });
-      if (preserveSelection) {
-        preservedOptions.forEach(function (option) {
-          if (!seen[option.value]) {
-            var retained = option.cloneNode(true);
-            retained.selected = true;
-            select.appendChild(retained);
-          }
-        });
-      }
-    }
-
     function applyFragment(params, options) {
-      // Every request (Apply, clear/reapply, toggle, pagination, badge
-      // removal, and the search timer itself) starts here, so cancelling
-      // any pending debounce here covers all non-search actions.
-      cancelPendingSearch();
-      abortInFlight();
+      if (controller) {
+        controller.abort();
+        controller = null;
+      }
       generation += 1;
       var requestGeneration = generation;
-      inFlightIsSearch = !!(options && options.isSearch);
+      var isOptionsOnly = !!(options && options.optionsOnly);
+      var isPopstate = !!(options && options.popstate);
+      // Stamp the request against the latest user-visible historical
+      // choice: a toggle stamped AFTER this request wins over the
+      // landing response's older flag (fix2 historical race).
+      var requestStamp = historicalStamp;
       controller =
         typeof AbortController !== "undefined" ? new AbortController() : null;
       setStatus(SEARCHING_MESSAGE);
+      if (!isOptionsOnly && !isPopstate) {
+        setError("");
+      }
       fetch(fragmentUrl(params), {
         headers: { "X-Requested-With": "XMLHttpRequest" },
         credentials: "same-origin",
@@ -355,7 +555,9 @@
             return;
           }
           if (!result.ok) {
-            setStatus(GENERIC_ERROR);
+            // Failure retains the last results and URL; only the
+            // draft and the retryable error stay visible.
+            setError(GENERIC_ERROR);
             return;
           }
           var parser = new DOMParser();
@@ -365,61 +567,74 @@
           );
           var fresh = documentFragment.querySelector("[data-discovery-results]");
           if (!fresh) {
-            setStatus(GENERIC_ERROR);
+            setError(GENERIC_ERROR);
             return;
           }
-          rememberApplied(params);
-          if (options && options.optionsOnly) {
-            replaceOptions(fresh, true);
+          if (isOptionsOnly) {
+            // Legacy options-only fragment path (kept for compatibility):
+            // prefer the direct change listener above, which performs no
+            // model-result request at all. The checkbox already holds
+            // the user's toggle; only the baseline/URL reconcile.
+            rememberApplied(params);
+            reconcileLinks();
+            replaceAppliedHistory(params);
             setStatus("Opções de tags atualizadas.");
-          } else {
-            results.replaceWith(document.importNode(fresh, true));
-            results = root.querySelector("[data-discovery-results]");
-            syncControls(results, options && options.preservePending);
+            return;
           }
-          syncHistoricalCheckbox();
-          reconcileLinks();
-          window.history.pushState(null, "", canonicalUrl(params));
-          // Replay a typed search dropped by this intervening action.
-          // rememberApplied has run, so searchParams() builds from the
-          // newly applied state plus the current input q, through the
-          // normal generation/abort-guarded search path. The intent
-          // is honoured only when the input q still differs from the
-          // applied q: after a successful Apply the applied q already
-          // is the input q, so the intent is dropped as redundant;
-          // after toggle/clear/reapply/pagination/badge-removal the
-          // applied q is still the old q, so the mismatch keeps the
-          // intent and the replay restarts paging at page 1 with the
-          // intervening action's state preserved. searchParams()
-          // never commits pending tag/mode choices, and the replay
-          // starts only now, after this request succeeded, so it
-          // cannot race or abort Apply. A failed request never
-          // reaches here, so its recorded intent survives for the
-          // next successful refresh.
-          var wantsSearch = pendingSearchWanted;
-          pendingSearchWanted = false;
-          var appliedQuery = (appliedParams.get("q") || "").trim();
-          var currentQuery = search.value.trim();
-          if (wantsSearch && currentQuery !== appliedQuery) {
-            applyFragment(searchParams(), {
-              preservePending: true,
-              isSearch: true,
-            });
+          var effective = effectiveAppliedFromFragment(fresh);
+          // Canonical versus baseline differ on `page` only: the
+          // baseline (rememberApplied) strips it (predicate identity),
+          // while the pushed history URL keeps it when the request
+          // carried it (pagination), so page-2 results are navigable.
+          effective.canonical = new URLSearchParams(params);
+          effective.canonical.delete("fragment");
+          effective.historicalStamp = requestStamp;
+          // The historical winner across an in-flight toggle: the flag
+          // newer than this request was computed from the CURRENT
+          // checkbox, never replayed stale from the landing response.
+          // The checkbox itself stays user-owned (never written here).
+          if (historicalStamp > requestStamp) {
+            effective.includeHistorical = selectorHistoricalChecked();
+            if (effective.includeHistorical) {
+              effective.canonical.set("include_historical", "1");
+            } else {
+              effective.canonical.delete("include_historical");
+            }
           }
+          results.replaceWith(document.importNode(fresh, true));
+          results = root.querySelector("[data-discovery-results]");
+          // After EVERY successful applied-state change (Apply, clear,
+          // reapply, badge removal, pagination), the baseline moves to
+          // the NEW effective applied state and the controls stay
+          // untouched (popstate additionally restores them). Popstate
+          // pushes no new history entry and never loops back through
+          // the push path.
+          reconcileAppliedState(effective, isPopstate);
+          if (isPopstate) {
+            return;
+          }
+          pushAppliedHistory(effective.canonical);
         })
-        .catch(function () {
+        .catch(function (error) {
           if (requestGeneration !== generation) {
             return;
           }
-          setStatus(GENERIC_ERROR);
+          if (error && error.name === "AbortError") {
+            return;
+          }
+          setError(GENERIC_ERROR);
         });
     }
 
-    function fetchLink(link) {
-      applyFragment(linkParams(link));
-    }
-
     form.addEventListener("submit", function (event) {
+      // The host draft controller runs first: a clean enhanced submit is
+      // already defaultPrevented there, so the transport must honor it
+      // and issue no request, no manual conversion and no history entry.
+      // The explicit Apply conversion of the origin marker to manual is
+      // the user's own Apply action, not a reconciliation write.
+      if (event.defaultPrevented) {
+        return;
+      }
       event.preventDefault();
       if (marker.value !== "manual") {
         marker.value = "manual";
@@ -427,40 +642,62 @@
       applyFragment(pendingParams());
     });
 
-    search.addEventListener("input", function () {
-      // Invalidate any in-flight response immediately: a request started
-      // for the previous query must not render while this query debounces.
-      generation += 1;
-      abortInFlight();
-      window.clearTimeout(timer);
-      timer = window.setTimeout(function () {
-        // The timer has fired; clear its id first so applyFragment's
-        // cancelPendingSearch does not record its own search as a
-        // dropped intent.
-        timer = null;
-        applyFragment(searchParams(), {
-          preservePending: true,
-          isSearch: true,
-        });
-      }, SEARCH_DELAY_MS);
-    });
-
-    if (historical) {
-      historical.addEventListener("change", function () {
-        applyFragment(historicalParams(), { optionsOnly: true });
-      });
-    }
+    // No name-search debounce: typing q is a pending draft action only.
+    // Tag-option search (250 ms) lives inside the selector, which owns
+    // its lookup endpoint and option rendering.
 
     root.addEventListener("click", function (event) {
+      // The selector's own [data-tag-clear] link is matched by linkParams
+      // through the scoped manual-empty clear branch (see above), so it
+      // shares the canonical clear derivation with [data-discovery-clear]
+      // and never falls through to the applied-state pagination branch.
       var link = event.target.closest(
-        "[data-discovery-clear], [data-discovery-reapply], " +
+        "[data-discovery-clear], [data-tag-clear], [data-discovery-reapply], " +
           "[data-discovery-remove], .pagination .page-link"
       );
       if (!link || !link.getAttribute("href")) {
         return;
       }
       event.preventDefault();
-      fetchLink(link);
+      applyFragment(linkParams(link));
+    });
+
+    // Historical toggle: options-only catalogue update. The selector owns
+    // the lookup-driven option refresh; the transport only reconciles the
+    // canonical include_historical flag via replaceState (no model-result
+    // request, so pending q/tags/mode can never be committed by a toggle).
+    // The toggle stamps the user-visible choice FIRST so any in-flight
+    // fragment response landing afterwards keeps this newer flag in the
+    // baseline/URL instead of pushing the stale one. The checkbox is
+    // never written back by the transport (popstate excepted), so a
+    // newer toggle can never be flipped back by an older result. A
+    // genuinely new applied state (new request sent AFTER the toggle)
+    // still reconciles its own flag normally.
+    form.addEventListener("change", function (event) {
+      var target = event.target;
+      if (
+        !target ||
+        !target.hasAttribute ||
+        !target.hasAttribute("data-tag-historical")
+      ) {
+        return;
+      }
+      historicalStamp += 1;
+      var params = historicalParams();
+      rememberApplied(params);
+      reconcileLinks();
+      replaceAppliedHistory(params);
+      setStatus("Opções de tags atualizadas.");
+    });
+
+    window.addEventListener("popstate", function () {
+      // Restore the popped canonical state without pushing a new entry:
+      // the fetch replaces the results and restores the controls to the
+      // popped URL (the only control-writing path), and
+      // pushAppliedHistory is never reached on this path.
+      var params = currentUrlQuery();
+      params.delete("fragment");
+      applyFragment(params, { popstate: true });
     });
   }
 
@@ -478,7 +715,9 @@
     var select = root.querySelector("[data-discovery-tags]");
     var mode = root.querySelector("[data-discovery-mode]");
     var marker = root.querySelector("[data-discovery-marker]");
-    var historical = root.querySelector("[data-discovery-historical]");
+    var historical = root.querySelector(
+      "[data-discovery-historical], [data-tag-historical]"
+    );
     var status = root.querySelector("[data-discovery-status]");
     var results = root.querySelector("[data-template-selection-results]");
     var clinicalSelect = document.getElementById("id_template");

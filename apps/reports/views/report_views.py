@@ -220,6 +220,13 @@ class ReportCreateView(LoginRequiredMixin, CreateView):
                 'discovery_state_label': selection.state_label,
                 'discovery_mode_label': selection.mode_label,
                 'discovery_include_historical': include_historical,
+                # S4 isolation: report creation keeps its accepted native
+                # select (`selector_plain`, no `data-tag-selector` root, no
+                # enhancement) + JSON controller (S4 starting point). The
+                # shared filter form renders the native `discovery_tag_options`
+                # select here, so the catalogue-only selector names below are
+                # intentionally NOT computed (P2: skips two extra
+                # `discovery_tag_options` calls per creation GET).
                 'discovery_tag_options': template_discovery.discovery_tag_options(
                     self.request.user,
                     selected_ids=selection.tag_ids,

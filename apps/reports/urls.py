@@ -17,6 +17,7 @@ from .views.report_views import (
     ReportDeleteView,
 )
 from .views.pdf_views import ReportPDFView
+from .views.report_tag_lookup import ReportTagLookupView
 from .views.template_selection_views import TemplateSelectionView
 
 app_name = 'reports'
@@ -24,6 +25,7 @@ app_name = 'reports'
 urlpatterns = [
     # Template URLs
     path('templates/', TemplateListView.as_view(), name='template_list'),
+    path('templates/tag-lookup/', ReportTagLookupView.as_view(), name='template_tag_lookup'),
     path('templates/select/', TemplateSelectionView.as_view(), name='template_select'),
     path('templates/create/', TemplateCreateView.as_view(), name='template_create'),
     path('templates/<uuid:pk>/update/', TemplateUpdateView.as_view(), name='template_update'),

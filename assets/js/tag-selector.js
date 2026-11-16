@@ -223,6 +223,49 @@
       });
     }
 
+    // TFUX S3 catalogue reconciliation (additive, opt-in): the
+    // catalogue transport reconciles chips from the successful
+    // fragment's effective applied selection by dispatching a
+    // `tag-selector:set-selection` CustomEvent on this root with
+    // `detail: { tags: [{ id, display_name, state_label }] }`. The
+    // rebuild below reuses the same addChip/attachRemove machinery as
+    // user adds, so reconciled chips keep working remove buttons; it
+    // rewrites only the hidden `[data-tag-input]` inputs the selector
+    // owns and NEVER marks manual and NEVER dispatches
+    // `tag-selector:change` (reconciliation is not a user change; the
+    // catalogue host rebaselines separately via `catalogue:applied`).
+    // Patient surfaces never dispatch this event, so their behavior is
+    // unchanged: without the event the selector runs exactly as before.
+    root.addEventListener("tag-selector:set-selection", function (event) {
+      var detail = (event && event.detail) || {};
+      var tags = detail.tags || [];
+      chips.replaceChildren();
+      hidden.replaceChildren();
+      tags.forEach(function (badge) {
+        if (!badge || badge.id === undefined || badge.id === null) {
+          return;
+        }
+        var tagId = String(badge.id);
+        var input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "tags";
+        input.value = tagId;
+        input.setAttribute("data-tag-input", "");
+        hidden.appendChild(input);
+        rememberTag({
+          id: tagId,
+          display_name: badge.display_name || "",
+          state_label: badge.state_label || "",
+        });
+        addChip({
+          id: tagId,
+          display_name: badge.display_name || "",
+          state_label: badge.state_label || "",
+        });
+        syncResult(tagId);
+      });
+    });
+
     Array.prototype.forEach.call(
       chips.querySelectorAll("[data-tag-chip]"),
       function (chip) {

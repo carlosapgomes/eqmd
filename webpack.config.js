@@ -103,6 +103,11 @@ module.exports = {
           from: "assets/js/patient-filter-form.js",
           to: "js/patient-filter-form.js",
         },
+        // Report-template catalogue host draft state (TFUX S3)
+        {
+          from: "assets/js/report-catalogue-filter-form.js",
+          to: "js/report-catalogue-filter-form.js",
+        },
         // Report-template catalogue discovery (S2)
         {
           from: "assets/js/report-template-discovery.js",

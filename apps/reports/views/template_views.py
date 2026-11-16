@@ -99,6 +99,40 @@ class TemplateListView(LoginRequiredMixin, ListView):
                 'discovery_state_label': selection.state_label,
                 'discovery_mode_label': selection.mode_label,
                 'discovery_include_historical': include_historical,
+                # S3 selector contract: the reports-owned selector
+                # partial consumes the same names as the patient
+                # surface (``available_tags``/``selected_tags``) with
+                # requester-safe rows plus visible historical identities.
+                # All visible identities (historical included) stay in
+                # the native fallback select: enhancement disables it and
+                # the selector owns lookup-only refreshes from there.
+                'tag_selection': selection,
+                'selected_tag_ids': list(selection.tag_ids),
+                'available_tags': template_discovery.discovery_tag_options(
+                    self.request.user,
+                    selected_ids=selection.tag_ids,
+                    include_historical=True,
+                ),
+                'available_tag_ids': [
+                    option.tag_id
+                    for option in template_discovery.discovery_tag_options(
+                        self.request.user,
+                        selected_ids=selection.tag_ids,
+                        include_historical=True,
+                    )
+                ],
+                'selected_tags': [
+                    {
+                        'badge': tag_projection.tag_badge(tag),
+                        'remove_querystring': tag_filters.remove_tag_query(
+                            query, selection, tag.pk
+                        ),
+                    }
+                    for tag in selection.tags
+                ],
+                'clear_tags_querystring': tag_filters.manual_empty_query(
+                    query, selection
+                ),
                 'discovery_tag_options': template_discovery.discovery_tag_options(
                     self.request.user,
                     selected_ids=selection.tag_ids,

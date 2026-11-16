@@ -1,0 +1,145 @@
+{% comment %}
+Report-catalogue tag selector (TFUX S3, design D5).
+
+Reports-owned instance of the shared S2 selector contract: identical
+``data-tag-*`` hooks and ``tag-selector:change`` events as
+``components/_tag_selector.html``, but the lookup URL is the reports-owned
+read-only view (same report-discovery read boundary, never
+``patients.view_patient``). The catalogue host controller consumes selected
+IDs from the hidden ``[data-tag-input]`` inputs and change notices; the
+selector owns rows/chips and performs lookup-only historical refreshes.
+
+``available_tags`` entries expose ``tag_id``/``display_name``/``state_label``
+(report ``DiscoveryTagOption`` rows) and ``selected_tags`` entries expose
+``badge``/``remove_querystring`` exactly like the patient surface, so the
+selector scripts need no catalogue-specific branch. Selected rows outside
+``available_tag_ids`` (visible historical identities) still get a native
+selected option so a no-JavaScript resubmit keeps filtering by them.
+
+Context flag ``selector_only`` renders only the selector block: the
+catalogue filter form embeds it inside its own ``col-md-4`` wrapper and
+mode column, while other hosts may wrap it differently.
+{% endcomment %}
+{% if not selector_only %}<div class="tag-filter-controls">
+  <label for="report-template-tag-search" class="form-label">
+    <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
+  </label>
+  <div class="tag-selector position-relative"
+       data-tag-selector
+       data-lookup-url="{% url 'reports:template_tag_lookup' %}">
+{% else %}
+  {# Catalogue branch: the visible label is required here too, since the
+     search input is otherwise unlabeled when `selector_only=1`. ids stay
+     unique: the catalogue renders this partial exactly once, and the
+     standalone branch above keeps the same ids on non-catalogue hosts. #}
+  <label for="report-template-tag-search" class="form-label">
+    <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
+  </label>
+  <div class="tag-selector position-relative"
+       data-tag-selector
+       data-lookup-url="{% url 'reports:template_tag_lookup' %}">
+{% endif %}
+    <select id="report-template-tag-native"
+            name="tags"
+            multiple
+            class="form-select"
+            aria-label="Tags"
+            data-tag-native
+            data-discovery-tags>
+      {% for tag in available_tags %}
+        <option value="{{ tag.tag_id }}"
+                {% if tag.tag_id in selected_tag_ids %}selected{% endif %}>
+          {{ tag.display_name }}{% if tag.state_label %} — {{ tag.state_label }}{% endif %}
+        </option>
+      {% endfor %}
+      {% for selected in selected_tags %}
+        {% if selected.badge.tag_id not in available_tag_ids %}
+          <option value="{{ selected.badge.tag_id }}" selected>
+            {{ selected.badge.display_name }}{% if selected.badge.state_label %} — {{ selected.badge.state_label }}{% endif %}
+          </option>
+        {% endif %}
+      {% endfor %}
+    </select>
+
+    <div class="d-none" data-tag-enhanced>
+      <input type="search"
+             id="report-template-tag-search"
+             class="form-control"
+             placeholder="Buscar tag por nome ou equipe..."
+             autocomplete="off"
+             aria-controls="report-template-tag-search-results"
+             data-tag-search>
+      <div class="d-flex justify-content-between align-items-center mt-1 gap-2">
+        <div class="form-check form-check-inline mb-0">
+          <input class="form-check-input"
+                 type="checkbox"
+                 id="report-template-include-historical"
+                 data-tag-historical
+                 {% if discovery_include_historical %}checked{% endif %}>
+          <label class="form-check-label small" for="report-template-include-historical">
+            Mostrar inativas e arquivadas no seletor
+          </label>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary"
+           href="?{{ clear_tags_querystring }}"
+           data-tag-clear>Remover filtro de tags</a>
+      </div>
+      <div class="d-flex flex-wrap gap-1 mt-2" data-tag-chips>
+        {% for selected in selected_tags %}
+          <span class="badge tag-filter-chip d-inline-flex align-items-center gap-1"
+                data-tag-chip
+                data-tag-id="{{ selected.badge.tag_id }}">
+            <span class="tag-filter-chip-label" data-tag-chip-label>{{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}</span>
+            <button type="button"
+                    class="tag-filter-chip-remove"
+                    aria-label="Remover {{ selected.badge.display_name }} da seleção"
+                    data-tag-remove><span aria-hidden="true">×</span></button>
+          </span>
+        {% endfor %}
+      </div>
+      <div class="tag-selector-panel shadow-sm"
+           data-tag-panel
+           hidden>
+        <ul class="list-group"
+            id="report-template-tag-search-results"
+            role="list"
+            data-tag-results
+            aria-label="Resultados de tags"
+            hidden></ul>
+        <button type="button"
+                class="btn btn-link btn-sm p-0"
+                data-tag-more
+                hidden>Carregar mais</button>
+      </div>
+      <p class="small text-muted mb-0 mt-1"
+         data-tag-status
+         aria-live="polite"
+         aria-atomic="true"></p>
+    </div>
+
+    <div data-tag-hidden-inputs></div>
+    <input type="hidden"
+           name="tag_filter"
+           value="{% if tag_selection.is_manual %}manual{% endif %}"
+           data-tag-marker>
+  </div>
+{% if selector_only %}
+  {# The catalogue filter form owns the mode column; keep a second
+     Correspondência control out of the embedded selector. #}
+{% else %}
+  <div class="d-flex flex-column gap-2 mt-1 mw-100">
+    <div class="d-flex flex-column gap-1 mw-100">
+      <label for="report-template-mode" class="form-label small mb-0">Correspondência</label>
+      <select id="report-template-mode"
+              name="tag_mode"
+              class="form-select w-100 mw-100"
+              aria-label="Correspondência"
+              data-discovery-mode>
+        <option value="any" {% if tag_selection.mode == "any" %}selected{% endif %}>Pelo menos uma selecionada (OU)</option>
+        <option value="all" {% if tag_selection.mode == "all" %}selected{% endif %}>Todas as selecionadas (E)</option>
+      </select>
+    </div>
+    <small class="text-muted text-break" data-tag-state>{{ tag_selection.state_label }}</small>
+  </div>
+</div>
+{% endif %}

@@ -378,3 +378,42 @@ class TagSelectorTemplateTests(TestCase):
         self.assertIn("Cir Vascular [CIRGER]", markup)
         self.assertIn('name="tag_filter"', markup)
         self.assertIn('name="tag_mode"', markup)
+
+    def test_set_selection_api_is_catalogue_opt_in_and_patient_neutral(self) -> None:
+        # TFUX S3 fix2: the shared selector exposes an opt-in
+        # ``tag-selector:set-selection`` reconciliation event for the
+        # catalogue transport. Without the event the selector behaves
+        # exactly as before: no set-selection listener side effects run
+        # on patient surfaces, which never dispatch the event, and the
+        # API neither marks manual nor dispatches tag-selector:change.
+        root = Path(__file__).resolve().parents[3]
+        source = (root / "assets" / "js" / "tag-selector.js").read_text()
+        normalized = re.sub(r"\s+", " ", source)
+        self.assertIn("tag-selector:set-selection", normalized)
+        # Opt-in: a no-op (empty selection) listener arm, wired once per
+        # selector root, reusing the existing addChip/attachRemove
+        # machinery — not a second chip renderer.
+        self.assertIn("addEventListener(\"tag-selector:set-selection\"", normalized)
+        self.assertIn("addChip({", normalized)
+        self.assertIn("notifySelectionChanged", normalized)
+        notify_count = source.count("notifySelectionChanged()")
+        # The definition plus the two pre-existing user-change call
+        # sites (remove handler, addTag) are untouched; the
+        # set-selection arm below adds no new dispatch (reconciliation
+        # is not a user change).
+        self.assertEqual(notify_count, 3)
+        arm_start = source.index(
+            'root.addEventListener("tag-selector:set-selection"'
+        )
+        arm_end = source.index("Array.prototype.forEach.call(", arm_start)
+        arm = source[arm_start:arm_end]
+        self.assertNotIn("notifySelectionChanged()", arm)
+        self.assertNotIn("markManual", arm)
+        self.assertNotIn("tag-selector:change", arm)
+        # Patient surfaces never dispatch the event: no catalogue
+        # transport script loads there and no template references it.
+        response = self.client.get(reverse("patients:patient_list"))
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        self.assertNotIn("tag-selector:set-selection", body)
+        self.assertNotIn("report-template-discovery", body)

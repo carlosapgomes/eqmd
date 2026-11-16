@@ -1,11 +1,16 @@
 {% comment %}
-  Report-template discovery filters (S2, design D5).
+  Report-template discovery filters (S2/S3, design D5).
 
   The native GET form is the no-JavaScript contract: repeated ``tags``,
   ``tag_mode`` and the manual marker round-trip through the query string,
   while automatic specialty defaults stay out of it and are recomputed on
   every request. Typed values are rendered through Django escaping only.
-  ``assets/js/report-template-discovery.js`` enhances this form in place.
+  ``assets/js/report-catalogue-filter-form.js`` owns the catalogue draft
+  state (``Alterações não aplicadas``) while ``assets/js/tag-selector.js``
+  owns the searchable selector; ``assets/js/report-template-discovery.js``
+  owns fragment transport/history. Creation shares this form but stays on
+  its accepted JSON controller until S4: catalogue-only hooks carry a
+  ``data-catalogue-`` prefix and creation-only behaviour is preserved.
 
   Native Apply carries ``tag_filter=manual`` on the submit button itself:
   a browser submits a named submit button only when it is the submitter,
@@ -16,7 +21,9 @@
 {% endcomment %}
 <div class="card shadow-sm mb-3">
   <div class="card-body">
-    <form method="get" data-discovery-form>
+    <form method="get"
+          data-discovery-form
+          {% if not selector_plain %}data-catalogue-filter-form{% endif %}>
       <div class="row g-3 align-items-end">
         <div class="col-md-4">
           <label for="report-template-search" class="form-label">
@@ -31,20 +38,28 @@
                  autocomplete="off">
         </div>
         <div class="col-md-4">
-          <label for="report-template-tags" class="form-label">
-            <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
-          </label>
-          <select id="report-template-tags"
-                  name="tags"
-                  multiple
-                  class="form-select"
-                  data-discovery-tags>
-            {% for option in discovery_tag_options %}
-              <option value="{{ option.tag_id }}" {% if option.is_selected %}selected{% endif %}>
-                {{ option.display_name }}{% if option.state_label %} — {{ option.state_label }}{% endif %}
-              </option>
-            {% endfor %}
-          </select>
+          {% if selector_plain %}
+            {# S4 isolation: creation keeps the accepted native select.
+               Same no-JS contract as the catalogue selector, but no
+               ``data-tag-selector`` root, so tag-selector.js leaves this
+               form on its JSON controller. #}
+            <label for="report-template-tags" class="form-label">
+              <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
+            </label>
+            <select id="report-template-tags"
+                    name="tags"
+                    multiple
+                    class="form-select"
+                    data-discovery-tags>
+              {% for option in discovery_tag_options %}
+                <option value="{{ option.tag_id }}" {% if option.is_selected %}selected{% endif %}>
+                  {{ option.display_name }}{% if option.state_label %} — {{ option.state_label }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          {% else %}
+            {% include "components/_report_template_tag_selector.html" with selector_only=1 %}
+          {% endif %}
         </div>
         <div class="col-md-2">
           <label for="report-template-mode" class="form-label">Correspondência</label>
@@ -71,7 +86,15 @@
       <input type="hidden"
              value="{% if discovery_selection.is_manual %}manual{% endif %}"
              data-discovery-marker>
+      {% if not selector_plain %}
+      {# Catalogue-only: draft indicator and error slot for the catalogue
+         host controller. Creation (selector_plain) shares the status
+         line below but keeps its accepted JSON controller. #}
+      <p class="small text-muted mb-0" data-catalogue-filter-dirty role="status" hidden>Alterações não aplicadas</p>
+      <p class="small text-danger mb-0" data-catalogue-filter-error role="alert" hidden></p>
+      {% endif %}
       <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
+        {% if selector_plain %}
         <div class="form-check form-check-inline mb-0">
           <input class="form-check-input"
                  type="checkbox"
@@ -79,11 +102,13 @@
                  name="include_historical"
                  value="1"
                  data-discovery-historical
+                 data-tag-historical
                  {% if discovery_include_historical %}checked{% endif %}>
           <label class="form-check-label small" for="report-template-historical">
             Mostrar inativas e arquivadas no seletor
           </label>
         </div>
+        {% endif %}
         <a href="?{{ discovery_clear_querystring }}"
            class="btn btn-sm btn-outline-secondary"
            data-discovery-clear>Remover filtro de tags</a>
