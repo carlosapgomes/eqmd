@@ -8,9 +8,11 @@
   ``assets/js/report-catalogue-filter-form.js`` owns the catalogue draft
   state (``Alterações não aplicadas``) while ``assets/js/tag-selector.js``
   owns the searchable selector; ``assets/js/report-template-discovery.js``
-  owns fragment transport/history. Creation shares this form but stays on
-  its accepted JSON controller until S4: catalogue-only hooks carry a
-  ``data-catalogue-`` prefix and creation-only behaviour is preserved.
+  owns fragment/JSON transport/history. The catalogue carries
+  the catalogue host form attribute (its host binds there); creation carries
+  ``creation_selector=1`` instead — same selector and draft indicator
+  under creation hooks (``data-creation-filter-*``), never the catalogue
+  host attribute or script, so only the creation controller binds.
 
   Native Apply carries ``tag_filter=manual`` on the submit button itself:
   a browser submits a named submit button only when it is the submitter,
@@ -23,7 +25,7 @@
   <div class="card-body">
     <form method="get"
           data-discovery-form
-          {% if not selector_plain %}data-catalogue-filter-form{% endif %}>
+          {% if not selector_plain and not creation_selector %}data-catalogue-filter-form{% endif %}>
       <div class="row g-3 align-items-end">
         <div class="col-md-4">
           <label for="report-template-search" class="form-label">
@@ -39,10 +41,11 @@
         </div>
         <div class="col-md-4">
           {% if selector_plain %}
-            {# S4 isolation: creation keeps the accepted native select.
+            {# Legacy isolation branch (pre-S4): kept for the explicit
+               opt-out contract; neither surface renders it anymore.
                Same no-JS contract as the catalogue selector, but no
-               ``data-tag-selector`` root, so tag-selector.js leaves this
-               form on its JSON controller. #}
+               ``data-tag-selector`` root, so tag-selector.js never
+               enhances the form. #}
             <label for="report-template-tags" class="form-label">
               <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
             </label>
@@ -86,23 +89,39 @@
       <input type="hidden"
              value="{% if discovery_selection.is_manual %}manual{% endif %}"
              data-discovery-marker>
-      {% if not selector_plain %}
+      {% if creation_selector %}
+      {# Creation draft indicator and error slot for the creation
+         controller (``initializeSelection``); the catalogue host never
+         binds here (no catalogue host attribute). #}
+      <p class="small text-muted mb-0" data-creation-filter-dirty role="status" hidden>Alterações não aplicadas</p>
+      <p class="small text-danger mb-0" data-creation-filter-error role="alert" hidden></p>
+      {% elif not selector_plain %}
       {# Catalogue-only: draft indicator and error slot for the catalogue
-         host controller. Creation (selector_plain) shares the status
-         line below but keeps its accepted JSON controller. #}
+         host controller. #}
       <p class="small text-muted mb-0" data-catalogue-filter-dirty role="status" hidden>Alterações não aplicadas</p>
       <p class="small text-danger mb-0" data-catalogue-filter-error role="alert" hidden></p>
       {% endif %}
       <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
-        {% if selector_plain %}
-        <div class="form-check form-check-inline mb-0">
+        {# Native historical control for the no-JS contract: rendered
+           outside the selector's enhanced-only block with a real
+           submitted name, so without JavaScript the user can still
+           request/hide historical options. The creation controller
+           hides the wrapper + disables it once the selector enhances
+           the form (enhanced users keep the panel toggle only, with
+           no orphaned native label). The plain
+           branch keeps the legacy co-located hook attribute; creation
+           deliberately omits ``data-tag-historical`` so the transport
+           never mistakes this fallback for the selector toggle. #}
+        {% if selector_plain or creation_selector %}
+        <div class="form-check form-check-inline mb-0"
+             data-discovery-historical-wrap>
           <input class="form-check-input"
                  type="checkbox"
                  id="report-template-historical"
                  name="include_historical"
                  value="1"
                  data-discovery-historical
-                 data-tag-historical
+                 {% if selector_plain %}data-tag-historical{% endif %}
                  {% if discovery_include_historical %}checked{% endif %}>
           <label class="form-check-label small" for="report-template-historical">
             Mostrar inativas e arquivadas no seletor

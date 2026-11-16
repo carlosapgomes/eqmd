@@ -220,13 +220,45 @@ class ReportCreateView(LoginRequiredMixin, CreateView):
                 'discovery_state_label': selection.state_label,
                 'discovery_mode_label': selection.mode_label,
                 'discovery_include_historical': include_historical,
-                # S4 isolation: report creation keeps its accepted native
-                # select (`selector_plain`, no `data-tag-selector` root, no
-                # enhancement) + JSON controller (S4 starting point). The
-                # shared filter form renders the native `discovery_tag_options`
-                # select here, so the catalogue-only selector names below are
-                # intentionally NOT computed (P2: skips two extra
-                # `discovery_tag_options` calls per creation GET).
+                # S4 selector contract (same names as the catalogue):
+                # the reports-owned selector partial consumes
+                # ``available_tags``/``selected_tags`` with requester-safe
+                # rows plus visible historical identities. The native
+                # fallback inside the selector honors the requested
+                # historical flag for the no-JS contract (historical
+                # identities only when requested, via the native
+                # historical control); enhancement disables it and the
+                # selector owns lookup-only refreshes from there.
+                # Creation renders the selector via
+                # ``creation_selector=1`` (no catalogue host form
+                # attribute, no catalogue script).
+                'tag_selection': selection,
+                'selected_tag_ids': list(selection.tag_ids),
+                'available_tags': template_discovery.discovery_tag_options(
+                    self.request.user,
+                    selected_ids=selection.tag_ids,
+                    include_historical=include_historical,
+                ),
+                'available_tag_ids': [
+                    option.tag_id
+                    for option in template_discovery.discovery_tag_options(
+                        self.request.user,
+                        selected_ids=selection.tag_ids,
+                        include_historical=include_historical,
+                    )
+                ],
+                'selected_tags': [
+                    {
+                        'badge': tag_projection.tag_badge(tag),
+                        'remove_querystring': tag_filters.remove_tag_query(
+                            query, selection, tag.pk
+                        ),
+                    }
+                    for tag in selection.tags
+                ],
+                'clear_tags_querystring': tag_filters.manual_empty_query(
+                    query, selection
+                ),
                 'discovery_tag_options': template_discovery.discovery_tag_options(
                     self.request.user,
                     selected_ids=selection.tag_ids,

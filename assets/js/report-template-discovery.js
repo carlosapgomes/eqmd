@@ -701,55 +701,85 @@
     });
   }
 
-  // Report-creation selector (S3, D6): same discovery semantics as the
-  // catalogue, but results come from the JSON lookup endpoint and the
-  // bounded clinical select is refreshed without touching title, date,
-  // EasyMDE content or the current selection, and without dispatching
-  // the select's change handler (which would navigate to the GET
-  // prefill flow). Only discovery interactions have this guarantee;
-  // explicitly choosing another model still uses that prefill flow.
+  // Report-creation discovery (S4, D1/D2/D6/D7): the same explicit
+  // draft/Apply semantics as the catalogue, over the JSON lookup
+  // endpoint. The shared selector owns tag search/rows/chips (reported
+  // lookup, 250 ms); typing the model-name query is a pending draft only
+  // and NEVER issues a model-result request (no debounce). Draft vs
+  // applied is normalized (trimmed q, deduplicated hidden-input ids,
+  // mode) with the persistent `Alterações não aplicadas` indicator near
+  // Apply; a clean enhanced Apply short-circuits (no request, no
+  // automatic→manual conversion, no history). Apply submits the whole
+  // draft as one JSON request; failure retains the last results, the
+  // draft and the dirty state and announces an honest error. Scoped
+  // clear/reapply/badge-removal/pagination derive from the last-applied
+  // state and preserve pending controls visibly. The historical toggle
+  // is options-only (replaceState, no model request): the selector owns
+  // its lookup refresh. History is deliberate: pushState only when the
+  // canonical applied URL changes, replaceState for the toggle, and
+  // popstate restores controls/results WITHOUT pushing.
+  //
+  // CLINICAL INVARIANT (R3, the heart of S4): controls are user-owned —
+  // the transport writes them ONLY on popstate. Every other success
+  // moves only the applied baseline, the results list/nav/summary, the
+  // clinical SELECT's options (value preserved, NO change event
+  // dispatched — dispatching would navigate to the GET prefill flow)
+  // and the URL. Title, document_date, EasyMDE content and the selected
+  // model are never read or written here, and the discovery form is a
+  // sibling of (never nested in) the clinical POST form, so no
+  // discovery interaction can POST clinical data. A still-authorized
+  // selected model outside the current results stays pinned in the
+  // clinical select with its count excluded (existing payload
+  // semantics, unchanged).
   function initializeSelection(root) {
     var lookupUrl = root.getAttribute("data-template-selection-url");
     var form = root.querySelector("[data-discovery-form]");
     var search = root.querySelector("[data-discovery-q]");
-    var select = root.querySelector("[data-discovery-tags]");
     var mode = root.querySelector("[data-discovery-mode]");
     var marker = root.querySelector("[data-discovery-marker]");
-    var historical = root.querySelector(
-      "[data-discovery-historical], [data-tag-historical]"
-    );
+    var dirty = root.querySelector("[data-creation-filter-dirty]");
+    var errorSlot = root.querySelector("[data-creation-filter-error]");
     var status = root.querySelector("[data-discovery-status]");
     var results = root.querySelector("[data-template-selection-results]");
     var clinicalSelect = document.getElementById("id_template");
     var warning = root.querySelector("[data-template-selection-warning]");
-    if (!lookupUrl || !form || !search || !select || !mode || !marker || !results || !clinicalSelect) {
+    if (!lookupUrl || !form || !search || !mode || !marker || !results || !clinicalSelect) {
       return;
     }
     if (warning) {
       warning.style.display = "none";
     }
-    var timer = null;
+    // The native no-JS historical control (filters partial, outside the
+    // selector's enhanced block) is only a fallback: once the selector
+    // enhances the form, hide its wrapper div (so the label is not
+    // orphaned next to the selector toggle) and disable the input, so
+    // enhanced users keep the single panel toggle (its submitted name
+    // would otherwise be ignored by the transport).
+    var nativeHistorical = form.querySelector("[data-discovery-historical]");
+    var nativeHistoricalWrap = form.querySelector(
+      "[data-discovery-historical-wrap]"
+    );
+    if (nativeHistoricalWrap && isEnhanced()) {
+      nativeHistoricalWrap.hidden = true;
+    }
+    if (nativeHistorical && isEnhanced()) {
+      nativeHistorical.hidden = true;
+      nativeHistorical.disabled = true;
+    }
     var generation = 0;
     var controller = null;
-    var inFlightIsSearch = false;
-    var pendingSearchWanted = false;
     var appliedParams = new URLSearchParams(
       results.getAttribute("data-discovery-applied") || ""
     );
     appliedParams.delete("fragment");
     appliedParams.delete("page");
-    // The page actually displayed in the results list/nav. The
-    // options-only historical lookup must preserve it so the
-    // returned options, clinical choices and notices describe the
-    // same page the user sees (rt2-1). Updated from every payload.
-    var displayedPage =
-      results.getAttribute("data-template-selection-page") || "1";
+    // Draft/applied baseline, seeded from the server-rendered applied
+    // state (the selector has already seeded hidden inputs from the
+    // server-rendered chips in defer order). Rebased from every
+    // successful applied response; never read from pending controls.
+    var applied = null;
 
     function abortInFlight() {
-      if (inFlightIsSearch) {
-        pendingSearchWanted = true;
-      }
-      inFlightIsSearch = false;
       if (controller) {
         controller.abort();
         controller = null;
@@ -760,67 +790,144 @@
         status.textContent = message || "";
       }
     }
+    function setError(message) {
+      if (errorSlot) {
+        errorSlot.textContent = message || "";
+        errorSlot.hidden = !message;
+      }
+      setStatus(message || "");
+    }
+    function isEnhanced() {
+      var native = form.querySelector("[data-tag-native]");
+      return !!native && native.disabled;
+    }
+    // Pending draft tag ids: hidden inputs when enhanced (authoritative,
+    // including empty-after-clear), the native multi-select otherwise.
+    function selectedTagIds() {
+      if (isEnhanced()) {
+        var ids = [];
+        Array.prototype.forEach.call(
+          form.querySelectorAll("[data-tag-input]"),
+          function (input) {
+            var value = String(input.value).trim();
+            if (value && ids.indexOf(value) === -1) {
+              ids.push(value);
+            }
+          }
+        );
+        return ids;
+      }
+      var native = form.querySelector("[data-tag-native]");
+      var fallback = [];
+      if (native && !native.disabled) {
+        Array.prototype.forEach.call(
+          native.querySelectorAll("option:checked"),
+          function (option) {
+            if (fallback.indexOf(option.value) === -1) {
+              fallback.push(option.value);
+            }
+          }
+        );
+      }
+      return fallback;
+    }
+    function readState() {
+      return {
+        q: search.value.trim(),
+        tags: selectedTagIds().sort(),
+        mode: mode.value,
+      };
+    }
+    function statesEqual(left, right) {
+      if (left.q !== right.q || left.mode !== right.mode) {
+        return false;
+      }
+      if (left.tags.length !== right.tags.length) {
+        return false;
+      }
+      for (var index = 0; index < left.tags.length; index += 1) {
+        if (left.tags[index] !== right.tags[index]) {
+          return false;
+        }
+      }
+      return true;
+    }
+    function refreshDirty() {
+      if (!dirty || !applied) {
+        return false;
+      }
+      var isDirty = !statesEqual(applied, readState());
+      dirty.hidden = !isDirty;
+      return isDirty;
+    }
+    function rebaseline(next) {
+      applied = {
+        q: next.q || "",
+        tags: (next.tags || []).slice().sort(),
+        mode: next.mode || "any",
+      };
+      refreshDirty();
+    }
+    applied = readState();
+    // Pending form controls: only explicit Apply may build a request
+    // from these. Tag-option search text is never a predicate.
     function pendingParams() {
       var params = new URLSearchParams();
       var query = search.value.trim();
       if (query) {
         params.set("q", query);
       }
-      if (marker.value === "manual") {
+      var tagIds = selectedTagIds();
+      if (marker.value === "manual" || tagIds.length) {
         params.set("tag_filter", "manual");
         params.set("tag_mode", mode.value);
-        Array.prototype.forEach.call(select.selectedOptions, function (option) {
-          params.append("tags", option.value);
+        tagIds.forEach(function (tagId) {
+          params.append("tags", tagId);
         });
       }
-      if (historical && historical.checked) {
+      if (selectorHistoricalChecked()) {
         params.set("include_historical", "1");
       }
       return params;
     }
-    function searchParams() {
-      var params = new URLSearchParams(appliedParams);
-      params.delete("page");
-      var query = search.value.trim();
-      if (query) {
-        params.set("q", query);
-      } else {
-        params.delete("q");
-      }
-      return params;
+    function selectorHistorical() {
+      return form.querySelector("[data-tag-historical]");
     }
+    function selectorHistoricalChecked() {
+      var historical = selectorHistorical();
+      return !!(historical && historical.checked);
+    }
+    // The historical toggle builds from the CURRENT DISPLAYED URL
+    // (window.location.search), changing only include_historical, so
+    // it preserves the displayed page and never commits pending
+    // q/tags/mode (mirrors the catalogue fix4 mechanism).
     function historicalParams() {
-      var params = new URLSearchParams(appliedParams);
-      params.delete("page");
-      // Preserve the displayed page: without it the server returns
-      // page-1 choices while page 2 stays visible.
-      if (displayedPage && displayedPage !== "1") {
-        params.set("page", displayedPage);
-      }
-      if (historical && historical.checked) {
+      var params = new URLSearchParams(window.location.search);
+      params.delete("fragment");
+      if (selectorHistoricalChecked()) {
         params.set("include_historical", "1");
       } else {
         params.delete("include_historical");
       }
       return params;
     }
+    // The last user-visible historical choice wins across any pending
+    // request: a toggle stamped after a request was sent wins over the
+    // landing response's older flag (catalogue historicalStamp seam).
+    var historicalStamp = 0;
     function rememberApplied(params) {
       appliedParams = new URLSearchParams(params);
       appliedParams.delete("fragment");
       appliedParams.delete("page");
     }
-    function cancelPendingSearch() {
-      if (timer !== null) {
-        window.clearTimeout(timer);
-        timer = null;
-        pendingSearchWanted = true;
-      }
-    }
+    // Delegated link clicks derive their request from the last-applied
+    // state plus the link's own single parameter. The selector's own
+    // [data-tag-clear] shares the scoped manual-empty clear branch.
     function linkParams(link) {
       var hrefParams = new URLSearchParams(
         new URL(link.getAttribute("href"), window.location.href).search
       );
-      if (link.hasAttribute("data-discovery-clear")) {
+      if (link.hasAttribute("data-discovery-clear") || link.hasAttribute("data-tag-clear")) {
         var clear = new URLSearchParams(appliedParams);
         clear.delete("tags");
         clear.delete("tag");
@@ -862,19 +969,15 @@
       }
       return pageParams;
     }
-    function syncHistoricalCheckbox() {
-      if (historical) {
-        historical.checked = appliedParams.has("include_historical");
-      }
-    }
     function reconcileLinks() {
       Array.prototype.forEach.call(
         root.querySelectorAll(
           "[data-discovery-clear], [data-discovery-reapply], " +
-            "[data-discovery-remove]"
+            "[data-discovery-remove], [data-tag-clear]"
         ),
         function (link) {
           var params = linkParams(link);
+          params.delete("fragment");
           link.setAttribute("href", "?" + params.toString());
         }
       );
@@ -886,58 +989,13 @@
       option.selected = !!selected;
       return option;
     }
-    function replaceTagOptions(options, preserveSelection, retainedOptions) {
-      // Preserve pending choices the rebuilt set omits (e.g. an
-      // archived tag selected with the historical toggle on, then
-      // toggled off before Apply) only when the server authorizes
-      // them: ``retained_tag_options`` in the payload is the
-      // resolved readable projection for the pending ids sent with
-      // the lookup (see lookupUrlFor). A pending id the server does
-      // not authorize (revoked readability) is dropped, never cloned
-      // from the stale DOM option, and retained labels are rebuilt
-      // from the authorized projection. Retention never applies a
-      // filter: the ids travel as ``retained_tags``, not ``tags``.
-      var preservedIds = [];
-      if (preserveSelection) {
-        preservedIds = Array.prototype.map.call(
-          select.selectedOptions,
-          function (option) {
-            return option.value;
-          }
-        );
-      }
-      var seen = {};
-      select.replaceChildren();
-      (options || []).forEach(function (item) {
-        var label = item.display_name;
-        if (item.state_label) {
-          label += " — " + item.state_label;
-        }
-        var isSelected = preserveSelection
-          ? preservedIds.indexOf(String(item.tag_id)) !== -1
-          : !!item.is_selected;
-        select.appendChild(
-          makeOption(String(item.tag_id), label, isSelected)
-        );
-        seen[String(item.tag_id)] = true;
-      });
-      if (preserveSelection) {
-        var authorized = {};
-        (retainedOptions || []).forEach(function (item) {
-          authorized[String(item.tag_id)] = item;
-        });
-        preservedIds.forEach(function (id) {
-          var item = authorized[id];
-          if (!seen[id] && item) {
-            var label = item.display_name;
-            if (item.state_label) {
-              label += " — " + item.state_label;
-            }
-            select.appendChild(makeOption(id, label, true));
-          }
-        });
-      }
-    }
+    // Clinical select: refresh options from the payload page while
+    // preserving the current value exactly, WITHOUT dispatching change
+    // (that would navigate to the GET prefill flow). A still-authorized
+    // selection outside the results stays pinned with the generic
+    // outside label; an unavailable one keeps its identity under the
+    // generic unavailable label (full server validation still rejects
+    // it; manual creation after explicit clear is unchanged).
     function updateClinicalSelect(payload) {
       var currentValue = clinicalSelect.value;
       var seen = {};
@@ -954,7 +1012,7 @@
           clinicalSelect.appendChild(
             makeOption(currentValue, "Modelo selecionado indisponível", true)
           );
-        } else if (payload.selected) {
+        } else if (payload.selected && payload.selected.id === currentValue) {
           clinicalSelect.appendChild(
             makeOption(
               payload.selected.id,
@@ -973,15 +1031,21 @@
       clinicalSelect.value = currentValue;
     }
     function reconcileSelectionNotices(payload) {
-      // Outside notice only when the selected id is absent from the
-      // current results; unavailable notice only when the lookup
+      // Outside notice only when the CURRENT selection is absent from
+      // the current results; unavailable notice only when the lookup
       // reports the selection unavailable. Create the elements when
       // the initial render omitted them (empty/filtered states).
-      var inResults = !!(
-        payload.selected &&
-        (payload.results || []).some(function (item) {
-          return item.id === payload.selected.id;
-        })
+      // Fix1: stale-selection reconciliation — reconcile against the
+      // clinical select's CURRENT value when the response lands, not
+      // the request-time selection in the payload. If the user cleared
+      // the selection while the response was in flight, both notices
+      // stay hidden (no phantom stale-model notice).
+      var currentSelectedId = clinicalSelect.value || "";
+      var inResults = (payload.results || []).some(function (item) {
+        return item.id === currentSelectedId;
+      });
+      var selectedMatchesCurrent = !!(
+        payload.selected && payload.selected.id === currentSelectedId
       );
       var outside = results.querySelector("[data-selected-template-outside]");
       if (!outside) {
@@ -1008,7 +1072,7 @@
         unavailable.setAttribute("data-selected-template-unavailable", "");
         results.insertBefore(unavailable, outside);
       }
-      if (payload.selection_unavailable) {
+      if (currentSelectedId && payload.selection_unavailable) {
         unavailable.textContent =
           "Modelo selecionado indisponível. Para criar manualmente, " +
           "limpar a seleção atual.";
@@ -1018,7 +1082,7 @@
         unavailable.hidden = true;
         unavailable.style.display = "none";
       }
-      if (payload.selected && !payload.selection_unavailable && !inResults) {
+      if (selectedMatchesCurrent && !payload.selection_unavailable && !inResults) {
         outside.replaceChildren();
         outside.appendChild(
           document.createTextNode(
@@ -1044,7 +1108,7 @@
       } else {
         // Clear stale name/tags so a hidden notice never keeps
         // metadata for a selection that is no longer outside the
-        // results (or no longer available) (rt2-2).
+        // results (or no longer available).
         outside.replaceChildren();
         outside.hidden = true;
         outside.style.display = "none";
@@ -1052,8 +1116,6 @@
     }
     // Canonical pt-BR labels for the dynamic summary, mirroring
     // TagFilterSelection.state_label/mode_label on the server.
-    // The JSON contract is unchanged: only source, mode and
-    // selected_tags from payload.filter are read.
     function discoveryModeLabel(modeValue) {
       return modeValue === "all"
         ? "Todas as selecionadas (E)"
@@ -1076,10 +1138,10 @@
       }
       return "Sem filtro de tag";
     }
+    // Results list/nav/summary only: never a clinical field, never a
+    // filter control. The count is the payload's result count (a pinned
+    // outside selection is excluded by the server payload itself).
     function updateResults(payload) {
-      // Rebuild list, empty state and navigation from every response
-      // so empty->match, single->multi-page and page transitions
-      // never keep stale markup from the initial render.
       var list = results.querySelector("[data-template-selection-list]");
       if (!list) {
         list = document.createElement("ul");
@@ -1138,7 +1200,7 @@
             (tag.state_label ? " (" + tag.state_label + ")" : "");
           // Recreate the per-badge remove link present in the
           // initial markup, with the server's effective filter
-          // parameters for removing exactly this tag (rt2-5).
+          // parameters for removing exactly this tag.
           if (tag.remove_querystring !== undefined) {
             var removeLink = document.createElement("a");
             removeLink.setAttribute("href", "?" + tag.remove_querystring);
@@ -1170,7 +1232,6 @@
         warningBox.hidden = true;
         warningBox.style.display = "none";
       }
-      displayedPage = String(payload.page);
       results.setAttribute("data-template-selection-page", String(payload.page));
       reconcileSelectionNotices(payload);
       results.setAttribute("data-discovery-count", String(payload.count));
@@ -1234,71 +1295,154 @@
     function lookupUrlFor(params) {
       var lookup = new URLSearchParams(params);
       // Ask the server to authorize the pending selections in the
-      // tag control for retention (rt2-3). These travel as
+      // tag control for retention. These travel as
       // ``retained_tags``, never as the ``tags`` filter, so they
-      // cannot apply or widen a filter.
-      Array.prototype.forEach.call(select.selectedOptions, function (option) {
-        lookup.append("retained_tags", option.value);
+      // cannot apply or widen a filter. (With the selector enhanced
+      // the chips already represent the pending selection; the
+      // retained projection keeps a readable historical selection
+      // represented even when its options are hidden.)
+      selectedTagIds().forEach(function (tagId) {
+        lookup.append("retained_tags", tagId);
       });
       if (clinicalSelect.value) {
         lookup.set("selected_template", clinicalSelect.value);
       }
       return lookupUrl + "?" + lookup.toString();
     }
-    function applyPayload(params, options, payload) {
-      rememberApplied(params);
-      if (options && options.optionsOnly) {
-        replaceTagOptions(payload.tag_options, true, payload.retained_tag_options);
-        // Options-only lookups still carry the full page projection
-        // for the displayed page: reproject the results (so a
-        // revocation never leaves stale list/nav metadata, rt2-2)
-        // and reconcile the clinical selection (without dispatching
-        // change) and its notices from the same payload page.
-        updateResults(payload);
-        updateClinicalSelect(payload);
-        reconcileSelectionNotices(payload);
-        setStatus("Opções de tags atualizadas.");
-      } else {
-        replaceTagOptions(
-          payload.tag_options,
-          !!(options && options.preservePending),
-          payload.retained_tag_options
+    function canonicalQueryString(params) {
+      var canonical = new URLSearchParams(params);
+      canonical.delete("fragment");
+      return canonical.toString();
+    }
+    function canonicalUrl(params) {
+      var queryString = canonicalQueryString(params);
+      return window.location.pathname + (queryString ? "?" + queryString : "");
+    }
+    function currentUrlQuery() {
+      return new URLSearchParams(window.location.search);
+    }
+    // Deliberate history (D6, catalogue pushAppliedHistory seam):
+    // push only when the canonical applied URL actually changed;
+    // pagination keeps `page` in the pushed URL (predicate requests
+    // already omit it, restarting at page 1).
+    function pushAppliedHistory(params) {
+      var nextQuery = canonicalQueryString(params);
+      var currentQuery = currentUrlQuery();
+      currentQuery.delete("fragment");
+      if (nextQuery === currentQuery.toString()) {
+        return;
+      }
+      window.history.pushState(null, "", canonicalUrl(params));
+    }
+    function replaceAppliedHistory(params) {
+      window.history.replaceState(null, "", canonicalUrl(params));
+    }
+    // Effective applied selection from a successful payload: the
+    // canonical request params carry q/mode/origin/historical, while
+    // the effective tag set (incl. automatic defaults that carry no
+    // tag params) comes from the payload's selected tag_options.
+    // Pending controls are never consulted here.
+    function effectiveApplied(payload, canonical) {
+      var tags = [];
+      (payload.tag_options || []).forEach(function (option) {
+        if (option.is_selected) {
+          var value = String(option.tag_id);
+          if (tags.indexOf(value) === -1) {
+            tags.push(value);
+          }
+        }
+      });
+      return {
+        q: canonical.get("q") || "",
+        tags: tags,
+        mode: payload.filter.mode || "any",
+        canonical: canonical,
+      };
+    }
+    // Popstate is the ONLY path that writes controls: restore the
+    // navigated applied state from the payload (q, mode, both origin
+    // markers, the historical checkbox, chips/hidden inputs through
+    // the selector's `tag-selector:set-selection` with ids AND display
+    // names — no network beyond the popped results fetch). Clinical
+    // fields and the selected model are never written.
+    function restoreControlsFromFragment(effective, canonical, payload) {
+      search.value = effective.q || "";
+      mode.value = effective.mode || "any";
+      var manual = payload.filter.source === "manual" ? "manual" : "";
+      marker.value = manual;
+      var tagMarker = form.querySelector("[data-tag-marker]");
+      if (tagMarker) {
+        tagMarker.value = manual;
+      }
+      var historical = selectorHistorical();
+      if (historical) {
+        historical.checked = canonical.has("include_historical");
+      }
+      var selectorRoot = form.querySelector("[data-tag-selector]");
+      if (selectorRoot) {
+        var tags = effective.tags.map(function (tagId) {
+          var found = null;
+          (payload.tag_options || []).forEach(function (option) {
+            if (String(option.tag_id) === tagId) {
+              found = option;
+            }
+          });
+          return {
+            id: tagId,
+            display_name: found ? found.display_name : "Tag " + tagId,
+            state_label: found ? found.state_label || "" : "",
+          };
+        });
+        selectorRoot.dispatchEvent(
+          new CustomEvent("tag-selector:set-selection", {
+            bubbles: false,
+            detail: { tags: tags },
+          })
         );
-        mode.value = payload.filter.mode;
-        marker.value = payload.filter.source === "manual" ? "manual" : "";
-        updateResults(payload);
-        updateClinicalSelect(payload);
-        if (payload.count === 0) {
-          setStatus(EMPTY_MESSAGE);
+      }
+    }
+    function applyPayload(params, options, payload) {
+      var canonical = new URLSearchParams(params);
+      canonical.delete("fragment");
+      var isPopstate = !!(options && options.popstate);
+      var requestStamp = options && options.requestStamp !== undefined ? options.requestStamp : 0;
+      // The historical winner across an in-flight toggle: the flag
+      // newer than this request was computed from the CURRENT
+      // checkbox, never replayed stale from the landing response.
+      if (historicalStamp > requestStamp) {
+        if (selectorHistoricalChecked()) {
+          canonical.set("include_historical", "1");
         } else {
-          setStatus(payload.count + " resultados encontrados.");
+          canonical.delete("include_historical");
         }
       }
-      syncHistoricalCheckbox();
+      var effective = effectiveApplied(payload, canonical);
+      rememberApplied(canonical);
+      updateResults(payload);
+      updateClinicalSelect(payload);
       reconcileLinks();
-      var queryString = params.toString();
-      window.history.pushState(
-        null,
-        "",
-        window.location.pathname + (queryString ? "?" + queryString : "")
-      );
-      var wantsSearch = pendingSearchWanted;
-      pendingSearchWanted = false;
-      var appliedQuery = (appliedParams.get("q") || "").trim();
-      var currentQuery = search.value.trim();
-      if (wantsSearch && currentQuery !== appliedQuery) {
-        applyFragment(searchParams(), {
-          preservePending: true,
-          isSearch: true,
-        });
+      if (isPopstate) {
+        restoreControlsFromFragment(effective, canonical, payload);
+      }
+      // Rebaseline LAST so the dirty refresh already sees the restored
+      // controls on popstate (clean) and the untouched pending draft
+      // on every other success (visibly pending).
+      rebaseline(effective);
+      setError("");
+      if (payload.count === 0) {
+        setStatus(EMPTY_MESSAGE);
+      } else {
+        setStatus(payload.count + " resultados encontrados.");
+      }
+      if (!isPopstate) {
+        pushAppliedHistory(canonical);
       }
     }
     function applyFragment(params, options) {
-      cancelPendingSearch();
       abortInFlight();
       generation += 1;
       var requestGeneration = generation;
-      inFlightIsSearch = !!(options && options.isSearch);
+      var requestStamp = historicalStamp;
       controller =
         typeof AbortController !== "undefined" ? new AbortController() : null;
       setStatus(SEARCHING_MESSAGE);
@@ -1317,52 +1461,82 @@
             return;
           }
           if (!result.ok) {
-            setStatus(GENERIC_ERROR);
+            // Failure retains the last results, the draft/dirty state
+            // and the URL; only the honest error is announced.
+            setError(GENERIC_ERROR);
             return;
           }
           var payload;
           try {
             payload = JSON.parse(result.body);
           } catch (error) {
-            setStatus(GENERIC_ERROR);
+            setError(GENERIC_ERROR);
             return;
           }
-          applyPayload(params, options, payload);
+          applyPayload(params, Object.assign({}, options, { requestStamp: requestStamp }), payload);
         })
-        .catch(function () {
+        .catch(function (error) {
           if (requestGeneration !== generation) {
             return;
           }
-          setStatus(GENERIC_ERROR);
+          if (error && error.name === "AbortError") {
+            return;
+          }
+          setError(GENERIC_ERROR);
         });
     }
     form.addEventListener("submit", function (event) {
       event.preventDefault();
+      // Clean enhanced Apply: no request, no automatic→manual
+      // conversion, no history entry (catalogue host seam).
+      if (isEnhanced() && !refreshDirty()) {
+        return;
+      }
       if (marker.value !== "manual") {
         marker.value = "manual";
       }
+      var tagMarker = form.querySelector("[data-tag-marker]");
+      if (tagMarker && tagMarker.value !== "manual") {
+        tagMarker.value = "manual";
+      }
       applyFragment(pendingParams());
     });
-    search.addEventListener("input", function () {
-      generation += 1;
-      abortInFlight();
-      window.clearTimeout(timer);
-      timer = window.setTimeout(function () {
-        timer = null;
-        applyFragment(searchParams(), {
-          preservePending: true,
-          isSearch: true,
-        });
-      }, SEARCH_DELAY_MS);
+    // No name-search debounce: typing q is a pending draft action only.
+    // Tag-option search (250 ms) lives inside the selector.
+    form.addEventListener("input", refreshDirty);
+    form.addEventListener("change", function (event) {
+      var target = event.target;
+      if (!target) {
+        return;
+      }
+      // The selector's historical toggle is option-only: it refreshes
+      // lookup choices without changing the applied predicate or the
+      // draft. The transport only reconciles the canonical flag via
+      // replaceState (no model-result request), stamped FIRST so an
+      // in-flight response keeps this newer flag.
+      if (target.hasAttribute && target.hasAttribute("data-tag-historical")) {
+        historicalStamp += 1;
+        var params = historicalParams();
+        rememberApplied(params);
+        reconcileLinks();
+        replaceAppliedHistory(params);
+        setStatus("Opções de tags atualizadas.");
+        return;
+      }
+      // Changing the matching mode is a manual tag-predicate edit.
+      if (target.name === "tag_mode" && isEnhanced()) {
+        var tagMarker = form.querySelector("[data-tag-marker]");
+        if (tagMarker) {
+          tagMarker.value = "manual";
+        }
+        marker.value = "manual";
+      }
+      refreshDirty();
     });
-    if (historical) {
-      historical.addEventListener("change", function () {
-        applyFragment(historicalParams(), { optionsOnly: true });
-      });
-    }
+    form.addEventListener("tag-selector:change", refreshDirty);
     root.addEventListener("click", function (event) {
       var link = event.target.closest(
-        "[data-discovery-clear], [data-discovery-reapply], " +
+        "[data-discovery-clear], [data-tag-clear], [data-discovery-reapply], " +
           "[data-discovery-remove], .pagination .page-link"
       );
       if (!link || !link.getAttribute("href")) {
@@ -1371,6 +1545,13 @@
       event.preventDefault();
       applyFragment(linkParams(link));
     });
+    window.addEventListener("popstate", function () {
+      // Restore the popped canonical state without pushing a new entry.
+      var params = currentUrlQuery();
+      params.delete("fragment");
+      applyFragment(params, { popstate: true });
+    });
+    refreshDirty();
   }
 
   function start() {

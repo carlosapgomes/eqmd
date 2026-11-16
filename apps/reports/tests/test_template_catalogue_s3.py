@@ -244,7 +244,15 @@ class CatalogueNoJsApplyTests(DiscoveryFixturesMixin, TestCase):
 
 
 class CatalogueCreationIsolationTests(DiscoveryFixturesMixin, TestCase):
-    """Report creation never initializes the catalogue controller (R2/R5)."""
+    """S4: creation renders the selector but never the catalogue host (R5).
+
+    S3 kept creation on the native select (``selector_plain``). S4 flips
+    the opt-in: creation now renders the shared selector on its own JSON
+    controller (``initializeSelection``) with creation draft hooks, while
+    the catalogue host attribute/script stay absent so only the creation
+    controller binds. The catalogue assertions elsewhere in this module
+    are unchanged.
+    """
 
     def creation_body(self) -> str:
         from datetime import date
@@ -267,24 +275,29 @@ class CatalogueCreationIsolationTests(DiscoveryFixturesMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         return response.content.decode()
 
-    def test_creation_keeps_native_select_without_selector_root(self) -> None:
-        # ``selector_plain`` renders the accepted native discovery select
-        # (``data-discovery-tags``) with NO ``data-tag-selector`` element and
-        # NO catalogue draft wiring; the word ``data-tag-selector`` survives
-        # only inside developer comments. tag-selector.js therefore never
-        # enhances the creation form and the catalogue transport never
-        # initializes there (creation keeps its JSON controller).
+    def test_creation_renders_selector_without_catalogue_host(self) -> None:
+        # S4: the shared selector root renders (reports-owned lookup),
+        # the native fallback select survives inside it (``data-discovery-
+        # tags`` on the selector's native select), and creation draft
+        # hooks replace the catalogue ones. The catalogue host attribute
+        # and script stay absent, so the catalogue controller never
+        # initializes on creation; only ``initializeSelection`` binds.
         body = self.creation_body()
-        self.assertNotIn("data-tag-selector=", body)
-        self.assertNotIn("data-tag-selector'", body)
-        self.assertNotIn('data-tag-selector"', body)
-        self.assertNotIn("data-catalogue-filter-form", body)
+        self.assertIn("data-tag-selector", body)
         self.assertIn("data-discovery-tags", body)
+        self.assertIn("data-creation-filter-dirty", body)
+        self.assertNotIn("data-catalogue-filter-form", body)
+        self.assertNotIn("data-catalogue-filter-dirty", body)
+        self.assertNotIn("data-catalogue-filter-error", body)
         self.assertNotIn("report-catalogue-filter-form.js", body)
+        self.assertIn("tag-selector.js", body)
 
-    def test_creation_does_not_point_at_catalogue_lookup(self) -> None:
+    def test_creation_selector_points_at_reports_lookup(self) -> None:
         body = self.creation_body()
-        self.assertNotIn("templates/tag-lookup", body)
+        self.assertIn("templates/tag-lookup", body)
+        # The JSON model transport keeps its own endpoint (creation
+        # results), distinct from the tag lookup the selector uses.
+        self.assertIn("data-template-selection-url=", body)
         self.assertNotIn('data-template-selection-url="/reports/templates/tag-lookup', body)
 
 

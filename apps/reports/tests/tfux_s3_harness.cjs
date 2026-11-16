@@ -11,7 +11,7 @@ const selectorSource = fs.readFileSync(
 const transportSource = fs.readFileSync(
   ROOT + "/assets/js/report-template-discovery.js", "utf8"
 );
-const markerFn = "  // Report-creation selector (S3, D6)";
+const markerFn = "  // Report-creation discovery (S4, D1/D2/D6/D7):";
 const discoverySource =
   transportSource.slice(0, transportSource.indexOf(markerFn)) +
   "  function start() {\n    Array.prototype.forEach.call(\n      document.querySelectorAll(\"[data-report-template-discovery]\"),\n      function (root) {\n        if (root.hasAttribute(\"data-template-selection\")) { return; }\n        initializeDiscovery(root);\n      }\n    );\n  }\n\n  if (document.readyState === \"loading\") {\n    document.addEventListener(\"DOMContentLoaded\", start);\n  } else {\n    start();\n  }\n})();\n";
@@ -54,8 +54,38 @@ class El {
     this.selected = false;
   }
   get childElementCount() { return this.children.length; }
-  get value() { return this._value !== undefined ? this._value : (this.attrs.value !== undefined ? String(this.attrs.value) : ""); }
-  set value(v) { this._value = String(v); }
+  // Real <select> reflection used by the creation controller (S4 harness):
+  // the currently selected <option> children.
+  get selectedOptions() { return this.children.filter((c) => c.tagName === "OPTION" && !!c.selected); }
+  // Real <select> reflection (TFUX S4 fix1): when the element carries
+  // OPTION children its value is browser-derived — the first selected
+  // option's value, or "" when no option is selected. Assigning a value
+  // with no matching option empties the selection, exactly like a
+  // browser, so option loss can no longer hide behind a stale string.
+  // Selects without OPTION children keep the legacy independent-string
+  // behavior (worlds that never render options: catalogue/creation mode).
+  _optionValue(c) { return String(c.attrs.value !== undefined ? c.attrs.value : (c._value || "")); }
+  get value() {
+    if (this.tagName === "SELECT" && this.children.some((c) => c.tagName === "OPTION")) {
+      const selected = this.children.find((c) => c.tagName === "OPTION" && !!c.selected);
+      return selected ? this._optionValue(selected) : "";
+    }
+    return this._value ? this._value : (this.attrs.value !== undefined ? String(this.attrs.value) : "");
+  }
+  set value(v) {
+    if (this.tagName === "SELECT" && this.children.some((c) => c.tagName === "OPTION")) {
+      const want = String(v);
+      let matched = false;
+      for (const c of this.children) {
+        if (c.tagName !== "OPTION") continue;
+        c.selected = !matched && this._optionValue(c) === want;
+        if (c.selected) matched = true;
+      }
+      this._value = "";
+      return;
+    }
+    this._value = String(v);
+  }
   get checked() { return this._checked !== undefined ? this._checked : this.attrs.checked === "" || this.attrs.checked === true; }
   set checked(v) { this._checked = !!v; }
   get disabled() { return this._disabled !== undefined ? this._disabled : ("disabled" in this.attrs); }
@@ -122,7 +152,8 @@ class El {
     // recorder, so classes live in attrs only).
     if (/^\.[\w-]+(\.[\w-]+)*$/.test(sel)) {
       const want = sel.slice(1).split(".");
-      const have = String(this.attrs.class || "").split(/\s+/).filter(Boolean);
+      // Class may live in attrs (markup) or className (script-created).
+      const have = String((this.attrs.class || this.className) || "").split(/\s+/).filter(Boolean);
       return want.every((c) => have.indexOf(c) !== -1);
     }
     if (/\s/.test(sel)) {
@@ -503,6 +534,257 @@ function buildWorld(opts) {
   vm.runInNewContext(discoverySource, sandbox);
   form.addEventListener("tag-selector:change", function () { calls.tagSelectorChange += 1; });
   return { calls, sandbox, root, form, search, mode, marker, status, errorSlot, dirty, results, historical, hiddenBox, selectorClear, clearLink, reapplyLink, removeLink, chips, selectorRoot, selectorBox: selectorRoot, tagSearch, native, tagStatus, pendingLookups, resolvePending };
+}
+
+// ---------------------------------------------------------------------------
+// TFUX S4 creation world: real selector + REAL creation controller
+// (initializeSelection from the FULL discovery source) on a creation-shaped
+// DOM that mirrors report_create_form.html after the S4 flip: discovery form
+// WITHOUT data-catalogue-filter-form, creation dirty/error slots
+// (data-creation-filter-*), selector partial subtree, JSON results root,
+// and a clinical form OUTSIDE the discovery root holding sentinels
+// (title/date/content/selected model) that no discovery interaction may
+// touch. The catalogue host script is NEVER loaded here (R5).
+// ---------------------------------------------------------------------------
+function buildCreationWorld(opts) {
+  opts = opts || {};
+  const calls = { fetch: [], fetchUrls: [], creationFetch: [], creationUrls: [], lookupCalls: [], pushState: [], replaceState: [], tagSelectorChange: 0, clinicalSubmit: 0, clinicalChange: 0 };
+  const docListeners = {};
+  const controlled = opts.controlled === true;
+  const pendingCreations = [];
+  const CREATION_URL = "/reports/create/00000000-0000-0000-0000-000000000001/select/";
+  function creationPayload() {
+    const tagOptions = (calls.__nextTagOptions || []).map((o) => ({ tag_id: Number(o.id), display_name: o.label || ("Tag " + o.id), state_label: o.state || "", is_selected: !!o.selected, is_historical: !!o.historical }));
+    const results = calls.__nextResults !== undefined ? calls.__nextResults : [{ id: "tpl-1", name: "Modelo Um", tags: [] }];
+    return {
+      results: results,
+      count: calls.__nextCount !== undefined ? calls.__nextCount : results.length,
+      page: calls.__nextPage || 1,
+      num_pages: calls.__nextNumPages || 1,
+      has_next: false,
+      has_previous: false,
+      filter: { source: calls.__nextSource || "manual", mode: calls.__nextMode || "any", selected_tags: calls.__nextFilterTags || [], warning: "" },
+      tag_options: tagOptions,
+      retained_tag_options: calls.__nextRetained || [],
+      selected: calls.__nextSelected !== undefined ? calls.__nextSelected : null,
+      selection_unavailable: !!calls.__nextUnavailable,
+    };
+  }
+  const badgeDefs = opts.badgeDefs || {};
+  // Clinical sentinels live OUTSIDE the discovery root (separate POST form).
+  const clinicalForm = new El("form", { method: "post" });
+  clinicalForm.__docListeners = docListeners;
+  const title = new El("input", {}); title.value = "SENTINEL title";
+  const docDate = new El("input", {}); docDate.value = "2024-01-15";
+  const content = new El("textarea", {}); content.value = "SENTINEL content";
+  const clinicalSelect = new El("select", { id: "id_template" });
+  clinicalSelect.__docListeners = docListeners;
+  const emptyOpt = new El("option", { value: "" }); emptyOpt.textContent = "---------";
+  clinicalSelect.appendChild(emptyOpt);
+  (opts.clinicalOptions || [{ id: "tpl-1", name: "Modelo Um" }, { id: "tpl-x", name: "Modelo Fora" }]).forEach((o) => {
+    const option = new El("option", { value: o.id });
+    option.textContent = o.name;
+    clinicalSelect.appendChild(option);
+  });
+  clinicalSelect.value = opts.selectedTemplate || "";
+  clinicalForm.appendChild(title); clinicalForm.appendChild(docDate);
+  clinicalForm.appendChild(content); clinicalForm.appendChild(clinicalSelect);
+  clinicalForm.addEventListener("submit", function () { calls.clinicalSubmit += 1; });
+  clinicalSelect.addEventListener("change", function () { calls.clinicalChange += 1; });
+  const documentStub = {
+    __listeners: docListeners,
+    readyState: "complete",
+    addEventListener(t, fn) { (docListeners[t] = docListeners[t] || []).push(fn); },
+    getElementById(id) { return id === "id_template" ? clinicalSelect : null; },
+    querySelectorAll(sel) {
+      if (sel === "[data-catalogue-filter-form]") return [];
+      if (sel === "[data-report-template-discovery]") return [root];
+      if (sel === "[data-tag-selector]") return [selectorRoot];
+      return [];
+    },
+    querySelector(sel) { return null; },
+    createElement(tag) { const el = new El(tag); el.__docListeners = docListeners; return el; },
+    createTextNode(text) { const el = new El("#text"); el.textContent = String(text); el.__docListeners = docListeners; return el; },
+  };
+  const root = new El("div", { "data-report-template-discovery": "", "data-template-selection": "", "data-template-selection-url": CREATION_URL });
+  root.__docListeners = docListeners;
+  const warning = new El("div", { "data-template-selection-warning": "" });
+  const form = new El("form", { "data-discovery-form": "", method: "get" });
+  form.__docListeners = docListeners;
+  const search = new El("input", { "data-discovery-q": "", name: "q" });
+  search.value = opts.q || ""; search.name = "q";
+  const mode = new El("select", { "data-discovery-mode": "", name: "tag_mode" });
+  mode.value = opts.mode || "any"; mode.name = "tag_mode";
+  const marker = new El("input", { "data-discovery-marker": "" });
+  marker.value = opts.marker || "";
+  const dirty = new El("p", { "data-creation-filter-dirty": "" }); dirty.hidden = true;
+  const errorSlot = new El("p", { "data-creation-filter-error": "" }); errorSlot.hidden = true;
+  const status = new El("p", { "data-discovery-status": "" });
+  const clearLink = new El("a", { "data-discovery-clear": "", href: "?" + (opts.applied || "") });
+  const reapplyLink = new El("a", { "data-discovery-reapply": "", href: "?" });
+  // Selector subtree mirroring _report_template_tag_selector.html.
+  const selectorRoot = new El("div", { "data-tag-selector": "", "data-lookup-url": "/reports/templates/tag-lookup/" });
+  selectorRoot.__docListeners = docListeners;
+  const native = new El("select", { "data-tag-native": "", "data-discovery-tags": "", name: "tags" });
+  native.__docListeners = docListeners;
+  const enhanced = new El("div", { "data-tag-enhanced": "" });
+  const tagSearch = new El("input", { "data-tag-search": "" }); tagSearch.type = "search";
+  const historical = new El("input", { "data-tag-historical": "" });
+  historical.type = "checkbox";
+  historical.checked = !!(opts.applied || "").match(/include_historical=1/);
+  const tagPanel = new El("div", { "data-tag-panel": "" }); tagPanel.hidden = true;
+  const tagResults = new El("ul", { "data-tag-results": "" }); tagResults.hidden = true;
+  const tagMore = new El("button", { "data-tag-more": "" }); tagMore.hidden = true;
+  const tagStatus = new El("p", { "data-tag-status": "" });
+  const chips = new El("div", { "data-tag-chips": "" });
+  enhanced.appendChild(tagSearch); enhanced.appendChild(historical);
+  enhanced.appendChild(chips); enhanced.appendChild(tagPanel);
+  tagPanel.appendChild(tagResults); tagPanel.appendChild(tagMore);
+  enhanced.appendChild(tagStatus);
+  const hiddenBox = new El("div", { "data-tag-hidden-inputs": "" });
+  const tagMarker = new El("input", { "data-tag-marker": "" });
+  tagMarker.value = opts.marker || "";
+  const selectorClear = new El("a", { "data-tag-clear": "", href: "?tag_filter=manual&tag_mode=any" });
+  selectorRoot.appendChild(native); selectorRoot.appendChild(enhanced);
+  selectorRoot.appendChild(hiddenBox); selectorRoot.appendChild(tagMarker);
+  form.appendChild(search); form.appendChild(mode); form.appendChild(marker);
+  form.appendChild(dirty); form.appendChild(errorSlot);
+  form.appendChild(selectorRoot); form.appendChild(selectorClear);
+  form.appendChild(clearLink); form.appendChild(reapplyLink); form.appendChild(status);
+  (opts.tagIds || []).forEach((id) => {
+    const option = new El("option", { value: String(id), selected: "" });
+    option.selected = true; option.textContent = "Tag " + id;
+    native.appendChild(option);
+    const chip = new El("span", { "data-tag-chip": "", "data-tag-id": String(id) });
+    const chipLabel = new El("span", { "data-tag-chip-label": "" });
+    chipLabel.textContent = "Tag " + id;
+    const remove = new El("button", { "data-tag-remove": "", "aria-label": "Remover Tag " + id + " da seleção" });
+    remove.type = "button";
+    chip.appendChild(chipLabel); chip.appendChild(remove);
+    chips.appendChild(chip);
+  });
+  // S4 fix1: the native no-JS historical control lives OUTSIDE the
+  // selector's enhanced block (filters partial bottom row) with a real
+  // submitted name; the creation controller hides/disables it when the
+  // selector enhances the form. S4 fix2: the input + its label share a
+  // wrapper div (data-discovery-historical-wrap) — the controller hides
+  // the wrapper so enhanced users see no orphaned label.
+  const nativeHistoricalWrap = new El("div", { "data-discovery-historical-wrap": "", class: "form-check form-check-inline mb-0" });
+  const nativeHistorical = new El("input", { "data-discovery-historical": "", name: "include_historical", value: "1" });
+  nativeHistorical.type = "checkbox";
+  nativeHistorical.checked = !!(opts.applied || "").match(/include_historical=1/);
+  nativeHistoricalWrap.appendChild(nativeHistorical);
+  form.appendChild(nativeHistoricalWrap);
+  const results = new El("div", { "data-template-selection-results": "" });
+  results.setAttribute("data-discovery-applied", opts.applied || "");
+  results.setAttribute("data-discovery-mode", opts.mode || "any");
+  results.setAttribute("data-discovery-source", opts.source || "");
+  results.setAttribute("data-discovery-count", String((opts.initialResults || []).length || 1));
+  results.setAttribute("data-template-selection-page", "1");
+  const summary = new El("div", { "data-discovery-summary": "" });
+  const stateBadge = new El("span", { "data-discovery-state": "" });
+  stateBadge.textContent = "Sem filtro de tag";
+  summary.appendChild(stateBadge);
+  const list = new El("ul", { "data-template-selection-list": "" });
+  // S4 fix1: identifiable pre-seeded results so a failed Apply has
+  // something observable to retain (results preservation is asserted
+  // against this list).
+  (opts.initialResults || []).forEach((item) => {
+    const li = new El("li", {});
+    li.textContent = item.name;
+    list.appendChild(li);
+  });
+  const empty = new El("div", { "data-template-selection-empty": "" }); empty.hidden = true;
+  const nav = new El("nav", { "data-template-selection-nav": "" }); nav.hidden = true;
+  const discWarning = new El("div", { "data-discovery-warning": "" }); discWarning.hidden = true;
+  const outside = new El("div", { "data-selected-template-outside": "" }); outside.hidden = true;
+  const unavailable = new El("div", { "data-selected-template-unavailable": "" }); unavailable.hidden = true;
+  const removeLink = new El("a", { "data-discovery-remove": "", href: "?" + (opts.applied || "") });
+  results.appendChild(summary); results.appendChild(discWarning);
+  results.appendChild(unavailable); results.appendChild(outside);
+  results.appendChild(list); results.appendChild(empty); results.appendChild(nav);
+  results.appendChild(removeLink);
+  root.appendChild(warning); root.appendChild(form); root.appendChild(results);
+  const sandbox = {
+    process: { env: process.env },
+    document: documentStub,
+    window: {
+      location: { pathname: "/reports/create/00000000-0000-0000-0000-000000000001/", search: "?" + (opts.applied || ""), href: "http://t/reports/create/" },
+      history: {
+        pushState(s, t, u) { calls.pushState.push(String(u)); sandbox.window.location.search = String(u).split("?")[1] ? "?" + String(u).split("?")[1] : ""; },
+        replaceState(s, t, u) { calls.replaceState.push(String(u)); sandbox.window.location.search = String(u).split("?")[1] ? "?" + String(u).split("?")[1] : ""; },
+      },
+      addEventListener(t, fn) { (sandbox.__winListeners[t] = sandbox.__winListeners[t] || []).push(fn); },
+      clearTimeout: clearTimeout,
+      setTimeout: setTimeout,
+    },
+    __winListeners: {},
+    URLSearchParams,
+    URL,
+    DOMParser: function () { this.parseFromString = function () { return { querySelector() { return null; } }; }; },
+    AbortController: undefined,
+    fetch(url, options) {
+      calls.fetchUrls.push(String(url));
+      const urlString = String(url);
+      if (urlString.indexOf("tag-lookup") !== -1 && urlString.indexOf(CREATION_URL) === -1) {
+        calls.lookupCalls.push(urlString);
+        return Promise.resolve({
+          ok: true,
+          json() { return Promise.resolve({ results: [], selected: [], count: 0, page: 1, num_pages: 1, page_size: 20, has_next: false, has_previous: false, include_historical: false }); },
+          text() { return Promise.resolve("{}"); },
+        });
+      }
+      if (urlString.indexOf(CREATION_URL) !== -1) {
+        calls.creationFetch.push(urlString); calls.creationUrls.push(urlString);
+        if (calls.__nextFail) {
+          return Promise.resolve({ ok: false, status: 503, text() { return Promise.resolve(""); } });
+        }
+        if (controlled) {
+          let resolveFetch;
+          const promise = new Promise((resolve) => { resolveFetch = resolve; });
+          pendingCreations.push({ url: urlString, resolve: resolveFetch });
+          return promise;
+        }
+        return Promise.resolve({ ok: true, text() { return Promise.resolve(JSON.stringify(creationPayload())); } });
+      }
+      return Promise.resolve({ ok: true, text() { return Promise.resolve("{}"); } });
+    },
+    CustomEvent: class { constructor(t, o) { this.type = t; this.bubbles = o && o.bubbles; this.detail = (o && o.detail) || {}; } },
+    console,
+    setTimeout: setTimeout,
+    clearTimeout: clearTimeout,
+  };
+  function resolveCreation() {
+    const pending = pendingCreations.shift();
+    if (!pending) return null;
+    pending.resolve({ ok: true, text() { return Promise.resolve(JSON.stringify(creationPayload())); } });
+    return pending;
+  }
+  // Production defer order on the creation page: tag-selector.js then
+  // report-template-discovery.js. The catalogue host is NOT loaded.
+  vm.runInNewContext(selectorSource, sandbox);
+  vm.runInNewContext(transportSource, sandbox);
+  form.addEventListener("tag-selector:change", function () { calls.tagSelectorChange += 1; });
+  function clinical() {
+    return { title: title.value, date: docDate.value, content: content.value, selected: clinicalSelect.value, changeCount: calls.clinicalChange, postCount: calls.clinicalSubmit };
+  }
+  return { calls, sandbox, root, form, search, mode, marker, dirty, errorSlot, status, results, historical, nativeHistorical, nativeHistoricalWrap, hiddenBox, selectorClear, clearLink, reapplyLink, removeLink, chips, selectorRoot, tagSearch, native, tagStatus, clinical, clinicalSelect, expectedSelected: opts.selectedTemplate || "", title, docDate, content, resolveCreation, pendingCreations };
+}
+function clinicalOut(w) {
+  const c = w.clinical();
+  return { title: c.title, date: c.date, content: c.content, selected: c.selected, clinicalChangeCount: c.changeCount, clinicalPostCount: c.postCount };
+}
+function clinicalUnchanged(w) {
+  const c = w.clinical();
+  // S4 fix1: the selected model is part of the sentinel too — option
+  // loss now shows up here (and in selectedPreserved) because the
+  // select stub reflects selectedOptions like a real browser.
+  return c.title === "SENTINEL title" && c.date === "2024-01-15" && c.content === "SENTINEL content" && c.selected === (w.expectedSelected || "") && c.changeCount === 0 && c.postCount === 0;
+}
+function resultNames(w) {
+  const list = w.results.querySelector("[data-template-selection-list]");
+  if (!list) return [];
+  return list.querySelectorAll("li").map((li) => li.textContent);
 }
 
 const scenario = process.argv[process.argv.length - 1];
@@ -1022,6 +1304,237 @@ function addDraftTag(w, id, label) {
     out.chipIds = chipIds(w);
     out.checkedAfter = w.historical.checked;
     out.pushCount = w.calls.pushState.length;
+  }
+  else if (scenario === "creation-typing-q") {
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "", tagIds: [] });
+    w.search.value = "novo";
+    w.search.dispatch("input", {});
+    await new Promise((r) => setTimeout(r, 400));
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.dirtyVisible = !w.dirty.hidden;
+    out.clinical = clinicalOut(w);
+    out.clinicalUnchanged = clinicalUnchanged(w);
+  } else if (scenario === "creation-clean-apply") {
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "tag_filter=manual&tag_mode=any", tagIds: [] });
+    w.form.dispatch("submit", {});
+    await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.pushCount = w.calls.pushState.length;
+    out.clinicalUnchanged = clinicalUnchanged(w);
+  } else if (scenario === "creation-dirty-apply") {
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "", tagIds: [], selectedTemplate: "tpl-1" });
+    w.calls.__nextTagOptions = [];
+    w.calls.__nextResults = [{ id: "tpl-1", name: "Modelo Um", tags: [] }];
+    w.search.value = "novo";
+    w.form.dispatch("submit", {});
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.fetchUrl = w.calls.creationUrls[0] || "";
+    out.pushCount = w.calls.pushState.length;
+    out.dirtyHiddenAfter = w.dirty.hidden;
+    out.clinical = clinicalOut(w);
+    out.clinicalUnchanged = clinicalUnchanged(w);
+    out.selectedPreserved = w.clinicalSelect.value === "tpl-1";
+    out.selectedId = w.clinicalSelect.value;
+    out.nativeHistoricalHidden = w.nativeHistorical.hidden === true && w.nativeHistorical.disabled === true;
+    out.nativeHistoricalWrapHidden = w.nativeHistoricalWrap.hidden === true;
+  } else if (scenario === "creation-apply-failure") {
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "", tagIds: [], selectedTemplate: "tpl-1", initialResults: [{ name: "Modelo Um" }, { name: "Modelo Dois" }] });
+    w.calls.__nextFail = true;
+    w.search.value = "novo";
+    w.form.dispatch("submit", {});
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.pushCount = w.calls.pushState.length;
+    out.errorVisible = !w.errorSlot.hidden && !!w.errorSlot.textContent;
+    out.dirtyVisible = !w.dirty.hidden;
+    out.qRetained = w.search.value;
+    // S4 fix1: seeded results must survive the failed Apply unchanged.
+    out.resultsAfterFailure = resultNames(w);
+    out.resultsRetained = JSON.stringify(resultNames(w)) === JSON.stringify(["Modelo Um", "Modelo Dois"]);
+    out.selectedId = w.clinicalSelect.value;
+    out.clinicalUnchanged = clinicalUnchanged(w);
+  } else if (scenario === "creation-popstate") {
+    const w = buildCreationWorld({ q: "A", mode: "any", marker: "manual", applied: "q=A&tag_filter=manual&tag_mode=any&tags=7", tagIds: ["7"], selectedTemplate: "tpl-1" });
+    w.calls.__nextTagOptions = [{ id: "3", label: "Tag Três", selected: true }, { id: "5", label: "Tag Cinco", selected: true }];
+    w.calls.__nextMode = "all";
+    w.calls.__nextSource = "manual";
+    w.calls.__nextResults = [{ id: "tpl-1", name: "Modelo Um", tags: [] }];
+    w.sandbox.window.location.search = "?q=B&tag_filter=manual&tag_mode=all&tags=3&tags=5";
+    w.search.value = "A";
+    for (const fn of w.sandbox.__winListeners["popstate"] || []) fn({});
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.pushCount = w.calls.pushState.length;
+    out.qAfter = w.search.value;
+    out.modeAfter = w.mode.value;
+    out.hiddenIds = hiddenIds(w);
+    out.chipIds = chipIds(w);
+    out.hiddenEqualsChips = JSON.stringify(hiddenIds(w).sort()) === JSON.stringify(chipIds(w).sort());
+    out.noDuplicateHidden = new Set(hiddenIds(w)).size === hiddenIds(w).length;
+    out.dirtyHiddenAfter = w.dirty.hidden;
+    out.clinicalUnchanged = clinicalUnchanged(w);
+    out.selectedPreserved = w.clinicalSelect.value === "tpl-1";
+  } else if (scenario === "creation-outside-results") {
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "", tagIds: [], selectedTemplate: "tpl-x" });
+    w.calls.__nextTagOptions = [];
+    w.calls.__nextResults = [{ id: "tpl-1", name: "Modelo Um", tags: [] }];
+    w.calls.__nextCount = 1;
+    w.calls.__nextSelected = { id: "tpl-x", name: "Modelo Fora", tags: [] };
+    w.search.value = "novo";
+    w.form.dispatch("submit", {});
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.selectedPreserved = w.clinicalSelect.value === "tpl-x";
+    out.clinical = clinicalOut(w);
+    out.clinicalUnchanged = clinicalUnchanged(w);
+    out.outsideOptionPresent = w.clinicalSelect.querySelectorAll("option").some((o) => String(o.value) === "tpl-x");
+    out.countAttr = w.results.getAttribute("data-discovery-count");
+  } else if (scenario === "creation-historical-toggle") {
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "tag_filter=manual&tag_mode=any", tagIds: [], selectedTemplate: "tpl-1" });
+    w.historical.checked = true;
+    w.historical.dispatch("change", {});
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.replaceCount = w.calls.replaceState.length;
+    out.pushCount = w.calls.pushState.length;
+    out.replaceUrl = w.calls.replaceState[0] || "";
+    out.checkedAfter = w.historical.checked;
+    out.dirtyHidden = w.dirty.hidden;
+    out.clinicalUnchanged = clinicalUnchanged(w);
+  } else if (scenario === "creation-badge-remove") {
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "manual", applied: "tag_filter=manual&tag_mode=any&tags=7&tags=8", tagIds: ["7", "8"], selectedTemplate: "tpl-1" });
+    w.removeLink.setAttribute("href", "?tag_filter=manual&tag_mode=any&tags=7");
+    w.calls.__nextTagOptions = [{ id: "7", label: "Tag Sete", selected: true }];
+    w.calls.__nextResults = [{ id: "tpl-1", name: "Modelo Um", tags: [] }];
+    w.search.value = "pendente";
+    w.root.dispatch("click", { target: w.removeLink });
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.fetchUrl = w.calls.creationUrls[0] || "";
+    out.qRetained = w.search.value;
+    out.hiddenIds = hiddenIds(w);
+    out.dirtyVisible = !w.dirty.hidden;
+    out.clinicalUnchanged = clinicalUnchanged(w);
+  } else if (scenario === "creation-stale-selection-clear") {
+    // S4 fix1 (finding 2): the request is sent with tpl-1 selected, the
+    // user then CLEARS the clinical select while the (delayed) response
+    // is in flight. The payload still carries tpl-1 as the outside
+    // selection; the landing reconciliation must NOT show the old model
+    // as selected-outside-results and must leave the selection empty.
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "", tagIds: [], selectedTemplate: "tpl-1", controlled: true });
+    w.calls.__nextTagOptions = [];
+    w.calls.__nextResults = [{ id: "tpl-2", name: "Modelo Dois", tags: [] }];
+    w.calls.__nextCount = 1;
+    w.calls.__nextSelected = { id: "tpl-1", name: "Modelo Um", tags: [] };
+    w.search.value = "novo";
+    w.form.dispatch("submit", {});
+    await settle();
+    w.clinicalSelect.value = "";
+    await settle();
+    w.resolveCreation();
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.selectedAfter = w.clinicalSelect.value;
+    out.selectedOptionCount = w.clinicalSelect.selectedOptions.length;
+    out.selectedOptionIds = w.clinicalSelect.querySelectorAll("option").map((o) => String(o.value));
+    const outsideEl = w.results.querySelector("[data-selected-template-outside]");
+    const unavailableEl = w.results.querySelector("[data-selected-template-unavailable]");
+    out.outsideHidden = !!outsideEl && outsideEl.hidden === true;
+    out.unavailableHidden = !!unavailableEl && unavailableEl.hidden === true;
+    out.outsideText = outsideEl ? outsideEl.textContent : "";
+    out.clinical = clinicalOut(w);
+    out.clinicalSentinels = w.clinical().title === "SENTINEL title" && w.clinical().date === "2024-01-15" && w.clinical().content === "SENTINEL content" && w.clinical().changeCount === 0 && w.clinical().postCount === 0;
+  } else if (scenario === "creation-stale-response") {
+    // S4 mutation gap (review table R1): two Applies in flight; the
+    // older response must be ignored by the generation guard and only
+    // the newer payload may render.
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "", tagIds: [], selectedTemplate: "tpl-1", controlled: true });
+    w.calls.__nextTagOptions = [];
+    w.search.value = "A";
+    w.form.dispatch("submit", {});
+    await settle();
+    w.search.value = "B";
+    w.form.dispatch("submit", {});
+    await settle();
+    out.pendingCount = w.pendingCreations.length;
+    w.calls.__nextResults = [{ id: "tpl-1", name: "Resultado A", tags: [] }];
+    w.calls.__nextCount = 1;
+    w.resolveCreation();
+    await settle(); await settle();
+    out.listAfterStale = resultNames(w);
+    w.calls.__nextResults = [{ id: "tpl-1", name: "Resultado B", tags: [] }];
+    w.resolveCreation();
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.listAfterApply = resultNames(w);
+    out.pushCount = w.calls.pushState.length;
+    out.clinicalUnchanged = clinicalUnchanged(w);
+  } else if (scenario === "creation-revert-clears-dirty") {
+    // S4 mutation gap (review table R1): typing q away from the applied
+    // state marks dirty; reverting to the applied value clears it with
+    // no request.
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "manual", applied: "tag_filter=manual&tag_mode=any", tagIds: [], selectedTemplate: "tpl-1" });
+    w.search.value = "novo";
+    w.search.dispatch("input", {});
+    await settle();
+    out.dirtyAfterEdit = !w.dirty.hidden;
+    w.search.value = "";
+    w.search.dispatch("input", {});
+    await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.dirtyHiddenAfterRevert = w.dirty.hidden;
+    out.clinicalUnchanged = clinicalUnchanged(w);
+  } else if (scenario === "creation-pagination") {
+    // S4 mutation gap (review table R4): a pagination link on page 1
+    // fetches page 2 and the deliberate history keeps page=2.
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "", tagIds: [], selectedTemplate: "tpl-1" });
+    w.calls.__nextTagOptions = [];
+    w.calls.__nextResults = [{ id: "tpl-1", name: "Modelo Um", tags: [] }];
+    w.calls.__nextCount = 2;
+    w.calls.__nextNumPages = 2;
+    w.calls.__nextPage = 1;
+    w.search.value = "novo";
+    w.form.dispatch("submit", {});
+    await settle(); await settle();
+    const pageLink = w.results.querySelectorAll("a").find((a) => String(a.getAttribute("href") || "").indexOf("page=2") !== -1);
+    out.pageLinkFound = !!pageLink;
+    if (pageLink) {
+      w.root.dispatch("click", { target: pageLink });
+      await settle(); await settle();
+    }
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.pageFetchUrl = w.calls.creationUrls[1] || "";
+    out.pushAfterPage = w.calls.pushState[w.calls.pushState.length - 1] || "";
+    out.selectedPreserved = w.clinicalSelect.value === "tpl-1";
+    out.selectedId = w.clinicalSelect.value;
+    out.clinicalUnchanged = clinicalUnchanged(w);
+  } else if (scenario === "creation-revoked-selection") {
+    // S4 mutation gap (review table R4): the selected model is revoked
+    // (server reports selection_unavailable); the select keeps its
+    // identity under the generic unavailable label and the notice shows.
+    // S4 fix2: the payload mirrors the real endpoint
+    // (template_selection_views.py): selection_unavailable=true always
+    // pairs with selected=null (never a non-null selected).
+    const w = buildCreationWorld({ q: "", mode: "any", marker: "", applied: "", tagIds: [], selectedTemplate: "tpl-1" });
+    w.calls.__nextTagOptions = [];
+    w.calls.__nextResults = [{ id: "tpl-2", name: "Modelo Dois", tags: [] }];
+    w.calls.__nextCount = 1;
+    w.calls.__nextSelected = null;
+    w.calls.__nextUnavailable = true;
+    w.search.value = "novo";
+    w.form.dispatch("submit", {});
+    await settle(); await settle();
+    out.creationFetchCount = w.calls.creationFetch.length;
+    out.selectedPreserved = w.clinicalSelect.value === "tpl-1";
+    out.selectedId = w.clinicalSelect.value;
+    const unavailableEl = w.results.querySelector("[data-selected-template-unavailable]");
+    out.unavailableVisible = !!unavailableEl && unavailableEl.hidden === false && !!unavailableEl.textContent;
+    const selectedOption = w.clinicalSelect.querySelectorAll("option").find((o) => !!o.selected);
+    out.selectedOptionLabel = selectedOption ? String(selectedOption.textContent) : "";
+    out.unavailableLabel = out.selectedOptionLabel === "Modelo selecionado indisponível";
+    out.selectedOptionIds = w.clinicalSelect.querySelectorAll("option").map((o) => String(o.value));
+    out.clinicalUnchanged = clinicalUnchanged(w);
   }
   console.log(JSON.stringify(out));
 })();

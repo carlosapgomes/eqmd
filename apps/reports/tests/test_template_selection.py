@@ -954,18 +954,25 @@ class Fix1RegressionTests(SelectionFixturesMixin, TestCase):
             self.create_url(), {"include_historical": "1"}
         ).content.decode()
         self.assertIn("S3 Arquivada A", body)
-        replace = _js_function(_js_source(), "replaceTagOptions")
-        # Retention is server-authorized (rt2-3): only ids the lookup
-        # payload's retained_tag_options projection authorizes may be
-        # retained, rebuilt from that projection, never cloned from
-        # the stale DOM option.
-        self.assertIn("retained_tag_options", _js_source())
-        self.assertIn("authorized", replace)
-        self.assertNotIn("cloneNode", replace)
+        # S4: the shared selector owns tag options/chips, so the
+        # creation controller never rebuilds native options (no
+        # replaceTagOptions seam); a pending historical selection
+        # survives as a chip. Retention stays server-authorized
+        # (rt2-3): the model lookup still carries the pending ids as
+        # retained_tags (never as the tags filter) for the payload's
+        # retained_tag_options projection.
+        self.assertNotIn("replaceTagOptions", _js_source())
+        lookup = _selection_function(_js_source(), "lookupUrlFor")
+        self.assertIn("retained_tags", lookup)
+        self.assertIn("selectedTagIds", lookup)
+        self.assertIn("retained", _js_source())
         # Pending preservation must not apply filters: historicalParams
-        # still builds only from applied params.
+        # builds only from the displayed URL (S4 fix4 seam), never from
+        # the pending controls.
         historical = _selection_function(_js_source(), "historicalParams")
-        self.assertIn("appliedParams", historical)
+        self.assertIn("window.location.search", historical)
+        self.assertNotIn("search.value", historical)
+        self.assertNotIn("selectedTagIds", historical)
 
     def test_p1_4_options_only_lookup_reconciles_selection(self):
         # Payload contract: historical lookup revalidates the selection.
@@ -980,14 +987,22 @@ class Fix1RegressionTests(SelectionFixturesMixin, TestCase):
         ).json()
         self.assertIsNone(payload["selected"])
         self.assertTrue(payload["selection_unavailable"])
-        # JS: the optionsOnly branch must reconcile clinical selection
-        # and its notices, not only tag options. Target the actual
-        # branch (rt2-4), not the whole suffix after "optionsOnly".
-        options_only = _options_only_branch(_js_source())
-        self.assertIn("updateClinicalSelect", options_only)
-        self.assertIn("reconcileSelectionNotices", options_only)
-        # Revalidation also reprojects the displayed results (rt2-2).
-        self.assertIn("updateResults", options_only)
+        # JS (S4): the historical toggle no longer fetches the model
+        # lookup at all (options-only, selector-owned), so there is no
+        # optionsOnly model branch; EVERY successful model payload
+        # reconciles the clinical selection and its notices (rt2-4)
+        # and reprojects the displayed results (rt2-2).
+        selection_source = _js_source()[
+            _js_source().index("function initializeSelection") :
+        ]
+        self.assertNotIn("optionsOnly", selection_source)
+        apply_payload = _selection_function(_js_source(), "applyPayload")
+        self.assertIn("updateClinicalSelect", apply_payload)
+        self.assertIn("updateResults", apply_payload)
+        # Notices reconcile from within updateResults (S4), exactly as
+        # the catalogue fragment rebuild does for its summary.
+        update_results = _selection_function(_js_source(), "updateResults")
+        self.assertIn("reconcileSelectionNotices", update_results)
 
     def test_p1_5_malformed_template_post_rerenders_without_500(self):
         before = Report.objects.count()
@@ -1030,11 +1045,17 @@ class Fix2RegressionTests(SelectionFixturesMixin, TestCase):
         payload = self.get_lookup(q="S3 Pagina", page="2").json()
         self.assertEqual(payload["page"], 2)
         self.assertEqual(len(payload["results"]), 5)
-        # JS seam (supplementary): historicalParams carries the
-        # displayed page; the executable suite proves the transition.
+        # JS seam (supplementary, S4): historicalParams builds from the
+        # DISPLAYED URL (window.location.search), so the displayed page
+        # survives the toggle without a displayedPage variable; the
+        # predicate baseline (rememberApplied) still strips page while
+        # the pushed URL keeps it. The executable suite proves the
+        # transition.
         historical = _selection_function(_js_source(), "historicalParams")
-        self.assertIn("displayedPage", historical)
-        self.assertIn("page", historical)
+        self.assertIn("window.location.search", historical)
+        self.assertIn("include_historical", historical)
+        remember = _selection_function(_js_source(), "rememberApplied")
+        self.assertIn('delete("page")', remember)
 
     def test_rt2_b_revoked_model_leaves_the_lookup_results(self):
         payload = self.get_lookup(selected_template=str(self.tpl_c.pk)).json()
@@ -1049,10 +1070,12 @@ class Fix2RegressionTests(SelectionFixturesMixin, TestCase):
         self.assertIsNone(payload["selected"])
         self.assertTrue(payload["selection_unavailable"])
         # JS seam (supplementary): hiding the outside notice clears
-        # its content, and optionsOnly reprojects results.
+        # its content, and every successful payload reprojects results
+        # (S4: no optionsOnly model branch — see test_p1_4).
         reconcile = _js_function(_js_source(), "reconcileSelectionNotices")
         self.assertGreaterEqual(reconcile.count("replaceChildren"), 2)
-        self.assertIn("updateResults", _options_only_branch(_js_source()))
+        apply_payload = _selection_function(_js_source(), "applyPayload")
+        self.assertIn("updateResults", apply_payload)
 
     def test_rt2_c_retained_tag_options_are_server_authorized(self):
         plain = self.get_lookup().json()
@@ -1174,7 +1197,8 @@ class Fix2RegressionTests(SelectionFixturesMixin, TestCase):
         self.assertIn('data-template-selection-page="2"', body)
         self.assertIn("data-report-template-discovery", body)
         self.assertIn("data-template-selection", body)
-        self.assertIn("data-discovery-historical", body)
+        # S4: the selector owns the historical toggle on creation.
+        self.assertIn("data-tag-historical", body)
         self.assertIn("data-discovery-tags", body)
         self.assertIn("id_template", body)
         self.assertIn(selected.name, body)
