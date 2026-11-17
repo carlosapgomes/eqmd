@@ -121,7 +121,7 @@ class TagSelectorTemplateTests(TestCase):
         self.assertIn("Pelo menos uma selecionada (OU)", markup)
         self.assertIn("Todas as selecionadas (E)", markup)
         self.assertIn("Mostrar inativas e arquivadas no seletor", markup)
-        self.assertIn("Remover filtro de tags", markup)
+        self.assertIn("Limpar todos os filtros", markup)
         self.assertNotIn("Qualquer tag", markup)
         self.assertNotIn("Incluir tags antigas", markup)
         self.assertNotIn("Limpar tags", markup)

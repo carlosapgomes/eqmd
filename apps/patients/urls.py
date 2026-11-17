@@ -3,12 +3,13 @@ from django.urls import path
 from apps.events.views import PatientEventsTimelineView
 
 from . import views, views_tag_filters, views_team_tags
+from .views_patient_list_filters import PatientListFilterActionsView
 
 app_name = "apps.patients"
 
 urlpatterns = [
     # Patient URLs
-    path("", views.PatientListView.as_view(), name="patient_list"),
+    path("", PatientListFilterActionsView.as_view(), name="patient_list"),
     # Pending temporary records dashboard (staff-only, design D7). Placed
     # before the <uuid:pk> routes for clarity; the uuid converter never
     # matches "temporary-records" anyway.

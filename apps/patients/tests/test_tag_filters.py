@@ -881,7 +881,7 @@ class SpecialtyPreferenceDefaultTests(TagFilterSelectionFixture):
             reapplied.context["tag_selection"].tag_ids, (self.cirger_tag.pk,)
         )
         self.assertFalse(reapplied.context["tag_filter_is_manual"])
-        self.assertIn("Restaurar padrão da especialidade", manual.content.decode())
+        self.assertIn("Usar padrão de tags da especialidade", manual.content.decode())
 
     def test_unavailable_saved_tag_is_omitted_with_generic_warning(self) -> None:
         preference = self.save_preference(
@@ -1052,7 +1052,7 @@ class PatientListLanguageAndRecoveryTests(TagFilterSelectionFixture):
         self.assertContains(response, "Todas as selecionadas (E)")
         self.assertContains(response, "Correspondência")
         self.assertContains(response, "Filtro personalizado")
-        self.assertContains(response, "Remover filtro de tags")
+        self.assertContains(response, "Limpar todos os filtros")
         self.assertContains(response, "Mostrar inativas e arquivadas no seletor")
         self.assertNotContains(response, "Qualquer tag")
         self.assertNotContains(response, "Incluir tags antigas")
@@ -1065,7 +1065,7 @@ class PatientListLanguageAndRecoveryTests(TagFilterSelectionFixture):
         body = response.content.decode()
         self.assertRegex(body, r'(?s)<button[^>]*type="submit"[^>]*>.*?Aplicar filtros.*?</button>')
 
-    def test_tag_removal_names_distinguish_draft_and_applied(self) -> None:
+    def test_tag_removal_is_draft_only_in_the_patient_list(self) -> None:
         self.login(self.member)
         response = self.client.get(
             reverse("patients:patient_list"),
@@ -1075,7 +1075,7 @@ class PatientListLanguageAndRecoveryTests(TagFilterSelectionFixture):
             response,
             'aria-label="Remover Estável CIRGER [CIRGER] da seleção"',
         )
-        self.assertContains(
+        self.assertNotContains(
             response,
             'aria-label="Remover Estável CIRGER [CIRGER] dos filtros aplicados"',
         )
@@ -1092,7 +1092,7 @@ class PatientListLanguageAndRecoveryTests(TagFilterSelectionFixture):
         self.assertNotContains(response, "Comece adicionando o primeiro paciente")
         self.assertNotContains(response, "Adicionar Paciente")
 
-    def test_filtered_zero_with_tags_offers_scoped_recovery(self) -> None:
+    def test_filtered_zero_with_tags_refers_to_the_action_bar(self) -> None:
         self.login(self.member)
         response = self.client.get(
             reverse("patients:patient_list"),
@@ -1109,7 +1109,8 @@ class PatientListLanguageAndRecoveryTests(TagFilterSelectionFixture):
         body = response.content.decode()
         empty_start = body.index("Nenhum paciente corresponde aos filtros atuais")
         empty_section = body[empty_start : empty_start + 2000]
-        self.assertIn("Remover filtro de tags", empty_section)
+        self.assertIn("Use a barra de ações dos filtros acima", empty_section)
+        self.assertNotIn("Remover filtro de tags", empty_section)
         self.assertNotContains(response, "Adicionar Paciente")
 
     def test_manual_empty_wording_is_not_an_untagged_predicate(self) -> None:

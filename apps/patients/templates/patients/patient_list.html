@@ -53,17 +53,19 @@
           </div>
 
           <!-- Tag Filter (multi-select + searchable lookup, S7) -->
-          {% include "components/_tag_filter.html" %}
+          {% include "components/_tag_filter.html" with patient_list_actions=True %}
           
           <!-- Actions -->
           <div class="col-12 d-flex justify-content-lg-end">
-            <div class="d-flex flex-wrap gap-2" role="group">
-              <button type="submit" class="btn btn-medical-outline-primary">
+            <div class="d-flex flex-wrap gap-2" role="group" aria-label="Ações dos filtros de pacientes" data-patient-filter-actions>
+              <button type="submit" name="tag_filter" value="manual" class="btn btn-medical-outline-primary">
                 <i class="bi bi-search" aria-hidden="true"></i> Aplicar filtros
               </button>
-              <a href="{% url 'apps.patients:patient_list' %}" class="btn btn-outline-secondary" title="Limpar filtros" aria-label="Limpar filtros">
-                <i class="bi bi-x-circle me-1"></i>Limpar filtros
-              </a>
+              <a href="{{ patient_list_clear_all_url }}" class="btn btn-outline-secondary" data-patient-clear-all>
+                <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar todos os filtros</a>
+              {% if patient_list_show_restore %}
+              <a href="{{ patient_list_restore_tags_url }}" class="btn btn-outline-secondary" data-patient-restore-tags>Usar padrão de tags da especialidade</a>
+              {% endif %}
             </div>
           </div>
           <div class="col-12">
@@ -72,44 +74,30 @@
         </form>
 
         <!-- Active Filters Display -->
-        {% if search_query or status_filter or tag_selection.has_predicate or tag_filter_is_manual %}
+        {% if search_query or status_filter or admission_filter == "admitted" or admission_filter == "not_admitted" or tag_selection.has_predicate or tag_filter_is_manual %}
         <div class="mt-3">
           <small class="text-medical-gray">Filtros ativos:</small>
           <div class="d-flex flex-wrap gap-2 mt-1">
             {% if search_query %}
               <span class="badge bg-medical-teal">
                 Busca: "{{ search_query }}"
-                <a href="?{{ search_remove_querystring }}"
-                   aria-label="Remover busca dos filtros aplicados"
-                   class="text-white text-decoration-none ms-1">×</a>
               </span>
             {% endif %}
             {% if status_filter %}
               <span class="badge bg-medical-teal">
                 Status: {% if status_filter == "1" %}Ambulatorial{% elif status_filter == "2" %}Internado{% elif status_filter == "3" %}Emergência{% elif status_filter == "4" %}Alta{% elif status_filter == "5" %}Transferido{% elif status_filter == "6" %}Óbito{% endif %}
-                <a href="?{{ status_remove_querystring }}"
-                   aria-label="Remover filtro de status dos filtros aplicados"
-                   class="text-white text-decoration-none ms-1">×</a>
               </span>
+            {% endif %}
+            {% if admission_filter == "admitted" or admission_filter == "not_admitted" %}
+              <span class="badge bg-medical-teal">Admissão: {% if admission_filter == "admitted" %}Com admissão ativa{% elif admission_filter == "not_admitted" %}Sem admissão ativa{% endif %}</span>
             {% endif %}
             {% for selected in selected_tags %}
               <span class="badge tag-filter-chip" data-active-tag-badge>
                 <span class="tag-filter-chip-label">{{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}</span>
-                <a href="?{{ selected.remove_querystring }}"
-                   aria-label="Remover {{ selected.badge.display_name }} dos filtros aplicados"
-                   class="tag-filter-chip-remove text-decoration-none ms-1"><span aria-hidden="true">×</span></a>
               </span>
             {% endfor %}
             {% if tag_filter_is_manual %}
               <span class="badge bg-secondary" data-tag-mode-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
-              <a href="?{{ clear_tags_querystring }}"
-                 class="badge bg-light text-dark text-decoration-none"
-                 data-clear-tag-filter>Remover filtro de tags</a>
-              {% if tag_preference_specialty %}
-                <a href="?{{ reapply_tags_querystring }}"
-                   class="badge bg-light text-dark text-decoration-none"
-                   data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
-              {% endif %}
             {% elif tag_selection.has_predicate %}
               <span class="badge bg-secondary" data-tag-default-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
             {% endif %}
@@ -128,7 +116,7 @@
               <strong data-tag-preference-specialty>{{ tag_preference_specialty.name }}</strong>
             </div>
             <div class="small" data-tag-preference-state>
-              {% if tag_preference_has_saved %}Preferência salva em uso{% else %}Sem preferência salva (padrão inicial){% endif %}
+              {{ patient_list_preference_status }}
               · {{ tag_filter_mode_label }}
             </div>
           </div>
@@ -268,15 +256,11 @@
           <i class="bi bi-person-lines-fill display-1 text-muted mb-3"></i>
           <h4 class="text-muted mb-3">Nenhum paciente encontrado</h4>
           {% if search_query or status_filter or admission_filter or tag_selection.has_predicate or tag_filter_error %}
-          <p class="text-muted mb-4">Nenhum paciente corresponde aos filtros atuais.</p>
-          <div class="d-flex flex-wrap justify-content-center gap-2">
-            {% if tag_selection.has_predicate %}
-            <a href="?{{ clear_tags_querystring }}" class="btn btn-outline-secondary" data-clear-tag-filter>Remover filtro de tags</a>
-            {% endif %}
-            {% if tag_filter_is_manual and tag_preference_specialty %}
-            <a href="?{{ reapply_tags_querystring }}" class="btn btn-outline-secondary" data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
-            {% endif %}
-          </div>
+          {% if tag_filter_error %}
+          <p class="text-muted mb-4">Não foi possível aplicar os filtros. Revise a seleção na barra de ações dos filtros acima.</p>
+          {% else %}
+          <p class="text-muted mb-4">Nenhum paciente corresponde aos filtros atuais. Use a barra de ações dos filtros acima para ajustar a busca.</p>
+          {% endif %}
           {% else %}
           <p class="text-muted mb-4">Comece adicionando o primeiro paciente ao sistema.</p>
           <a href="{% url 'apps.patients:patient_create' %}" class="btn btn-medical-primary">
