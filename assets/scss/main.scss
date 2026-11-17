@@ -62,6 +62,7 @@ $alert-border-width: 1px;
 
 // Import Bootstrap's SASS source files after variable definitions
 @import "~bootstrap/scss/bootstrap";
+@import "tag_filters";
 
 // Additional medical-specific utility classes
 .bg-medical-primary {

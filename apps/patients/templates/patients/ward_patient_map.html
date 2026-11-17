@@ -1,6 +1,6 @@
 {% extends "patients/patient_base.html" %} 
 {% load hospital_tags %} 
-{% load static %} 
+{% load static static_assets %}
 {% block title %}
 {{ page_title }} | {% hospital_name %}
 {% endblock title %} 
@@ -13,8 +13,8 @@
 {% block page_specific_scripts %}
 {{ block.super }}
 <script src="{% static 'js/ward_patient_map.js' %}"></script>
-<script src="{% static 'js/tag-selector.js' %}" defer></script>
-<script src="{% static 'js/patient-filter-form.js' %}" defer></script>
+<script src="{% versioned_static 'js/tag-selector.js' %}" defer></script>
+<script src="{% versioned_static 'js/patient-filter-form.js' %}" defer></script>
 {% endblock %}
 
 {% block patient_content %}
@@ -63,11 +63,11 @@
   <!-- Search and Filter Section -->
   <div class="row mb-3">
     <div class="col-12">
-      <div class="card">
+      <div class="card tag-filter-card">
         <div class="card-body">
-          <form method="get" class="row g-3" data-patient-filter-form>
+          <form method="get" class="row g-3 tag-filter-form" data-patient-filter-form>
             <!-- Search -->
-            <div class="col-md-3">
+            <div class="col-12 col-lg-8">
               <label for="search" class="form-label">
                 <i class="bi bi-search me-1"></i>Buscar Paciente
               </label>
@@ -80,7 +80,7 @@
             </div>
 
             <!-- Ward -->
-            <div class="col-md-2">
+            <div class="col-12 col-lg-4">
               <label for="ward" class="form-label">Ala</label>
               <select class="form-select" id="ward" name="ward">
                 <option value="">Todas as Alas</option>
@@ -97,8 +97,8 @@
             {% include "components/_tag_filter.html" %}
 
             <!-- Actions -->
-            <div class="col-md-2 d-flex align-items-end">
-              <div class="btn-group w-100" role="group">
+            <div class="col-12 col-lg-8 d-flex align-items-center">
+              <div class="d-flex flex-wrap gap-2" role="group">
                 <button type="submit" class="btn btn-medical-outline-primary">
                   <i class="bi bi-search" aria-hidden="true"></i> Aplicar filtros
                 </button>
@@ -106,14 +106,14 @@
                    class="btn btn-outline-secondary"
                    title="Limpar filtros"
                    aria-label="Limpar filtros">
-                  <i class="bi bi-x-circle"></i>
+                  <i class="bi bi-x-circle me-1"></i>Limpar filtros
                 </a>
               </div>
             </div>
 
             <!-- Tree Controls -->
-            <div class="col-md-2 d-flex align-items-end">
-              <div class="btn-group w-100" role="group">
+            <div class="col-12 col-lg-4 d-flex align-items-center justify-content-lg-end">
+              <div class="btn-group" role="group">
                 <button type="button" class="btn btn-outline-secondary" id="expand-all" title="Expandir todas">
                   <i class="bi bi-arrows-expand"></i>
                 </button>

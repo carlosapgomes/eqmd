@@ -1,5 +1,5 @@
 {% extends 'base_app.html' %}
-{% load static %}
+{% load static static_assets %}
 
 {% block title %}Novo Relatório - {{ patient.name }}{% endblock %}
 
@@ -352,8 +352,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{% static 'js/tag-selector.js' %}" defer></script>
-<script src="{% static 'js/report-template-discovery.js' %}" defer></script>
+<script src="{% versioned_static 'js/tag-selector.js' %}" defer></script>
+<script src="{% versioned_static 'js/report-template-discovery.js' %}" defer></script>
 <script src="{% static 'js/easymde.min.js' %}"></script>
 <script>
   let easyMDE;

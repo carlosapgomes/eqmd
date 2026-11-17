@@ -9,7 +9,8 @@ requester-aware projection. Selected rows outside `available_tags` (visible
 historical identities) still get a native selected option so a no-JavaScript
 resubmit keeps filtering by them.
 {% endcomment %}
-<div class="tag-filter-controls">
+<div class="tag-filter-controls row g-3">
+  <div class="col-12 col-lg-8">
   <label for="tag-search" class="form-label">
     <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
   </label>
@@ -38,14 +39,30 @@ resubmit keeps filtering by them.
     </select>
 
     <div class="d-none" data-tag-enhanced>
-      <input type="search"
-             id="tag-search"
-             class="form-control form-control-sm"
-             placeholder="Buscar tag por nome ou equipe..."
-             autocomplete="off"
-             aria-controls="tag-search-results"
-             data-tag-search>
-      <div class="d-flex justify-content-between align-items-center mt-1 gap-2">
+      <div class="position-relative" data-tag-search-anchor>
+        <input type="search"
+               id="tag-search"
+               class="form-control"
+               placeholder="Buscar tag por nome ou equipe..."
+               autocomplete="off"
+               aria-controls="tag-search-results"
+               data-tag-search>
+        <div class="tag-selector-panel shadow-sm"
+             data-tag-panel
+             hidden>
+          <ul class="list-group"
+              id="tag-search-results"
+              role="list"
+              data-tag-results
+              aria-label="Resultados de tags"
+              hidden></ul>
+          <button type="button"
+                  class="btn btn-link btn-sm p-0"
+                  data-tag-more
+                  hidden>Carregar mais</button>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap align-items-center mt-2 gap-2">
         <div class="form-check form-check-inline mb-0">
           <input class="form-check-input"
                  type="checkbox"
@@ -72,20 +89,6 @@ resubmit keeps filtering by them.
           </span>
         {% endfor %}
       </div>
-      <div class="tag-selector-panel shadow-sm"
-           data-tag-panel
-           hidden>
-        <ul class="list-group"
-            id="tag-search-results"
-            role="list"
-            data-tag-results
-            aria-label="Resultados de tags"
-            hidden></ul>
-        <button type="button"
-                class="btn btn-link btn-sm p-0"
-                data-tag-more
-                hidden>Carregar mais</button>
-      </div>
       <p class="small text-muted mb-0 mt-1"
          data-tag-status
          aria-live="polite"
@@ -99,17 +102,20 @@ resubmit keeps filtering by them.
            data-tag-marker>
   </div>
 
-  <div class="d-flex flex-column gap-2 mt-1 mw-100">
-    <div class="d-flex flex-column gap-1 mw-100">
-      <label for="tag-mode" class="form-label small mb-0">Correspondência</label>
+  </div>
+  <div class="col-12 col-lg-4">
+  <div class="d-flex flex-column gap-2 mw-100">
+    <div class="d-flex flex-column mw-100">
+      <label for="tag-mode" class="form-label">Correspondência</label>
       <select id="tag-mode"
               name="tag_mode"
-              class="form-select form-select-sm w-100 mw-100"
+              class="form-select w-100 mw-100"
               aria-label="Correspondência">
         <option value="any" {% if tag_filter_mode == "any" %}selected{% endif %}>Pelo menos uma selecionada (OU)</option>
         <option value="all" {% if tag_filter_mode == "all" %}selected{% endif %}>Todas as selecionadas (E)</option>
       </select>
     </div>
     <small class="text-muted text-break" data-tag-state>{{ tag_filter_state_label }}</small>
+  </div>
   </div>
 </div>

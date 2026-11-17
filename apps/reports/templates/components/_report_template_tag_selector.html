@@ -28,10 +28,10 @@ mode column, while other hosts may wrap it differently.
        data-tag-selector
        data-lookup-url="{% url 'reports:template_tag_lookup' %}">
 {% else %}
-  {# Catalogue branch: the visible label is required here too, since the
+  {% comment %} Catalogue branch: the visible label is required here too, since the
      search input is otherwise unlabeled when `selector_only=1`. ids stay
      unique: the catalogue renders this partial exactly once, and the
-     standalone branch above keeps the same ids on non-catalogue hosts. #}
+     standalone branch above keeps the same ids on non-catalogue hosts. {% endcomment %}
   <label for="report-template-tag-search" class="form-label">
     <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
   </label>
@@ -62,14 +62,30 @@ mode column, while other hosts may wrap it differently.
     </select>
 
     <div class="d-none" data-tag-enhanced>
-      <input type="search"
-             id="report-template-tag-search"
-             class="form-control"
-             placeholder="Buscar tag por nome ou equipe..."
-             autocomplete="off"
-             aria-controls="report-template-tag-search-results"
-             data-tag-search>
-      <div class="d-flex justify-content-between align-items-center mt-1 gap-2">
+      <div class="position-relative" data-tag-search-anchor>
+        <input type="search"
+               id="report-template-tag-search"
+               class="form-control"
+               placeholder="Buscar tag por nome ou equipe..."
+               autocomplete="off"
+               aria-controls="report-template-tag-search-results"
+               data-tag-search>
+        <div class="tag-selector-panel shadow-sm"
+             data-tag-panel
+             hidden>
+          <ul class="list-group"
+              id="report-template-tag-search-results"
+              role="list"
+              data-tag-results
+              aria-label="Resultados de tags"
+              hidden></ul>
+          <button type="button"
+                  class="btn btn-link btn-sm p-0"
+                  data-tag-more
+                  hidden>Carregar mais</button>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap align-items-center mt-2 gap-2">
         <div class="form-check form-check-inline mb-0">
           <input class="form-check-input"
                  type="checkbox"
@@ -80,9 +96,11 @@ mode column, while other hosts may wrap it differently.
             Mostrar inativas e arquivadas no seletor
           </label>
         </div>
+        {% if not selector_only %}
         <a class="btn btn-sm btn-outline-secondary"
            href="?{{ clear_tags_querystring }}"
            data-tag-clear>Remover filtro de tags</a>
+        {% endif %}
       </div>
       <div class="d-flex flex-wrap gap-1 mt-2" data-tag-chips>
         {% for selected in selected_tags %}
@@ -97,20 +115,6 @@ mode column, while other hosts may wrap it differently.
           </span>
         {% endfor %}
       </div>
-      <div class="tag-selector-panel shadow-sm"
-           data-tag-panel
-           hidden>
-        <ul class="list-group"
-            id="report-template-tag-search-results"
-            role="list"
-            data-tag-results
-            aria-label="Resultados de tags"
-            hidden></ul>
-        <button type="button"
-                class="btn btn-link btn-sm p-0"
-                data-tag-more
-                hidden>Carregar mais</button>
-      </div>
       <p class="small text-muted mb-0 mt-1"
          data-tag-status
          aria-live="polite"
@@ -124,8 +128,8 @@ mode column, while other hosts may wrap it differently.
            data-tag-marker>
   </div>
 {% if selector_only %}
-  {# The catalogue filter form owns the mode column; keep a second
-     Correspondência control out of the embedded selector. #}
+  {% comment %} The catalogue filter form owns the mode column; keep a second
+     Correspondência control out of the embedded selector. {% endcomment %}
 {% else %}
   <div class="d-flex flex-column gap-2 mt-1 mw-100">
     <div class="d-flex flex-column gap-1 mw-100">

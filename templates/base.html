@@ -1,4 +1,4 @@
-{% load static %}
+{% load static static_assets %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -25,7 +25,7 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="{% url 'apps.core:manifest_json' %}">
     
-    <link rel="stylesheet" href="{% static 'main.css' %}">
+    <link rel="stylesheet" href="{% versioned_static 'main.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap-icons.min.css' %}">
     {% block extra_head %}
     {% endblock extra_head %}

@@ -1,6 +1,6 @@
 {% extends 'base_app.html' %}
 {% load reports_extras %}
-{% load static %}
+{% load static static_assets %}
 
 {% block title %}Modelos de Relatório{% endblock %}
 
@@ -59,9 +59,9 @@
 </div>
 {% endif %}
 
-<script src="{% static 'js/tag-selector.js' %}" defer></script>
-<script src="{% static 'js/report-catalogue-filter-form.js' %}" defer></script>
-<script src="{% static 'js/report-template-discovery.js' %}" defer></script>
+<script src="{% versioned_static 'js/tag-selector.js' %}" defer></script>
+<script src="{% versioned_static 'js/report-catalogue-filter-form.js' %}" defer></script>
+<script src="{% versioned_static 'js/report-template-discovery.js' %}" defer></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Delegate from document, which fragment replacement never removes, so

@@ -21,13 +21,13 @@
   The ``data-discovery-marker`` input has no name, so it never submits; it
   only carries the current automatic/manual origin for the enhancement.
 {% endcomment %}
-<div class="card shadow-sm mb-3">
+<div class="card shadow-sm tag-filter-card mb-3">
   <div class="card-body">
     <form method="get"
           data-discovery-form
           {% if not selector_plain and not creation_selector %}data-catalogue-filter-form{% endif %}>
-      <div class="row g-3 align-items-end">
-        <div class="col-md-4">
+      <div class="row g-3 align-items-start tag-filter-form">
+        <div class="col-12">
           <label for="report-template-search" class="form-label">
             <i class="bi bi-search me-2" aria-hidden="true"></i>Buscar por nome
           </label>
@@ -39,13 +39,13 @@
                  data-discovery-q
                  autocomplete="off">
         </div>
-        <div class="col-md-4">
+        <div class="col-12 col-lg-8">
           {% if selector_plain %}
-            {# Legacy isolation branch (pre-S4): kept for the explicit
+            {% comment %} Legacy isolation branch (pre-S4): kept for the explicit
                opt-out contract; neither surface renders it anymore.
                Same no-JS contract as the catalogue selector, but no
                ``data-tag-selector`` root, so tag-selector.js never
-               enhances the form. #}
+               enhances the form. {% endcomment %}
             <label for="report-template-tags" class="form-label">
               <i class="bi bi-tags me-2" aria-hidden="true"></i>Tags
             </label>
@@ -64,7 +64,7 @@
             {% include "components/_report_template_tag_selector.html" with selector_only=1 %}
           {% endif %}
         </div>
-        <div class="col-md-2">
+        <div class="col-12 col-lg-4">
           <label for="report-template-mode" class="form-label">Correspondência</label>
           <select id="report-template-mode"
                   name="tag_mode"
@@ -74,35 +74,24 @@
             <option value="all" {% if discovery_selection.mode == "all" %}selected{% endif %}>Todas as selecionadas (E)</option>
           </select>
         </div>
-        <div class="col-md-2">
-          <div class="btn-group w-100" role="group">
-            <button type="submit"
-                    name="tag_filter"
-                    value="manual"
-                    class="btn btn-medical-primary"
-                    data-discovery-apply>
-              <i class="bi bi-search me-1" aria-hidden="true"></i>Aplicar filtros
-            </button>
-          </div>
-        </div>
       </div>
       <input type="hidden"
              value="{% if discovery_selection.is_manual %}manual{% endif %}"
              data-discovery-marker>
       {% if creation_selector %}
-      {# Creation draft indicator and error slot for the creation
+      {% comment %} Creation draft indicator and error slot for the creation
          controller (``initializeSelection``); the catalogue host never
-         binds here (no catalogue host attribute). #}
+         binds here (no catalogue host attribute). {% endcomment %}
       <p class="small text-muted mb-0" data-creation-filter-dirty role="status" hidden>Alterações não aplicadas</p>
       <p class="small text-danger mb-0" data-creation-filter-error role="alert" hidden></p>
       {% elif not selector_plain %}
-      {# Catalogue-only: draft indicator and error slot for the catalogue
-         host controller. #}
+      {% comment %} Catalogue-only: draft indicator and error slot for the catalogue
+         host controller. {% endcomment %}
       <p class="small text-muted mb-0" data-catalogue-filter-dirty role="status" hidden>Alterações não aplicadas</p>
       <p class="small text-danger mb-0" data-catalogue-filter-error role="alert" hidden></p>
       {% endif %}
       <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
-        {# Native historical control for the no-JS contract: rendered
+        {% comment %} Native historical control for the no-JS contract: rendered
            outside the selector's enhanced-only block with a real
            submitted name, so without JavaScript the user can still
            request/hide historical options. The creation controller
@@ -111,7 +100,7 @@
            no orphaned native label). The plain
            branch keeps the legacy co-located hook attribute; creation
            deliberately omits ``data-tag-historical`` so the transport
-           never mistakes this fallback for the selector toggle. #}
+           never mistakes this fallback for the selector toggle. {% endcomment %}
         {% if selector_plain or creation_selector %}
         <div class="form-check form-check-inline mb-0"
              data-discovery-historical-wrap>
@@ -134,7 +123,14 @@
         <a href="?{{ discovery_reapply_querystring }}"
            class="btn btn-sm btn-outline-secondary"
            data-discovery-reapply>Restaurar padrão da especialidade</a>
-        <p class="small text-muted mb-0 ms-auto"
+            <button type="submit"
+                    name="tag_filter"
+                    value="manual"
+                    class="btn btn-medical-primary ms-lg-auto"
+                    data-discovery-apply>
+              <i class="bi bi-search me-1" aria-hidden="true"></i>Aplicar filtros
+            </button>
+        <p class="small text-muted mb-0 w-100"
            data-discovery-status
            aria-live="polite"
            aria-atomic="true"></p>

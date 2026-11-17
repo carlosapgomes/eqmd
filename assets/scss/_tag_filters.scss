@@ -1,0 +1,55 @@
+// Shared filter presentation; preserve explicit Apply and selector hooks.
+.tag-filter-form,
+.tag-filter-controls {
+  min-width: 0;
+
+  .form-control,
+  .form-select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .btn {
+    white-space: normal;
+  }
+}
+
+[data-tag-search-anchor] {
+  width: 100%;
+  min-width: 0;
+}
+
+[data-discovery-summary] .badge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+[data-tag-enhanced] .form-check {
+  flex: 1 1 16rem;
+  margin-right: 0;
+}
+
+[data-tag-enhanced] [data-tag-clear] {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 575.98px) {
+  .tag-filter-form select[name="tag_mode"] {
+    font-size: 0.875rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (max-width: 359.98px) {
+  .tag-filter-card > .card-body {
+    padding: 0.5rem;
+  }
+
+  .tag-filter-form select[name="tag_mode"] {
+    font-size: 0.8125rem;
+    padding-left: 0.5rem;
+    padding-right: 1rem;
+    background-position: right 0.375rem center;
+  }
+}
