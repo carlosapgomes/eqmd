@@ -9,7 +9,7 @@ and never echoes a forged identifier. The list opts into its own global
 application actions; other consumers retain their existing scoped controls.
 {% endcomment %}
 <div class="col-12">
-  {% include "components/_tag_selector.html" with patient_list_actions=patient_list_actions %}
+  {% include "components/_tag_selector.html" with patient_list_actions=patient_list_actions map_filter_actions=map_filter_actions %}
 </div>
 {% if tag_filter_error %}
   <div class="col-12">

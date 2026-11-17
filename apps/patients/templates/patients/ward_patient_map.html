@@ -51,7 +51,7 @@
                 <small class="text-muted">Alas</small>
               </div>
             </div>
-            {% if has_active_filters %}
+            {% if map_has_effective_filters %}
             <small class="text-muted d-block mt-1">Totais do resultado filtrado</small>
             {% endif %}
           </div>
@@ -63,9 +63,10 @@
   <!-- Search and Filter Section -->
   <div class="row mb-3">
     <div class="col-12">
-      <div class="card tag-filter-card">
+      <form method="get" class="tag-filter-form" data-patient-filter-form>
+      <div class="card tag-filter-card" data-patient-filter-panel>
         <div class="card-body">
-          <form method="get" class="row g-3 tag-filter-form" data-patient-filter-form>
+          <div class="row g-3">
             <!-- Search -->
             <div class="col-12 col-lg-8">
               <label for="search" class="form-label">
@@ -94,68 +95,74 @@
             </div>
 
             <!-- Tag Filter (shared multi-select + searchable lookup, S7/S9) -->
-            {% include "components/_tag_filter.html" %}
+            {% include "components/_tag_filter.html" with map_filter_actions=True %}
 
             <!-- Actions -->
-            <div class="col-12 col-lg-8 d-flex align-items-center">
-              <div class="d-flex flex-wrap gap-2" role="group">
-                <button type="submit" class="btn btn-medical-outline-primary">
+            <div class="col-12 d-flex align-items-center">
+              <div class="d-flex flex-wrap gap-2 justify-content-start" role="group" aria-label="Ações dos filtros do mapa" data-map-filter-actions>
+                <button type="submit" name="tag_filter" value="manual" class="btn btn-medical-outline-primary">
                   <i class="bi bi-search" aria-hidden="true"></i> Aplicar filtros
                 </button>
-                <a href="{% url 'apps.patients:patient_map' %}"
-                   class="btn btn-outline-secondary"
-                   title="Limpar filtros"
-                   aria-label="Limpar filtros">
-                  <i class="bi bi-x-circle me-1"></i>Limpar filtros
-                </a>
+                <a href="{{ map_clear_all_url }}" class="btn btn-outline-secondary" data-map-clear-all>
+                  <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar todos os filtros</a>
+                {% if map_show_restore %}
+                <a href="{{ map_restore_tags_url }}" class="btn btn-outline-secondary" data-map-restore-tags>Usar padrão de tags da especialidade</a>
+                {% endif %}
               </div>
             </div>
 
-            <!-- Tree Controls -->
-            <div class="col-12 col-lg-4 d-flex align-items-center justify-content-lg-end">
-              <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-secondary" id="expand-all" title="Expandir todas">
-                  <i class="bi bi-arrows-expand"></i>
-                </button>
-                <button type="button" class="btn btn-outline-secondary" id="collapse-all" title="Recolher todas">
-                  <i class="bi bi-arrows-collapse"></i>
-                </button>
-                <button type="button" class="btn btn-outline-primary" id="refresh-data" title="Atualizar dados">
-                  <i class="bi bi-arrow-clockwise"></i>
-                </button>
-              </div>
+            <div class="col-12">
+              <p class="small text-muted mb-0" data-patient-filter-dirty role="status" hidden>Alterações não aplicadas</p>
             </div>
+          </div>
 
-            <!-- Empty Wards Toggle: a pending predicate of the same
-                 GET form. It only becomes part of the applied state
-                 through Aplicar filtros, with or without JavaScript. -->
-            <div class="col-12 mt-3">
-              <div class="form-check">
-                <input class="form-check-input border-primary"
-                       type="checkbox"
-                       id="show-empty-wards"
-                       name="show_empty_wards"
-                       value="true"
-                       {% if show_empty_wards %}checked{% endif %}>
-                <label class="form-check-label" for="show-empty-wards">
-                  <i class="bi bi-building me-1"></i>
-                  Mostrar alas vazias
-                </label>
-              </div>
-              <p class="small text-muted mb-0 mt-1" data-patient-filter-dirty role="status" hidden>Alterações não aplicadas</p>
+          <!-- Active Filters -->
+          {% if has_active_filters %}
+          <div class="mt-3" data-map-applied-summary>
+            <small class="text-muted">Filtros ativos:</small>
+            <div class="d-flex flex-wrap gap-2 mt-1">
+              {% if search_query %}
+                <span class="badge bg-primary">
+                  Busca: {{ search_query }}
+                </span>
+              {% endif %}
+              {% if ward_filter %}
+                {% for ward in all_wards %}
+                  {% if ward.id|stringformat:"s" == ward_filter %}
+                    <span class="badge bg-secondary">
+                      Ala: {{ ward.abbreviation }}
+                    </span>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+              {% for selected in selected_tags %}
+                <span class="badge tag-filter-chip" data-active-tag-badge>
+                  <span class="tag-filter-chip-label">{{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}</span>
+                </span>
+              {% endfor %}
+              {% if tag_filter_is_manual %}
+                <span class="badge bg-secondary" data-tag-mode-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
+              {% elif tag_selection.has_predicate %}
+                <span class="badge bg-secondary" data-tag-default-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
+              {% endif %}
             </div>
-          </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% include "components/_ward_map_display_options.html" %}
+      </form>
 
           {% if tag_preference_specialty %}
-            <div class="mt-3" data-tag-preference-panel>
-              <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="card card-medical mt-3 mb-4" data-tag-preference-panel>
+              <div class="card-body d-flex flex-wrap align-items-center gap-3">
                 <div class="me-auto">
                   <div class="small text-muted">
                     Especialidade ativa:
                     <strong data-tag-preference-specialty>{{ tag_preference_specialty.name }}</strong>
                   </div>
                   <div class="small" data-tag-preference-state>
-                    {% if tag_preference_has_saved %}Preferência salva em uso{% else %}Sem preferência salva (padrão inicial){% endif %}
+                    {{ map_preference_status }}
                     · {{ tag_filter_mode_label }}
                   </div>
                 </div>
@@ -188,63 +195,6 @@
             </div>
           {% endif %}
 
-          <!-- Active Filters -->
-          {% if has_active_filters %}
-          <div class="mt-3">
-            <small class="text-muted">Filtros ativos:</small>
-            <div class="d-flex flex-wrap gap-2 mt-1">
-              {% if search_query %}
-                <span class="badge bg-primary">
-                  Busca: {{ search_query }}
-                  <a href="?{{ search_remove_querystring }}"
-                     aria-label="Remover busca dos filtros aplicados"
-                     class="text-white text-decoration-none ms-1">
-                    <i class="bi bi-x"></i>
-                  </a>
-                </span>
-              {% endif %}
-              {% if ward_filter %}
-                {% for ward in all_wards %}
-                  {% if ward.id|stringformat:"s" == ward_filter %}
-                    <span class="badge bg-secondary">
-                      Ala: {{ ward.abbreviation }}
-                      <a href="?{{ ward_remove_querystring }}"
-                         aria-label="Remover filtro de ala dos filtros aplicados"
-                         class="text-white text-decoration-none ms-1">
-                        <i class="bi bi-x"></i>
-                      </a>
-                    </span>
-                  {% endif %}
-                {% endfor %}
-              {% endif %}
-              {% for selected in selected_tags %}
-                <span class="badge tag-filter-chip" data-active-tag-badge>
-                  <span class="tag-filter-chip-label">{{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}</span>
-                  <a href="?{{ selected.remove_querystring }}"
-                     aria-label="Remover {{ selected.badge.display_name }} dos filtros aplicados"
-                     class="tag-filter-chip-remove text-decoration-none ms-1">
-                    <span aria-hidden="true">×</span>
-                  </a>
-                </span>
-              {% endfor %}
-              {% if tag_filter_is_manual %}
-                <span class="badge bg-secondary" data-tag-mode-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
-                <a href="?{{ clear_tags_querystring }}"
-                   class="badge bg-light text-dark text-decoration-none"
-                   data-clear-tag-filter>Remover filtro de tags</a>
-                {% if tag_preference_specialty %}
-                  <a href="?{{ reapply_tags_querystring }}"
-                     class="badge bg-light text-dark text-decoration-none"
-                     data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
-                {% endif %}
-              {% elif tag_selection.has_predicate %}
-                <span class="badge bg-secondary" data-tag-default-badge>{{ tag_filter_state_label }} · {{ tag_filter_mode_label }}</span>
-              {% endif %}
-            </div>
-          </div>
-          {% endif %}
-        </div>
-      </div>
     </div>
   </div>
 
@@ -260,6 +210,7 @@
     <div class="col-12">
       <div class="card">
         <div class="card-body">
+          {% include "components/_ward_map_empty_notice.html" %}
           {% if ward_data %}
           <div class="ward-tree">
             {% for ward_info in ward_data %}
@@ -367,7 +318,11 @@
                 <div class="ps-4 pt-2">
                   <div class="text-muted fst-italic p-3">
                     <i class="bi bi-info-circle me-2"></i>
-                    Nenhum paciente internado nesta ala
+                    {% if map_has_patient_predicates %}
+                    Nenhum paciente corresponde aos filtros atuais nesta ala.
+                    {% else %}
+                    Nenhum paciente internado nesta ala.
+                    {% endif %}
                   </div>
                 </div>
                 {% endif %}
@@ -383,9 +338,7 @@
             <p class="text-muted">
               Corrija ou limpe o filtro de tags para ver os pacientes internados.
             </p>
-            <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-outline-secondary">
-              <i class="bi bi-x-circle me-1"></i>Limpar filtros
-            </a>
+            <p class="text-muted">Use a barra de ações dos filtros acima.</p>
           </div>
           {% else %}
           <div class="text-center py-5" data-map-empty-results>
@@ -394,19 +347,8 @@
             {% if search_query or ward_filter or tag_selection.has_predicate %}
             <p class="text-muted">
               Nenhum paciente internado corresponde aos filtros atuais.
-              Ajuste a busca, a ala ou as tags para ver resultados.
+              Use a barra de ações dos filtros acima para ajustar a busca, a ala ou as tags.
             </p>
-            <div class="d-flex flex-wrap justify-content-center gap-2">
-              {% if tag_selection.has_predicate %}
-              <a href="?{{ clear_tags_querystring }}" class="btn btn-outline-secondary" data-clear-tag-filter>Remover filtro de tags</a>
-              {% endif %}
-              {% if tag_filter_is_manual and tag_preference_specialty %}
-              <a href="?{{ reapply_tags_querystring }}" class="btn btn-outline-secondary" data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
-              {% endif %}
-              <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar filtros
-              </a>
-            </div>
             {% else %}
             <p class="text-muted">
               Nenhum paciente internado no momento.

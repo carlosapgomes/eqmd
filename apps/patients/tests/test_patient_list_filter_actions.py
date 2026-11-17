@@ -255,13 +255,13 @@ class PatientListFilterActionsTests(TestCase):
         self.assertContains(invalid, "Não foi possível aplicar os filtros")
         self.assertEqual(invalid.context["paginator"].count, 0)
 
-    def test_map_keeps_its_existing_clear_restore_and_applied_links(self) -> None:
+    def test_map_has_its_own_canonical_filter_actions(self) -> None:
         response = self.client.get(reverse("patients:patient_map"), {"tags": self.y.pk})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Remover filtro de tags")
-        self.assertContains(response, "Restaurar padrão da especialidade")
-        self.assertNotContains(response, "Usar padrão de tags da especialidade")
-        self.assertNotContains(response, "Limpar todos os filtros")
+        self.assertNotContains(response, "Remover filtro de tags")
+        self.assertNotContains(response, "Restaurar padrão da especialidade")
+        self.assertContains(response, "Usar padrão de tags da especialidade")
+        self.assertContains(response, "Limpar todos os filtros")
 
     def test_legacy_scoped_clear_still_preserves_non_tag_predicates(self) -> None:
         response = self.response(q="Ana", status="2", tag=str(self.y.pk))

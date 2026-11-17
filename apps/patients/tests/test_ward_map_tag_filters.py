@@ -701,7 +701,7 @@ class WardMapLanguageAndRecoveryTests(WardMapTagFilterFixture):
             "Todas as selecionadas (E)",
             "Correspondência",
             "Filtro personalizado",
-            "Remover filtro de tags",
+            "Limpar todos os filtros",
             "Mostrar inativas e arquivadas no seletor",
             "Aplicar filtros",
         ):
@@ -717,16 +717,16 @@ class WardMapLanguageAndRecoveryTests(WardMapTagFilterFixture):
             r'(?s)<button[^>]*type="submit"[^>]*>.*?Aplicar filtros.*?</button>',
         )
 
-    def test_tag_removal_names_distinguish_draft_and_applied(self) -> None:
+    def test_tag_removal_names_are_draft_only(self) -> None:
         body = self.map_response(tags=[self.cirger_tag.pk]).content.decode()
         self.assertIn(
             'aria-label="Remover Estável CIRGER [CIRGER] da seleção"', body
         )
-        self.assertIn(
+        self.assertNotIn(
             'aria-label="Remover Estável CIRGER [CIRGER] dos filtros aplicados"', body
         )
 
-    def test_filtered_zero_explains_no_match_with_scoped_recovery(self) -> None:
+    def test_filtered_zero_explains_no_match_and_refers_to_action_bar(self) -> None:
         response = self.map_response(tags=[self.outpatient_tag.pk])
         body = response.content.decode()
         self.assertEqual(list(response.context["ward_data"]), [])
@@ -735,13 +735,13 @@ class WardMapLanguageAndRecoveryTests(WardMapTagFilterFixture):
         )
         empty_start = body.index("Nenhum paciente encontrado")
         empty_section = body[empty_start : empty_start + 2500]
-        self.assertIn("Remover filtro de tags", empty_section)
+        self.assertIn("barra de ações dos filtros", empty_section)
+        self.assertNotIn("Remover filtro de tags", empty_section)
         self.assertNotIn("Nenhuma ala cadastrada", body)
 
     def test_tree_only_filtered_zero_matches_full_map_recovery(self) -> None:
-        # TFUX S1 review correction: the AJAX tree-only partial
-        # must present the same filtered-empty recovery as the
-        # full map, reusing the existing querystrings.
+        # PMFA-S1: the fragment shares the full-map explanation and points
+        # to the existing action bar instead of duplicating its controls.
         response = self.ajax_response(tags=[self.outpatient_tag.pk])
         body = response.content.decode()
         self.assertEqual(list(response.context["ward_data"]), [])
@@ -750,8 +750,9 @@ class WardMapLanguageAndRecoveryTests(WardMapTagFilterFixture):
         )
         empty_start = body.index("Nenhum paciente encontrado")
         empty_section = body[empty_start : empty_start + 2500]
-        self.assertIn("Remover filtro de tags", empty_section)
-        self.assertIn("Limpar filtros", empty_section)
+        self.assertIn("barra de ações dos filtros", empty_section)
+        self.assertNotIn("Remover filtro de tags", empty_section)
+        self.assertNotIn("Limpar filtros", empty_section)
         self.assertNotIn("Nenhum paciente internado no momento", body)
         self.assertNotIn("Nenhuma ala cadastrada", body)
 

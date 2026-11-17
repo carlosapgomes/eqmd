@@ -6,7 +6,7 @@
   <small class="text-muted">
     {{ total_patients }} paciente{{ total_patients|pluralize }} ·
     {{ total_wards }} ala{{ total_wards|pluralize }}
-    {% if has_active_filters %}(resultado filtrado){% endif %}
+    {% if map_has_effective_filters %}(resultado filtrado){% endif %}
   </small>
 </div>
 {% if updating %}
@@ -15,6 +15,7 @@
   Os dados do mapa estão sendo atualizados.
 </div>
 {% endif %}
+{% include "components/_ward_map_empty_notice.html" %}
 {% if ward_data %}
 <div class="ward-tree">
   {% for ward_info in ward_data %}
@@ -122,7 +123,11 @@
       <div class="ps-4 pt-2">
         <div class="text-muted fst-italic p-3">
           <i class="bi bi-info-circle me-2"></i>
-          Nenhum paciente internado nesta ala
+          {% if map_has_patient_predicates %}
+          Nenhum paciente corresponde aos filtros atuais nesta ala.
+          {% else %}
+          Nenhum paciente internado nesta ala.
+          {% endif %}
         </div>
       </div>
       {% endif %}
@@ -147,19 +152,8 @@
   {% if search_query or ward_filter or tag_selection.has_predicate %}
   <p class="text-muted">
     Nenhum paciente internado corresponde aos filtros atuais.
-    Ajuste a busca, a ala ou as tags para ver resultados.
+    Use a barra de ações dos filtros acima para ajustar a busca, a ala ou as tags.
   </p>
-  <div class="d-flex flex-wrap justify-content-center gap-2">
-    {% if tag_selection.has_predicate %}
-    <a href="?{{ clear_tags_querystring }}" class="btn btn-outline-secondary" data-clear-tag-filter>Remover filtro de tags</a>
-    {% endif %}
-    {% if tag_filter_is_manual and tag_preference_specialty %}
-    <a href="?{{ reapply_tags_querystring }}" class="btn btn-outline-secondary" data-reapply-tag-preferences>Restaurar padrão da especialidade</a>
-    {% endif %}
-    <a href="{% url 'apps.patients:patient_map' %}" class="btn btn-outline-secondary">
-      <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar filtros
-    </a>
-  </div>
   {% else %}
   <p class="text-muted">
     Nenhum paciente internado no momento.

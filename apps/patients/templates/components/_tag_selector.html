@@ -72,7 +72,7 @@ resubmit keeps filtering by them.
             Mostrar inativas e arquivadas no seletor
           </label>
         </div>
-        {% if not patient_list_actions %}
+        {% if not patient_list_actions and not map_filter_actions %}
         <a class="btn btn-sm btn-outline-secondary"
            href="?{{ clear_tags_querystring }}"
            data-tag-clear>Remover filtro de tags</a>
