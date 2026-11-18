@@ -6,6 +6,106 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-18
+
+### Added — descoberta e classificação de modelos de laudo
+
+- **Classificação opcional de modelos de laudo por tags do catálogo**
+  (change `add-report-template-tag-discovery`; `9f73b44`):
+  editores autorizados podem associar zero ou mais tags **existentes**
+  do catálogo ao criar/editar um modelo de laudo — novo campo
+  `ReportTemplate.tags` (M2M para `patients.AllowedTag`, migration
+  `reports/0004_reporttemplate_tags`, trilha de histórico
+  `simple-history` preservada). O formulário nunca cria tags novas;
+  propriedade, exceções administrativas de edição e visibilidade
+  público/privado permanecem inalteradas; templates existentes
+  ficam sem tags até classificação autorizada (predicados ativos
+  excluem modelos não classificados; limpar filtros os restaura).
+  Auditoria técnica da associação fica na camada de dados, sem nova
+  tela de histórico.
+
+- **Filtragem por tags e busca dinâmica no catálogo e no seletor**
+  (change `add-report-template-tag-discovery`; `9c7c65d`,
+  `bb71267`): `/reports/templates/` e o seletor de modelos usado
+  na criação do laudo do paciente ganham filtragem por tags e
+  busca por nome, reutilizando da lista/mapa de pacientes as
+  preferências salvas de especialidade, o fallback principal, os
+  modos ANY/ALL e a semântica explícita de limpar/reaplicar;
+  metadados de tags restritas seguem ocultos independentemente do
+  acesso ao modelo.
+
+### Changed — UX de filtros de tags (pacientes e modelos)
+
+- **Política explícita de filtros unificada** (change
+  `improve-tag-filter-discovery-ux`; `ea546d7`, `7a3f6d8`,
+  `31bfe44`, `37c1172`): separa o predicado aplicado, os controles
+  em edição (rascunho) e a preferência de especialidade
+  persistida, sinalizando quando diferem. O predicado só é
+  aplicado pela ação explícita **Aplicar filtros** — digitar
+  nome, alterar seleção de tags/modo ou alternar alas vazias não
+  atualiza resultados implicitamente. Remoção de badge,
+  limpar/reaplicar e paginação são atalhos deliberados sobre o
+  último estado aplicado, nunca commitando edições pendentes
+  não relacionadas. Rótulos distinguem coleção genuinamente
+  vazia de coleção esvaziada pelo filtro ativo.
+
+- **Barras de ação únicas na lista e no mapa de pacientes**
+  (changes `simplify-patient-list-filter-actions` e
+  `simplify-patient-map-filter-actions`; `0f8532c`, `6fd95d6`):
+  uma única barra de ação por página — Aplicar filtros, Limpar
+  todos os filtros (clear-all verdadeiro) e restauração do
+  padrão de tags da especialidade com escopo nomeado; links
+  duplicados de limpar/restaurar removidos; resumos aplicados
+  tornam-se informativos, inclusive em estados vazios filtrados;
+  o mapa preserva busca, ala e visão de enfermaria vazia
+  aplicadas ao restaurar tags, um Apply vazio suprime
+  explicitamente os defaults automáticos e o texto diferencia
+  ala vazia de ala sem pacientes correspondentes (página cheia e
+  fragmento AJAX).
+
+- **Editor de tags do modelo com chips pesquisáveis** (change
+  `improve-report-template-tag-editor-ux`; `0a2a560`): criação e
+  edição de modelo trocam o `select multiple` nativo
+  (Ctrl/Cmd-click) por seleção pesquisável local nas tags
+  autorizadas ao editor, com chips selecionados e botão de
+  remoção nomeado em cada chip (inclusive o último); as edições
+  de tags ficam pendentes até Criar/Salvar Modelo, preservando
+  nome, markdown, switches e demais valores não salvos; contrato
+  POST, links protegidos, regras de propriedade e fallback
+  nativo sem JS mantidos.
+
+- **Catálogo de modelos: barra única e overlay só em navegação
+  real** (change `simplify-report-template-filter-actions`;
+  `0a2a560`, `198071d`): `/reports/templates/` recebe a barra
+  alinhada à esquerda com o mesmo vocabulário da lista de
+  pacientes; Limpar todos remove nome/tags/opções e suprime
+  defaults no reload; Restaurar recupera nome e tags/modo
+  aplicados descartando rascunhos; essas duas ações reconstróem
+  os controles via navegação GET completa, enquanto Apply e
+  paginação mantêm o transporte AJAX; o overlay global de
+  carregamento passa a distinguir navegação real de interações
+  AJAX canceladas — exatamente um overlay, sem o bloqueio de
+  15 s anterior; URLs legadas de query preservadas.
+
+### Fixed — renderização dos filtros de tags
+
+- **Assets versionados e cartões de filtro responsivos** (change
+  `fix-tag-filter-rendering`; `94fd66a`): URLs com versão de
+  conteúdo para o stylesheet e scripts compartilhados de filtro
+  impedem que JavaScript legado em cache oculte o novo contêiner
+  de resultados no primeiro carregamento; resultados ancorados
+  diretamente abaixo do campo de busca, linhas de filtro
+  responsivas e espaçosas com área de ação separada; comentários
+  inline Django multilinha inválidos substituídos por blocos.
+
+### Docs — specs OpenSpec
+
+- Specs **nova** (`page-navigation-feedback`) e **atualizadas**
+  (`patient-tag-filtering`, `reports`) formalizam o contrato de
+  filtragem por tags, a política explícita de aplicação e o
+  feedback de navegação; sete changes arquivados em
+  `openspec/changes/archive/2026-11-1*`.
+
 ## [0.6.0] - 2026-11-12
 
 ### Added — patient profile clinical safety
