@@ -14,6 +14,9 @@
         return;
     }
     
+    let pendingLoading;
+    let loadingTimeout;
+
     // Show loading overlay
     function showLoading() {
         loadingOverlay.classList.remove('d-none');
@@ -21,7 +24,25 @@
     
     // Hide loading overlay
     function hideLoading() {
+        clearTimeout(pendingLoading);
+        clearTimeout(loadingTimeout);
         loadingOverlay.classList.add('d-none');
+    }
+
+    // Cancellation can happen in a later listener during the same dispatch.
+    function scheduleLoading(event, delay) {
+        if (event.defaultPrevented) {
+            return;
+        }
+        clearTimeout(pendingLoading);
+        pendingLoading = setTimeout(function() {
+            if (event.defaultPrevented) {
+                return;
+            }
+            showLoading();
+            clearTimeout(loadingTimeout);
+            loadingTimeout = setTimeout(hideLoading, 15000);
+        }, delay);
     }
     
     // Check if link should trigger loading indicator
@@ -112,66 +133,27 @@
     
     // Add click event listeners to navigation links and form submissions
     function initializeNavLoading() {
-        // Listen to all link clicks
         document.addEventListener('click', function(event) {
-            const link = event.target.closest('a');
-            
-            if (!link || !shouldShowLoading(link)) {
+            if (event.button > 0 || event.ctrlKey || event.metaKey ||
+                event.shiftKey || event.altKey) {
                 return;
             }
-            
-            // Show loading with small delay to avoid flicker on fast responses
-            setTimeout(showLoading, 100);
-        });
-        
-        // Listen to form submissions
-        document.addEventListener('submit', function(event) {
-            const form = event.target;
-            
-            if (!shouldShowFormLoading(form)) {
-                return;
-            }
-            
-            // Show loading immediately for form submissions
-            showLoading();
-        });
-        
-        // Hide loading when page starts to unload (navigation is happening)
-        window.addEventListener('beforeunload', function() {
-            // Keep loading visible during navigation
-        });
-        
-        // Hide loading if user comes back to page (back button)
-        window.addEventListener('pageshow', function(event) {
-            hideLoading();
-        });
-        
-        // Hide loading on page load
-        window.addEventListener('load', function() {
-            hideLoading();
-        });
-        
-        // Safety: Hide loading after maximum time
-        let loadingTimeout;
-        function resetLoadingTimeout() {
-            clearTimeout(loadingTimeout);
-            loadingTimeout = setTimeout(hideLoading, 15000); // 15 second max
-        }
-        
-        // Reset timeout for both link clicks and form submissions
-        document.addEventListener('click', function(event) {
             const link = event.target.closest('a');
             if (link && shouldShowLoading(link)) {
-                resetLoadingTimeout();
+                // Keep the existing delay without masking intercepted clicks.
+                scheduleLoading(event, 100);
             }
         });
-        
+
         document.addEventListener('submit', function(event) {
-            const form = event.target;
-            if (shouldShowFormLoading(form)) {
-                resetLoadingTimeout();
+            if (shouldShowFormLoading(event.target)) {
+                // Wait for all submit listeners before treating this as navigation.
+                scheduleLoading(event, 0);
             }
         });
+
+        window.addEventListener('pageshow', hideLoading);
+        window.addEventListener('load', hideLoading);
     }
     
     // Initialize when DOM is ready

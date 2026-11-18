@@ -117,6 +117,25 @@
           </label>
         </div>
         {% endif %}
+        {% if catalogue_filter_actions %}
+        <div class="d-flex flex-wrap gap-2 justify-content-start"
+             role="group" aria-label="Ações dos filtros dos modelos"
+             data-catalogue-filter-actions>
+          <button type="submit" name="tag_filter" value="manual"
+                  class="btn btn-medical-outline-primary" data-discovery-apply>
+            <i class="bi bi-search" aria-hidden="true"></i> Aplicar filtros
+          </button>
+          <a href="{{ catalogue_clear_all_url }}" class="btn btn-outline-secondary"
+             data-discovery-clear data-catalogue-navigation data-catalogue-clear-all>
+            <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar todos os filtros
+          </a>
+          <a href="{{ catalogue_restore_tags_url }}" class="btn btn-outline-secondary"
+             data-discovery-reapply data-catalogue-navigation data-catalogue-restore
+             {% if not catalogue_show_restore %}hidden{% endif %}>
+            <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Usar padrão de tags da especialidade
+          </a>
+        </div>
+        {% else %}
         <a href="?{{ discovery_clear_querystring }}"
            class="btn btn-sm btn-outline-secondary"
            data-discovery-clear>Remover filtro de tags</a>
@@ -130,6 +149,7 @@
                     data-discovery-apply>
               <i class="bi bi-search me-1" aria-hidden="true"></i>Aplicar filtros
             </button>
+        {% endif %}
         <p class="small text-muted mb-0 w-100"
            data-discovery-status
            aria-live="polite"

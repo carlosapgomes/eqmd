@@ -108,6 +108,11 @@ module.exports = {
           from: "assets/js/report-catalogue-filter-form.js",
           to: "js/report-catalogue-filter-form.js",
         },
+        // Template classification editor: local authorized native choices.
+        {
+          from: "assets/js/report-template-tag-editor.js",
+          to: "js/report-template-tag-editor.js",
+        },
         // Report-template catalogue discovery (S2)
         {
           from: "assets/js/report-template-discovery.js",

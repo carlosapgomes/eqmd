@@ -1,5 +1,6 @@
 """Content-versioned URLs keep cached selector code compatible with markup."""
 
+import re
 from html import unescape
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -64,6 +65,25 @@ class VersionedStaticTests(SimpleTestCase):
                 url = self.render_asset()
                 self.assertEqual(parse_qs(urlsplit(url).query)["existing"], ["1"])
                 self.assertIn("v", parse_qs(urlsplit(url).query))
+
+    def test_base_bundle_version_follows_built_content(self) -> None:
+        with TemporaryDirectory() as directory:
+            asset = Path(directory) / "main-bundle.js"
+            asset.write_text("previous global loader")
+            with patch(
+                "apps.core.templatetags.static_assets.finders.find",
+                return_value=str(asset),
+            ):
+                before = Template("{% extends 'base.html' %}").render(Context())
+                asset.write_text("corrected navigation listener")
+                after = Template("{% extends 'base.html' %}").render(Context())
+        pattern = r'src="(/static/main-bundle.js[^"]*)"'
+        before_urls = re.findall(pattern, before)
+        after_urls = re.findall(pattern, after)
+        self.assertEqual(len(before_urls), 1)
+        self.assertEqual(len(after_urls), 1)
+        self.assertIn("v", parse_qs(urlsplit(before_urls[0]).query))
+        self.assertNotEqual(before_urls, after_urls)
 
     def test_missing_asset_preserves_storage_url(self) -> None:
         with (

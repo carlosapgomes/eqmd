@@ -1,0 +1,42 @@
+{% comment %}Editor choices come only from the authorized bound form field.{% endcomment %}
+<div class="mb-3" data-template-tag-editor>
+  <div data-editor-native>
+    <label for="{{ form.tag_ids.id_for_label }}" class="form-label">{{ form.tag_ids.label }}</label>
+    {{ form.tag_ids }}
+    <div class="form-text">
+      Sem JavaScript, use o seletor nativo. No computador, Ctrl/Cmd + clique
+      seleciona várias tags ou desmarca uma tag, inclusive a última.
+    </div>
+    {% if not form.tag_ids.field.choices %}
+      <p class="form-text">Nenhuma tag disponível para seleção.</p>
+    {% endif %}
+  </div>
+  <div data-editor-enhanced hidden>
+    <label for="template-tag-editor-search" class="form-label">{{ form.tag_ids.label }}</label>
+    <input type="search" id="template-tag-editor-search" class="form-control"
+           data-editor-search autocomplete="off" placeholder="Buscar tags disponíveis"
+           aria-controls="template-tag-editor-panel"
+           aria-describedby="template-tag-editor-help template-tag-editor-status{% if form.tag_ids.errors %} {{ form.tag_ids.auto_id }}_error{% endif %}">
+    <p class="form-text" id="template-tag-editor-help">
+      Clique nas tags para selecionar. Use × para remover, inclusive a última.
+      As alterações são gravadas somente ao criar ou salvar o modelo.
+    </p>
+    <div class="border rounded overflow-auto mt-2" id="template-tag-editor-panel"
+         style="max-height: 16rem;" data-editor-panel hidden>
+      <div class="list-group list-group-flush" data-editor-results></div>
+      <p class="small text-muted m-2" data-editor-empty hidden></p>
+    </div>
+    <div class="d-flex flex-wrap gap-1 mt-2" data-editor-chips></div>
+    <p class="small text-muted mb-0 mt-2" id="template-tag-editor-status"
+       data-editor-status role="status" aria-live="polite" aria-atomic="true"></p>
+  </div>
+  {% if form.tag_ids.errors %}
+    <div class="invalid-feedback d-block" id="{{ form.tag_ids.auto_id }}_error" role="alert">
+      {% for error in form.tag_ids.errors %}{{ error }}{% endfor %}
+    </div>
+  {% endif %}
+  <div class="form-text">
+    Classificação opcional do modelo. Somente tags que você pode alterar
+    aparecem neste campo. Tags históricas mantêm a indicação de estado.
+  </div>
+</div>

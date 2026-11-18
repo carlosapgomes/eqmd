@@ -9,6 +9,7 @@
   requester-readable metadata reaches this partial.
 {% endcomment %}
 <div data-discovery-results
+     data-catalogue-can-restore="{{ catalogue_show_restore|yesno:'true,false' }}"
      data-discovery-mode="{{ discovery_selection.mode }}"
      data-discovery-source="{{ discovery_selection.source }}"
      data-discovery-applied="{{ discovery_filter_querystring }}"
@@ -18,10 +19,12 @@
     {% for selected in discovery_selected_tags %}
       <span class="badge bg-medical-teal" data-active-tag-badge>
         {{ selected.badge.display_name }}{% if selected.badge.state_label %} ({{ selected.badge.state_label }}){% endif %}
+        {% if not catalogue_filter_actions %}
         <a href="?{{ selected.remove_querystring }}"
            class="text-white text-decoration-none ms-1"
            data-discovery-remove
            aria-label="Remover {{ selected.badge.display_name }} dos filtros aplicados">×</a>
+        {% endif %}
       </span>
     {% endfor %}
   </div>
@@ -156,11 +159,15 @@
     <div class="alert alert-info" role="alert">
       <i class="bi bi-info-circle me-2"></i>
       Nenhum modelo corresponde aos filtros atuais.
+      {% if catalogue_filter_actions %}
+        Use as ações dos filtros acima para alterar ou limpar os filtros.
+      {% else %}
       {% if discovery_selection.has_predicate %}
         <a href="?{{ discovery_clear_querystring }}" class="alert-link" data-discovery-clear>Remover filtro de tags</a>.
       {% endif %}
       {% if discovery_selection.is_manual %}
         <a href="?{{ discovery_reapply_querystring }}" class="alert-link" data-discovery-reapply>Restaurar padrão da especialidade</a>.
+      {% endif %}
       {% endif %}
     </div>
     {% else %}

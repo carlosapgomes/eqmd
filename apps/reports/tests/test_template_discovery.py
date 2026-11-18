@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import re
 from html.parser import HTMLParser
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlsplit
 
 from django.http import QueryDict
 from django.test import Client, TestCase
@@ -724,76 +724,57 @@ class DiscoveryStateTests(DiscoveryFixturesMixin, TestCase):
         )
         self.assertEqual(self.result_ids(searched), [])
 
-    def test_canonical_clear_reapply_and_badge_links_preserve_q_and_historical(
-        self,
-    ) -> None:
-        # No-JS canonical semantics for P1-C2/C3: server-rendered clear,
-        # reapply and badge-removal hrefs preserve the current q and the
-        # include_historical flag, so the enhancement can re-derive the
-        # same requests from the last-applied state after a search/toggle.
-        params = {
-            "q": "avaliacao",
-            "tags": [self.tag_x.pk, self.tag_y.pk],
-            "tag_mode": "all",
-            "tag_filter": "manual",
-            "include_historical": "1",
-        }
-        response = self.get_list(**params)
-        body = response.content.decode()
-        clear_match = re.search(r'href="\?([^"]*)"[^>]*data-discovery-clear', body)
-        reapply_match = re.search(r'href="\?([^"]*)"[^>]*data-discovery-reapply', body)
-        if clear_match is None or reapply_match is None:
-            self.fail("clear/reapply links missing")
-        clear = parse_qs(html.unescape(clear_match.group(1)), keep_blank_values=True)
-        reapply = parse_qs(
-            html.unescape(reapply_match.group(1)), keep_blank_values=True
+    def test_catalogue_actions_and_legacy_tag_urls_keep_separate_scopes(self) -> None:
+        response = self.get_list(
+            q="avaliacao",
+            tags=[self.tag_x.pk, self.tag_y.pk],
+            tag_mode="all",
+            tag_filter="manual",
+            include_historical="1",
         )
-        self.assertEqual(clear["q"], ["avaliacao"])
-        self.assertEqual(clear["include_historical"], ["1"])
-        self.assertEqual(clear["tag_filter"], ["manual"])
-        self.assertEqual(clear["tag_mode"], ["all"])
-        self.assertNotIn("tags", clear)
-        self.assertEqual(reapply["q"], ["avaliacao"])
-        self.assertEqual(reapply["include_historical"], ["1"])
-        self.assertNotIn("tags", reapply)
-        self.assertNotIn("tag_filter", reapply)
-        self.assertNotIn("tag_mode", reapply)
-        # Badge-removal hrefs carry the same q/historical plus the
-        # applied predicate minus exactly one tag.
-        remove_hrefs = re.findall(r'href="\?([^"]*)"[^>]*data-discovery-remove', body)
-        self.assertEqual(len(remove_hrefs), 2)
-        removed_tag_sets = []
-        for href in remove_hrefs:
-            parsed = parse_qs(html.unescape(href), keep_blank_values=True)
+        body = response.content.decode()
+        for attribute, expected in (
+            ("data-discovery-clear", {"tag_filter": ["manual"], "tag_mode": ["any"]}),
+            (
+                "data-discovery-reapply",
+                {"q": ["avaliacao"], "include_historical": ["1"]},
+            ),
+        ):
+            hrefs = re.findall(r'href="([^"]*)"[^>]*' + attribute, body)
+            self.assertEqual(len(hrefs), 1)
+            self.assertEqual(
+                parse_qs(urlsplit(html.unescape(hrefs[0])).query), expected
+            )
+        self.assertNotContains(response, "data-discovery-remove")
+        # Legacy tag-only URLs still preserve q/historical and applied mode.
+        legacy_clear = response.context["discovery_clear_querystring"]
+        legacy_removals = [
+            row["remove_querystring"]
+            for row in response.context["discovery_selected_tags"]
+        ]
+        self.assert_legacy_tag_urls(legacy_clear, legacy_removals)
+
+    def assert_legacy_tag_urls(self, clear: str, removals: list[str]) -> None:
+        self.assertEqual(len(removals), 2)
+        remaining_ids = []
+        for encoded in [clear, *removals]:
+            parsed = parse_qs(encoded)
             self.assertEqual(parsed["q"], ["avaliacao"])
             self.assertEqual(parsed["include_historical"], ["1"])
             self.assertEqual(parsed["tag_filter"], ["manual"])
             self.assertEqual(parsed["tag_mode"], ["all"])
-            self.assertEqual(len(parsed["tags"]), 1)
-            removed_tag_sets.append(parsed["tags"][0])
-            # Following the removal keeps q/historical and applies the
-            # remaining predicate.
+            if encoded != clear:
+                self.assertEqual(len(parsed["tags"]), 1)
+                remaining_ids.extend(parsed["tags"])
+            else:
+                self.assertNotIn("tags", parsed)
             following = self.client.get(reverse(LIST_URL), parsed)
             self.assertEqual(following.status_code, 200)
             self.assertEqual(following.context["discovery_name_query"], "avaliacao")
             self.assertTrue(following.context["discovery_include_historical"])
         self.assertEqual(
-            sorted(removed_tag_sets),
-            sorted([str(self.tag_x.pk), str(self.tag_y.pk)]),
+            sorted(remaining_ids), sorted(map(str, (self.tag_x.pk, self.tag_y.pk)))
         )
-        # Following clear/reapply from this state preserves q/historical
-        # and yields the manual-empty / automatic results respectively.
-        cleared = self.client.get(reverse(LIST_URL), clear)
-        self.assertEqual(cleared.status_code, 200)
-        self.assertEqual(cleared.context["discovery_name_query"], "avaliacao")
-        self.assertTrue(cleared.context["discovery_include_historical"])
-        self.assertTrue(cleared.context["discovery_selection"].is_manual)
-        self.assertFalse(cleared.context["discovery_selection"].has_predicate)
-        reapplied = self.client.get(reverse(LIST_URL), reapply)
-        self.assertEqual(reapplied.status_code, 200)
-        self.assertEqual(reapplied.context["discovery_name_query"], "avaliacao")
-        self.assertTrue(reapplied.context["discovery_include_historical"])
-        self.assertFalse(reapplied.context["discovery_selection"].is_manual)
 
     def test_last_applied_attribute_keeps_automatic_and_manual_empty(self) -> None:
         # Automatic defaults stay out of the canonical state, so search or
@@ -929,8 +910,8 @@ class DiscoveryLanguageAndRecoveryTests(DiscoveryFixturesMixin, TestCase):
             "Todas as selecionadas (E)",
             "Correspondência",
             "Filtro personalizado",
-            "Remover filtro de tags",
-            "Restaurar padrão da especialidade",
+            "Limpar todos os filtros",
+            "Usar padrão de tags da especialidade",
             "Mostrar inativas e arquivadas no seletor",
             "Aplicar filtros",
         ):
@@ -940,12 +921,11 @@ class DiscoveryLanguageAndRecoveryTests(DiscoveryFixturesMixin, TestCase):
         self.assertNotContains(response, "Limpar tags")
         self.assertNotContains(response, "Reaplicar preferências")
 
-    def test_applied_badge_removal_names_the_applied_scope(self) -> None:
+    def test_applied_badges_are_informational(self) -> None:
         response = self.get_list(tags=[self.tag_x.pk])
-        self.assertContains(
-            response,
-            'aria-label="Remover S2 X dos filtros aplicados"',
-        )
+        self.assertContains(response, "data-active-tag-badge")
+        self.assertContains(response, "S2 X")
+        self.assertNotContains(response, "data-discovery-remove")
 
     def test_filtered_zero_explains_no_match_without_first_template_cta(self) -> None:
         response = self.get_list(q="zzz-sem-correspondencia")
@@ -963,15 +943,12 @@ class DiscoveryLanguageAndRecoveryTests(DiscoveryFixturesMixin, TestCase):
             tag_mode="any",
         )
         self.assertEqual(list(response.context["object_list"]), [])
-        self.assertContains(
-            response, "Nenhum modelo corresponde aos filtros atuais"
-        )
+        self.assertContains(response, "Nenhum modelo corresponde aos filtros atuais")
         body = response.content.decode()
-        empty_start = body.index(
-            "Nenhum modelo corresponde aos filtros atuais"
-        )
+        empty_start = body.index("Nenhum modelo corresponde aos filtros atuais")
         empty_section = body[empty_start : empty_start + 2000]
-        self.assertIn("Remover filtro de tags", empty_section)
+        self.assertIn("Use as ações dos filtros acima", empty_section)
+        self.assertEqual(body.count("data-discovery-clear"), 1)
         self.assertNotContains(response, "Crie o primeiro template")
 
     def test_manual_empty_is_unfiltered_and_keeps_all_models(self) -> None:

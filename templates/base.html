@@ -77,7 +77,7 @@
     <script src="{% static 'js/popper.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
     <!-- Load only core main bundle without mediafiles -->
-    <script src="{% static 'main-bundle.js' %}"></script>
+    <script src="{% versioned_static 'main-bundle.js' %}"></script>
     <script>
         // Initialize Bootstrap tooltips
         document.addEventListener('DOMContentLoaded', function() {

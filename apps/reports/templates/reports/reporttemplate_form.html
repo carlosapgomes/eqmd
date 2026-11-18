@@ -1,4 +1,5 @@
 {% extends 'base_app.html' %}
+{% load static_assets %}
 
 {% block title %}{% if object %}Editar{% else %}Novo{% endif %} Modelos de Relatório{% endblock %}
 
@@ -112,20 +113,7 @@
         </div>
       </div>
 
-      <div class="mb-3">
-        <label for="{{ form.tag_ids.id_for_label }}" class="form-label">
-          {{ form.tag_ids.label }}
-        </label>
-        {{ form.tag_ids }}
-        {% if form.tag_ids.errors %}
-          <div class="invalid-feedback d-block">
-            {% for error in form.tag_ids.errors %}{{ error }}{% endfor %}
-          </div>
-        {% endif %}
-        <div class="form-text">
-          Classificação opcional do modelo. Tags inativas são mostradas com o estado.
-        </div>
-      </div>
+      {% include "components/_report_template_tag_editor.html" %}
 
       <div class="d-flex justify-content-between flex-wrap gap-2">
         <div>
@@ -208,4 +196,8 @@
     </details>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% versioned_static 'js/report-template-tag-editor.js' %}" defer></script>
 {% endblock %}

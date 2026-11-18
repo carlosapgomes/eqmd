@@ -12,6 +12,11 @@
  * generic error. Labels are moved as DOM nodes (cloneNode / textContent),
  * never assembled as raw HTML.
  *
+ * Canonical catalogue clear-all/restore are native GET opt-ins: invalidate
+ * older fragment work, reconcile applied hrefs, then let navigation rebuild
+ * the controls. Legacy scoped hooks and creation remain in-place. History
+ * restoration includes persisted pageshow so Back cannot revive old drafts.
+ *
  * Controls are user-owned (TFUX S3 fix3 invariant): the transport NEVER
  * writes the visible controls (q input, chips, hidden tag inputs, mode
  * select, historical checkbox) — with exactly ONE exception, popstate,
@@ -287,7 +292,23 @@
     // href that predates the latest Apply/toggle. Server-rendered hrefs
     // stay canonical for the no-JS flow; this only re-derives the
     // enhanced request at click time.
+    function catalogueActionParams(link) {
+      if (link.hasAttribute("data-catalogue-clear-all")) {
+        return new URLSearchParams("tag_filter=manual&tag_mode=any");
+      }
+      var params = new URLSearchParams();
+      var name = (appliedParams.get("q") || "").trim();
+      if (name) { params.set("q", name); }
+      if (appliedParams.get("include_historical") === "1") {
+        params.set("include_historical", "1");
+      }
+      return params;
+    }
+
     function linkParams(link) {
+      if (link.hasAttribute("data-catalogue-navigation")) {
+        return catalogueActionParams(link);
+      }
       var hrefParams = new URLSearchParams(
         new URL(link.getAttribute("href"), window.location.href).search
       );
@@ -512,6 +533,14 @@
     // old results node, summary included). This is not a control:
     // the count line is reconciled, the error is cleared on success.
     function reconcileSummary(fragmentRoot) {
+      var restore = root.querySelector("[data-catalogue-restore]");
+      if (restore) {
+        var focused = document.activeElement === restore;
+        restore.hidden = fragmentRoot.getAttribute("data-catalogue-can-restore") !== "true";
+        if (restore.hidden && focused) {
+          form.querySelector("[data-discovery-apply]").focus();
+        }
+      }
       var count = fragmentRoot.getAttribute("data-discovery-count");
       setError("");
       if (count === "0") {
@@ -658,8 +687,20 @@
       if (!link || !link.getAttribute("href")) {
         return;
       }
+      if (link.hasAttribute("data-catalogue-navigation")) {
+        reconcileLinks();
+        if (event.defaultPrevented || event.button > 0 || event.ctrlKey ||
+            event.metaKey || event.shiftKey || event.altKey) { return; }
+        generation += 1;
+        if (controller) { controller.abort(); }
+        return;
+      }
       event.preventDefault();
       applyFragment(linkParams(link));
+    });
+
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) { applyFragment(currentUrlQuery(), { popstate: true }); }
     });
 
     // Historical toggle: options-only catalogue update. The selector owns
