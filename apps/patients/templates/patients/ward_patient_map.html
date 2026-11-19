@@ -208,6 +208,7 @@
   {% if total_patients %}
   <div class="d-flex justify-content-end mb-3">
     <a
+      download
       class="btn btn-medical-outline-primary"
       href="{% url 'patients:patient_map_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
       data-map-export
@@ -218,6 +219,7 @@
   {% else %}
   <div class="d-flex justify-content-end mb-3">
     <a
+      download
       class="btn btn-medical-outline-primary disabled"
       aria-disabled="true"
       tabindex="-1"

@@ -430,6 +430,7 @@ class WardMapExportButtonTests(WardMapExportViewFixture):
         block = source[start:end]
         self.assertIn("data-map-export", block)
         self.assertNotIn("updating", block)
+        self.assertEqual(block.count("download"), 2)
         self.assertLess(source.index("data-map-updating"), start)
         self.assertLess(end, source.index("<!-- Tree View Section -->"))
         for body in (self.map_body(), self.map_body(q="NadaDisponivel")):
