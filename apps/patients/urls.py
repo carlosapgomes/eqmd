@@ -4,6 +4,7 @@ from apps.events.views import PatientEventsTimelineView
 
 from . import views, views_tag_filters, views_team_tags
 from .views_patient_list_filters import PatientListFilterActionsView
+from .views_ward_map_export import WardMapExportXlsxView
 from .views_ward_map_filters import WardMapFilterActionsView
 
 app_name = "apps.patients"
@@ -129,6 +130,11 @@ urlpatterns = [
     path("wards/<uuid:pk>/", views.WardDetailView.as_view(), name="ward_detail"),
     path("wards/<uuid:pk>/edit/", views.WardUpdateView.as_view(), name="ward_update"),
     path("map/", WardMapFilterActionsView.as_view(), name="patient_map"),
+    path(
+        "map/export/",
+        WardMapExportXlsxView.as_view(),
+        name="patient_map_export",
+    ),
     # Tag URLs
     path("tags/", views.AllowedTagListView.as_view(), name="tag_list"),
     # Searchable read-only tag lookup used by the patient-list multi-tag
