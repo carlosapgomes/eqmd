@@ -205,6 +205,30 @@
   </div>
   {% endif %}
 
+  {% if total_patients %}
+  <div class="d-flex justify-content-end mb-3">
+    <a
+      class="btn btn-medical-outline-primary"
+      href="{% url 'patients:patient_map_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+      data-map-export
+    >
+      <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Exportar xlsx
+    </a>
+  </div>
+  {% else %}
+  <div class="d-flex justify-content-end mb-3">
+    <a
+      class="btn btn-medical-outline-primary disabled"
+      aria-disabled="true"
+      tabindex="-1"
+      title="Nenhum paciente no resultado da busca"
+      data-map-export-disabled
+    >
+      <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Exportar xlsx
+    </a>
+  </div>
+  {% endif %}
+
   <!-- Tree View Section -->
   <div class="row">
     <div class="col-12">

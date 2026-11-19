@@ -14,6 +14,9 @@ that can move to a shared ward-map-export fixture module, and each
 behavior class (Access, Attachment, Ajax, Refusal, Parity) can become
 its own ``test_ward_map_export_*`` module without changing a single
 assertion.
+
+WMX-S3 adds ``WardMapExportButtonTests`` here: the same fixtures render
+the map page's button beside the endpoint it links to.
 """
 
 from __future__ import annotations
@@ -25,6 +28,8 @@ from typing import Any
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
+from bs4 import BeautifulSoup, Tag
+from django.template import loader
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -53,6 +58,8 @@ FILE_STAMP_FORMAT = "mapa_pacientes_%Y%m%d_%H%M%S.xlsx"
 FIRST_DATA_ROW = 2
 # One minute past the 20-minute staleness window the cache reader enforces.
 CACHE_STALENESS = timedelta(minutes=21)
+EXPORT_LABEL = "Exportar xlsx"
+EXPORT_DISABLED_TITLE = "Nenhum paciente no resultado da busca"
 
 
 def create_ward(owner: Any, name: str, abbreviation: str) -> Ward:
@@ -88,6 +95,15 @@ def exported_names(workbook: Workbook) -> set[str]:
         for _title, rows in sheet_listings(workbook)
         for _bed, nome in rows
     }
+
+
+def export_rows(body: str) -> list[Tag]:
+    """Return the export anchors one rendered map body carries (design D4)."""
+    page = BeautifulSoup(body, "html.parser")
+    rows: list[Tag] = []
+    for marker in ("data-map-export", "data-map-export-disabled"):
+        rows += page.find_all("a", attrs={marker: True})
+    return rows
 
 
 class WardMapExportViewFixture(TestCase):
@@ -327,3 +343,107 @@ class WardMapExportParityTests(WardMapExportViewFixture):
             response = self.export_response()
         self.assertEqual(response.status_code, 200)
         resolver.assert_called_once()
+
+
+class WardMapExportButtonTests(WardMapExportViewFixture):
+    """WMX-S3: the map page's export row; the AJAX fragment never has one."""
+
+    def single_row(self, body: str) -> Tag:
+        """Return the page's single export anchor (design D4)."""
+        rows = export_rows(body)
+        self.assertEqual(len(rows), 1)
+        return rows[0]
+
+    def map_body(self, **params: Any) -> str:
+        """Render the full map page and return its decoded body."""
+        return self.client.get(self.map_url(), params).content.decode("utf-8")
+
+    def assert_disabled_anchor(self, response: Any) -> None:
+        """Assert the empty-result disabled anchor: no href, inert, titled."""
+        row = self.single_row(response.content.decode("utf-8"))
+        self.assertIn("data-map-export-disabled", row.attrs)
+        self.assertIsNone(row.get("href"))
+        self.assertIn("disabled", row.get("class", []))
+        self.assertEqual(row.get("aria-disabled"), "true")
+        self.assertEqual(row.get("tabindex"), "-1")
+        self.assertEqual(row.get("title"), EXPORT_DISABLED_TITLE)
+        self.assertEqual(row.get_text(strip=True), EXPORT_LABEL)
+
+    def test_the_row_sits_above_results_outside_the_filter_form(self) -> None:
+        body = self.map_body()
+        row = self.single_row(body)
+        self.assertIn("data-map-export", row.attrs)
+        self.assertIn("btn-medical-outline-primary", row.get("class", []))
+        self.assertIsNotNone(row.find("i", class_="bi-file-earmark-excel"))
+        self.assertEqual(row.get_text(strip=True), EXPORT_LABEL)
+        self.assertIsNone(row.find_parent("form"))
+        self.assertIsNone(row.find_parent(attrs={"data-patient-filter-panel": True}))
+        row_at = body.index("data-map-export")
+        results_at = body.index('<div class="card">', body.index("</form>"))
+        self.assertTrue(body.index("</form>") < row_at < results_at)
+
+    def test_the_enabled_href_carries_the_exact_query_string(self) -> None:
+        ward = str(self.ward_a.pk)
+        for query, suffix in (
+            ({"q": "Filtro", "ward": ward}, f"?q=Filtro&ward={ward}"),
+            ({"q": "", "ward": ward}, f"?q=&ward={ward}"),
+            ({}, ""),
+        ):
+            with self.subTest(params=query):
+                self.assertEqual(
+                    self.single_row(self.map_body(**query)).get("href"),
+                    self.export_url() + suffix,
+                )
+
+    def test_the_enabled_href_preserves_repeated_parameters(self) -> None:
+        params = {"tags": [str(self.tag_a.pk), str(self.tag_b.pk)], "tag_mode": "all"}
+        row = self.single_row(self.map_body(**params))
+        href = row.get("href")
+        self.assertEqual(
+            href,
+            f"{self.export_url()}?tags={self.tag_a.pk}"
+            f"&tags={self.tag_b.pk}&tag_mode=all",
+        )
+        followed = self.client.get(href)
+        self.assertEqual(followed.status_code, 200)
+        self.assertEqual(followed["Content-Type"], XLSX_CONTENT_TYPE)
+
+    def test_empty_results_render_the_disabled_anchor(self) -> None:
+        for params, retained_wards in (
+            ({"q": "NadaDisponivel"}, 0),
+            ({"q": "NadaDisponivel", "show_empty_wards": "true"}, 2),
+        ):
+            with self.subTest(params=params):
+                response = self.client.get(self.map_url(), params)
+                self.assertEqual(response.context["total_patients"], 0)
+                self.assertEqual(len(response.context["ward_data"]), retained_wards)
+                self.assert_disabled_anchor(response)
+        WardMappingCache.objects.update(updated_at=timezone.now() - CACHE_STALENESS)
+        cold = self.client.get(self.map_url())
+        self.assertTrue(cold.context["updating"])
+        self.assert_disabled_anchor(cold)
+
+    def test_the_row_block_is_placed_and_keyed_independently_of_updating(self) -> None:
+        source = loader.get_template("patients/ward_patient_map.html").template.source
+        start = source.index("{% if total_patients %}")
+        end = source.index("{% endif %}", source.rindex("data-map-export-disabled"))
+        block = source[start:end]
+        self.assertIn("data-map-export", block)
+        self.assertNotIn("updating", block)
+        self.assertLess(source.index("data-map-updating"), start)
+        self.assertLess(end, source.index("<!-- Tree View Section -->"))
+        for body in (self.map_body(), self.map_body(q="NadaDisponivel")):
+            for row in export_rows(body):
+                self.assertNotIn("updating", str(row.attrs))
+
+    def test_the_ajax_fragment_never_renders_the_export_row(self) -> None:
+        for params in ({}, {"q": "NadaDisponivel"}):
+            with self.subTest(params=params):
+                ajax = self.client.get(
+                    self.map_url(), params, HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+                )
+                self.assertTemplateUsed(
+                    ajax, "patients/ward_patient_map_tree_only.html"
+                )
+                self.assertEqual(export_rows(ajax.content.decode("utf-8")), [])
+                self.assertNotContains(ajax, EXPORT_LABEL)
