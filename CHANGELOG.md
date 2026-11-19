@@ -6,6 +6,62 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-19
+
+### Added — exportação XLSX do mapa de enfermaria
+
+- **Exportação XLSX do mapa de enfermagem** (change
+  `add-ward-map-xlsx-export`; `a4ed537`, `81e9a0b`, `f31164f`,
+  `c35f977`): novo serviço `ward_map_export.py` transforma as
+  linhas já resolvidas do mapa em um workbook XLSX — uma aba
+  por enfermaria sobrevivente, colunas fixas `Leito`,
+  `Identificação`, `Médico/Interno`, `Evolução` e `Conduta` com
+  larguras fixas aprovadas. O endpoint de exportação reusa a
+  resolução completa de contexto da view do mapa, de modo que o
+  download é exatamente o resultado atual de busca/filtro, e
+  responde como attachment (a página permanece em
+  `/patients/map`). Botão `Exportar xlsx` acima dos resultados e
+  fora do formulário de filtro, desabilitado somente quando o
+  resultado filtrado não tem pacientes; os anchors de exportação
+  são marcados como download para não disparar o overlay global
+  de navegação (`c35f977`). Apenas a evolução publicada mais
+  recente é exportada (rascunhos e notas excluídas fora;
+  autor/conteúdo em branco quando o paciente não tem nota
+  publicada).
+
+### Added — cópia fragmentada no card da evolução
+
+- **Diálogo de cópia fragmentada no card da evolução** (change
+  `add-dailynote-card-copy-dialog`; `621ceff`): o botão de
+  copiar do card da DailyNote ganha fluxo próprio via hook
+  `copy-dailynote-btn` servido por novos módulos webpack.
+  Conteúdo até 4.000 caracteres copia direto como hoje (sem
+  diálogo); acima disso abre diálogo Bootstrap 5 com
+  "Copiar tudo" e botões numerados `P1..P4`. A divisão é
+  client-side em fronteiras de parágrafo, alvo de ~3.900
+  caracteres por parte com teto de 4.000 e no máximo 4 botões;
+  cada botão exibe sua contagem de caracteres e mantém indicador
+  de copiado enquanto o diálogo está aberto. Quando as quatro
+  partes não cobrem o conteúdo todo, o diálogo mostra aviso
+  explícito com total e caracteres cobertos (a capacidade de
+  16.000 caracteres do hospital é citada quando excedida) — o
+  conteúdo nunca é truncado em silêncio. Helpers de clipboard
+  compartilhados com o fluxo genérico de cards (`showToast` e
+  `showClipboardFeedback` movidos verbatim de
+  `assets/index.js` para `assets/js/clipboard-utils.js`;
+  `copyTextToClipboard(text)` derivado do corpo do
+  `copyToClipboard(button)` existente), com o fluxo genérico
+  preservado. O algoritmo de divisão é coberto por harness Node
+  automatizado dentro da suíte Django (precedente
+  `page_navigation_loading_harness.cjs`) e o bundle webpack foi
+  reconstruído (`static/main-bundle.js`).
+
+### Docs — specs OpenSpec (novas capacidades)
+
+- Specs **novas** (`dailynote-card-copy`, `patient-map-export`)
+  formalizam os dois contratos; dois changes arquivados em
+  `openspec/changes/archive/2026-11-19-*`.
+
 ## [0.7.0] - 2026-11-18
 
 ### Added — descoberta e classificação de modelos de laudo
