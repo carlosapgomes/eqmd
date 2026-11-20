@@ -114,6 +114,7 @@ class ExamBatchCaptureTests(TestCase):
         for i, exam in enumerate(exams):
             data[f"exams-{i}-examRequested"] = exam.get("examRequested", "")
             data[f"exams-{i}-examCode"] = exam.get("examCode", "")
+            data[f"exams-{i}-requestReason"] = exam.get("requestReason", "")
         return data
 
     def test_batch_page_renders_shared_fields_and_formset(self):
@@ -233,6 +234,145 @@ class ExamBatchCaptureTests(TestCase):
                 "apps.patients:patient_events_timeline",
                 kwargs={"patient_id": self.patient.pk},
             ),
+        )
+
+    def test_per_exam_justificativa_rendered_in_rows_and_empty_form(self):
+        """S1 R1: GET renders per-exam Justificativa in rows and empty-form."""
+        self.client.force_login(self.doctor)
+        response = self.client.get(self._batch_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="exams-0-requestReason"')
+        self.assertContains(response, 'name="exams-__prefix__-requestReason"')
+        self.assertContains(response, "Justificativa")
+
+    def test_per_exam_justificativa_override_and_fallback(self):
+        """S1 R2: per-exam value persists; empty falls back to shared."""
+        self.client.force_login(self.doctor)
+        data = self._valid_post(
+            [
+                {
+                    "examRequested": "Hemograma",
+                    "requestReason": "Motivo A",
+                },
+                {"examRequested": "Glicemia", "requestReason": ""},
+            ],
+            save_final="1",
+        )
+        response = self.client.post(self._batch_url(), data)
+        self.assertEqual(response.status_code, 302)
+        submissions = list(
+            PDFFormSubmission.all_objects.filter(
+                patient=self.patient, form_template=self.template
+            ).order_by("id")
+        )
+        self.assertEqual(len(submissions), 2)
+        by_exam = {s.form_data.get("examRequested"): s for s in submissions}
+        self.assertEqual(
+            by_exam["Hemograma"].form_data.get("requestReason"), "Motivo A"
+        )
+        self.assertEqual(
+            by_exam["Glicemia"].form_data.get("requestReason"), "Dor torácica"
+        )
+
+    def test_invalid_post_preserves_per_exam_justificativa(self):
+        """S1 R5: invalid POST re-renders preserving per-exam justificativa."""
+        self.client.force_login(self.doctor)
+        data = self._valid_post(
+            [
+                {"examRequested": "", "requestReason": "Motivo A"},
+            ],
+            save_final="1",
+        )
+        response = self.client.post(self._batch_url(), data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            PDFFormSubmission.all_objects.filter(
+                patient=self.patient, form_template=self.template
+            ).count(),
+            0,
+        )
+        self.assertContains(response, "Motivo A")
+        self.assertContains(response, 'name="exams-0-requestReason"')
+
+    def test_mirrored_unused_row_is_ignored(self):
+        """S1 R7 guard: unused row mirroring shared justificativa is ignored."""
+        self.client.force_login(self.doctor)
+        data = self._valid_post(
+            [
+                {"examRequested": "Hemograma"},
+                {
+                    "examRequested": "",
+                    "examCode": "",
+                    "requestReason": "Dor torácica",
+                },
+            ],
+            save_final="1",
+        )
+        response = self.client.post(self._batch_url(), data)
+        self.assertEqual(response.status_code, 302)
+        submissions = PDFFormSubmission.all_objects.filter(
+            patient=self.patient, form_template=self.template
+        )
+        self.assertEqual(submissions.count(), 1)
+        self.assertEqual(
+            submissions.first().form_data.get("examRequested"), "Hemograma"
+        )
+
+    def test_multiline_shared_mirrored_row_stores_shared_verbatim(self):
+        """S1 review-1 P1: single-line mirror of multiline shared stores shared.
+
+        The shared reason is a textarea (multiline); the per-exam input is
+        type=text, which drops line breaks from the blurred/prefilled copy.
+        An untouched used row must store the shared value verbatim.
+        """
+        self.client.force_login(self.doctor)
+        data = self._valid_post(
+            [
+                {
+                    "examRequested": "Hemograma",
+                    "requestReason": "Linha ALinha B",
+                },
+            ],
+            requestReason="Linha A\r\nLinha B",
+            save_final="1",
+        )
+        response = self.client.post(self._batch_url(), data)
+        self.assertEqual(response.status_code, 302)
+        submission = PDFFormSubmission.all_objects.filter(
+            patient=self.patient, form_template=self.template
+        ).first()
+        self.assertEqual(
+            submission.form_data.get("requestReason"), "Linha A\r\nLinha B"
+        )
+
+    def test_multiline_shared_unused_mirrored_row_ignored(self):
+        """S1 review-1 P1: unused row mirroring multiline shared is ignored.
+
+        An added, unused row posts the shared reason with line breaks
+        dropped by the single-line input; the deformed mirror must still
+        count as a mirrored blank row instead of rejecting the batch.
+        """
+        self.client.force_login(self.doctor)
+        data = self._valid_post(
+            [
+                {"examRequested": "Hemograma"},
+                {
+                    "examRequested": "",
+                    "examCode": "",
+                    "requestReason": "Linha ALinha B",
+                },
+            ],
+            requestReason="Linha A\r\nLinha B",
+            save_final="1",
+        )
+        response = self.client.post(self._batch_url(), data)
+        self.assertEqual(response.status_code, 302)
+        submissions = PDFFormSubmission.all_objects.filter(
+            patient=self.patient, form_template=self.template
+        )
+        self.assertEqual(submissions.count(), 1)
+        self.assertEqual(
+            submissions.first().form_data.get("examRequested"), "Hemograma"
         )
 
     def test_legacy_single_flow_unchanged(self):

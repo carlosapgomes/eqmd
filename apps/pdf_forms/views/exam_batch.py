@@ -95,8 +95,19 @@ class ExamBatchSharedForm(forms.Form):
     )
 
 
+def _without_line_breaks(value):
+    """Return ``value`` as a single-line input renders it (\r and \n removed).
+
+    The shared reason is a textarea, while the per-exam field is an
+    ``input type="text"`` that drops line breaks when mirroring the shared
+    value (blur copy / row prefill). Mirror comparisons must therefore use
+    this normalized form (review-1 P1).
+    """
+    return value.replace("\r", "").replace("\n", "")
+
+
 class ExamBatchItemForm(forms.Form):
-    """One exam row: free-text exam name plus optional code (phase 1)."""
+    """One exam row: exam name, optional code, optional justificativa."""
 
     examRequested = forms.CharField(
         label="Exame Solicitado",
@@ -111,6 +122,36 @@ class ExamBatchItemForm(forms.Form):
             attrs={"class": "form-control", "placeholder": "Opcional"}
         ),
     )
+    requestReason = forms.CharField(
+        label="Justificativa",
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Opcional — usa a justificativa do lote",
+            }
+        ),
+    )
+
+    def __init__(self, *args, shared_request_reason="", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.shared_request_reason = shared_request_reason
+        if self.is_bound:
+            exam_requested = (
+                self.data.get(self.add_prefix("examRequested")) or ""
+            ).strip()
+            exam_code = (self.data.get(self.add_prefix("examCode")) or "").strip()
+            per_exam_reason = self.data.get(self.add_prefix("requestReason"))
+            if (
+                not exam_requested
+                and not exam_code
+                and per_exam_reason is not None
+                and per_exam_reason == _without_line_breaks(shared_request_reason)
+            ):
+                # Unused row whose justificativa mirrors the shared value
+                # (R7), including the single-line form of a multiline
+                # shared value: treat as blank, don't require the exam name.
+                self.fields["examRequested"].required = False
 
 
 ExamBatchItemFormSet = formset_factory(
@@ -147,6 +188,16 @@ def build_exam_batch_form_data(*, template, patient, user, shared, exam, batch_i
     if hasattr(current_date, "isoformat"):
         current_date = current_date.isoformat()
 
+    per_exam_reason = (exam.get("requestReason") or "").strip()
+    shared_reason = shared["requestReason"]
+    if per_exam_reason and per_exam_reason != _without_line_breaks(shared_reason):
+        request_reason = per_exam_reason
+    else:
+        # Empty or single-line mirror of the shared reason: store the
+        # shared value verbatim so multiline text survives the
+        # single-line copy (R6).
+        request_reason = shared_reason
+
     form_data.update(
         {
             "patientName": patient.name,
@@ -154,7 +205,7 @@ def build_exam_batch_form_data(*, template, patient, user, shared, exam, batch_i
             "patientCity": getattr(patient, "city", "") or "",
             "patientState": getattr(patient, "state", "") or "",
             "patientNationalId": getattr(patient, "id_number", "") or "",
-            "requestReason": shared["requestReason"],
+            "requestReason": request_reason,
             "currentDate": current_date,
             "doctor": shared["doctor"],
             "doctorRegistrationNumber": shared.get("doctorRegistrationNumber", ""),
@@ -198,7 +249,13 @@ class ExamRequestBatchView(LoginRequiredMixin, View):
             raise PermissionDenied(BATCH_APPROVAL_DENIED_MESSAGE)
 
         shared_form = ExamBatchSharedForm(request.POST)
-        formset = ExamBatchItemFormSet(request.POST, prefix="exams")
+        formset = ExamBatchItemFormSet(
+            request.POST,
+            prefix="exams",
+            form_kwargs={
+                "shared_request_reason": request.POST.get("requestReason", "")
+            },
+        )
 
         try:
             total_forms = int(request.POST.get("exams-TOTAL_FORMS", "0"))
