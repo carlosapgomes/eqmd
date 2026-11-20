@@ -932,7 +932,7 @@ Data sources are implemented using:
 ## Solicitação de Exames em Lote (chequinho)
 
 Fluxo dedicado para solicitar N exames SUS ("Solicitação de Exames
-SUS") com uma única justificativa/data/médico, imprimindo até 3 vias
+SUS") com justificativa/data/médico compartilhados, imprimindo até 3 vias
 por folha A4. O motor genérico não foi alterado: o lote reaproveita o
 template configurado, o overlay e o modelo de submission.
 
@@ -947,6 +947,17 @@ Múltiplos SUS" → card "Solicitação de Exames SUS (chequinho)" →
 - Campos compartilhados (motivo, data, médico) com os auto-fills
   atuais + formset dinâmico de 1–12 exames (texto livre + código
   opcional), com botão "+ Adicionar exame".
+- **Justificativa individual por exame** (opcional, linha única): o
+  `blur` do campo compartilhado copia o valor apenas para as
+  justificativas ainda não editadas manualmente (`data-dirty`,
+  delegação em `#exam-rows`); novas linhas nascem pré-preenchidas;
+  re-render de POST inválido preserva os valores individuais e re-arma
+  a marcação de editado. Justificativa vazia herda o valor
+  compartilhado (fallback server-side, inclusive sem JavaScript) e o
+  espelho multilinha do compartilhado é normalizado no servidor
+  (persistido verbatim). Linha adicionada sem exame/código cuja
+  justificativa ainda espelha o compartilhado é ignorada como linha em
+  branco; linhas parcialmente preenchidas seguem rejeitadas.
 - POST válido cria N `PDFFormSubmission` (1 por exame) em transação
   atômica, cada uma no formato `form_data` atual acrescido de
   `batch_id` (UUID compartilhado, sem migration).
