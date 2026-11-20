@@ -6,6 +6,27 @@ Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-20
+
+### Added — justificativa individual por exame no lote
+
+- **Justificativa opcional por exame no lote de exames**
+  (change OpenSpec `exam-batch-per-exam-justification`, aplicada
+  como commit direto `1ea5cdd`; merge `59d7233`): o formulário
+  de lote de exames ganha campo opcional de justificativa por
+  linha (input de linha única) ao lado da justificativa
+  compartilhada existente. O blur do campo compartilhado copia o
+  valor apenas para os campos por-exame não editados manualmente
+  (flag `data-dirty` com delegação de eventos em `#exam-rows`);
+  novas linhas nascem pré-preenchidas com o valor compartilhado;
+  o servidor mantém fallback para a justificativa compartilhada
+  quando o campo individual vem vazio. Linha não-usada cujo
+  espelho permaneceu intacto é ignorada (não conta como edição);
+  o espelho multilinha é normalizado no servidor, e a
+  justificativa compartilhada é persistida verbatim. Sem
+  migração de banco; coberto por +140 linhas de testes em
+  `apps/pdf_forms/tests/test_exam_batch.py`.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added — exportação XLSX do mapa de enfermaria
